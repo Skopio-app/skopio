@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS projects (
 
 CREATE TABLE IF NOT EXISTS events (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    timestamp TEXT NOT NULL,
+    timestamp DATETIME NOT NULL,
     duration INTEGER DEFAULT 0,
     activity_type TEXT NOT NULL,
     app_name TEXT NOT NULL,
@@ -17,14 +17,14 @@ CREATE TABLE IF NOT EXISTS events (
     language TEXT,
     metadata TEXT,
     status TEXT DEFAULT 'ongoing',
-    end_timestamp TEXT,
+    end_timestamp DATETIME,
     FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS afk_events (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    afk_start TEXT NOT NULL,
-    afk_end TEXT,
+    afk_start DATETIME NOT NULL,
+    afk_end DATETIME,
     duration INTEGER
 );
 
@@ -54,11 +54,12 @@ CREATE TABLE IF NOT EXISTS event_tags (
 
 CREATE TABLE IF NOT EXISTS yearly_summaries (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    year INTEGER NOT NULL,
+    year INTEGER NOT NULL UNIQUE,
     total_active_time INTEGER NOT NULL,
     total_afk_time INTEGER NOT NULL,
     most_active_app TEXT,
     most_active_project TEXT,
+    most_active_language TEXT,
     metadata TEXT,
     last_updated TEXT NOT NULL
-)
+);
