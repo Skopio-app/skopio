@@ -1,0 +1,56 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            SELECT id, name, target_duration, frequency, exclude_days, progress, metadata\n            FROM goals\n            ",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Integer"
+      },
+      {
+        "name": "name",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "target_duration",
+        "ordinal": 2,
+        "type_info": "Integer"
+      },
+      {
+        "name": "frequency",
+        "ordinal": 3,
+        "type_info": "Text"
+      },
+      {
+        "name": "exclude_days",
+        "ordinal": 4,
+        "type_info": "Text"
+      },
+      {
+        "name": "progress",
+        "ordinal": 5,
+        "type_info": "Integer"
+      },
+      {
+        "name": "metadata",
+        "ordinal": 6,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      true
+    ]
+  },
+  "hash": "27291e0353b6a86739d84ed5eba6baffe4c1eda5eb06c61c9734b1298296e8e1"
+}

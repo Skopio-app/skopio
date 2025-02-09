@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO goals (name, target_duration, frequency, exclude_days, progress, metadata)\n            VALUES (?, ?, ?, ?, ?, ?)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 6
+    },
+    "nullable": []
+  },
+  "hash": "49d1c47e24c908ac616ddc669e956d4b3a412f6522d8e5493a0c80158f59a0cd"
+}
