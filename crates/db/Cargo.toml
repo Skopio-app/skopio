@@ -1,0 +1,14 @@
+[package]
+name = "db"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+chrono = { version = "0.4.39", features = ["serde"] }
+dotenvy = "0.15.7"
+serde = { version = "1.0.217", features = ["derive"] }
+sqlx = { version = "0.8", features = ["sqlite", "runtime-tokio-native-tls", "chrono"] }
+tokio = { version = "1.43.0", features = ["full"] }
+
+[build-dependencies]
+sqlx-cli = { version = "0.8.3", features = ["sqlite"] }

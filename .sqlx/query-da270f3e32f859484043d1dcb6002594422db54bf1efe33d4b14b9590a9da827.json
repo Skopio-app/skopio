@@ -1,0 +1,38 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT id, name, root_path, metadata FROM projects WHERE NAME = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Integer"
+      },
+      {
+        "name": "name",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "root_path",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "metadata",
+        "ordinal": 3,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      true,
+      false,
+      true,
+      true
+    ]
+  },
+  "hash": "da270f3e32f859484043d1dcb6002594422db54bf1efe33d4b14b9590a9da827"
+}
