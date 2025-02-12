@@ -5,3 +5,6 @@ pub mod afk_events;
 pub mod goals;
 pub mod tags;
 pub mod yearly_summaries;
+mod utils;
+
+pub use connection::DBContext;

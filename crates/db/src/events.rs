@@ -2,6 +2,8 @@ use sqlx::SqlitePool;
 use chrono::{DateTime, NaiveDateTime, Utc };
 use serde::{Deserialize, Serialize};
 
+use crate::DBContext;
+
 #[derive(Serialize, Deserialize, Debug, sqlx::FromRow)]
 pub struct Event {
     pub id: i64,
@@ -20,25 +22,25 @@ pub struct Event {
 
 impl Event {
     // Insert a new event
-    pub async fn insert(pool: &SqlitePool, event: Event) -> Result<(), sqlx::Error> {
+    pub async fn insert(&self, db_context: &DBContext) -> Result<(), sqlx::Error> {
         sqlx::query!(
             r#"
             INSERT INTO EVENTS (timestamp, duration, activity_type, app_name, file_name, project_id, branch_name, language, metadata, status, end_timestamp)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             "#,
-            event.timestamp,
-            event.duration,
-            event.activity_type,
-            event.app_name,
-            event.file_name,
-            event.project_id,
-            event.branch_name,
-            event.language,
-            event.metadata,
-            event.status,
-            event.end_timestamp
+            self.timestamp,
+            self.duration,
+            self.activity_type,
+            self.app_name,
+            self.file_name,
+            self.project_id,
+            self.branch_name,
+            self.language,
+            self.metadata,
+            self.status,
+            self.end_timestamp
         )
-        .execute(pool)
+        .execute(db_context.pool())
         .await?;
         Ok(())
     }
