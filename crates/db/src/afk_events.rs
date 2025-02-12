@@ -1,6 +1,7 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 use sqlx::SqlitePool;
+use crate::DBContext;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct AfkEvent {
@@ -12,9 +13,9 @@ pub struct AfkEvent {
 
 impl AfkEvent {
     /// Insert an AFK event
-    pub async fn insert(pool: &SqlitePool, event: AfkEvent) -> Result<(), sqlx::Error> {
-        let afk_start_str = event.afk_start.to_rfc3339();
-        let afk_end_str = event.afk_end.map(|end| end.to_rfc3339());
+    pub async fn insert(&self, db_context: &DBContext) -> Result<(), sqlx::Error> {
+        let afk_start_str = self.afk_start.to_rfc3339();
+        let afk_end_str = self.afk_end.map(|end| end.to_rfc3339());
         sqlx::query!(
             r#"
             INSERT INTO afk_events (afk_start, afk_end, duration)
@@ -22,9 +23,9 @@ impl AfkEvent {
              "#,
             afk_start_str,
             afk_end_str,
-            event.duration
+            self.duration
         )
-        .execute(pool)
+        .execute(db_context.pool())
         .await?;
         Ok(())
     }
