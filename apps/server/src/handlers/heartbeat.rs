@@ -1,3 +1,4 @@
+use std::sync::Arc;
 use axum::{http::StatusCode, response::IntoResponse, Json};
 use db::{DBContext, events::Event};
 use chrono::{DateTime, NaiveDateTime, Utc};
@@ -20,7 +21,7 @@ pub struct HeartbeatPayload {
 /// Handle incoming heartbeat requests and insert the event into the database.
 pub async fn handle_heartbeat(
     Json(payload): Json<HeartbeatPayload>,
-    db_context: DBContext,
+    db_context: Arc<DBContext>,
 ) -> impl IntoResponse {
     if payload.afk {
         // Process an afk event
