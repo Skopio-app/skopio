@@ -1,8 +1,10 @@
-use std::path::Path;
-use std::process::Command;
+use crate::db::open_database;
 use chrono::Utc;
 use rusqlite::params;
-use crate::db::open_database;
+use std::path::Path;
+use std::process::Command;
+use std::thread;
+use std::time::{Duration, Instant};
 
 /// Struct to store file event details
 pub struct Event<'a> {
@@ -15,6 +17,12 @@ pub struct Event<'a> {
     pub duration: Option<i64>,
 }
 
+/// Tracks the start time of typing
+static mut TYPING_START: Option<Instant> = None;
+/// Tracks if the user is currently typing
+static mut IS_TYPING: bool = false;
+
+/// Log a file event (open, save, focus, typing) with relevant metadata
 pub fn log_event(event: &Event) {
     let conn = open_database();
     let timestamp = Utc::now();
@@ -38,6 +46,53 @@ pub fn log_event(event: &Event) {
             duration_value
         ],
     ).expect("Failed to insert event");
+}
+
+/// Detect typing activity and log typing time
+pub fn track_typing(file: &str, language: &str, project: &str, editor: &str) {
+    let file = file.to_string();
+    let language = language.to_string();
+    let project = project.to_string();
+    let editor = editor.to_string();
+
+    thread::spawn(move || {
+        loop {
+            thread::sleep(Duration::from_secs(1));
+
+            unsafe {
+                if IS_TYPING {
+                    let elapsed = TYPING_START.unwrap().elapsed().as_secs();
+
+                    // If no typing for 3+ seconds, log typing time and reset
+                    if elapsed > 3 {
+                        let event = Event {
+                            file: &file,
+                            activity: "typing",
+                            language: &language,
+                            project: &project,
+                            editor: &editor,
+                            metadata: Some("User was actively typing"),
+                            duration: Some(elapsed as i64),
+                        };
+
+                        log_event(&event);
+
+                        IS_TYPING = false;
+                    }
+                }
+            }
+        }
+    });
+}
+
+/// Reset typing timer when the user starts typing
+pub fn start_typing() {
+    unsafe {
+        if !IS_TYPING {
+            TYPING_START = Some(Instant::now());
+            IS_TYPING = true;
+        }
+    }
 }
 
 /// Get the current Git branch name (if applicable)
