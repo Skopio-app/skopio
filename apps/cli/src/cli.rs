@@ -16,6 +16,7 @@ pub enum Commands {
     /// Log a heartbeat (continuous coding activity)
     Heartbeat {
         project: String,
+        full_path: String,
         branch: Option<String>,
         file: String,
         language: String,
@@ -26,6 +27,8 @@ pub enum Commands {
 
     /// Log a coding event (like debugging, reviewing)
     Event {
+        project: String,
+        full_path: String,
         activity_type: String,
         app: String,
         duration: i32,

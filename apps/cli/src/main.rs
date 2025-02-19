@@ -1,16 +1,13 @@
-use clap::Parser;
 use crate::cli::Cli;
-use crate::commands::{execute_command, Commands};
 use crate::db::init_db;
+use clap::Parser;
 
-mod db;
-mod tracking;
-mod sync;
-mod commands;
 mod cli;
-mod models;
-mod heartbeat;
+mod db;
 mod events;
+mod heartbeat;
+mod models;
+mod sync;
 
 fn main() {
     let cli = Cli::parse();
@@ -20,18 +17,21 @@ fn main() {
     match cli.command {
         cli::Commands::Heartbeat {
             project,
+            full_path,
             branch,
             file,
             language,
             app,
             is_write,
-        } => heartbeat::log_heartbeat(&conn, project, branch, file, language, app, is_write),
+        } => heartbeat::log_heartbeat(&conn, project, full_path, branch, file, language, app, is_write),
 
         cli::Commands::Event {
+            project,
+            full_path,
             activity_type,
             app,
             duration,
-        } => events::log_event(&conn, activity_type, app, duration),
+        } => events::log_event(&conn, project, full_path, activity_type, app, duration),
 
         cli::Commands::Sync => sync::sync_data(&conn),
     }
