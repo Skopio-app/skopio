@@ -1,30 +1,43 @@
-use std::fs;
-use std::path::PathBuf;
 use rusqlite::Connection;
 
-pub fn set_database_path(custom_path: &str) {
-    let config_path = get_config_path();
-    fs::write(config_path, custom_path).expect("Failed to store DB path");
-}
+/// Initialize the database connection
+pub fn init_db(db_path: &str) -> Connection {
+    let conn = Connection::open(db_path).expect("Failed to open database");
 
-pub fn get_database_path() -> PathBuf {
-    let config_path = get_config_path();
+    conn.execute_batch(
+        "
+        CREATE TABLE IF NOT EXISTS projects (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL UNIQUE,
+        full_path TEXT NOT NULL UNIQUE
+        );
 
-    if let Ok(db_path) = fs::read_to_string(config_path) {
-        return PathBuf::from(db_path.trim());
-    }
+        CREATE TABLE IF NOT EXISTS heartbeats (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        timestamp TEXT NOT NULL,
+        project_id INTEGER NOT NULL,
+        branch TEXT,
+        file TEXT NOT NULL,
+        language TEXT NOT NULL,
+        app TEXT NOT NULL,
+        is_write BOOLEAN DEFAULT FALSE,
+        synced BOOLEAN DEFAULT FALSE,
+        FOREIGN KEY (project_id) REFERENCES projects (id) ON DELETE CASCADE
+        );
 
-    PathBuf::from("/tmp/tracking.db")
-}
+        CREATE TABLE IF NOT EXISTS events (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        timestamp TEXT NOT NULL,
+        activity_type TEXT NOT NULL,
+        app TEXT NOT NULL,
+        duration INTEGER NOT NULL,
+        project_id INTEGER NOT NULL,
+        synced BOOLEAN DEFAULT FALSE,
+        FOREIGN KEY (project_id) REFERENCES projects (id) ON DELETE CASCADE
+        );
+        ",
+    )
+    .expect("Failed to create tables");
 
-/// Get the config path where the DB path is stored
-fn get_config_path() -> PathBuf {
-    let home = std::env::var("HOME").unwrap_or_else(|_| "/tmp".to_string());
-    PathBuf::from(format!("{}/.timestack_config", home))
-}
-
-/// Open the database connection
-pub fn open_database() -> Connection {
-    let db_path = get_database_path();
-    Connection::open(db_path).expect("Failed to open database")
+    conn
 }
