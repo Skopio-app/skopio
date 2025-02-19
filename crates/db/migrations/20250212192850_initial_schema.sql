@@ -41,7 +41,7 @@ CREATE TABLE IF NOT EXISTS events
     duration      INTEGER DEFAULT 0,
     activity_type TEXT     NOT NULL,
     app_id      INTEGER     NOT NULL,
-    entity_id     TEXT,
+    entity_id     INTEGER,
     project_id    INTEGER,
     branch_id   INTEGER,
     language_id      INTEGER,

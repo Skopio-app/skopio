@@ -2,7 +2,7 @@
 members = [
     "apps/cli",
     "apps/desktop/src-tauri",
-    "apps/server",
+#    "apps/server",
     "crates/db"
 ]
 resolver = "2"

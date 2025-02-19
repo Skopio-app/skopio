@@ -1,37 +1,47 @@
 use serde::{Deserialize, Serialize};
 use sqlx::SqlitePool;
+use crate::DBContext;
 
-
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, sqlx::FromRow)]
 pub struct Project {
     pub id: Option<i64>,
     pub name: String,
     pub root_path: Option<String>,
-    pub metadata: Option<String>,
 }
 
 impl Project {
-    // Insert a new project if it doesn't already exist
-    pub async fn insert(pool: &SqlitePool, project: Project) -> Result<(), sqlx::Error> {
+    /// Creates a new project
+    pub async fn create(self, db_context: &DBContext) -> Result<(), sqlx::Error> {
         sqlx::query!(
-            "INSERT OR IGNORE INTO projects (name, root_path, metadata) VALUES (?, ?, ?)",
-            project.name,
-            project.root_path,
-            project.metadata
+            "INSERT OR IGNORE INTO projects (name, root_path) VALUES (?, ?)",
+            self.name,
+            self.root_path,
         )
-        .execute(pool)
+        .execute(db_context.pool())
         .await?;
+
         Ok(())
     }
 
-    // Fetch a project by name
-    pub async fn get_by_name(pool: &SqlitePool, name: &str) -> Result<Option<Project>, sqlx::Error> {
+    /// Fetches a project by name
+    pub async fn find_by_name(db_context: &DBContext, name: &str) -> Result<Option<Self>, sqlx::Error> {
         sqlx::query_as!(
             Project,
-            "SELECT id, name, root_path, metadata FROM projects WHERE NAME = ?",
+            "SELECT id, name, root_path FROM projects WHERE NAME = ?",
             name
         )
-        .fetch_optional(pool)
+        .fetch_optional(db_context.pool())
         .await
+    }
+
+    /// Deletes a project
+    pub async fn delete(self, db_context: &DBContext) -> Result<(), sqlx::Error> {
+        if let Some(id) = self.id {
+            sqlx::query!("DELETE FROM projects WHERE id = ?", id)
+                .execute(db_context.pool())
+                .await?;
+        }
+
+        Ok(())
     }
 }

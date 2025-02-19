@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT id, name, root_path, metadata FROM projects WHERE NAME = ?",
+  "query": "SELECT id, name, root_path FROM projects WHERE NAME = ?",
   "describe": {
     "columns": [
       {
@@ -17,11 +17,6 @@
         "name": "root_path",
         "ordinal": 2,
         "type_info": "Text"
-      },
-      {
-        "name": "metadata",
-        "ordinal": 3,
-        "type_info": "Text"
       }
     ],
     "parameters": {
@@ -30,9 +25,8 @@
     "nullable": [
       true,
       false,
-      true,
       true
     ]
   },
-  "hash": "da270f3e32f859484043d1dcb6002594422db54bf1efe33d4b14b9590a9da827"
+  "hash": "94026a8275030d4218da10b1dee627a440564c6d80cf2aa651e8fa16ae70b9c8"
 }

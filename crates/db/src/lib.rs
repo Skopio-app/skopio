@@ -6,5 +6,6 @@ pub mod goals;
 pub mod tags;
 pub mod yearly_summaries;
 mod utils;
+mod languages;
 
 pub use connection::DBContext;
