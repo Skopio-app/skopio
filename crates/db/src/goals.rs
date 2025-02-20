@@ -51,8 +51,7 @@ impl Goal {
 
     /// Fetch all goals.
     pub async fn all(db_context: &DBContext) -> Result<Vec<Self>, sqlx::Error> {
-        sqlx::query_as::<_, Goal>(
-            "SELECT * FROM goals")
+        sqlx::query_as::<_, Goal>("SELECT * FROM goals")
             .fetch_all(db_context.pool())
             .await
     }

@@ -1,5 +1,4 @@
-use sqlx::SqlitePool;
-use chrono::{DateTime, NaiveDateTime, Utc };
+use chrono::{DateTime, NaiveDateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 use crate::DBContext;
@@ -75,14 +74,17 @@ impl Event {
     //     Ok(events)
     // }
 
-    pub async fn fetch_by_project(db_context: &DBContext, project_id: i64) -> Result<Vec<Self>, sqlx::Error> {
+    pub async fn fetch_by_project(
+        db_context: &DBContext,
+        project_id: i64,
+    ) -> Result<Vec<Self>, sqlx::Error> {
         sqlx::query_as!(
             Self,
             "SELECT * FROM events WHERE project_id = ?",
             project_id
         )
-            .fetch_all(db_context.pool())
-            .await
+        .fetch_all(db_context.pool())
+        .await
     }
 
     pub async fn delete(self, db_context: &DBContext) -> Result<(), sqlx::Error> {
