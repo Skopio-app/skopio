@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT id, name, root_path, metadata FROM projects WHERE NAME = ?",
+  "query": "SELECT id, project_id, name, type as entity_type FROM entities WHERE project_id = ?",
   "describe": {
     "columns": [
       {
@@ -9,17 +9,17 @@
         "type_info": "Integer"
       },
       {
-        "name": "name",
+        "name": "project_id",
         "ordinal": 1,
-        "type_info": "Text"
+        "type_info": "Integer"
       },
       {
-        "name": "root_path",
+        "name": "name",
         "ordinal": 2,
         "type_info": "Text"
       },
       {
-        "name": "metadata",
+        "name": "entity_type",
         "ordinal": 3,
         "type_info": "Text"
       }
@@ -28,11 +28,11 @@
       "Right": 1
     },
     "nullable": [
-      true,
       false,
-      true,
+      false,
+      false,
       true
     ]
   },
-  "hash": "da270f3e32f859484043d1dcb6002594422db54bf1efe33d4b14b9590a9da827"
+  "hash": "2384baf14cf2ffb5c7bf443a8b5b03414f84e4e824208abfcbc5195475423381"
 }

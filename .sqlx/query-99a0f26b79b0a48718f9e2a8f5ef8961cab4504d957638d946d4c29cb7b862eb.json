@@ -1,0 +1,74 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT id, project_id, entity_id, branch_id, language_id, app_id, timestamp, is_write, lines, cursorpos FROM heartbeats",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Integer"
+      },
+      {
+        "name": "project_id",
+        "ordinal": 1,
+        "type_info": "Integer"
+      },
+      {
+        "name": "entity_id",
+        "ordinal": 2,
+        "type_info": "Integer"
+      },
+      {
+        "name": "branch_id",
+        "ordinal": 3,
+        "type_info": "Integer"
+      },
+      {
+        "name": "language_id",
+        "ordinal": 4,
+        "type_info": "Integer"
+      },
+      {
+        "name": "app_id",
+        "ordinal": 5,
+        "type_info": "Integer"
+      },
+      {
+        "name": "timestamp",
+        "ordinal": 6,
+        "type_info": "Datetime"
+      },
+      {
+        "name": "is_write",
+        "ordinal": 7,
+        "type_info": "Bool"
+      },
+      {
+        "name": "lines",
+        "ordinal": 8,
+        "type_info": "Integer"
+      },
+      {
+        "name": "cursorpos",
+        "ordinal": 9,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false,
+      true,
+      true,
+      true,
+      true,
+      false,
+      false,
+      true,
+      true,
+      true
+    ]
+  },
+  "hash": "99a0f26b79b0a48718f9e2a8f5ef8961cab4504d957638d946d4c29cb7b862eb"
+}

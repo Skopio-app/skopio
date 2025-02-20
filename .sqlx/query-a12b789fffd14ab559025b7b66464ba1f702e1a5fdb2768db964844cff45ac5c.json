@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO heartbeats (project_id, entity_id, branch_id, language_id, app_id, timestamp, is_write, lines, cursorpos)\nVALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 9
+    },
+    "nullable": []
+  },
+  "hash": "a12b789fffd14ab559025b7b66464ba1f702e1a5fdb2768db964844cff45ac5c"
+}

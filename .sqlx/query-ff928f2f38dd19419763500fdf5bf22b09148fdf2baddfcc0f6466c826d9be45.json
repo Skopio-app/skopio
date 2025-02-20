@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO entities (project_id, name, type) VALUES (?, ?, ?)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": []
+  },
+  "hash": "ff928f2f38dd19419763500fdf5bf22b09148fdf2baddfcc0f6466c826d9be45"
+}
