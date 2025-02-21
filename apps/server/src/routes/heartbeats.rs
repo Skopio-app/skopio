@@ -1,8 +1,14 @@
+use crate::utils::error_response;
 use axum::extract::State;
+use axum::http::StatusCode;
 use axum::routing::post;
 use axum::{Json, Router};
 use chrono::Utc;
+use db::apps::App;
+use db::branches::Branch;
 use db::heartbeats::Heartbeat;
+use db::languages::Language;
+use db::projects::Project;
 use db::DBContext;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
@@ -10,11 +16,12 @@ use tokio::sync::Mutex;
 
 #[derive(Serialize, Deserialize, Debug)]
 struct HeartbeatInput {
-    project_id: Option<i64>,
-    entity_id: Option<i64>,
-    branch_id: Option<i64>,
-    language_id: Option<i64>,
-    app_id: i64,
+    project_name: String,
+    project_path: String,
+    entity_name: String,
+    branch_name: String,
+    language_name: Option<String>,
+    app_name: String,
     is_write: bool,
     lines: Option<i64>,
     cursorpos: Option<i64>,
@@ -23,26 +30,47 @@ struct HeartbeatInput {
 async fn handle_heartbeat(
     State(db): State<Arc<Mutex<DBContext>>>,
     Json(payload): Json<HeartbeatInput>,
-) -> Json<String> {
+) -> Result<Json<String>, (StatusCode, Json<String>)> {
     let db = db.lock().await;
+
+    let app_id = App::find_or_insert(&*db, &payload.app_name)
+        .await
+        .map_err(error_response)?;
+    let project_id = Project::find_or_insert(&*db, &payload.project_name, &payload.project_path)
+        .await
+        .map_err(error_response)?;
+    let branch_id = Branch::find_or_insert(&*db, project_id, &payload.branch_name)
+        .await
+        .map_err(error_response)?;
+    let entity_id = Branch::find_or_insert(&*db, project_id, &payload.branch_name)
+        .await
+        .map_err(error_response)?;
+    let language_id = if let Some(lang) = &payload.language_name {
+        Some(
+            Language::find_or_insert(&*db, lang)
+                .await
+                .map_err(error_response)?,
+        )
+    } else {
+        None
+    };
 
     let heartbeat = Heartbeat {
         id: None,
-        project_id: payload.project_id,
-        entity_id: payload.entity_id,
-        branch_id: payload.branch_id,
-        language_id: payload.language_id,
-        app_id: Some(payload.app_id),
+        project_id: Some(project_id),
+        entity_id: Some(entity_id),
+        branch_id: Some(branch_id),
+        language_id,
+        app_id: Some(app_id),
         timestamp: Utc::now(),
         is_write: Some(payload.is_write),
         lines: payload.lines,
         cursorpos: payload.cursorpos,
     };
 
-    match heartbeat.create(&*db).await {
-        Ok(_) => Json("Heartbeat recorded".to_string()),
-        Err(err) => Json(format!("Error: {}", err)),
-    }
+    heartbeat.create(&*db).await.map_err(error_response)?;
+
+    Ok(Json("Heartbeat recorded".to_string()))
 }
 
 pub fn heartbeat_routes(db: Arc<Mutex<DBContext>>) -> Router {
