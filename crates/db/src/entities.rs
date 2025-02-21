@@ -10,17 +10,30 @@ pub struct Entity {
 }
 
 impl Entity {
-    pub async fn create(self, db_context: &DBContext) -> Result<(), sqlx::Error> {
-        sqlx::query!(
-            "INSERT INTO entities (project_id, name, type) VALUES (?, ?, ?)",
-            self.project_id,
-            self.name,
-            self.entity_type
+    /// Finds an entity by name under a specific project, or inserts it if it doesn't exist.
+    pub async fn find_or_insert(db_context: &DBContext, project_id: i64, name: &str, entity_type: &str) -> Result<i64, sqlx::Error> {
+        let record = sqlx::query!(
+            "SELECT id FROM entities WHERE project_id = ? AND name = ?",
+            project_id,
+            name
         )
-        .execute(db_context.pool())
+            .fetch_optional(db_context.pool())
+            .await?;
+
+        if let Some(row) = record {
+            return Ok(row.id);
+        }
+
+        let result = sqlx::query!(
+            "INSERT INTO entities (project_id, name, type) VALUES (?, ?, ?) RETURNING id",
+            project_id,
+            name,
+            entity_type
+        )
+        .fetch_one(db_context.pool())
         .await?;
 
-        Ok(())
+        Ok(result.id)
     }
 
     pub async fn all_by_project(
