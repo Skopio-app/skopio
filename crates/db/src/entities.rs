@@ -21,7 +21,7 @@ impl Entity {
             .await?;
 
         if let Some(row) = record {
-            return Ok(row.id);
+            return row.id.ok_or_else(|| sqlx::Error::RowNotFound);
         }
 
         let result = sqlx::query!(
@@ -33,7 +33,7 @@ impl Entity {
         .fetch_one(db_context.pool())
         .await?;
 
-        Ok(result.id)
+        result.id.ok_or_else(|| sqlx::Error::RowNotFound)
     }
 
     pub async fn all_by_project(

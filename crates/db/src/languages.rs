@@ -14,10 +14,10 @@ impl Language {
             .await?;
 
         if let Some(row) = record {
-            return Ok(row.id);
+            return row.id.ok_or_else(|| sqlx::Error::RowNotFound);
         }
 
-        let result = sqlx::query!("INSERT INTO languages (name) VALUES (?)", name)
+        let result = sqlx::query!("INSERT INTO languages (name) VALUES (?) RETURNING id", name)
             .fetch_one(db_context.pool())
             .await?;
 

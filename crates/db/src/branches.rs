@@ -35,7 +35,7 @@ impl Branch {
         .fetch_one(db_context.pool())
         .await?;
 
-        Ok(result.id)
+        result.id.ok_or_else(|| sqlx::Error::RowNotFound)
     }
 
     pub async fn all_project(

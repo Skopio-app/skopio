@@ -15,7 +15,7 @@ impl Project {
             .await?;
 
         if let Some(row) = record {
-            return Ok(row.id);
+            return row.id.ok_or_else(|| sqlx::Error::RowNotFound);
         }
 
         let result = sqlx::query!(
