@@ -6,23 +6,16 @@ pub fn init_db(db_path: &str) -> Connection {
 
     conn.execute_batch(
         "
-        CREATE TABLE IF NOT EXISTS projects (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL UNIQUE,
-        full_path TEXT NOT NULL UNIQUE
-        );
-
         CREATE TABLE IF NOT EXISTS heartbeats (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         timestamp TEXT NOT NULL,
-        project_id INTEGER NOT NULL,
+        project TEXT NOT NULL,
         branch TEXT,
         file TEXT NOT NULL,
         language TEXT NOT NULL,
         app TEXT NOT NULL,
         is_write BOOLEAN DEFAULT FALSE,
-        synced BOOLEAN DEFAULT FALSE,
-        FOREIGN KEY (project_id) REFERENCES projects (id) ON DELETE CASCADE
+        synced BOOLEAN DEFAULT FALSE
         );
 
         CREATE TABLE IF NOT EXISTS events (
@@ -31,9 +24,8 @@ pub fn init_db(db_path: &str) -> Connection {
         activity_type TEXT NOT NULL,
         app TEXT NOT NULL,
         duration INTEGER NOT NULL,
-        project_id INTEGER NOT NULL,
+        project TEXT NOT NULL,
         synced BOOLEAN DEFAULT FALSE,
-        FOREIGN KEY (project_id) REFERENCES projects (id) ON DELETE CASCADE
         );
         ",
     )
