@@ -16,22 +16,26 @@ pub enum Commands {
     /// Log a heartbeat (continuous coding activity)
     Heartbeat {
         project: String,
-        full_path: String,
-        branch: Option<String>,
-        file: String,
+        entity: String,
         language: String,
         app: String,
+        lines: Option<i64>,
+        cursorpos: Option<i64>,
         #[arg(short, long)]
         is_write: bool,
     },
 
     /// Log a coding event (like debugging, reviewing)
     Event {
-        project: String,
-        full_path: String,
+        timestamp: String,
         activity_type: String,
         app: String,
+        entity: String,
+        entity_type: String,
         duration: i32,
+        project: String,
+        language: String,
+        end_timestamp: String,
     },
 
     /// Sync stored data to the remote server

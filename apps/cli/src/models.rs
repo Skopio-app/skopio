@@ -14,6 +14,7 @@ pub struct Heartbeat {
 #[derive(Serialize, Deserialize)]
 pub struct Event {
     pub timestamp: String,
+
     pub activity_type: String,
     pub app: String,
     pub duration: i32,

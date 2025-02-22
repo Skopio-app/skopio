@@ -9,12 +9,14 @@ pub fn init_db(db_path: &str) -> Connection {
         CREATE TABLE IF NOT EXISTS heartbeats (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         timestamp TEXT NOT NULL,
-        project TEXT NOT NULL,
+        project_path TEXT NOT NULL,
         branch TEXT,
-        file TEXT NOT NULL,
+        entity TEXT NOT NULL,
         language TEXT NOT NULL,
         app TEXT NOT NULL,
         is_write BOOLEAN DEFAULT FALSE,
+        lines INTEGER,
+        cursorpos INTEGER,
         synced BOOLEAN DEFAULT FALSE
         );
 
@@ -23,9 +25,14 @@ pub fn init_db(db_path: &str) -> Connection {
         timestamp TEXT NOT NULL,
         activity_type TEXT NOT NULL,
         app TEXT NOT NULL,
+        entity_name TEXT,
+        entity_type TEXT,
         duration INTEGER NOT NULL,
-        project TEXT NOT NULL,
-        synced BOOLEAN DEFAULT FALSE,
+        project_path TEXT NOT NULL,
+        branch TEXT,
+        language TEXT,
+        end_timestamp TEXT,
+        synced BOOLEAN DEFAULT FALSE
         );
         ",
     )

@@ -9,7 +9,7 @@ pub fn sync_data(conn: &Connection) {
     let client = Client::new();
 
     let heartbeats: Vec<Heartbeat> = conn
-        .prepare("SELECT timestamp, project, branch, file, language, app, is_write FROM heartbeats WHERE synced = 0")
+        .prepare("SELECT timestamp, project_path, branch, entity, language, app, is_write, lines, cursorpos FROM heartbeats WHERE synced = 0")
         .unwrap()
         .query_map([], |row| {
             Ok(Heartbeat {
@@ -27,7 +27,7 @@ pub fn sync_data(conn: &Connection) {
         .collect();
 
     let events: Vec<Event> = conn
-        .prepare("SELECT timestamp, activity_type, app, duration, project FROM events where synced = 0")
+        .prepare("SELECT timestamp, activity_type, app, entity_name, entity_type, duration, project_path, branch, language, end_timestamp FROM events where synced = 0")
         .unwrap()
         .query_map([], |row| {
             Ok(Event {
