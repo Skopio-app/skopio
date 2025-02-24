@@ -9,17 +9,24 @@ pub struct Project {
 }
 
 impl Project {
-    /// Creates a new project
-    pub async fn create(self, db_context: &DBContext) -> Result<(), sqlx::Error> {
-        sqlx::query!(
-            "INSERT OR IGNORE INTO projects (name, root_path) VALUES (?, ?)",
-            self.name,
-            self.root_path,
+    pub async fn find_or_insert(db_context: &DBContext, name: &str, root_path: &str) -> Result<i64, sqlx::Error> {
+        let record = sqlx::query!("SELECT id FROM projects WHERE name = ?", name)
+            .fetch_optional(db_context.pool())
+            .await?;
+
+        if let Some(row) = record {
+            return row.id.ok_or_else(|| sqlx::Error::RowNotFound);
+        }
+
+        let result = sqlx::query!(
+            "INSERT INTO projects (name, root_path) VALUES (?, ?) RETURNING id",
+            name,
+            root_path,
         )
-        .execute(db_context.pool())
+        .fetch_one(db_context.pool())
         .await?;
 
-        Ok(())
+        Ok(result.id)
     }
 
     /// Fetches a project by name

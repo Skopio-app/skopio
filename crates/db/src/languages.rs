@@ -8,12 +8,20 @@ pub struct Language {
 }
 
 impl Language {
-    pub async fn create(self, db_context: &DBContext) -> Result<Self, sqlx::Error> {
-        sqlx::query!("INSERT INTO languages (name) VALUES (?)", self.name)
-            .execute(db_context.pool())
+    pub async fn find_or_insert(db_context: &DBContext, name: &str) -> Result<i64, sqlx::Error> {
+        let record = sqlx::query!("SELECT id FROM languages WHERE name = ?", name)
+            .fetch_optional(db_context.pool())
             .await?;
 
-        Ok(self)
+        if let Some(row) = record {
+            return row.id.ok_or_else(|| sqlx::Error::RowNotFound);
+        }
+
+        let result = sqlx::query!("INSERT INTO languages (name) VALUES (?) RETURNING id", name)
+            .fetch_one(db_context.pool())
+            .await?;
+
+        Ok(result.id)
     }
 
     pub async fn all(db_context: &DBContext) -> Result<Vec<Self>, sqlx::Error> {

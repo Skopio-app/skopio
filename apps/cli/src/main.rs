@@ -8,6 +8,7 @@ mod events;
 mod heartbeat;
 mod models;
 mod sync;
+mod utils;
 
 fn main() {
     let cli = Cli::parse();
@@ -17,21 +18,25 @@ fn main() {
     match cli.command {
         cli::Commands::Heartbeat {
             project,
-            full_path,
-            branch,
-            file,
+            entity,
             language,
             app,
+            lines,
+            cursorpos,
             is_write,
-        } => heartbeat::log_heartbeat(&conn, project, full_path, branch, file, language, app, is_write),
+        } => heartbeat::log_heartbeat(&conn, project, entity, language, app, is_write, lines, cursorpos),
 
         cli::Commands::Event {
-            project,
-            full_path,
+            timestamp,
             activity_type,
             app,
+            entity,
+            entity_type,
             duration,
-        } => events::log_event(&conn, project, full_path, activity_type, app, duration),
+            project,
+            language,
+            end_timestamp
+        } => events::log_event(&conn, timestamp, activity_type, app, entity, entity_type, duration, project, language, end_timestamp),
 
         cli::Commands::Sync => sync::sync_data(&conn),
     }

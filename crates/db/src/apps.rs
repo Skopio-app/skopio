@@ -8,13 +8,24 @@ pub struct App {
 }
 
 impl App {
-    /// Creates a new app
-    pub async fn create(self, db_context: &DBContext) -> Result<(), sqlx::Error> {
-        sqlx::query!("INSERT INTO apps (name) VALUES (?)", self.name)
-            .execute(db_context.pool())
+    /// Finds an existing app by name or inserts a new one, returning its ID.
+    pub async fn find_or_insert(db_context: &DBContext, name: &str) -> Result<i64, sqlx::Error> {
+        let record = sqlx::query!("SELECT id FROM apps WHERE name = ?", name)
+            .fetch_optional(db_context.pool())
             .await?;
 
-        Ok(())
+        if let Some(row) = record {
+            return row.id.ok_or_else(|| sqlx::Error::RowNotFound);
+        }
+
+        let result = sqlx::query!(
+            "INSERT INTO apps (name) VALUES (?) RETURNING id",
+            name
+        )
+            .fetch_one(db_context.pool())
+            .await?;
+
+        Ok(result.id)
     }
 
     /// Retrieves all apps
