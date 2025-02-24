@@ -17,6 +17,7 @@ use tokio::sync::Mutex;
 
 #[derive(Serialize, Deserialize, Debug)]
 struct EventInput {
+    #[serde(with = "chrono::serde::ts_seconds_option")]
     timestamp: Option<DateTime<Utc>>,
     duration: Option<i64>,
     activity_type: String,
@@ -27,6 +28,7 @@ struct EventInput {
     project_path: String,
     branch_name: String,
     language_name: String,
+    #[serde(with = "chrono::serde::ts_seconds_option")]
     end_timestamp: Option<DateTime<Utc>>,
 }
 
