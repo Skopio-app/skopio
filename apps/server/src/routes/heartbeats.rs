@@ -3,7 +3,7 @@ use axum::extract::State;
 use axum::http::StatusCode;
 use axum::routing::post;
 use axum::{Json, Router};
-use chrono::Utc;
+use chrono::{DateTime, Utc};
 use db::apps::App;
 use db::branches::Branch;
 use db::heartbeats::Heartbeat;
@@ -16,6 +16,8 @@ use tokio::sync::Mutex;
 
 #[derive(Serialize, Deserialize, Debug)]
 struct HeartbeatInput {
+    #[serde(with = "chrono::serde::ts_seconds_option")]
+    timestamp: Option<DateTime<Utc>>,
     project_name: String,
     project_path: String,
     entity_name: String,
@@ -62,7 +64,7 @@ async fn handle_heartbeat(
         branch_id: Some(branch_id),
         language_id,
         app_id: Some(app_id),
-        timestamp: Utc::now(),
+        timestamp: payload.timestamp.unwrap_or_else(Utc::now),
         is_write: Some(payload.is_write),
         lines: payload.lines,
         cursorpos: payload.cursorpos,

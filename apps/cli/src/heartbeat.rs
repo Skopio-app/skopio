@@ -1,4 +1,4 @@
-use crate::utils::{extract_project_name, find_git_branch, find_git_project_root};
+use crate::utils::find_git_branch;
 use chrono::Utc;
 use rusqlite::{params, Connection};
 use std::path::Path;

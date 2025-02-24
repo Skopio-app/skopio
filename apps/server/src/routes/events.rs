@@ -1,9 +1,9 @@
-use crate::utils::error_response;
+use crate::utils::{error_response, to_naive_datetime};
 use axum::extract::State;
 use axum::http::StatusCode;
 use axum::routing::post;
 use axum::{Json, Router};
-use chrono::{NaiveDateTime, Utc};
+use chrono::{DateTime, NaiveDateTime, Utc};
 use db::apps::App;
 use db::branches::Branch;
 use db::entities::Entity;
@@ -17,7 +17,7 @@ use tokio::sync::Mutex;
 
 #[derive(Serialize, Deserialize, Debug)]
 struct EventInput {
-    timestamp: Option<NaiveDateTime>,
+    timestamp: Option<DateTime<Utc>>,
     duration: Option<i64>,
     activity_type: String,
     app_name: String,
@@ -27,7 +27,7 @@ struct EventInput {
     project_path: String,
     branch_name: String,
     language_name: String,
-    end_timestamp: Option<NaiveDateTime>,
+    end_timestamp: Option<DateTime<Utc>>,
 }
 
 async fn handle_event(
@@ -55,7 +55,7 @@ async fn handle_event(
 
     let event = Event {
         id: None,
-        timestamp: payload.timestamp.unwrap_or_else(|| Utc::now().naive_utc()),
+        timestamp: to_naive_datetime(payload.timestamp).unwrap_or_else(|| Utc::now().naive_utc()),
         duration: payload.duration,
         activity_type: payload.activity_type,
         app_id,
@@ -63,7 +63,7 @@ async fn handle_event(
         project_id: Some(project_id),
         branch_id: Some(branch_id),
         language_id: Some(language_id),
-        end_timestamp: payload.end_timestamp,
+        end_timestamp: to_naive_datetime(payload.end_timestamp),
     };
 
     event.create(&*db).await.map_err(error_response)?;
