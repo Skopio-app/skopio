@@ -1,12 +1,14 @@
-use chrono::{DateTime, NaiveDateTime, Utc};
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct Heartbeat {
-    pub timestamp: String,
+    #[serde(with = "chrono::serde::ts_seconds_option")]
+    pub timestamp: Option<DateTime<Utc>>,
     pub project_name: String,
     pub project_path: String,
     pub entity_name: String,
+    pub entity_type: String,
     pub branch_name: String,
     pub language_name: String,
     pub app_name: String,
@@ -15,7 +17,7 @@ pub struct Heartbeat {
     pub cursorpos: Option<i64>,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct Event {
     #[serde(with = "chrono::serde::ts_seconds_option")]
     pub timestamp: Option<DateTime<Utc>>,
