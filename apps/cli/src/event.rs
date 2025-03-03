@@ -13,7 +13,7 @@ pub fn log_event(
     project: String,
     language: String,
     end_timestamp: i32,
-) {
+) -> Result<(), Box<dyn std::error::Error>> {
     let project_path = Path::new(&project);
     let branch = find_git_branch(&project_path);
 
@@ -33,10 +33,12 @@ pub fn log_event(
             end_timestamp,
         ],
     )
-    .expect("Failed to insert event");
+    .map_err(|e| format!( "Failed to insert event: {}", e))?;
 
     println!(
         "Event '{}' logged for {} ({} sec)",
         activity_type, app, duration
     );
+
+    Ok(())
 }

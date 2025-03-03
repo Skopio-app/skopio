@@ -13,7 +13,7 @@ pub fn log_heartbeat(
     is_write: bool,
     lines: Option<i64>,
     cursorpos: Option<i64>,
-) {
+) -> Result<(), Box<dyn std::error::Error>> {
     let file_path = Path::new(&entity);
     let branch_name = find_git_branch(file_path);
 
@@ -33,7 +33,9 @@ pub fn log_heartbeat(
             cursorpos,
         ],
     )
-    .expect("Failed to insert heartbeat");
+    .map_err(|e| format!("Failed to insert heartbeat: {}", e))?;
 
     println!("Heartbeat logged for {}", entity);
+
+    Ok(())
 }

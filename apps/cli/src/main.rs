@@ -15,7 +15,13 @@ fn main() {
     let db_path = get_or_store_db_path(cli.db);
 
     println!("Using database path: {}", db_path);
-    let conn = init_db(&db_path);
+    let conn = match init_db(&db_path) {
+        Ok(conn) => conn,
+        Err(err) => {
+            eprintln!("Error initializing database: {}", err);
+            std::process::exit(1);
+        }
+    };
 
     match cli.command {
         Some(cli::Commands::Heartbeat {
@@ -28,7 +34,7 @@ fn main() {
             lines,
             cursorpos,
             is_write,
-        }) => heartbeat::log_heartbeat(
+        }) => match heartbeat::log_heartbeat(
             &conn,
             timestamp,
             project,
@@ -39,7 +45,10 @@ fn main() {
             is_write,
             lines,
             cursorpos,
-        ),
+        ) {
+            Ok(_) => println!("Heartbeat logged successfully."),
+            Err(err) => eprintln!("Error logging heartbeat: {}", err),
+        },
 
         Some(cli::Commands::Event {
             timestamp,
@@ -51,7 +60,7 @@ fn main() {
             project,
             language,
             end_timestamp,
-        }) => event::log_event(
+        }) => match event::log_event(
             &conn,
             timestamp,
             activity_type,
@@ -62,7 +71,10 @@ fn main() {
             project,
             language,
             end_timestamp,
-        ),
+        ) {
+            Ok(_) => println!("Event logged successfully."),
+            Err(err) => eprintln!("Error logging event: {}", err),
+        },
 
         Some(cli::Commands::Sync) => {
             if let Err(err) = sync::sync_data(&conn) {

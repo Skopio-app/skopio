@@ -1,5 +1,5 @@
 use crate::models::{Event, Heartbeat};
-use crate::utils::{extract_project_name, parse_timestamp};
+use crate::utils::extract_project_name;
 use chrono::{DateTime, TimeZone, Utc};
 use reqwest::blocking::Client;
 use rusqlite::Connection;

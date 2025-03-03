@@ -1,16 +1,19 @@
+use rusqlite::Connection;
 use std::fs;
 use std::path::Path;
-use rusqlite::Connection;
 
 /// Initialize the database connection
-pub fn init_db(db_path: &str) -> Connection {
-    let db_parent = Path::new(db_path).parent().unwrap();
+pub fn init_db(db_path: &str) -> Result<Connection, Box<dyn std::error::Error>> {
+    let db_parent = Path::new(db_path)
+        .parent()
+        .ok_or("Invalid database path: No parent directory")?;
 
     if !db_parent.exists() {
-        fs::create_dir_all(db_parent).expect("Failed to create database directory");
+        fs::create_dir_all(db_parent)
+            .map_err(|e| format!("Failed to create database directory: {}", e))?;
     }
 
-    let conn = Connection::open(db_path).expect("Failed to open database");
+    let conn = Connection::open(db_path).map_err(|e| format!("Failed to open database: {}", e))?;
 
     conn.execute_batch(
         "
@@ -45,7 +48,7 @@ pub fn init_db(db_path: &str) -> Connection {
         );
         ",
     )
-    .expect("Failed to create tables");
+    .map_err(|e| format!("Failed to create tables: {}", e))?;
 
-    conn
+    Ok(conn)
 }

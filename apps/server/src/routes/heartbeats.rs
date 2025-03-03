@@ -35,8 +35,6 @@ async fn handle_heartbeats(
     State(db): State<Arc<Mutex<DBContext>>>,
     Json(payload): Json<Vec<HeartbeatInput>>,
 ) -> Result<Json<String>, (StatusCode, Json<String>)> {
-    println!("Received heartbeats: {:?}", payload);
-
     let db = db.lock().await;
 
     for hb in payload {
