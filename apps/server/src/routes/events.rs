@@ -14,6 +14,7 @@ use db::DBContext;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tokio::sync::Mutex;
+use tracing::info;
 
 #[derive(Serialize, Deserialize, Debug)]
 struct EventInput {
@@ -37,6 +38,8 @@ async fn handle_events(
     Json(payload): Json<Vec<EventInput>>,
 ) -> Result<Json<String>, (StatusCode, Json<String>)> {
     let db = db.lock().await;
+
+    info!("Handling {} events from plugin CLI", payload.len());
 
     for event in payload {
         let app_id = App::find_or_insert(&*db, &event.app_name)
@@ -72,6 +75,7 @@ async fn handle_events(
         event.create(&*db).await.map_err(error_response)?;
     }
 
+    info!("Event details stored successfully");
     Ok(Json("Events recorded".to_string()))
 }
 

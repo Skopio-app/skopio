@@ -14,6 +14,7 @@ use db::DBContext;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tokio::sync::Mutex;
+use tracing::info;
 
 #[derive(Serialize, Deserialize, Debug)]
 struct HeartbeatInput {
@@ -36,6 +37,8 @@ async fn handle_heartbeats(
     Json(payload): Json<Vec<HeartbeatInput>>,
 ) -> Result<Json<String>, (StatusCode, Json<String>)> {
     let db = db.lock().await;
+
+    info!("Handling {} heartbeats from plugin CLI", payload.len());
 
     for hb in payload {
         let app_id = App::find_or_insert(&*db, &hb.app_name)
@@ -76,6 +79,7 @@ async fn handle_heartbeats(
         heartbeat.create(&*db).await.map_err(error_response)?;
     }
 
+    info!("Heartbeat details stored successfully");
     Ok(Json("Heartbeats recorded".to_string()))
 }
 
