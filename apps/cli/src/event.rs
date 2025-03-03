@@ -1,6 +1,7 @@
 use crate::utils::find_git_branch;
 use rusqlite::{params, Connection};
 use std::path::Path;
+use log::info;
 
 pub fn log_event(
     conn: &Connection,
@@ -35,7 +36,7 @@ pub fn log_event(
     )
     .map_err(|e| format!( "Failed to insert event: {}", e))?;
 
-    println!(
+    info!(
         "Event '{}' logged for {} ({} sec)",
         activity_type, app, duration
     );

@@ -1,6 +1,7 @@
 use crate::utils::find_git_branch;
 use rusqlite::{params, Connection};
 use std::path::Path;
+use log::info;
 
 pub fn log_heartbeat(
     conn: &Connection,
@@ -35,7 +36,7 @@ pub fn log_heartbeat(
     )
     .map_err(|e| format!("Failed to insert heartbeat: {}", e))?;
 
-    println!("Heartbeat logged for {}", entity);
+    info!("Heartbeat logged for {}", entity);
 
     Ok(())
 }

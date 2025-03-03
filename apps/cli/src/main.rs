@@ -1,6 +1,9 @@
 use crate::cli::{get_or_store_db_path, Cli};
 use crate::db::init_db;
 use clap::Parser;
+use env_logger::Builder;
+use log::{debug, error, info, LevelFilter};
+use std::io::Write;
 
 mod cli;
 mod db;
@@ -11,14 +14,28 @@ mod sync;
 mod utils;
 
 fn main() {
+    Builder::new()
+        .format(|buf, record| {
+            writeln!(
+                buf,
+                "[{} {}:{}] {}",
+                record.level(),
+                record.file().unwrap_or("unknown"),
+                record.line().unwrap_or(0),
+                record.args()
+            )
+        })
+        .filter(None, LevelFilter::Debug)
+        .init();
+
     let cli = Cli::parse();
     let db_path = get_or_store_db_path(cli.db);
 
-    println!("Using database path: {}", db_path);
+    info!("Using database path: {}", db_path);
     let conn = match init_db(&db_path) {
         Ok(conn) => conn,
         Err(err) => {
-            eprintln!("Error initializing database: {}", err);
+            error!("Error initializing database: {}", err);
             std::process::exit(1);
         }
     };
@@ -46,8 +63,8 @@ fn main() {
             lines,
             cursorpos,
         ) {
-            Ok(_) => println!("Heartbeat logged successfully."),
-            Err(err) => eprintln!("Error logging heartbeat: {}", err),
+            Ok(_) => debug!("Heartbeat logged successfully."),
+            Err(err) => error!("Error logging heartbeat: {}", err),
         },
 
         Some(cli::Commands::Event {
@@ -72,19 +89,19 @@ fn main() {
             language,
             end_timestamp,
         ) {
-            Ok(_) => println!("Event logged successfully."),
-            Err(err) => eprintln!("Error logging event: {}", err),
+            Ok(_) => debug!("Event logged successfully."),
+            Err(err) => error!("Error logging event: {}", err),
         },
 
         Some(cli::Commands::Sync) => {
             if let Err(err) = sync::sync_data(&conn) {
-                eprintln!("Sync failed: {}", err);
+                error!("Sync failed: {}", err);
                 std::process::exit(1);
             }
         }
 
         None => {
-            println!("Database initialized at {}", db_path);
+            info!("Database initialized at {}", db_path);
         }
     }
 }

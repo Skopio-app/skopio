@@ -1,6 +1,7 @@
 use crate::models::{Event, Heartbeat};
 use crate::utils::extract_project_name;
 use chrono::{DateTime, TimeZone, Utc};
+use log::{debug, info};
 use reqwest::blocking::Client;
 use rusqlite::Connection;
 use std::path::Path;
@@ -68,7 +69,7 @@ pub fn sync_data(conn: &Connection) -> Result<(), Box<dyn std::error::Error>> {
         .collect();
 
     if heartbeats.is_empty() && events.is_empty() {
-        println!("No data to sync");
+        debug!("No data to sync");
         return Ok(());
     }
 
@@ -82,7 +83,7 @@ pub fn sync_data(conn: &Connection) -> Result<(), Box<dyn std::error::Error>> {
             Ok(response) if response.status().is_success() => {
                 conn.execute("UPDATE heartbeats SET synced = 1 WHERE synced = 0", [])
                     .unwrap();
-                println!("Heartbeats synced successfully!")
+                info!("Heartbeats synced successfully!")
             }
 
             Ok(response) => {
@@ -114,7 +115,7 @@ pub fn sync_data(conn: &Connection) -> Result<(), Box<dyn std::error::Error>> {
             Ok(response) if response.status().is_success() => {
                 conn.execute("UPDATE events SET synced = 1 WHERE synced = 0", [])
                     .unwrap();
-                println!("Events synced successfully!");
+                info!("Events synced successfully!");
             }
 
             Ok(response) => {
