@@ -3,7 +3,7 @@ use crate::db::init_db;
 use clap::Parser;
 use env_logger::Builder;
 use log::{debug, error, info, LevelFilter};
-use std::io::Write;
+use std::io::{stderr, stdout, Write};
 
 mod cli;
 mod db;
@@ -15,9 +15,17 @@ mod utils;
 
 fn main() {
     Builder::new()
-        .format(|buf, record| {
+        .format(|_buf, record| {
+            // Prevent normal logs from appearing as warnings in plugin
+            let mut target: Box<dyn Write> =
+                if record.level() == LevelFilter::Info || record.level() == LevelFilter::Debug {
+                    Box::new(stdout())
+                } else {
+                    Box::new(stderr())
+                };
+
             writeln!(
-                buf,
+                target,
                 "[{} {}:{}] {}",
                 record.level(),
                 record.file().unwrap_or("unknown"),
@@ -32,6 +40,7 @@ fn main() {
     let db_path = get_or_store_db_path(cli.db);
 
     info!("Using database path: {}", db_path);
+
     let conn = match init_db(&db_path) {
         Ok(conn) => conn,
         Err(err) => {
