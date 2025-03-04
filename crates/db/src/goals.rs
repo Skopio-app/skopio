@@ -1,6 +1,5 @@
 use crate::DBContext;
 use serde::{Deserialize, Serialize};
-use sqlx::SqlitePool;
 
 #[derive(Serialize, Deserialize, Debug, sqlx::FromRow)]
 pub struct Goal {

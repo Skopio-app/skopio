@@ -1,8 +1,8 @@
-use std::str::FromStr;
-use sqlx::{sqlite::SqlitePoolOptions, SqlitePool};
+use crate::utils::extract_db_file_path;
 use sqlx::migrate::Migrator;
 use sqlx::sqlite::SqliteConnectOptions;
-use crate::utils::extract_db_file_path;
+use sqlx::{sqlite::SqlitePoolOptions, SqlitePool};
+use std::str::FromStr;
 
 static MIGRATOR: Migrator = sqlx::migrate!("./migrations");
 
@@ -15,8 +15,7 @@ impl DBContext {
     /// Creates a new `DBContext` with an optional database URL.
     pub async fn new(database_url: &str) -> Result<Self, sqlx::Error> {
         if let Some(parent_dir) = extract_db_file_path(database_url).parent() {
-            std::fs::create_dir_all(parent_dir)
-                .expect("Failed to create database directory");
+            std::fs::create_dir_all(parent_dir).expect("Failed to create database directory");
         }
 
         let connection_options = SqliteConnectOptions::from_str(database_url)?

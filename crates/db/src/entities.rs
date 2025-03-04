@@ -11,14 +11,19 @@ pub struct Entity {
 
 impl Entity {
     /// Finds an entity by name under a specific project, or inserts it if it doesn't exist.
-    pub async fn find_or_insert(db_context: &DBContext, project_id: i64, name: &str, entity_type: &str) -> Result<i64, sqlx::Error> {
+    pub async fn find_or_insert(
+        db_context: &DBContext,
+        project_id: i64,
+        name: &str,
+        entity_type: &str,
+    ) -> Result<i64, sqlx::Error> {
         let record = sqlx::query!(
             "SELECT id FROM entities WHERE project_id = ? AND name = ?",
             project_id,
             name
         )
-            .fetch_optional(db_context.pool())
-            .await?;
+        .fetch_optional(db_context.pool())
+        .await?;
 
         if let Some(row) = record {
             return row.id.ok_or_else(|| sqlx::Error::RowNotFound);

@@ -1,42 +1,46 @@
 use crate::utils::find_git_branch;
+use log::info;
 use rusqlite::{params, Connection};
 use std::path::Path;
-use log::info;
+
+pub struct HeartbeatData {
+    pub timestamp: i32,
+    pub project: String,
+    pub entity: String,
+    pub entity_type: String,
+    pub language: String,
+    pub app: String,
+    pub is_write: bool,
+    pub lines: Option<i64>,
+    pub cursorpos: Option<i64>,
+}
 
 pub fn log_heartbeat(
     conn: &Connection,
-    timestamp: i32,
-    project: String,
-    entity: String,
-    entity_type: String,
-    language: String,
-    app: String,
-    is_write: bool,
-    lines: Option<i64>,
-    cursorpos: Option<i64>,
+    hb_data: HeartbeatData,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let file_path = Path::new(&entity);
+    let file_path = Path::new(&hb_data.entity);
     let branch_name = find_git_branch(file_path);
 
     conn.execute(
         "INSERT INTO heartbeats (timestamp, project_path, branch, entity_name, entity_type, language, app, is_write, lines, cursorpos, synced)
         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, 0)",
         params![
-            timestamp,
-            project,
+            hb_data.timestamp,
+            hb_data.project,
             branch_name,
-            entity,
-            entity_type,
-            language,
-            app,
-            is_write,
-            lines,
-            cursorpos,
+            hb_data.entity,
+            hb_data.entity_type,
+            hb_data.language,
+            hb_data.app,
+            hb_data.is_write,
+            hb_data.lines,
+            hb_data.cursorpos,
         ],
     )
     .map_err(|e| format!("Failed to insert heartbeat: {}", e))?;
 
-    info!("Heartbeat logged for {}", entity);
+    info!("Heartbeat logged for {}", hb_data.entity);
 
     Ok(())
 }

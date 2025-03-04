@@ -1,5 +1,7 @@
 use crate::cli::{get_or_store_db_path, Cli};
 use crate::db::init_db;
+use crate::event::EventData;
+use crate::heartbeat::HeartbeatData;
 use clap::Parser;
 use env_logger::Builder;
 use log::{debug, error, info, LevelFilter};
@@ -60,21 +62,24 @@ fn main() {
             lines,
             cursorpos,
             is_write,
-        }) => match heartbeat::log_heartbeat(
-            &conn,
-            timestamp,
-            project,
-            entity,
-            entity_type,
-            language,
-            app,
-            is_write,
-            lines,
-            cursorpos,
-        ) {
-            Ok(_) => debug!("Heartbeat logged successfully."),
-            Err(err) => error!("Error logging heartbeat: {}", err),
-        },
+        }) => {
+            let hb_data = HeartbeatData {
+                timestamp,
+                project,
+                entity,
+                entity_type,
+                language,
+                app,
+                lines,
+                cursorpos,
+                is_write,
+            };
+
+            match heartbeat::log_heartbeat(&conn, hb_data) {
+                Ok(_) => debug!("Heartbeat logged successfully."),
+                Err(err) => error!("Error logging heartbeat: {}", err),
+            }
+        }
 
         Some(cli::Commands::Event {
             timestamp,
@@ -86,21 +91,24 @@ fn main() {
             project,
             language,
             end_timestamp,
-        }) => match event::log_event(
-            &conn,
-            timestamp,
-            activity_type,
-            app,
-            entity,
-            entity_type,
-            duration,
-            project,
-            language,
-            end_timestamp,
-        ) {
-            Ok(_) => debug!("Event logged successfully."),
-            Err(err) => error!("Error logging event: {}", err),
-        },
+        }) => {
+            let event_data = EventData {
+                timestamp,
+                activity_type,
+                app,
+                entity,
+                entity_type,
+                duration,
+                project,
+                language,
+                end_timestamp,
+            };
+
+            match event::log_event(&conn, event_data) {
+                Ok(_) => debug!("Event logged successfully."),
+                Err(err) => error!("Error logging event: {}", err),
+            }
+        }
 
         Some(cli::Commands::Sync) => {
             if let Err(err) = sync::sync_data(&conn) {

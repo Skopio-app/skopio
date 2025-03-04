@@ -9,7 +9,11 @@ pub struct Project {
 }
 
 impl Project {
-    pub async fn find_or_insert(db_context: &DBContext, name: &str, root_path: &str) -> Result<i64, sqlx::Error> {
+    pub async fn find_or_insert(
+        db_context: &DBContext,
+        name: &str,
+        root_path: &str,
+    ) -> Result<i64, sqlx::Error> {
         let record = sqlx::query!("SELECT id FROM projects WHERE name = ?", name)
             .fetch_optional(db_context.pool())
             .await?;

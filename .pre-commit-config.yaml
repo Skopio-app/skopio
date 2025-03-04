@@ -1,0 +1,38 @@
+repos:
+  # Typescript format
+  - repo: local
+    hooks:
+      - id: prettier
+        name: Prettier Formatter
+        entry: npx prettier --write
+        language: node
+        types_or: [javascript, jsx, tsx, ts, css, json, markdown, yaml, html]
+
+  # Rust format
+  - repo: local
+    hooks:
+      - id: rustfmt
+        name: Rust Formatter
+        description: Format rust files within workspace
+        entry: cargo fmt --all
+        language: system
+        pass_filenames: false
+
+  # Rust linting (Clippy)
+  - repo: local
+    hooks:
+      - id: clippy
+        name: Rust Linter (Clippy)
+        description: Check for warnings and best practices
+        entry: cargo clippy -- -D warnings
+        language: system
+        pass_filenames: false
+
+  # Typescript & JavaScript Linting
+  - repo: local
+    hooks:
+      - id: eslint
+        name: ESLint
+        entry: npx eslint . --config apps/desktop/eslint.config.js
+        language: node
+        types_or: [javascript, jsx, tsx, ts]
