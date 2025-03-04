@@ -41,21 +41,21 @@ async fn handle_heartbeats(
     info!("Handling {} heartbeats from plugin CLI", payload.len());
 
     for hb in payload {
-        let app_id = App::find_or_insert(&*db, &hb.app_name)
+        let app_id = App::find_or_insert(&db, &hb.app_name)
             .await
             .map_err(error_response)?;
-        let project_id = Project::find_or_insert(&*db, &hb.project_name, &hb.project_path)
+        let project_id = Project::find_or_insert(&db, &hb.project_name, &hb.project_path)
             .await
             .map_err(error_response)?;
-        let branch_id = Branch::find_or_insert(&*db, project_id, &hb.branch_name)
+        let branch_id = Branch::find_or_insert(&db, project_id, &hb.branch_name)
             .await
             .map_err(error_response)?;
-        let entity_id = Entity::find_or_insert(&*db, project_id, &hb.entity_name, &hb.entity_type)
+        let entity_id = Entity::find_or_insert(&db, project_id, &hb.entity_name, &hb.entity_type)
             .await
             .map_err(error_response)?;
         let language_id = if let Some(lang) = &hb.language_name {
             Some(
-                Language::find_or_insert(&*db, lang)
+                Language::find_or_insert(&db, lang)
                     .await
                     .map_err(error_response)?,
             )
@@ -76,7 +76,7 @@ async fn handle_heartbeats(
             cursorpos: hb.cursorpos,
         };
 
-        heartbeat.create(&*db).await.map_err(error_response)?;
+        heartbeat.create(&db).await.map_err(error_response)?;
     }
 
     info!("Heartbeat details stored successfully");

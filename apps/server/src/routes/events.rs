@@ -42,20 +42,20 @@ async fn handle_events(
     info!("Handling {} events from plugin CLI", payload.len());
 
     for event in payload {
-        let app_id = App::find_or_insert(&*db, &event.app_name)
+        let app_id = App::find_or_insert(&db, &event.app_name)
             .await
             .map_err(error_response)?;
-        let project_id = Project::find_or_insert(&*db, &event.project_name, &event.project_path)
+        let project_id = Project::find_or_insert(&db, &event.project_name, &event.project_path)
             .await
             .map_err(error_response)?;
-        let branch_id = Branch::find_or_insert(&*db, project_id, &event.branch_name)
+        let branch_id = Branch::find_or_insert(&db, project_id, &event.branch_name)
             .await
             .map_err(error_response)?;
         let entity_id =
-            Entity::find_or_insert(&*db, project_id, &event.entity_name, &event.entity_type)
+            Entity::find_or_insert(&db, project_id, &event.entity_name, &event.entity_type)
                 .await
                 .map_err(error_response)?;
-        let language_id = Language::find_or_insert(&*db, &event.language_name)
+        let language_id = Language::find_or_insert(&db, &event.language_name)
             .await
             .map_err(error_response)?;
 
@@ -72,7 +72,7 @@ async fn handle_events(
             end_timestamp: to_naive_datetime(event.end_timestamp),
         };
 
-        event.create(&*db).await.map_err(error_response)?;
+        event.create(&db).await.map_err(error_response)?;
     }
 
     info!("Event details stored successfully");

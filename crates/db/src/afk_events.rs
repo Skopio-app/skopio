@@ -1,7 +1,6 @@
 use crate::DBContext;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use sqlx::SqlitePool;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct AfkEvent {
