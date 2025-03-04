@@ -1,9 +1,12 @@
 [package]
 name = "db"
 version = "0.1.0"
-edition = "2021"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
 
 [dependencies]
-chrono = { version = "0.4.39", features = ["serde"] }
-serde = { version = "1.0.217", features = ["derive"] }
+chrono = { workspace = true, features = ["serde"] }
+serde = { workspace = true, features = ["derive"] }
 sqlx = { version = "0.8", features = ["sqlite", "runtime-tokio-native-tls", "chrono"] }

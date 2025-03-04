@@ -1,17 +1,20 @@
 [package]
 name = "cli"
 version = "0.1.0"
-edition = "2021"
+edition.workspace = true
+authors.workspace = true
+repository.workspace = true
+rust-version.workspace = true
 
 [dependencies]
-chrono = { version = "0.4.39", features = ["serde"] }
+chrono = { workspace = true, features = ["serde"] }
 clap = { version = "4.5.29", features = ["derive"] }
-git2 = "0.20.0"
-reqwest = { version = "0.12.12", features = ["blocking", "json"] }
-rusqlite = { version = "0.32.0", features = ["bundled"] }
-serde = { version = "1.0.217", features = ["derive"] }
-dirs = "6.0.0"
-serde_json = "1.0.138"
-log = "0.4.26"
-env_logger = "0.11.6"
+git2 = {workspace = true}
+reqwest = { workspace = true, features = ["blocking", "json"] }
+rusqlite = { version = "0.32.0", features = ["bundled"] } # Update blocked by sqlx
+serde = { workspace = true, features = ["derive"] }
+dirs = {workspace = true}
+serde_json = {workspace = true}
+log = {workspace = true}
+env_logger = {workspace = true}
 
