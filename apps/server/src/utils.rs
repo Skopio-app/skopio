@@ -7,7 +7,7 @@ use tracing::error;
 
 pub fn get_application_support_path() -> PathBuf {
     let base_dir = data_dir().unwrap_or_else(|| PathBuf::from("."));
-    base_dir.join("Timestack").join("timestack.db")
+    base_dir.join("Skopio").join("skopio.db")
 }
 
 pub fn error_response<E: std::fmt::Display>(err: E) -> (StatusCode, Json<String>) {

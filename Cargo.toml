@@ -9,9 +9,9 @@ resolver = "2"
 
 [workspace.package]
 edition = "2021"
-license = ""
+license = "MIT"
 authors = ["Samuel Wahome <hey@samwahome.com>"]
-repository = "https://github.com/Samuel-dot-cloud/timestack"
+repository = "https://github.com/Samuel-dot-cloud/skopio"
 rust-version = "1.80.0"
 
 [workspace.dependencies]

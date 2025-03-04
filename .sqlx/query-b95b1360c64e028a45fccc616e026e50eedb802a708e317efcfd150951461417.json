@@ -1,0 +1,18 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT id FROM languages WHERE name = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [true]
+  },
+  "hash": "b95b1360c64e028a45fccc616e026e50eedb802a708e317efcfd150951461417"
+}

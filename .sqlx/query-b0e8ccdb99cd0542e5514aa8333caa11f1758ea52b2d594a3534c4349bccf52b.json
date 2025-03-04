@@ -1,0 +1,18 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT id FROM entities WHERE project_id = ? AND name = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": [true]
+  },
+  "hash": "b0e8ccdb99cd0542e5514aa8333caa11f1758ea52b2d594a3534c4349bccf52b"
+}

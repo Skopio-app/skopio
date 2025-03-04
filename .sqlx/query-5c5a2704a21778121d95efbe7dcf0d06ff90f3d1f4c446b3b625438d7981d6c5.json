@@ -1,0 +1,18 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT id FROM branches WHERE project_id = ? AND name = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": [false]
+  },
+  "hash": "5c5a2704a21778121d95efbe7dcf0d06ff90f3d1f4c446b3b625438d7981d6c5"
+}

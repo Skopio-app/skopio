@@ -1,0 +1,18 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT id FROM apps WHERE name = ?",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [true]
+  },
+  "hash": "11944a8c133e25fceb13af3133c20eb54059377fc7cd74dd82aa4cadda1339fa"
+}
