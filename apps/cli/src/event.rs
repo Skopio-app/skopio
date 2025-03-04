@@ -1,7 +1,7 @@
 use crate::utils::find_git_branch;
+use log::info;
 use rusqlite::{params, Connection};
 use std::path::Path;
-use log::info;
 
 pub fn log_event(
     conn: &Connection,

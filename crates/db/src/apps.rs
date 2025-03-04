@@ -18,10 +18,7 @@ impl App {
             return row.id.ok_or_else(|| sqlx::Error::RowNotFound);
         }
 
-        let result = sqlx::query!(
-            "INSERT INTO apps (name) VALUES (?) RETURNING id",
-            name
-        )
+        let result = sqlx::query!("INSERT INTO apps (name) VALUES (?) RETURNING id", name)
             .fetch_one(db_context.pool())
             .await?;
 
