@@ -5,9 +5,9 @@ use std::path::Path;
 
 #[derive(Parser)]
 #[command(
-    name = "timestack-cli",
+    name = "skopio-cli",
     version = "1.0",
-    about = "Timestack editor plugin CLI helper app"
+    about = "Skopio editor plugin CLI helper app"
 )]
 pub struct Cli {
     #[command(subcommand)]
@@ -91,7 +91,7 @@ struct Config {
 
 fn get_config_path() -> String {
     let home_dir = dirs::home_dir().expect("Failed to get home directory");
-    format!("{}/.timestack/config.json", home_dir.display())
+    format!("{}/.skopio/config.json", home_dir.display())
 }
 
 pub fn get_or_store_db_path(cli_db: Option<String>) -> String {
@@ -117,5 +117,5 @@ pub fn get_or_store_db_path(cli_db: Option<String>) -> String {
         }
     }
 
-    "timestack-cli-data.db".to_string()
+    "skopio-cli-data.db".to_string()
 }

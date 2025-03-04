@@ -1,0 +1,18 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO branches (project_id, name) VALUES (?, ?) RETURNING id",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": [true]
+  },
+  "hash": "cdb3504ade162c5fea82367db8991bac2dc1829497163b83be49a36dbbb156c2"
+}

@@ -1,0 +1,18 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO apps (name) VALUES (?) RETURNING id",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [false]
+  },
+  "hash": "6bf04bae2a7c3b78a9c5916e54521b1609505d34dad40dfb8caf5b83d8b23899"
+}

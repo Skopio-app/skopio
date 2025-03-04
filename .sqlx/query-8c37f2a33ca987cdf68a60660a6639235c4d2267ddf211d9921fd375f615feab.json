@@ -1,0 +1,18 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT INTO projects (name, root_path) VALUES (?, ?) RETURNING id",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": [false]
+  },
+  "hash": "8c37f2a33ca987cdf68a60660a6639235c4d2267ddf211d9921fd375f615feab"
+}

@@ -1,8 +1,8 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "Timestack",
+  "productName": "Skopio",
   "version": "0.1.0",
-  "identifier": "com.samwahome.timestack",
+  "identifier": "com.samwahome.skopio",
   "build": {
     "frontendDist": "../dist",
     "devUrl": "http://localhost:5173",
@@ -12,7 +12,7 @@
   "app": {
     "windows": [
       {
-        "title": "Timestack",
+        "title": "Skopio",
         "width": 800,
         "height": 600,
         "resizable": true,
