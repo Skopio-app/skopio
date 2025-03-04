@@ -16,7 +16,6 @@ async fn main() {
 
     fmt()
         .with_env_filter(filter)
-        .with_target(true)
         .with_file(true)
         .with_line_number(true)
         .with_timer(fmt::time::ChronoLocal::rfc_3339())

@@ -16,7 +16,7 @@ mod utils;
 fn main() {
     Builder::new()
         .format(|_buf, record| {
-            // Prevent normal logs from appearing as warnings in plugin
+            // Prevent normal logs from appearing as warnings in plugin debug console
             let mut target: Box<dyn Write> =
                 if record.level() == LevelFilter::Info || record.level() == LevelFilter::Debug {
                     Box::new(stdout())
