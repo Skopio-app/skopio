@@ -29,8 +29,9 @@ CREATE TABLE IF NOT EXISTS entities
 (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     project_id INTEGER NOT NULL,
-    name TEXT NOT NULL UNIQUE,
+    name TEXT NOT NULL,
     type TEXT,
+    UNIQUE (project_id, name),
     FOREIGN KEY (project_id) REFERENCES projects (id) ON DELETE CASCADE
 );
 
