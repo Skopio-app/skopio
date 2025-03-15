@@ -2,7 +2,7 @@ use core_foundation::runloop::{kCFRunLoopCommonModes, CFRunLoop};
 use core_graphics::event::{
     CGEventTap, CGEventTapLocation, CGEventTapOptions, CGEventTapPlacement, CGEventType,
 };
-use log::{debug, info};
+use log::error;
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Instant;
@@ -37,7 +37,7 @@ impl KeyboardTracker {
                 |_proxy, event_type, event| {
                     let key_event = event.clone();
                     let now = Instant::now();
-                    let last_keypress = self.last_keypress.clone();
+                    let last_keypress = Arc::clone(&self.last_keypress);
 
                     *last_keypress.lock().unwrap() = now;
 
@@ -57,24 +57,23 @@ impl KeyboardTracker {
                         }
                         _ => {}
                     }
-
-                    debug!("Key Event: {:?}, Pressed Keys: {:?}", event_type, *keys);
-
                     None
                 },
             ) {
                 Ok(tap) => unsafe {
-                    let loop_source = tap
-                        .mach_port
-                        .create_runloop_source(0)
-                        .expect("Failed to create runloop source");
+                    let loop_source = match tap.mach_port.create_runloop_source(0) {
+                        Ok(source) => source,
+                        Err(_) => {
+                            error!("Failed to create runloop source!");
+                            return;
+                        }
+                    };
                     current.add_source(&loop_source, kCFRunLoopCommonModes);
                     tap.enable();
-                    info!("Keyboard tracking started...");
                     CFRunLoop::run_current();
                 },
                 Err(_) => {
-                    panic!("Failed to create keyboard event tap");
+                    error!("Failed to create keyboard event tap!");
                 }
             }
         });

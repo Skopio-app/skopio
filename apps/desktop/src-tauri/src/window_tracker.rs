@@ -1,5 +1,6 @@
 use cocoa::base::nil;
 use cocoa::foundation::NSAutoreleasePool;
+use log::{error, warn};
 use objc2::rc::Retained;
 use objc2::runtime::{AnyClass, AnyObject};
 use objc2::{msg_send, sel};
@@ -30,50 +31,38 @@ impl WindowTracker {
     pub fn start_tracking(self: Arc<Self>, event_callback: Arc<dyn Fn(Window) + Send + Sync>) {
         let active_window = Arc::clone(&self.active_window);
 
-        thread::spawn(move || {
-            // let mut last_window: Option<Window> = None;
+        thread::spawn(move || loop {
+            thread::sleep(Duration::from_millis(500));
 
-            loop {
-                thread::sleep(Duration::from_millis(500)); // Poll every 2 seconds
+            let new_window = WindowTracker::get_active_window();
+            if let Some(new_window) = new_window {
+                let mut active_window_lock = active_window.lock().unwrap();
 
-                let new_window = WindowTracker::get_active_window();
-                if let Some(new_window) = new_window {
-                    let mut active_window_lock = active_window.lock().unwrap();
-
-                    if *active_window_lock != Some(new_window.clone()) {
-                        *active_window_lock = Some(new_window.clone());
-                        event_callback(new_window); // Trigger callback on window change
-                    }
+                if *active_window_lock != Some(new_window.clone()) {
+                    *active_window_lock = Some(new_window.clone());
+                    event_callback(new_window);
                 }
             }
         });
     }
 
     pub fn get_active_window() -> Option<Window> {
-        log::info!("Entering get_active_window...");
-
-        let result = panic::catch_unwind(|| unsafe {
+        unsafe {
             let pool = NSAutoreleasePool::new(nil);
-
-            log::info!("Getting NSWorkspace...");
             let class_name = c"NSWorkspace";
             let workspace_class = AnyClass::get(class_name);
             if workspace_class.is_none() {
-                log::error!("Failed to get NSWorkspace class.");
+                error!("Failed to get NSWorkspace class.");
                 return None;
             }
             let workspace: Retained<AnyObject> =
                 msg_send![workspace_class.unwrap(), sharedWorkspace];
 
-            log::info!("Getting frontmost application...");
             let front_app: Option<&AnyObject> = msg_send![&*workspace, frontmostApplication];
-
             if front_app.is_none() {
-                log::warn!("No active application found.");
+                warn!("No active application found.");
                 return None;
             }
-
-            log::info!("Getting localized app name...");
             let app_name: Option<String> = front_app.and_then(|app| {
                 let app_name: Option<&AnyObject> = msg_send![app, localizedName];
                 app_name.map(|app_name| {
@@ -82,7 +71,6 @@ impl WindowTracker {
                 })
             });
 
-            log::info!("Getting bundle ID...");
             let bundle_id: Option<String> = {
                 let bundle_id: Option<&AnyObject> =
                     front_app.map(|app| msg_send![app, bundleIdentifier]);
@@ -97,9 +85,6 @@ impl WindowTracker {
             let app_name_str = app_name.unwrap_or_else(|| "unknown".to_string());
             let bundle_id_str = bundle_id.unwrap_or_else(|| "unknown".to_string());
 
-            log::info!("App name: {}", app_name_str);
-            log::info!("Bundle ID: {}", bundle_id_str);
-
             let mut window_title_str = Self::get_window_title();
             let mut active_process = "unknown".to_string();
 
@@ -112,8 +97,6 @@ impl WindowTracker {
             {
                 window_title_str = Self::get_browser_active_tab(&bundle_id_str);
             }
-
-            log::info!("Finalizing active window details...");
             pool.drain();
 
             Some(Window {
@@ -122,42 +105,24 @@ impl WindowTracker {
                 bundle_id: bundle_id_str,
                 active_process,
             })
-        });
-
-        match result {
-            Ok(value) => {
-                log::info!("Active window retrieved: {:?}", value);
-                value
-            }
-            Err(_) => {
-                log::error!("Failed to get active window (macOS API exception)");
-                None
-            }
         }
     }
 
     fn get_window_title() -> String {
-        log::info!("Getting window title...");
-
-        let result = panic::catch_unwind(|| unsafe {
+        unsafe {
             let pool = NSAutoreleasePool::new(nil);
-
-            log::info!("Getting current application...");
             let class_name = c"NSRunningApplication";
             let window_info_class = AnyClass::get(class_name);
             if window_info_class.is_none() {
-                log::error!("Failed to get NSRunningApplication class.");
+                error!("Failed to get NSRunningApplication class.");
                 return "unknown".to_string();
             }
-
             let active_app: Option<Retained<AnyObject>> =
                 msg_send![window_info_class.unwrap(), currentApplication];
             if active_app.is_none() {
-                log::warn!("No active application found.");
+                warn!("No active application found.");
                 return "unknown".to_string();
             }
-
-            log::info!("Fetching window title using `performSelector`...");
             let selector = sel!(localizedName);
             let window_title: Option<&AnyObject> = active_app
                 .as_ref()
@@ -166,20 +131,13 @@ impl WindowTracker {
             if let Some(window_title) = window_title {
                 let s: *const i8 = msg_send![window_title, UTF8String];
                 let title_str = std::ffi::CStr::from_ptr(s).to_string_lossy().into_owned();
-                log::info!("Window title: {}", title_str);
                 pool.drain();
                 return title_str;
             }
 
-            log::warn!("Window title is nil.");
             pool.drain();
             "unknown".to_string()
-        });
-
-        result.unwrap_or_else(|_| {
-            log::error!("Failed to get window title (macOS API exception)");
-            "unknown".to_string()
-        })
+        }
     }
 
     pub fn get_terminal_directory() -> String {
@@ -197,39 +155,7 @@ impl WindowTracker {
         end tell
         "#;
 
-        let output = Self::run_osascript(script);
-
-        if output == "unknown" || output.is_empty() {
-            // Fallback: Use `lsof` to get the working directory of the frontmost Terminal process
-            let pid_output = Command::new("pgrep")
-                .arg("-n")
-                .arg("Terminal")
-                .output()
-                .ok()
-                .map(|out| String::from_utf8_lossy(&out.stdout).trim().to_string());
-
-            if let Some(pid) = pid_output {
-                let lsof_output = Command::new("lsof")
-                    .arg("-a")
-                    .arg("-p")
-                    .arg(&pid)
-                    .arg("-d")
-                    .arg("cwd")
-                    .arg("-Fn")
-                    .output()
-                    .ok()
-                    .map(|out| {
-                        out.stdout
-                            .split(|&b| b == b'\n')
-                            .find(|line| line.starts_with(b"n"))
-                            .map(|line| String::from_utf8_lossy(&line[1..]).trim().to_string())
-                    });
-
-                return lsof_output.flatten().unwrap_or("unknown".to_string());
-            }
-        }
-
-        output
+        Self::run_osascript(script)
     }
 
     pub fn get_terminal_process() -> String {
@@ -298,11 +224,10 @@ impl WindowTracker {
 
         let output = Self::run_osascript(script);
         if output == "No active tab" || output.is_empty() {
-            log::warn!("No active tab detected for {}", bundle_id);
+            warn!("No active tab detected for {}", bundle_id);
             return "unknown".to_string();
         }
 
-        log::info!("Active tab URL detected: {}", output);
         output
     }
 
@@ -319,7 +244,7 @@ impl WindowTracker {
         });
 
         result.unwrap_or_else(|_| {
-            log::error!("Failed to execute AppleScript: {}", script);
+            error!("Failed to execute AppleScript: {}", script);
             "unknown".to_string()
         })
     }

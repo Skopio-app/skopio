@@ -27,7 +27,6 @@ pub fn run() {
                 )?;
             }
 
-            // Initialize tracking components
             let window_tracker = Arc::new(WindowTracker::new());
             let cursor_tracker = Arc::new(CursorTracker::new());
             let keyboard_tracker = Arc::new(KeyboardTracker::new());
@@ -39,7 +38,6 @@ pub fn run() {
             let event_tracker = Arc::new(EventTracker::new(
                 Arc::clone(&cursor_tracker),
                 Arc::clone(&heartbeat_tracker),
-                Arc::clone(&afk_tracker),
             ));
 
             tauri::async_runtime::spawn({

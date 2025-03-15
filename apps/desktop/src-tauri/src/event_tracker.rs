@@ -1,4 +1,3 @@
-use crate::afk_tracker::AFKTracker;
 use crate::cursor_tracker::CursorTracker;
 use crate::heartbeat_tracker::{get_git_branch, get_xcode_project_details, HeartbeatTracker};
 use crate::window_tracker::WindowTracker;
@@ -31,20 +30,17 @@ pub struct EventTracker {
     active_event: Arc<Mutex<Option<Event>>>,
     cursor_tracker: Arc<CursorTracker>,
     heartbeat_tracker: Arc<HeartbeatTracker>,
-    afk_tracker: Arc<AFKTracker>,
 }
 
 impl EventTracker {
     pub fn new(
         cursor_tracker: Arc<CursorTracker>,
         heartbeat_tracker: Arc<HeartbeatTracker>,
-        afk_tracker: Arc<AFKTracker>,
     ) -> Self {
         Self {
             active_event: Arc::new(Mutex::new(None)),
             cursor_tracker,
             heartbeat_tracker,
-            afk_tracker,
         }
     }
 
@@ -79,9 +75,6 @@ impl EventTracker {
                     prev_event.activity_type,
                     duration
                 );
-
-                // Reset AFK tracking when an event ends
-                self.afk_tracker.report_activity();
             }
         }
 
@@ -101,8 +94,6 @@ impl EventTracker {
         });
 
         info!("New event logged: {:?}", active);
-
-        // ✅ Trigger a heartbeat when an event occurs
         let cursor_position = self.cursor_tracker.get_global_cursor_position();
         let (cursor_x, cursor_y) = cursor_position;
         self.heartbeat_tracker

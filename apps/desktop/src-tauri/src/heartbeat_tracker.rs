@@ -1,7 +1,7 @@
 use crate::cursor_tracker::CursorTracker;
 use crate::window_tracker::{Window, WindowTracker};
 use chrono::{DateTime, Utc};
-use log::info;
+use log::{info, warn};
 use serde::{Deserialize, Serialize};
 use std::fs;
 use std::process::Command;
@@ -103,7 +103,7 @@ impl HeartbeatTracker {
                 }
             }
 
-            info!("Dynamic heartbeat logged: {:?}", heartbeat);
+            info!("Heartbeat logged: {:?}", heartbeat);
             *last = Some(heartbeat);
         }
     }
@@ -114,22 +114,19 @@ impl HeartbeatTracker {
         window_tracker: Arc<WindowTracker>,
     ) {
         let heartbeat_tracker = Arc::clone(&self);
-
-        // Clone cursor_tracker before using it in the first closure
-        let cursor_tracker_clone1 = Arc::clone(&cursor_tracker);
-        cursor_tracker_clone1.start_tracking({
+        let cursor_tracker_1 = Arc::clone(&cursor_tracker);
+        cursor_tracker_1.start_tracking({
             let heartbeat_tracker = Arc::clone(&heartbeat_tracker);
             move |app_name, file, x, y| {
                 heartbeat_tracker.track_heartbeat(app_name, file, x, y, false);
             }
         });
 
-        // Clone cursor_tracker again before using it in the second closure
-        let cursor_tracker_clone2 = Arc::clone(&cursor_tracker);
+        let cursor_tracker_2 = Arc::clone(&cursor_tracker);
         window_tracker.start_tracking(Arc::new({
             let heartbeat_tracker = Arc::clone(&heartbeat_tracker);
             move |window: Window| {
-                let cursor_position = cursor_tracker_clone2.get_global_cursor_position();
+                let cursor_position = cursor_tracker_2.get_global_cursor_position();
                 heartbeat_tracker.track_heartbeat(
                     &window.app_name,
                     &window.title,
@@ -139,13 +136,11 @@ impl HeartbeatTracker {
                 );
             }
         }) as Arc<dyn Fn(Window) + Send + Sync>);
-
-        info!("Heartbeat tracking started with event-driven approach.");
     }
 }
 
 pub fn get_git_branch(project: &str) -> String {
-    let output = std::process::Command::new("git")
+    let output = Command::new("git")
         .arg("-C")
         .arg(project)
         .arg("rev-parse")
@@ -198,7 +193,7 @@ pub fn get_xcode_project_details() -> (Option<String>, Option<String>, String, O
         Some(path) if path.starts_with("file://") => path.trim_start_matches("file://").to_string(),
         Some(path) if path != "No active document" => path.to_string(),
         _ => {
-            log::warn!("No active document detected in Xcode.");
+            warn!("No active document detected in Xcode.");
             "".to_string()
         }
     };
@@ -213,6 +208,7 @@ pub fn get_xcode_project_details() -> (Option<String>, Option<String>, String, O
     (project_name, project_path, entity_name, language_name)
 }
 
+// TODO: Find a better and more accurate means of detecting languages
 fn detect_language(file_path: &str) -> Option<String> {
     if file_path.ends_with(".swift") {
         Some("Swift".to_string())

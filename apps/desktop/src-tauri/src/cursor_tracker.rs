@@ -1,13 +1,12 @@
 use crate::window_tracker::WindowTracker;
-use chrono::Utc;
 use core_foundation::runloop::{kCFRunLoopCommonModes, CFRunLoop};
 use core_graphics::event::{
     CGEventTap, CGEventTapLocation, CGEventTapOptions, CGEventTapPlacement, CGEventType,
 };
-use log::{debug, info};
+use log::error;
 use std::sync::{Arc, Mutex};
+use std::thread;
 use std::time::Instant;
-use std::{panic, thread};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct MouseButtons {
@@ -66,7 +65,6 @@ impl CursorTracker {
                     let mut buttons = pressed_buttons.lock().unwrap();
 
                     match event_type {
-                        // Detects cursor movement**
                         CGEventType::MouseMoved => {
                             let position = event.location();
                             let dx = (position.x - last_pos.0).abs();
@@ -74,13 +72,6 @@ impl CursorTracker {
                             if dx > 0.5 || dy > 0.5 {
                                 *last_pos = (position.x, position.y);
                                 *last_move_time = Instant::now();
-
-                                debug!(
-                                    "Cursor Moved: x={}, y={} at {:?}",
-                                    position.x,
-                                    position.y,
-                                    Utc::now()
-                                );
 
                                 if let Some(window) = WindowTracker::get_active_window() {
                                     let app_name = window.app_name;
@@ -117,18 +108,20 @@ impl CursorTracker {
                 },
             ) {
                 Ok(tap) => unsafe {
-                    let loop_source = tap
-                        .mach_port
-                        .create_runloop_source(0)
-                        .expect("Failed to create runloop source");
+                    let loop_source = match tap.mach_port.create_runloop_source(0) {
+                        Ok(source) => source,
+                        Err(_) => {
+                            error!("Failed to create runloop source!");
+                            return;
+                        }
+                    };
                     let current = CFRunLoop::get_current();
                     current.add_source(&loop_source, kCFRunLoopCommonModes);
                     tap.enable();
-                    info!("Cursor tracking started...");
                     CFRunLoop::run_current();
                 },
                 Err(_) => {
-                    panic!("Failed to create cursor event tap");
+                    error!("Failed to create cursor event tap!");
                 }
             }
         });

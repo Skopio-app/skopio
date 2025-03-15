@@ -28,20 +28,6 @@ impl AFKTracker {
         }
     }
 
-    /// Other trackers call this to reset the AFK timer
-    pub fn report_activity(&self) {
-        let now = Utc::now();
-        *self.last_activity.write().unwrap() = now;
-
-        // If user was AFK, log the return event
-        let mut afk_time = self.afk_start.lock().unwrap();
-        if afk_time.is_some() {
-            let duration = (now - afk_time.unwrap()).num_seconds();
-            info!("User returned at: {} (AFK Duration: {}s)", now, duration);
-            *afk_time = None;
-        }
-    }
-
     pub fn start_tracking(self: Arc<Self>) {
         let last_activity = Arc::clone(&self.last_activity);
         let afk_start = Arc::clone(&self.afk_start);
@@ -74,11 +60,6 @@ impl AFKTracker {
                 let keyboard_active = !keys_pressed.is_empty();
 
                 let activity_detected = mouse_active || mouse_clicked || keyboard_active;
-
-                info!(
-                    "Activity Check - Mouse: {:?}, Clicked: {}, Keys Pressed: {:?}",
-                    cursor_position, mouse_clicked, keys_pressed
-                );
 
                 if activity_detected {
                     *last_activity.write().unwrap() = now;
