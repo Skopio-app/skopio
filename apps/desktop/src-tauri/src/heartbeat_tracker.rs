@@ -1,4 +1,5 @@
 use crate::cursor_tracker::CursorTracker;
+use crate::monitored_app::MonitoredApp;
 use crate::window_tracker::{Window, WindowTracker};
 use chrono::{DateTime, Utc};
 use log::{info, warn};
@@ -47,9 +48,14 @@ impl HeartbeatTracker {
         let (project_name, project_path, file_path, language_name) = match app {
             "Xcode" => get_xcode_project_details(),
             "Terminal" => (None, None, WindowTracker::get_terminal_directory(), None),
-            "Safari" | "Google Chrome" | "Firefox" => {
-                (None, None, WindowTracker::get_browser_active_tab(app), None)
-            }
+            "Safari" | "Google Chrome" | "Firefox" => (
+                None,
+                None,
+                WindowTracker::get_browser_active_tab(
+                    &app.parse::<MonitoredApp>().unwrap_or(MonitoredApp::Unknown),
+                ),
+                None,
+            ),
             _ => (None, None, file.to_string(), None),
         };
 

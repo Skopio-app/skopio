@@ -1,5 +1,6 @@
 use crate::cursor_tracker::CursorTracker;
 use crate::heartbeat_tracker::{get_git_branch, get_xcode_project_details, HeartbeatTracker};
+use crate::monitored_app::MonitoredApp;
 use crate::window_tracker::WindowTracker;
 use chrono::{DateTime, Utc};
 use log::info;
@@ -49,9 +50,14 @@ impl EventTracker {
         let (project_name, project_path, entity_name, language_name) = match app {
             "Xcode" => get_xcode_project_details(),
             "Terminal" => (None, None, WindowTracker::get_terminal_directory(), None),
-            "Safari" | "Google Chrome" | "Firefox" => {
-                (None, None, WindowTracker::get_browser_active_tab(app), None)
-            }
+            "Safari" | "Google Chrome" | "Firefox" => (
+                None,
+                None,
+                WindowTracker::get_browser_active_tab(
+                    &app.parse::<MonitoredApp>().unwrap_or(MonitoredApp::Unknown),
+                ),
+                None,
+            ),
             _ => (None, None, file.to_string(), None),
         };
 
@@ -154,7 +160,6 @@ pub fn is_compiling_xcode() -> bool {
     }
 }
 
-/// Detects if Xcode is debugging (i.e., running the app)
 pub fn is_debugging_xcode() -> bool {
     let output = Command::new("osascript")
         .arg("-e")
@@ -169,7 +174,6 @@ pub fn is_debugging_xcode() -> bool {
     }
 }
 
-/// Detects if the user is actively typing/editing in Xcode
 pub fn is_editing_xcode() -> bool {
     let output = Command::new("osascript")
         .arg("-e")

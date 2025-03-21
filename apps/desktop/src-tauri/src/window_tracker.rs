@@ -9,6 +9,8 @@ use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use std::{panic, thread};
 
+use crate::monitored_app::MonitoredApp;
+
 #[derive(Clone, PartialEq, Debug)]
 pub struct Window {
     pub app_name: String,
@@ -95,7 +97,11 @@ impl WindowTracker {
                 || app_name_str.contains("Safari")
                 || app_name_str.contains("Firefox")
             {
-                window_title_str = Self::get_browser_active_tab(&bundle_id_str);
+                window_title_str = Self::get_browser_active_tab(
+                    &bundle_id_str
+                        .parse::<MonitoredApp>()
+                        .unwrap_or(MonitoredApp::Unknown),
+                );
             }
             pool.drain();
 
@@ -179,9 +185,9 @@ impl WindowTracker {
         }
     }
 
-    pub fn get_browser_active_tab(bundle_id: &str) -> String {
+    pub fn get_browser_active_tab(bundle_id: &MonitoredApp) -> String {
         let script = match bundle_id {
-            "com.google.Chrome" => {
+            MonitoredApp::Chrome => {
                 r#"
                 tell application "Google Chrome"
                     if (count of windows) > 0 and (count of tabs of front window) > 0 then
@@ -192,7 +198,7 @@ impl WindowTracker {
                 end tell
             "#
             }
-            "org.mozilla.firefox" => {
+            MonitoredApp::Firefox => {
                 r#"
                 tell application "Firefox"
                     activate
@@ -208,7 +214,7 @@ impl WindowTracker {
                 end tell
             "#
             }
-            "com.apple.Safari" => {
+            MonitoredApp::Safari => {
                 r#"
                 tell application "Safari"
                     if (count of windows) > 0 and (count of tabs of front window) > 0 then
