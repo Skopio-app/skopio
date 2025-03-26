@@ -39,6 +39,7 @@ pub fn run() {
             let event_tracker = Arc::new(EventTracker::new(
                 Arc::clone(&cursor_tracker),
                 Arc::clone(&heartbeat_tracker),
+                Arc::clone(&keyboard_tracker),
             ));
 
             tauri::async_runtime::spawn({

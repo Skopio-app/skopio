@@ -105,12 +105,14 @@ impl WindowTracker {
             }
             pool.drain();
 
-            Some(Window {
+            let window = Window {
                 app_name: app_name_str,
                 title: window_title_str,
                 bundle_id: bundle_id_str,
                 active_process,
-            })
+            };
+
+            Some(window)
         }
     }
 

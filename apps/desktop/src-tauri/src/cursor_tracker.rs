@@ -1,9 +1,11 @@
 use crate::window_tracker::WindowTracker;
+use cocoa::appkit::CGPoint;
 use core_foundation::runloop::{kCFRunLoopCommonModes, CFRunLoop};
 use core_graphics::event::{
     CGEventTap, CGEventTapLocation, CGEventTapOptions, CGEventTapPlacement, CGEventType,
 };
 use log::error;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Instant;
@@ -17,15 +19,16 @@ pub struct MouseButtons {
 }
 
 pub struct CursorTracker {
-    last_position: Arc<Mutex<(f64, f64)>>,
+    last_position: Arc<Mutex<CGPoint>>,
     last_movement: Arc<Mutex<Instant>>,
     pressed_buttons: Arc<Mutex<MouseButtons>>,
+    mouse_moved: Arc<AtomicBool>,
 }
 
 impl CursorTracker {
     pub fn new() -> Self {
         Self {
-            last_position: Arc::new(Mutex::new((0.0, 0.0))),
+            last_position: Arc::new(Mutex::new(CGPoint::new(0.0, 0.0))),
             last_movement: Arc::new(Mutex::new(Instant::now())),
             pressed_buttons: Arc::new(Mutex::new(MouseButtons {
                 left: false,
@@ -33,6 +36,7 @@ impl CursorTracker {
                 middle: false,
                 other: false,
             })),
+            mouse_moved: Arc::new(AtomicBool::new(false)),
         }
     }
 
@@ -43,13 +47,14 @@ impl CursorTracker {
         let last_position = Arc::clone(&self.last_position);
         let last_movement = Arc::clone(&self.last_movement);
         let pressed_buttons = Arc::clone(&self.pressed_buttons);
+        let mouse_moved = Arc::clone(&self.mouse_moved);
         let heartbeat_callback = Arc::new(heartbeat_callback);
 
         thread::spawn(move || {
             match CGEventTap::new(
                 CGEventTapLocation::HID,
                 CGEventTapPlacement::HeadInsertEventTap,
-                CGEventTapOptions::Default,
+                CGEventTapOptions::ListenOnly,
                 vec![
                     CGEventType::MouseMoved,
                     CGEventType::LeftMouseDown,
@@ -67,11 +72,14 @@ impl CursorTracker {
                     match event_type {
                         CGEventType::MouseMoved => {
                             let position = event.location();
-                            let dx = (position.x - last_pos.0).abs();
-                            let dy = (position.y - last_pos.1).abs();
-                            if dx > 0.5 || dy > 0.5 {
-                                *last_pos = (position.x, position.y);
+                            let dx = (position.x - last_pos.x).abs();
+                            let dy = (position.y - last_pos.y).abs();
+                            let movement_threshold = 0.5;
+
+                            if dx > movement_threshold || dy > movement_threshold {
+                                *last_pos = position;
                                 *last_move_time = Instant::now();
+                                mouse_moved.store(true, Ordering::Relaxed);
 
                                 if let Some(window) = WindowTracker::get_active_window() {
                                     let app_name = window.app_name;
@@ -132,6 +140,11 @@ impl CursorTracker {
     }
 
     pub fn get_global_cursor_position(&self) -> (f64, f64) {
-        *self.last_position.lock().unwrap()
+        let position = *self.last_position.lock().unwrap();
+        (position.x, position.y)
+    }
+
+    pub fn has_mouse_moved(&self) -> bool {
+        self.mouse_moved.swap(false, Ordering::Relaxed)
     }
 }

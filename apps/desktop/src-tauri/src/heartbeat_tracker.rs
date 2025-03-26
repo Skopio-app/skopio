@@ -5,8 +5,10 @@ use chrono::{DateTime, Utc};
 use log::{info, warn};
 use serde::{Deserialize, Serialize};
 use std::fs;
+use std::path::Path;
 use std::process::Command;
 use std::sync::{Arc, Mutex};
+use tokei::{Config, Languages};
 
 #[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]
 struct Heartbeat {
@@ -214,22 +216,20 @@ pub fn get_xcode_project_details() -> (Option<String>, Option<String>, String, O
     (project_name, project_path, entity_name, language_name)
 }
 
-// TODO: Find a better and more accurate means of detecting languages
 fn detect_language(file_path: &str) -> Option<String> {
-    if file_path.ends_with(".swift") {
-        Some("Swift".to_string())
-    } else if file_path.ends_with(".h") || file_path.ends_with(".m") || file_path.ends_with(".mm") {
-        Some("Objective-C".to_string())
-    } else if file_path.ends_with(".cpp")
-        || file_path.ends_with(".cc")
-        || file_path.ends_with(".cxx")
-    {
-        Some("C++".to_string())
-    } else if file_path.ends_with(".c") {
-        Some("C".to_string())
-    } else {
-        None
-    }
+    let path = Path::new(file_path);
+
+    let mut languages = Languages::new();
+    let config = Config::default();
+
+    languages.get_statistics(&[path], &[], &config);
+
+    let detected_language = languages
+        .iter()
+        .max_by_key(|(_, stats)| stats.code)
+        .map(|(lang, _)| *lang);
+
+    detected_language.map(|lang| lang.name().to_string())
 }
 
 pub fn detect_lines_edited_xcode(file: &str) -> i64 {

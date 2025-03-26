@@ -1,5 +1,6 @@
 use crate::cursor_tracker::CursorTracker;
 use crate::heartbeat_tracker::{get_git_branch, get_xcode_project_details, HeartbeatTracker};
+use crate::keyboard_tracker::KeyboardTracker;
 use crate::monitored_app::MonitoredApp;
 use crate::window_tracker::WindowTracker;
 use chrono::{DateTime, Utc};
@@ -29,23 +30,28 @@ struct Event {
 
 pub struct EventTracker {
     active_event: Arc<Mutex<Option<Event>>>,
+    last_activity: Arc<Mutex<Instant>>,
     cursor_tracker: Arc<CursorTracker>,
     heartbeat_tracker: Arc<HeartbeatTracker>,
+    keyboard_tracker: Arc<KeyboardTracker>,
 }
 
 impl EventTracker {
     pub fn new(
         cursor_tracker: Arc<CursorTracker>,
         heartbeat_tracker: Arc<HeartbeatTracker>,
+        keyboard_tracker: Arc<KeyboardTracker>,
     ) -> Self {
         Self {
             active_event: Arc::new(Mutex::new(None)),
+            last_activity: Arc::new(Mutex::new(Instant::now())),
             cursor_tracker,
             heartbeat_tracker,
+            keyboard_tracker,
         }
     }
 
-    pub fn track_event(&self, app: &str, file: &str, action: &str) {
+    pub fn track_event(&self, app: &str, file: &str, category: &str) {
         let now = Utc::now();
         let (project_name, project_path, entity_name, language_name) = match app {
             "Xcode" => get_xcode_project_details(),
@@ -81,6 +87,7 @@ impl EventTracker {
                     prev_event.activity_type,
                     duration
                 );
+                *active = None;
             }
         }
 
@@ -88,7 +95,7 @@ impl EventTracker {
         *active = Some(Event {
             timestamp: Some(now),
             duration: None,
-            activity_type: action.to_string(),
+            activity_type: category.to_string(),
             app_name: app.to_string(),
             entity_name: Some(entity_name.clone()),
             entity_type: Some(if app == "Xcode" { "file" } else { "window" }.to_string()),
@@ -100,28 +107,65 @@ impl EventTracker {
         });
 
         info!("New event logged: {:?}", active);
+        *self.last_activity.lock().unwrap() = Instant::now();
         let cursor_position = self.cursor_tracker.get_global_cursor_position();
         let (cursor_x, cursor_y) = cursor_position;
         self.heartbeat_tracker
             .track_heartbeat(app, &entity_name, cursor_x, cursor_y, false);
     }
 
-    /// Dynamically tracks events when an app/file/activity changes
     pub fn start_tracking(self: Arc<Self>) {
+        let last_activity = Arc::clone(&self.last_activity);
+        let active_event = Arc::clone(&self.active_event);
+
         thread::spawn(move || {
             let mut last_check = Instant::now();
             let mut last_state: Option<(String, String)> = None;
+            let timeout_duration = Duration::from_secs(120);
 
             loop {
                 if last_check.elapsed() >= Duration::from_millis(500) {
+                    let now = Instant::now();
+
                     if let Some(window) = WindowTracker::get_active_window() {
                         let app = window.app_name.clone();
                         let file = window.title.clone();
-                        let action = detect_coding_action(&app, &file);
+                        let action = detect_coding_action(&app);
 
-                        if last_state.as_ref() != Some(&(app.clone(), file.clone())) {
-                            last_state = Some((app.clone(), file.clone()));
-                            Self::track_event(&self, &app, &file, &action);
+                        let mouse_buttons = self.cursor_tracker.get_pressed_mouse_buttons();
+                        let keys_pressed = self.keyboard_tracker.get_pressed_keys();
+
+                        let mouse_active = self.cursor_tracker.has_mouse_moved();
+
+                        let mouse_clicked = mouse_buttons.left
+                            || mouse_buttons.right
+                            || mouse_buttons.middle
+                            || mouse_buttons.other;
+                        let keyboard_active = !keys_pressed.is_empty();
+
+                        let activity_detected = mouse_active || mouse_clicked || keyboard_active;
+
+                        if activity_detected {
+                            *last_activity.lock().unwrap() = now;
+                            if last_state.as_ref() != Some(&(app.clone(), file.clone())) {
+                                last_state = Some((app.clone(), file.clone()));
+                                Self::track_event(&self, &app, &file, &action);
+                            }
+                        } else {
+                            let last_active_time = *last_activity.lock().unwrap();
+                            if now.duration_since(last_active_time) >= timeout_duration {
+                                if let Some(prev_event) = active_event.lock().unwrap().take() {
+                                    let event_duration =
+                                        (Utc::now() - prev_event.timestamp.unwrap()).num_seconds();
+                                    info!(
+                                        "Auto-ending inactive event: App: {}, File: {:?}, Activity: {}, Duration: {}s",
+                                        prev_event.app_name,
+                                        prev_event.entity_name,
+                                        prev_event.activity_type,
+                                        event_duration
+                                    )
+                                }
+                            }
                         }
                     }
                     last_check = Instant::now();
@@ -133,8 +177,8 @@ impl EventTracker {
 }
 
 // TODO: Add accurate language detection and process tracking
-pub fn detect_coding_action(app: &str, file: &str) -> String {
-    if app == "Xcode" && file.ends_with(".swift") {
+pub fn detect_coding_action(app: &str) -> String {
+    if app == "Xcode" {
         if is_compiling_xcode() {
             return "Compiling".to_string();
         } else if is_debugging_xcode() {

@@ -11,7 +11,6 @@ pub struct AFKTracker {
     last_activity: Arc<RwLock<DateTime<Utc>>>,
     afk_start: Arc<Mutex<Option<DateTime<Utc>>>>,
     afk_threshold: Duration,
-    last_cursor_position: Arc<Mutex<(f64, f64)>>,
     cursor_tracker: Arc<CursorTracker>,
     keyboard_tracker: Arc<KeyboardTracker>,
 }
@@ -19,10 +18,9 @@ pub struct AFKTracker {
 impl AFKTracker {
     pub fn new(cursor_tracker: Arc<CursorTracker>, keyboard_tracker: Arc<KeyboardTracker>) -> Self {
         Self {
-            last_activity: Arc::new(RwLock::new(Utc::now())), // UTC-based last activity
+            last_activity: Arc::new(RwLock::new(Utc::now())),
             afk_start: Arc::new(Mutex::new(None)),
             afk_threshold: Duration::from_secs(60),
-            last_cursor_position: Arc::new(Mutex::new(cursor_tracker.get_global_cursor_position())),
             cursor_tracker,
             keyboard_tracker,
         }
@@ -32,7 +30,6 @@ impl AFKTracker {
         let last_activity = Arc::clone(&self.last_activity);
         let afk_start = Arc::clone(&self.afk_start);
         let afk_threshold = self.afk_threshold;
-        let last_cursor_position = Arc::clone(&self.last_cursor_position);
         let cursor_tracker = Arc::clone(&self.cursor_tracker);
         let keyboard_tracker = Arc::clone(&self.keyboard_tracker);
 
@@ -41,18 +38,12 @@ impl AFKTracker {
                 let now = Utc::now();
                 let last_activity_time = *last_activity.read().unwrap();
                 let mut afk_time = afk_start.lock().unwrap();
-                let mut last_cursor = last_cursor_position.lock().unwrap();
 
                 // Detect user activity (mouse/keyboard)
-                let cursor_position = cursor_tracker.get_global_cursor_position();
                 let mouse_buttons = cursor_tracker.get_pressed_mouse_buttons();
                 let keys_pressed = keyboard_tracker.get_pressed_keys();
 
-                let dx = (cursor_position.0 - last_cursor.0).abs();
-                let dy = (cursor_position.1 - last_cursor.1).abs();
-                let movement_threshold = 2.0; // Ignore movemnet smaller than 2px.
-
-                let mouse_active = dx > movement_threshold || dy > movement_threshold;
+                let mouse_active = self.cursor_tracker.has_mouse_moved();
                 let mouse_clicked = mouse_buttons.left
                     || mouse_buttons.right
                     || mouse_buttons.middle
@@ -63,10 +54,15 @@ impl AFKTracker {
 
                 if activity_detected {
                     *last_activity.write().unwrap() = now;
-                    *afk_time = None;
 
-                    last_cursor.0 = cursor_position.0;
-                    last_cursor.1 = cursor_position.1;
+                    if let Some(afk_start_time) = *afk_time {
+                        let afk_duration = (now - afk_start_time).num_seconds();
+                        info!(
+                            "User returned at: {} (AFK Duration: {}s)",
+                            now, afk_duration
+                        );
+                    }
+                    *afk_time = None;
                 } else {
                     let idle_duration = (now - last_activity_time).num_seconds();
                     if idle_duration >= afk_threshold.as_secs() as i64 && afk_time.is_none() {

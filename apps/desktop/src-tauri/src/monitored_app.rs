@@ -14,7 +14,7 @@ pub enum MonitoredApp {
     Xcode,
     #[strum(serialize = "notion.id")]
     Notion,
-    #[strum(serialize = "comany.thebrowser.Browser")]
+    #[strum(serialize = "company.thebrowser.Browser")]
     ArcBrowser,
     #[strum(serialize = "unknown")]
     Unknown,
