@@ -1,14 +1,14 @@
 use cocoa::base::nil;
 use cocoa::foundation::NSAutoreleasePool;
-use log::{error, warn};
+use log::warn;
+use objc2::msg_send;
 use objc2::rc::Retained;
 use objc2::runtime::{AnyClass, AnyObject};
-use objc2::{msg_send, sel};
-use std::process::Command;
 use std::sync::{Arc, Mutex};
+use std::thread;
 use std::time::Duration;
-use std::{panic, thread};
 
+use crate::helpers::app::{get_browser_active_tab, get_terminal_process, run_osascript};
 use crate::monitored_app::MonitoredApp;
 
 #[derive(Clone, PartialEq, Debug)]
@@ -16,7 +16,6 @@ pub struct Window {
     pub app_name: String,
     pub title: String,
     pub bundle_id: String,
-    pub active_process: String,
 }
 
 pub struct WindowTracker {
@@ -52,13 +51,8 @@ impl WindowTracker {
         unsafe {
             let pool = NSAutoreleasePool::new(nil);
             let class_name = c"NSWorkspace";
-            let workspace_class = AnyClass::get(class_name);
-            if workspace_class.is_none() {
-                error!("Failed to get NSWorkspace class.");
-                return None;
-            }
-            let workspace: Retained<AnyObject> =
-                msg_send![workspace_class.unwrap(), sharedWorkspace];
+            let workspace_class = AnyClass::get(class_name)?;
+            let workspace: Retained<AnyObject> = msg_send![workspace_class, sharedWorkspace];
 
             let front_app: Option<&AnyObject> = msg_send![&*workspace, frontmostApplication];
             if front_app.is_none() {
@@ -87,173 +81,77 @@ impl WindowTracker {
             let app_name_str = app_name.unwrap_or_else(|| "unknown".to_string());
             let bundle_id_str = bundle_id.unwrap_or_else(|| "unknown".to_string());
 
-            let mut window_title_str = Self::get_window_title();
-            let mut active_process = "unknown".to_string();
-
-            if app_name_str == "Terminal" {
-                window_title_str = Self::get_terminal_directory();
-                active_process = Self::get_terminal_process();
-            } else if app_name_str.contains("Google Chrome")
-                || app_name_str.contains("Safari")
-                || app_name_str.contains("Firefox")
-            {
-                window_title_str = Self::get_browser_active_tab(
-                    &bundle_id_str
-                        .parse::<MonitoredApp>()
-                        .unwrap_or(MonitoredApp::Unknown),
-                );
-            }
+            let window_title_str = Self::get_active_window_title(&app_name_str, &bundle_id_str);
             pool.drain();
 
             let window = Window {
                 app_name: app_name_str,
                 title: window_title_str,
                 bundle_id: bundle_id_str,
-                active_process,
             };
 
             Some(window)
         }
     }
 
-    fn get_window_title() -> String {
-        unsafe {
-            let pool = NSAutoreleasePool::new(nil);
-            let class_name = c"NSRunningApplication";
-            let window_info_class = AnyClass::get(class_name);
-            if window_info_class.is_none() {
-                error!("Failed to get NSRunningApplication class.");
-                return "unknown".to_string();
-            }
-            let active_app: Option<Retained<AnyObject>> =
-                msg_send![window_info_class.unwrap(), currentApplication];
-            if active_app.is_none() {
-                warn!("No active application found.");
-                return "unknown".to_string();
-            }
-            let selector = sel!(localizedName);
-            let window_title: Option<&AnyObject> = active_app
-                .as_ref()
-                .map(|app| msg_send![app, performSelector: selector]);
-
-            if let Some(window_title) = window_title {
-                let s: *const i8 = msg_send![window_title, UTF8String];
-                let title_str = std::ffi::CStr::from_ptr(s).to_string_lossy().into_owned();
-                pool.drain();
-                return title_str;
-            }
-
-            pool.drain();
-            "unknown".to_string()
-        }
-    }
-
-    pub fn get_terminal_directory() -> String {
-        let script = r#"
-        tell application "Terminal"
-            try
-                if (count of windows) > 0 then
-                    set frontWindow to front window
-                    if (count of tabs of frontWindow) > 0 then
-                        set frontTab to selected tab of frontWindow
-                        return frontTab's current settings's title
-                    end if
-                end if
-            end try
-        end tell
-        "#;
-
-        Self::run_osascript(script)
-    }
-
-    pub fn get_terminal_process() -> String {
-        let script = r#"
-        tell application "Terminal"
-            if (count of windows) > 0 then
-                set frontWindow to front window
-                return name of frontWindow
-            else
-                return "No Active Terminal"
-            end if
-        end tell
-        "#;
-
-        let window_title = Self::run_osascript(script);
-
-        if !window_title.is_empty() && window_title != "No Active Terminal" {
-            window_title
-        } else {
-            "unknown".to_string()
-        }
-    }
-
-    pub fn get_browser_active_tab(bundle_id: &MonitoredApp) -> String {
-        let script = match bundle_id {
-            MonitoredApp::Chrome => {
-                r#"
-                tell application "Google Chrome"
-                    if (count of windows) > 0 and (count of tabs of front window) > 0 then
-                        return URL of active tab of front window
-                    else
-                        return "No active tab"
-                    end if
-                end tell
-            "#
-            }
-            MonitoredApp::Firefox => {
-                r#"
-                tell application "Firefox"
-                    activate
-                    delay 0.5
-                    tell application "System Events"
-                        keystroke "l" using command down
-                        delay 0.2
-                        keystroke "c" using command down
-                    end tell
-                    delay 0.2
-                    set clipboard_content to the clipboard
-                    return clipboard_content
-                end tell
-            "#
-            }
-            MonitoredApp::Safari => {
-                r#"
-                tell application "Safari"
-                    if (count of windows) > 0 and (count of tabs of front window) > 0 then
-                        return URL of current tab of front window
-                    else
-                        return "No active tab"
-                    end if
-                end tell
-            "#
-            }
-            _ => return "unknown".to_string(),
-        };
-
-        let output = Self::run_osascript(script);
-        if output == "No active tab" || output.is_empty() {
-            warn!("No active tab detected for {}", bundle_id);
-            return "unknown".to_string();
+    pub fn get_active_window_title(app_name: &str, bundle_id: &str) -> String {
+        if app_name == "Terminal" {
+            return get_terminal_process();
+        } else if ["Google Chrome", "Safari", "Firefox"].contains(&app_name) {
+            return get_browser_active_tab(
+                &bundle_id
+                    .parse::<MonitoredApp>()
+                    .unwrap_or(MonitoredApp::Unknown),
+            );
         }
 
-        output
-    }
+        let script = format!(
+            r#"
+            tell application "System Events"
+                tell process "{}"
+                    if exists (attribute "AXFocusedUIElement") then
+                        try
+                            return value of attribute "AXTitle" of AXFocusedUIElement
+                        on error
+                            return "missing"
+                        end try
+                    end if
+                end tell
+            end tell
+            "#,
+            app_name
+        );
 
-    pub fn run_osascript(script: &str) -> String {
-        let result = panic::catch_unwind(|| {
-            let output = Command::new("osascript")
-                .arg("-e")
-                .arg(script)
-                .output()
-                .ok()
-                .map(|output| String::from_utf8_lossy(&output.stdout).trim().to_string());
+        let title = run_osascript(&script);
+        if !title.is_empty() && title != "missing" {
+            return title;
+        }
 
-            output.unwrap_or_else(|| "unknown".to_string())
-        });
+        // Fallback: Search all windows for main title
+        let fallback_script = format!(
+            r#"
+            tell application "System Events"
+                tell process "{}"
+                    repeat with win in every window
+                        if value of attribute "AXMain" of win is true then
+                            try
+                                return value of attribute "AXTitle" of win
+                            on error
+                                return "missing"
+                            end try
+                        end if
+                    end repeat
+                end tell
+            end tell
+            "#,
+            app_name
+        );
 
-        result.unwrap_or_else(|_| {
-            error!("Failed to execute AppleScript: {}", script);
-            "unknown".to_string()
-        })
+        let fallback_title = run_osascript(&fallback_script);
+        if !fallback_title.is_empty() && fallback_title != "missing" {
+            return fallback_title;
+        }
+
+        "unknown".to_string()
     }
 }

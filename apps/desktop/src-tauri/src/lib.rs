@@ -11,6 +11,7 @@ mod afk_tracker;
 mod cursor_tracker;
 mod event_tracker;
 mod heartbeat_tracker;
+mod helpers;
 mod keyboard_tracker;
 mod monitored_app;
 mod window_tracker;

@@ -1,4 +1,5 @@
 use crate::cursor_tracker::CursorTracker;
+use crate::helpers::app::{get_browser_active_tab, get_terminal_process};
 use crate::monitored_app::MonitoredApp;
 use crate::window_tracker::{Window, WindowTracker};
 use chrono::{DateTime, Utc};
@@ -49,11 +50,11 @@ impl HeartbeatTracker {
     ) {
         let (project_name, project_path, file_path, language_name) = match app {
             "Xcode" => get_xcode_project_details(),
-            "Terminal" => (None, None, WindowTracker::get_terminal_directory(), None),
+            "Terminal" => (None, None, get_terminal_process(), None),
             "Safari" | "Google Chrome" | "Firefox" => (
                 None,
                 None,
-                WindowTracker::get_browser_active_tab(
+                get_browser_active_tab(
                     &app.parse::<MonitoredApp>().unwrap_or(MonitoredApp::Unknown),
                 ),
                 None,
@@ -111,7 +112,7 @@ impl HeartbeatTracker {
                 }
             }
 
-            info!("Heartbeat logged: {:?}", heartbeat);
+            // info!("Heartbeat logged: {:?}", heartbeat);
             *last = Some(heartbeat);
         }
     }

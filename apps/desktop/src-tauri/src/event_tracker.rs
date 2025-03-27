@@ -1,5 +1,6 @@
 use crate::cursor_tracker::CursorTracker;
 use crate::heartbeat_tracker::{get_git_branch, get_xcode_project_details, HeartbeatTracker};
+use crate::helpers::app::{get_browser_active_tab, get_terminal_process};
 use crate::keyboard_tracker::KeyboardTracker;
 use crate::monitored_app::MonitoredApp;
 use crate::window_tracker::WindowTracker;
@@ -55,11 +56,11 @@ impl EventTracker {
         let now = Utc::now();
         let (project_name, project_path, entity_name, language_name) = match app {
             "Xcode" => get_xcode_project_details(),
-            "Terminal" => (None, None, WindowTracker::get_terminal_directory(), None),
+            "Terminal" => (None, None, get_terminal_process(), None),
             "Safari" | "Google Chrome" | "Firefox" => (
                 None,
                 None,
-                WindowTracker::get_browser_active_tab(
+                get_browser_active_tab(
                     &app.parse::<MonitoredApp>().unwrap_or(MonitoredApp::Unknown),
                 ),
                 None,
@@ -106,7 +107,7 @@ impl EventTracker {
             end_timestamp: None,
         });
 
-        info!("New event logged: {:?}", active);
+        // info!("New event logged: {:?}", active);
         *self.last_activity.lock().unwrap() = Instant::now();
         let cursor_position = self.cursor_tracker.get_global_cursor_position();
         let (cursor_x, cursor_y) = cursor_position;
