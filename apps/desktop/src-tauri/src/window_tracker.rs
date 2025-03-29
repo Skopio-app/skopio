@@ -94,7 +94,7 @@ impl WindowTracker {
         }
     }
 
-    pub fn get_active_window_title(app_name: &str, bundle_id: &str) -> String {
+    fn get_active_window_title(app_name: &str, bundle_id: &str) -> String {
         if app_name == "Terminal" {
             return get_terminal_process();
         } else if ["Google Chrome", "Safari", "Firefox"].contains(&app_name) {
@@ -127,7 +127,6 @@ impl WindowTracker {
             return title;
         }
 
-        // Fallback: Search all windows for main title
         let fallback_script = format!(
             r#"
             tell application "System Events"

@@ -1011,6 +1011,20 @@ dependencies = [
 ]
 
 [[package]]
+name = "dashmap"
+version = "6.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5041cc499144891f3790297212f32a74fb938e5136a14943f338ef9e0ae276cf"
+dependencies = [
+ "cfg-if",
+ "crossbeam-utils",
+ "hashbrown 0.14.5",
+ "lock_api",
+ "once_cell",
+ "parking_lot_core 0.9.10",
+]
+
+[[package]]
 name = "db"
 version = "0.1.0"
 dependencies = [
@@ -1061,6 +1075,7 @@ dependencies = [
  "cocoa",
  "core-foundation 0.10.0",
  "core-graphics",
+ "dashmap 6.1.0",
  "log",
  "objc2 0.6.0",
  "serde",
@@ -5672,7 +5687,7 @@ dependencies = [
  "aho-corasick 0.7.20",
  "clap 2.34.0",
  "crossbeam-channel",
- "dashmap",
+ "dashmap 4.0.2",
  "dirs 3.0.2",
  "encoding_rs_io",
  "env_logger 0.8.4",

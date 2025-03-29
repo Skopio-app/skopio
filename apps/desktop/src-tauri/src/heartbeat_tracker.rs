@@ -3,12 +3,14 @@ use crate::helpers::app::{get_browser_active_tab, get_terminal_process};
 use crate::monitored_app::MonitoredApp;
 use crate::window_tracker::{Window, WindowTracker};
 use chrono::{DateTime, Utc};
-use log::{info, warn};
+use dashmap::DashMap;
+use log::{debug, info, warn};
 use serde::{Deserialize, Serialize};
-use std::fs;
 use std::path::Path;
 use std::process::Command;
 use std::sync::{Arc, Mutex};
+use std::time::{Duration, Instant};
+use std::{fs, thread};
 use tokei::{Config, Languages};
 
 #[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]
@@ -30,13 +32,59 @@ struct Heartbeat {
 
 pub struct HeartbeatTracker {
     last_heartbeat: Arc<Mutex<Option<Heartbeat>>>,
+    last_heartbeats: Arc<DashMap<(String, String), Instant>>, // (app_name, entity_name)
 }
 
 impl HeartbeatTracker {
     pub fn new() -> Self {
-        Self {
+        let tracker = Self {
             last_heartbeat: Arc::new(Mutex::new(None)),
+            last_heartbeats: Arc::new(DashMap::new()),
+        };
+
+        let last_heartbeats_ref = Arc::clone(&tracker.last_heartbeats);
+        thread::spawn(move || loop {
+            thread::sleep(Duration::from_secs(30));
+            Self::cleanup_old_entries(&last_heartbeats_ref);
+        });
+
+        tracker
+    }
+
+    fn cleanup_old_entries(last_heartbeats: &Arc<DashMap<(String, String), Instant>>) {
+        let threshold = Instant::now() - Duration::from_secs(300); // 5 minutes
+        let mut removed = 0;
+
+        last_heartbeats.retain(|_, &mut timestamp| {
+            let keep = timestamp > threshold;
+            if !keep {
+                removed += 1;
+            }
+            keep
+        });
+
+        debug!(
+            "Cleanup up {} old heartbeats, remaining: {}",
+            removed,
+            last_heartbeats.len()
+        );
+    }
+
+    fn should_log_heartbeat(&self, app: &str, entity: &str) -> bool {
+        let now = Instant::now();
+        let min_interval = Duration::from_secs(10);
+
+        let key = (app.to_string(), entity.to_string());
+        let should_log = match self.last_heartbeats.get(&key) {
+            Some(entry) => now.duration_since(*entry.value()) >= min_interval,
+            None => true,
+        };
+
+        if should_log {
+            self.last_heartbeats.insert(key, now);
         }
+
+        should_log
     }
 
     /// Dynamically logs a heartbeat when user activity changes
@@ -48,6 +96,10 @@ impl HeartbeatTracker {
         cursor_y: f64,
         is_write: bool,
     ) {
+        if !self.should_log_heartbeat(app, file) {
+            return;
+        }
+
         let (project_name, project_path, file_path, language_name) = match app {
             "Xcode" => get_xcode_project_details(),
             "Terminal" => (None, None, get_terminal_process(), None),
@@ -95,26 +147,8 @@ impl HeartbeatTracker {
             cursor_y: Some(cursor_y),
         };
 
-        if let Ok(mut last) = self.last_heartbeat.try_lock() {
-            if let Some(ref last_heartbeat) = *last {
-                let elapsed = last_heartbeat
-                    .timestamp
-                    .unwrap()
-                    .signed_duration_since(Utc::now())
-                    .num_seconds();
-                if elapsed < 60
-                    && last_heartbeat.cursor_x == heartbeat.cursor_x
-                    && last_heartbeat.cursor_y == heartbeat.cursor_y
-                    && last_heartbeat.is_write == heartbeat.is_write
-                    && last_heartbeat.entity_name == heartbeat.entity_name
-                {
-                    return;
-                }
-            }
-
-            // info!("Heartbeat logged: {:?}", heartbeat);
-            *last = Some(heartbeat);
-        }
+        info!("Heartbeat logged: {:?}", heartbeat);
+        *self.last_heartbeat.lock().unwrap() = Some(heartbeat);
     }
 
     pub fn start_tracking(
@@ -123,19 +157,20 @@ impl HeartbeatTracker {
         window_tracker: Arc<WindowTracker>,
     ) {
         let heartbeat_tracker = Arc::clone(&self);
-        let cursor_tracker_1 = Arc::clone(&cursor_tracker);
-        cursor_tracker_1.start_tracking({
+        let cursor_tracker_ref = Arc::clone(&cursor_tracker);
+
+        cursor_tracker_ref.start_tracking({
             let heartbeat_tracker = Arc::clone(&heartbeat_tracker);
             move |app_name, file, x, y| {
                 heartbeat_tracker.track_heartbeat(app_name, file, x, y, false);
             }
         });
 
-        let cursor_tracker_2 = Arc::clone(&cursor_tracker);
+        let cursor_tracker_ref = Arc::clone(&cursor_tracker);
         window_tracker.start_tracking(Arc::new({
             let heartbeat_tracker = Arc::clone(&heartbeat_tracker);
             move |window: Window| {
-                let cursor_position = cursor_tracker_2.get_global_cursor_position();
+                let cursor_position = cursor_tracker_ref.get_global_cursor_position();
                 heartbeat_tracker.track_heartbeat(
                     &window.app_name,
                     &window.title,
