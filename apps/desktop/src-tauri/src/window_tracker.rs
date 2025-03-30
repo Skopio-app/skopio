@@ -11,6 +11,7 @@ use std::time::Duration;
 use crate::helpers::app::{get_browser_active_tab, get_terminal_process, run_osascript};
 use crate::monitored_app::MonitoredApp;
 
+/// Represents an actively tracked app window.
 #[derive(Clone, PartialEq, Debug)]
 pub struct Window {
     pub app_name: String,

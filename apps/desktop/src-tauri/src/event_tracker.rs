@@ -1,13 +1,12 @@
 use crate::cursor_tracker::CursorTracker;
-use crate::heartbeat_tracker::{get_git_branch, get_xcode_project_details, HeartbeatTracker};
-use crate::helpers::app::{get_browser_active_tab, get_terminal_process};
+use crate::heartbeat_tracker::HeartbeatTracker;
+use crate::helpers::git::get_git_branch;
 use crate::keyboard_tracker::KeyboardTracker;
-use crate::monitored_app::MonitoredApp;
+use crate::monitored_app::{resolve_app_details, Category, Entity, MonitoredApp};
 use crate::window_tracker::WindowTracker;
 use chrono::{DateTime, Utc};
 use log::info;
 use serde::{Deserialize, Serialize};
-use std::process::Command;
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::{Duration, Instant};
@@ -17,10 +16,10 @@ struct Event {
     #[serde(with = "chrono::serde::ts_seconds_option")]
     timestamp: Option<DateTime<Utc>>,
     duration: Option<i64>,
-    activity_type: String,
+    activity_type: Category,
     app_name: String,
     entity_name: Option<String>,
-    entity_type: Option<String>,
+    entity_type: Option<Entity>,
     project_name: Option<String>,
     project_path: Option<String>,
     branch_name: Option<String>,
@@ -52,23 +51,15 @@ impl EventTracker {
         }
     }
 
-    pub fn track_event(&self, app: &str, file: &str, category: &str) {
+    pub fn track_event(&self, app_name: &str, app_bundle_id: &str, entity: &str) {
         let now = Utc::now();
-        let (project_name, project_path, entity_name, language_name) = match app {
-            "Xcode" => get_xcode_project_details(),
-            "Terminal" => (None, None, get_terminal_process(), None),
-            "Safari" | "Google Chrome" | "Firefox" => (
-                None,
-                None,
-                get_browser_active_tab(
-                    &app.parse::<MonitoredApp>().unwrap_or(MonitoredApp::Unknown),
-                ),
-                None,
-            ),
-            _ => (None, None, file.to_string(), None),
-        };
+        let bundle_id = app_bundle_id
+            .parse::<MonitoredApp>()
+            .unwrap_or(MonitoredApp::Unknown);
+        let (project_name, project_path, entity_name, language_name, entity_type, category) =
+            resolve_app_details(&bundle_id, entity);
 
-        let branch_name = if app == "Xcode" {
+        let branch_name = if app_name == "Xcode" {
             project_path.as_deref().map(get_git_branch)
         } else {
             None
@@ -78,11 +69,11 @@ impl EventTracker {
 
         if let Some(prev_event) = active.clone() {
             let duration = (now - prev_event.timestamp.unwrap()).num_seconds();
-            if prev_event.app_name != app
+            if prev_event.app_name != app_name
                 || prev_event.entity_name.as_deref() != Some(entity_name.as_str())
             {
                 info!(
-                    "Event Ended: App={}, File={}, Activity={}, Duration={}s",
+                    "Event Ended: App={}, Entity={}, Activity={}, Duration={}s",
                     prev_event.app_name,
                     prev_event.entity_name.unwrap_or("unknown".to_string()),
                     prev_event.activity_type,
@@ -92,14 +83,13 @@ impl EventTracker {
             }
         }
 
-        // Log the new event
         *active = Some(Event {
             timestamp: Some(now),
             duration: None,
-            activity_type: category.to_string(),
-            app_name: app.to_string(),
+            activity_type: category,
+            app_name: app_name.to_string(),
             entity_name: Some(entity_name.clone()),
-            entity_type: Some(if app == "Xcode" { "file" } else { "window" }.to_string()),
+            entity_type: Some(entity_type),
             project_name,
             project_path,
             branch_name,
@@ -107,12 +97,17 @@ impl EventTracker {
             end_timestamp: None,
         });
 
-        // info!("New event logged: {:?}", active);
         *self.last_activity.lock().unwrap() = Instant::now();
         let cursor_position = self.cursor_tracker.get_global_cursor_position();
         let (cursor_x, cursor_y) = cursor_position;
-        self.heartbeat_tracker
-            .track_heartbeat(app, &entity_name, cursor_x, cursor_y, false);
+        self.heartbeat_tracker.track_heartbeat(
+            app_name,
+            app_bundle_id,
+            &entity_name,
+            cursor_x,
+            cursor_y,
+            false,
+        );
     }
 
     pub fn start_tracking(self: Arc<Self>) {
@@ -129,9 +124,9 @@ impl EventTracker {
                     let now = Instant::now();
 
                     if let Some(window) = WindowTracker::get_active_window() {
-                        let app = window.app_name.clone();
+                        let app_name = window.app_name.clone();
+                        let bundle_id = window.bundle_id;
                         let file = window.title.clone();
-                        let action = detect_coding_action(&app);
 
                         let mouse_buttons = self.cursor_tracker.get_pressed_mouse_buttons();
                         let keys_pressed = self.keyboard_tracker.get_pressed_keys();
@@ -148,9 +143,9 @@ impl EventTracker {
 
                         if activity_detected {
                             *last_activity.lock().unwrap() = now;
-                            if last_state.as_ref() != Some(&(app.clone(), file.clone())) {
-                                last_state = Some((app.clone(), file.clone()));
-                                Self::track_event(&self, &app, &file, &action);
+                            if last_state.as_ref() != Some(&(app_name.clone(), file.clone())) {
+                                last_state = Some((app_name.clone(), file.clone()));
+                                Self::track_event(&self, &app_name, &bundle_id, &file);
                             }
                         } else {
                             let last_active_time = *last_activity.lock().unwrap();
@@ -159,7 +154,7 @@ impl EventTracker {
                                     let event_duration =
                                         (Utc::now() - prev_event.timestamp.unwrap()).num_seconds();
                                     info!(
-                                        "Auto-ending inactive event: App: {}, File: {:?}, Activity: {}, Duration: {}s",
+                                        "Auto-ending inactive event: App: {}, Entity: {:?}, Activity: {}, Duration: {}s",
                                         prev_event.app_name,
                                         prev_event.entity_name,
                                         prev_event.activity_type,
@@ -174,61 +169,5 @@ impl EventTracker {
                 thread::sleep(Duration::from_millis(100));
             }
         });
-    }
-}
-
-// TODO: Add accurate language detection and process tracking
-pub fn detect_coding_action(app: &str) -> String {
-    if app == "Xcode" {
-        if is_compiling_xcode() {
-            return "Compiling".to_string();
-        } else if is_debugging_xcode() {
-            return "Debugging".to_string();
-        } else if is_editing_xcode() {
-            return "Editing".to_string();
-        }
-    }
-    "Focusing".to_string()
-}
-
-pub fn is_compiling_xcode() -> bool {
-    let output = Command::new("osascript")
-        .arg("-e")
-        .arg("tell application \"Xcode\" to get build status")
-        .output()
-        .ok()
-        .map(|output| String::from_utf8_lossy(&output.stdout).trim().to_string());
-
-    match output {
-        Some(status) => status == "Building",
-        None => false,
-    }
-}
-
-pub fn is_debugging_xcode() -> bool {
-    let output = Command::new("osascript")
-        .arg("-e")
-        .arg("tell application \"Xcode\" to get run state")
-        .output()
-        .ok()
-        .map(|output| String::from_utf8_lossy(&output.stdout).trim().to_string());
-
-    match output {
-        Some(state) => state == "Running",
-        None => false,
-    }
-}
-
-pub fn is_editing_xcode() -> bool {
-    let output = Command::new("osascript")
-        .arg("-e")
-        .arg("tell application \"System Events\" to tell process \"Xcode\" to get value of attribute \"AXFocusedUIElement\"")
-        .output()
-        .ok()
-        .map(|output| String::from_utf8_lossy(&output.stdout).trim().to_string());
-
-    match output {
-        Some(state) => state.contains("AXTextArea"),
-        None => false,
     }
 }

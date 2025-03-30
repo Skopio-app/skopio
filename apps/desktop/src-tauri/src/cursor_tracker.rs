@@ -42,7 +42,7 @@ impl CursorTracker {
 
     pub fn start_tracking<F>(self: Arc<Self>, heartbeat_callback: F)
     where
-        F: Fn(&str, &str, f64, f64) + Send + Sync + 'static,
+        F: Fn(&str, &str, &str, f64, f64) + Send + Sync + 'static,
     {
         let last_position = Arc::clone(&self.last_position);
         let last_movement = Arc::clone(&self.last_movement);
@@ -83,9 +83,10 @@ impl CursorTracker {
 
                                 if let Some(window) = WindowTracker::get_active_window() {
                                     let app_name = window.app_name;
+                                    let bundle_id = window.bundle_id;
                                     let file = window.title;
                                     let callback = Arc::clone(&heartbeat_callback);
-                                    callback(&app_name, &file, position.x, position.y);
+                                    callback(&app_name, &bundle_id, &file, position.x, position.y);
                                 }
                             }
                         }

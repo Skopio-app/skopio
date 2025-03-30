@@ -61,8 +61,8 @@ pub fn run() {
                 let cursor_tracker = Arc::clone(&cursor_tracker);
                 let heartbeat_tracker = Arc::clone(&heartbeat_tracker);
                 async move {
-                    cursor_tracker.start_tracking(move |app_name, file, x, y| {
-                        heartbeat_tracker.track_heartbeat(app_name, file, x, y, false);
+                    cursor_tracker.start_tracking(move |app_name, bundle_id, file, x, y| {
+                        heartbeat_tracker.track_heartbeat(app_name, bundle_id, file, x, y, false);
                     });
                 }
             });
@@ -76,6 +76,7 @@ pub fn run() {
                         let cursor_position = cursor_tracker.get_global_cursor_position();
                         heartbeat_tracker.track_heartbeat(
                             &window.app_name,
+                            &window.bundle_id,
                             &window.title,
                             cursor_position.0,
                             cursor_position.1,

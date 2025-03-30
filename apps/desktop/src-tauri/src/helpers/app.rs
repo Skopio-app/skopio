@@ -2,7 +2,7 @@ use std::{panic, process::Command};
 
 use log::{error, warn};
 
-use crate::monitored_app::MonitoredApp;
+use crate::{helpers::language::detect_language, monitored_app::MonitoredApp};
 
 pub fn get_terminal_process() -> String {
     let script = r#"
@@ -75,6 +75,56 @@ pub fn get_browser_active_tab(bundle_id: &MonitoredApp) -> String {
     }
 
     output
+}
+
+pub fn get_xcode_project_details() -> (Option<String>, Option<String>, String, Option<String>) {
+    let project_path_output = Command::new("osascript")
+        .arg("-e")
+        .arg("tell application \"Xcode\" to get path of active workspace document")
+        .output();
+
+    let project_path = project_path_output
+        .ok()
+        .map(|output| String::from_utf8_lossy(&output.stdout).trim().to_string())
+        .filter(|p| !p.is_empty());
+
+    let project_name = project_path
+        .as_ref()
+        .map(|p| p.split('/').last().unwrap_or("Unknown").to_string());
+
+    let active_file_path_output = Command::new("osascript")
+        .arg("-e")
+        .arg(
+            r#"
+            tell application "System Events"
+                tell process "Xcode"
+                    try
+                        return value of attribute "AXDocument" of window 1
+                    on error
+                        return "No active document"
+                    end try
+                end tell
+            end tell
+        "#,
+        )
+        .output();
+
+    let active_file_path = active_file_path_output
+        .ok()
+        .map(|output| String::from_utf8_lossy(&output.stdout).trim().to_string());
+
+    let entity_name = match active_file_path.as_deref() {
+        Some(path) if path.starts_with("file://") => path.trim_start_matches("file://").to_string(),
+        Some(path) if path != "No active document" => path.to_string(),
+        _ => {
+            warn!("No active document detected in Xcode.");
+            "".to_string()
+        }
+    };
+
+    let language_name = detect_language(&entity_name);
+
+    (project_name, project_path, entity_name, language_name)
 }
 
 pub fn run_osascript(script: &str) -> String {
