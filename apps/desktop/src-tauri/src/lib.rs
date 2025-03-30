@@ -62,7 +62,7 @@ pub fn run() {
                 let heartbeat_tracker = Arc::clone(&heartbeat_tracker);
                 async move {
                     cursor_tracker.start_tracking(move |app_name, bundle_id, file, x, y| {
-                        heartbeat_tracker.track_heartbeat(app_name, bundle_id, file, x, y, false);
+                        heartbeat_tracker.track_heartbeat(app_name, bundle_id, file, x, y);
                     });
                 }
             });
@@ -80,7 +80,6 @@ pub fn run() {
                             &window.title,
                             cursor_position.0,
                             cursor_position.1,
-                            false,
                         );
                     }));
                 }

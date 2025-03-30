@@ -106,7 +106,6 @@ impl EventTracker {
             &entity_name,
             cursor_x,
             cursor_y,
-            false,
         );
     }
 

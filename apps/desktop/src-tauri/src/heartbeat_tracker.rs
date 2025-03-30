@@ -92,7 +92,6 @@ impl HeartbeatTracker {
         entity: &str,
         cursor_x: f64,
         cursor_y: f64,
-        is_write: bool,
     ) {
         let bundle_id = app_bundle_id
             .parse::<MonitoredApp>()
@@ -104,12 +103,19 @@ impl HeartbeatTracker {
             return;
         }
 
-        let lines_edited: Option<i64> = if app_name == "Xcode" { Some(0) } else { None };
+        // TODO: Find a reliable means of retrieving xcode line edit count
+        // let lines_edited: Option<i64> = if app_name == "Xcode" { Some(0) } else { None };
 
         let branch_name = if app_name == "Xcode" {
             project_path.as_deref().map(get_git_branch)
         } else {
             None
+        };
+
+        let is_write: bool = if app_name == "Xcode" {
+            entity.contains("Edited")
+        } else {
+            false
         };
 
         let heartbeat = Heartbeat {
@@ -122,7 +128,7 @@ impl HeartbeatTracker {
             language_name,
             app_name: app_name.to_string(),
             is_write,
-            lines: lines_edited,
+            lines: None,
             cursor_x: Some(cursor_x),
             cursor_y: Some(cursor_y),
         };
@@ -142,7 +148,7 @@ impl HeartbeatTracker {
         cursor_tracker_ref.start_tracking({
             let heartbeat_tracker = Arc::clone(&heartbeat_tracker);
             move |app_name, app_bundle_id, file, x, y| {
-                heartbeat_tracker.track_heartbeat(app_name, app_bundle_id, file, x, y, false);
+                heartbeat_tracker.track_heartbeat(app_name, app_bundle_id, file, x, y);
             }
         });
 
@@ -157,7 +163,6 @@ impl HeartbeatTracker {
                     &window.title,
                     cursor_position.0,
                     cursor_position.1,
-                    false,
                 );
             }
         }) as Arc<dyn Fn(Window) + Send + Sync>);

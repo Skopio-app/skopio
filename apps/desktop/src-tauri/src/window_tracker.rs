@@ -8,8 +8,7 @@ use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Duration;
 
-use crate::helpers::app::{get_browser_active_tab, get_terminal_process, run_osascript};
-use crate::monitored_app::MonitoredApp;
+use crate::helpers::app::run_osascript;
 
 /// Represents an actively tracked app window.
 #[derive(Clone, PartialEq, Debug)]
@@ -82,7 +81,7 @@ impl WindowTracker {
             let app_name_str = app_name.unwrap_or_else(|| "unknown".to_string());
             let bundle_id_str = bundle_id.unwrap_or_else(|| "unknown".to_string());
 
-            let window_title_str = Self::get_active_window_title(&app_name_str, &bundle_id_str);
+            let window_title_str = Self::get_active_window_title(&app_name_str);
             pool.drain();
 
             let window = Window {
@@ -95,17 +94,7 @@ impl WindowTracker {
         }
     }
 
-    fn get_active_window_title(app_name: &str, bundle_id: &str) -> String {
-        if app_name == "Terminal" {
-            return get_terminal_process();
-        } else if ["Google Chrome", "Safari", "Firefox"].contains(&app_name) {
-            return get_browser_active_tab(
-                &bundle_id
-                    .parse::<MonitoredApp>()
-                    .unwrap_or(MonitoredApp::Unknown),
-            );
-        }
-
+    fn get_active_window_title(app_name: &str) -> String {
         let script = format!(
             r#"
             tell application "System Events"
