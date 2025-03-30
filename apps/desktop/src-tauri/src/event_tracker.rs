@@ -2,7 +2,7 @@ use crate::cursor_tracker::CursorTracker;
 use crate::heartbeat_tracker::HeartbeatTracker;
 use crate::helpers::git::get_git_branch;
 use crate::keyboard_tracker::KeyboardTracker;
-use crate::monitored_app::{resolve_app_details, Category, Entity, MonitoredApp};
+use crate::monitored_app::{resolve_app_details, Category, Entity, MonitoredApp, IGNORED_APPS};
 use crate::window_tracker::WindowTracker;
 use chrono::{DateTime, Utc};
 use log::info;
@@ -52,10 +52,15 @@ impl EventTracker {
     }
 
     pub fn track_event(&self, app_name: &str, app_bundle_id: &str, entity: &str) {
-        let now = Utc::now();
         let bundle_id = app_bundle_id
             .parse::<MonitoredApp>()
             .unwrap_or(MonitoredApp::Unknown);
+
+        if IGNORED_APPS.contains(&bundle_id) {
+            return;
+        }
+
+        let now = Utc::now();
         let (project_name, project_path, entity_name, language_name, entity_type, category) =
             resolve_app_details(&bundle_id, entity);
 

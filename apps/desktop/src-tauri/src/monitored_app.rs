@@ -43,6 +43,9 @@ static LEARNING_URLS: LazyLock<HashSet<&'static str>> = LazyLock::new(|| {
     ])
 });
 
+pub static IGNORED_APPS: LazyLock<HashSet<MonitoredApp>> =
+    LazyLock::new(|| HashSet::from([MonitoredApp::Code]));
+
 static CODING_URLS: LazyLock<HashSet<&'static str>> = LazyLock::new(|| {
     HashSet::from([
         "leetcode.com",
@@ -78,6 +81,8 @@ pub enum MonitoredApp {
     ChromeBeta,
     #[strum(serialize = "com.google.Chrome.canary")]
     ChromeCanary,
+    #[strum(serialize = "com.microsoft.VSCode")]
+    Code,
     #[strum(serialize = "com.figma.Desktop")]
     Figma,
     #[strum(serialize = "org.mozilla.firefox")]
