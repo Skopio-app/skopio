@@ -3,8 +3,9 @@ use std::{collections::HashSet, sync::LazyLock};
 use serde::{Deserialize, Serialize};
 use strum_macros::{Display, EnumString};
 
-use crate::helpers::app::{
-    get_browser_active_tab, get_terminal_process, get_xcode_project_details, run_osascript,
+use crate::helpers::{
+    app::{get_browser_active_tab, get_xcode_project_details, run_osascript},
+    language::detect_language,
 };
 
 static BROWSER_APPS: LazyLock<HashSet<MonitoredApp>> = LazyLock::new(|| {
@@ -179,7 +180,7 @@ fn get_browser_category(url: &str) -> Category {
     Category::Browsing
 }
 
-fn get_xcode_category() -> Category {
+fn get_xcode_category(entity: &str) -> Category {
     let is_compling = run_osascript("tell application \"Xcode\" to get build status") == "Building";
 
     if is_compling {
@@ -192,18 +193,22 @@ fn get_xcode_category() -> Category {
         return Category::Debugging;
     }
 
+    if is_documentation_entity(entity) {
+        return Category::WritingDocs;
+    }
+
     Category::Coding
 }
 
-// fn is_documentation_entity(entity_path: &str) -> bool {
-//     if let Some(language) = detect_language(entity_path) {
-//         let doc_languages = HashSet::from(["Markdown", "Org", "ReStructuredText", "Text", "Tex"]);
-//         return doc_languages.contains(language.as_str());
-//     }
-//     false
-// }
+fn is_documentation_entity(entity_path: &str) -> bool {
+    if let Some(language) = detect_language(entity_path) {
+        let doc_languages = HashSet::from(["Markdown", "Org", "ReStructuredText", "Text", "Tex"]);
+        return doc_languages.contains(language.as_str());
+    }
+    false
+}
 
-fn get_category_for_app(app: &MonitoredApp, url: Option<&str>) -> Category {
+fn get_category_for_app(app: &MonitoredApp, entity: Option<&str>, url: Option<&str>) -> Category {
     if let Some(category) = APP_CATEGORIES
         .iter()
         .find(|(a, _)| a == app)
@@ -220,14 +225,8 @@ fn get_category_for_app(app: &MonitoredApp, url: Option<&str>) -> Category {
     }
 
     if *app == MonitoredApp::Xcode {
-        return get_xcode_category();
+        return get_xcode_category(entity.unwrap_or_default());
     }
-
-    // if let Some(entity) = entity {
-    //     if is_documentation_entity(entity) {
-    //         return Category::WritingDocs;
-    //     }
-    // }
 
     Category::Browsing
 }
@@ -252,18 +251,7 @@ pub fn resolve_app_details(
                 entity.clone(),
                 lang,
                 Entity::File,
-                get_category_for_app(app, None),
-            )
-        }
-        MonitoredApp::Terminal => {
-            let entity = get_terminal_process();
-            (
-                None,
-                None,
-                entity,
-                None,
-                Entity::App,
-                get_category_for_app(app, None),
+                get_category_for_app(app, Some(&entity), None),
             )
         }
         _ if BROWSER_APPS.contains(app) => {
@@ -274,7 +262,7 @@ pub fn resolve_app_details(
                 url.clone(),
                 None,
                 get_entity_for_app(app),
-                get_category_for_app(app, Some(&url)),
+                get_category_for_app(app, None, Some(&url)),
             )
         }
         _ => (
@@ -283,7 +271,7 @@ pub fn resolve_app_details(
             entity.to_string(),
             None,
             Entity::App,
-            get_category_for_app(app, None),
+            get_category_for_app(app, None, None),
         ),
     }
 }

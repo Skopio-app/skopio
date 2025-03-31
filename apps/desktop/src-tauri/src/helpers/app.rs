@@ -4,27 +4,6 @@ use log::{error, warn};
 
 use crate::{helpers::language::detect_language, monitored_app::MonitoredApp};
 
-pub fn get_terminal_process() -> String {
-    let script = r#"
-    tell application "Terminal"
-        if (count of windows) > 0 then
-            set frontWindow to front window
-            return name of frontWindow
-        else
-            return "No Active Terminal"
-        end if
-    end tell
-    "#;
-
-    let window_title = run_osascript(script);
-
-    if !window_title.is_empty() && window_title != "No Active Terminal" {
-        window_title
-    } else {
-        "unknown".to_string()
-    }
-}
-
 pub fn get_browser_active_tab(bundle_id: &MonitoredApp) -> String {
     let script = match bundle_id {
         MonitoredApp::Chrome => {
@@ -65,7 +44,7 @@ pub fn get_browser_active_tab(bundle_id: &MonitoredApp) -> String {
             end tell
         "#
         }
-        _ => return "unknown".to_string(),
+        _ => return "".to_string(),
     };
 
     let output = run_osascript(script);
@@ -78,48 +57,38 @@ pub fn get_browser_active_tab(bundle_id: &MonitoredApp) -> String {
 }
 
 pub fn get_xcode_project_details() -> (Option<String>, Option<String>, String, Option<String>) {
-    let project_path_output = Command::new("osascript")
-        .arg("-e")
-        .arg("tell application \"Xcode\" to get path of active workspace document")
-        .output();
-
-    let project_path = project_path_output
-        .ok()
-        .map(|output| String::from_utf8_lossy(&output.stdout).trim().to_string())
-        .filter(|p| !p.is_empty());
-
+    let project_path_script =
+        r#"tell application "Xcode" to get path of active workspace document"#;
+    let project_path = run_osascript(project_path_script);
+    let project_path = if project_path != "unknown" && !project_path.is_empty() {
+        Some(project_path)
+    } else {
+        None
+    };
     let project_name = project_path
         .as_ref()
-        .map(|p| p.split('/').last().unwrap_or("Unknown").to_string());
+        .map(|p| p.split("/").last().unwrap_or("Unknown").to_string());
 
-    let active_file_path_output = Command::new("osascript")
-        .arg("-e")
-        .arg(
-            r#"
-            tell application "System Events"
-                tell process "Xcode"
-                    try
-                        return value of attribute "AXDocument" of window 1
-                    on error
-                        return "No active document"
-                    end try
-                end tell
+    let active_file_script = r#"
+        tell application "System Events"
+            tell process "Xcode"
+                try
+                    return value of attribute "AXDocument" of window 1
+                on error
+                    return "No active document"
+                end try
             end tell
-        "#,
-        )
-        .output();
+        end tell
+    "#;
+    let active_file_path = run_osascript(active_file_script);
 
-    let active_file_path = active_file_path_output
-        .ok()
-        .map(|output| String::from_utf8_lossy(&output.stdout).trim().to_string());
-
-    let entity_name = match active_file_path.as_deref() {
-        Some(path) if path.starts_with("file://") => path.trim_start_matches("file://").to_string(),
-        Some(path) if path != "No active document" => path.to_string(),
-        _ => {
-            warn!("No active document detected in Xcode.");
-            "".to_string()
-        }
+    let entity_name = if active_file_path.starts_with("file://") {
+        active_file_path.trim_start_matches("file://").to_string()
+    } else if active_file_path != "No active document" && active_file_path != "unknown" {
+        active_file_path
+    } else {
+        warn!("No active document detected in Xcode.");
+        "unknown".to_string()
     };
 
     let language_name = detect_language(&entity_name);
