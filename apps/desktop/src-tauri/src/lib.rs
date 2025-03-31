@@ -3,6 +3,7 @@ use crate::cursor_tracker::CursorTracker;
 use crate::event_tracker::EventTracker;
 use crate::heartbeat_tracker::HeartbeatTracker;
 use crate::window_tracker::WindowTracker;
+use chrono::Local;
 use keyboard_tracker::KeyboardTracker;
 use std::sync::Arc;
 use window_tracker::Window;
@@ -25,6 +26,19 @@ pub fn run() {
                 app.handle().plugin(
                     tauri_plugin_log::Builder::default()
                         .level(log::LevelFilter::Debug)
+                        .format(|out, message, record| {
+                            let local_time = Local::now().format("%Y-%m-%d %H:%M:%S");
+                            let module = record.target();
+                            let line = record.line().unwrap_or_default();
+                            out.finish(format_args!(
+                                "[{}] [{}] [{}:{}] {}",
+                                local_time,
+                                record.level(),
+                                module,
+                                line,
+                                message
+                            ));
+                        })
                         .build(),
                 )?;
             }
