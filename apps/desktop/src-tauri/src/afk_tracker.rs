@@ -16,11 +16,15 @@ pub struct AFKTracker {
 }
 
 impl AFKTracker {
-    pub fn new(cursor_tracker: Arc<CursorTracker>, keyboard_tracker: Arc<KeyboardTracker>) -> Self {
+    pub fn new(
+        cursor_tracker: Arc<CursorTracker>,
+        keyboard_tracker: Arc<KeyboardTracker>,
+        afk_timeout: u64,
+    ) -> Self {
         Self {
             last_activity: Arc::new(RwLock::new(Utc::now())),
             afk_start: Arc::new(Mutex::new(None)),
-            afk_threshold: Duration::from_secs(60),
+            afk_threshold: Duration::from_secs(afk_timeout),
             cursor_tracker,
             keyboard_tracker,
         }

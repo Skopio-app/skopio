@@ -30,13 +30,15 @@ struct Heartbeat {
 pub struct HeartbeatTracker {
     last_heartbeat: Arc<Mutex<Option<Heartbeat>>>,
     last_heartbeats: Arc<DashMap<(String, String), Instant>>, // (app_name, entity_name)
+    heartbeat_interval: Duration,
 }
 
 impl HeartbeatTracker {
-    pub fn new() -> Self {
+    pub fn new(heartbeat_interval: u64) -> Self {
         let tracker = Self {
             last_heartbeat: Arc::new(Mutex::new(None)),
             last_heartbeats: Arc::new(DashMap::new()),
+            heartbeat_interval: Duration::from_secs(heartbeat_interval),
         };
 
         let last_heartbeats_ref = Arc::clone(&tracker.last_heartbeats);
@@ -69,11 +71,10 @@ impl HeartbeatTracker {
 
     fn should_log_heartbeat(&self, app: &str, entity: &str) -> bool {
         let now = Instant::now();
-        let min_interval = Duration::from_secs(10);
 
         let key = (app.to_string(), entity.to_string());
         let should_log = match self.last_heartbeats.get(&key) {
-            Some(entry) => now.duration_since(*entry.value()) >= min_interval,
+            Some(entry) => now.duration_since(*entry.value()) >= self.heartbeat_interval,
             None => true,
         };
 
