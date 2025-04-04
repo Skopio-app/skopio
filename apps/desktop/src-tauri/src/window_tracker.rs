@@ -16,6 +16,7 @@ pub struct Window {
     pub app_name: String,
     pub title: String,
     pub bundle_id: String,
+    /// Refers to the executable path of a binary
     pub path: String,
 }
 
@@ -80,11 +81,11 @@ impl WindowTracker {
             };
 
             let app_path: Option<String> = front_app.and_then(|app| {
-                let url: *mut AnyObject = msg_send![app, bundleURL];
+                let url: *mut AnyObject = msg_send![app, executableURL];
                 if url.is_null() {
                     return None;
                 }
-                let path_obj: *const AnyObject = msg_send![url, UTF8String];
+                let path_obj: *const AnyObject = msg_send![url, path];
                 if path_obj.is_null() {
                     return None;
                 }

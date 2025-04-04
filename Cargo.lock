@@ -1090,6 +1090,7 @@ dependencies = [
  "tauri-plugin-log",
  "tokei",
  "tokio",
+ "url",
 ]
 
 [[package]]

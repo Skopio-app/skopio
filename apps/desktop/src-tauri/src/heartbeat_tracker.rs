@@ -94,6 +94,7 @@ impl HeartbeatTracker {
         &self,
         app_name: &str,
         app_bundle_id: &str,
+        app_path: &str,
         entity: &str,
         cursor_x: f64,
         cursor_y: f64,
@@ -108,7 +109,7 @@ impl HeartbeatTracker {
         }
 
         let (project_name, project_path, entity_name, language_name, entity_type, _category) =
-            resolve_app_details(&bundle_id, entity);
+            resolve_app_details(&bundle_id, app_name, app_path.to_string(), entity);
 
         if !self.should_log_heartbeat(app_name, entity) {
             return;
@@ -183,15 +184,16 @@ impl HeartbeatTracker {
 
         cursor_tracker_ref.start_tracking({
             let heartbeat_tracker = Arc::clone(&heartbeat_tracker);
-            move |app_name, app_bundle_id, file, x, y| {
+            move |app_name, app_bundle_id, app_path, file, x, y| {
                 let heartbeat_tracker = Arc::clone(&heartbeat_tracker);
                 let app_name = app_name.to_string();
                 let app_bundle_id = app_bundle_id.to_string();
                 let file = file.to_string();
+                let app_path = app_path.to_string();
 
                 tauri::async_runtime::spawn(async move {
                     heartbeat_tracker
-                        .track_heartbeat(&app_name, &app_bundle_id, &file, x, y)
+                        .track_heartbeat(&app_name, &app_bundle_id, &app_path, &file, x, y)
                         .await;
                 });
             }
@@ -205,12 +207,14 @@ impl HeartbeatTracker {
                 let heartbeat_tracker = Arc::clone(&heartbeat_tracker);
                 let app_name = window.app_name.clone();
                 let bundle_id = window.bundle_id.clone();
+                let app_path = window.path;
                 let title = window.title.clone();
                 tauri::async_runtime::spawn(async move {
                     heartbeat_tracker
                         .track_heartbeat(
                             &app_name,
                             &bundle_id,
+                            &app_path,
                             &title,
                             cursor_position.0,
                             cursor_position.1,

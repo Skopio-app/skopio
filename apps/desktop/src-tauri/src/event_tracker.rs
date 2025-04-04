@@ -51,7 +51,13 @@ impl EventTracker {
         }
     }
 
-    pub async fn track_event(&self, app_name: &str, app_bundle_id: &str, entity: &str) {
+    pub async fn track_event(
+        &self,
+        app_name: &str,
+        app_bundle_id: &str,
+        app_path: &str,
+        entity: &str,
+    ) {
         let bundle_id = app_bundle_id
             .parse::<MonitoredApp>()
             .unwrap_or(MonitoredApp::Unknown);
@@ -62,7 +68,7 @@ impl EventTracker {
 
         let now = Utc::now();
         let (project_name, project_path, entity_name, language_name, entity_type, category) =
-            resolve_app_details(&bundle_id, entity);
+            resolve_app_details(&bundle_id, app_name, app_path.to_string(), entity);
 
         let branch_name = if app_name == "Xcode" {
             project_path.as_deref().map(get_git_branch)
@@ -92,7 +98,7 @@ impl EventTracker {
                     should_reset_event = true;
                 }
             }
-        }
+        } // ← Drop lock here before await
 
         if should_reset_event {
             *self.active_event.lock().unwrap() = None;
@@ -117,7 +123,14 @@ impl EventTracker {
         let (cursor_x, cursor_y) = cursor_position;
 
         self.heartbeat_tracker
-            .track_heartbeat(app_name, app_bundle_id, &entity_name, cursor_x, cursor_y)
+            .track_heartbeat(
+                app_name,
+                app_bundle_id,
+                app_path,
+                &entity_name,
+                cursor_x,
+                cursor_y,
+            )
             .await;
     }
 
@@ -138,6 +151,7 @@ impl EventTracker {
                         let app_name = window.app_name.clone();
                         let bundle_id = window.bundle_id;
                         let file = window.title.clone();
+                        let app_path = window.path;
 
                         let mouse_buttons = self.cursor_tracker.get_pressed_mouse_buttons();
                         let keys_pressed = self.keyboard_tracker.get_pressed_keys();
@@ -160,8 +174,11 @@ impl EventTracker {
                                 let app_name = app_name.clone();
                                 let bundle_id = bundle_id.clone();
                                 let file = file.clone();
+                                let app_path = app_path.clone();
                                 tauri::async_runtime::spawn(async move {
-                                    tracker.track_event(&app_name, &bundle_id, &file).await;
+                                    tracker
+                                        .track_event(&app_name, &bundle_id, &app_path, &file)
+                                        .await;
                                 });
                             }
                         } else {

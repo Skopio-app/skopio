@@ -121,16 +121,16 @@ async fn async_setup(app_handle: &AppHandle) -> Result<(), anyhow::Error> {
         let cursor_tracker = Arc::clone(&cursor_tracker);
         let heartbeat_tracker = Arc::clone(&heartbeat_tracker);
         async move {
-            cursor_tracker.start_tracking(move |app_name, bundle_id, file, x, y| {
+            cursor_tracker.start_tracking(move |app_name, bundle_id, app_path, file, x, y| {
                 let heartbeat_tracker = Arc::clone(&heartbeat_tracker);
                 let app_name = app_name.to_string();
                 let bundle_id = bundle_id.to_string();
+                let app_path = app_path.to_string();
                 let file = file.to_string();
 
-                // Spawn async work
                 tauri::async_runtime::spawn(async move {
                     heartbeat_tracker
-                        .track_heartbeat(&app_name, &bundle_id, &file, x, y)
+                        .track_heartbeat(&app_name, &bundle_id, &app_path, &file, x, y)
                         .await;
                 });
             });
@@ -151,6 +151,7 @@ async fn async_setup(app_handle: &AppHandle) -> Result<(), anyhow::Error> {
                         .track_heartbeat(
                             &window.app_name,
                             &window.bundle_id,
+                            &window.path,
                             &window.title,
                             cursor_position.0,
                             cursor_position.1,

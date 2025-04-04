@@ -4,7 +4,7 @@ use db::{
     apps::App, branches::Branch, entities::Entity, languages::Language, projects::Project,
     DBContext,
 };
-use log::debug;
+
 use tauri::{AppHandle, Manager, Runtime};
 
 use crate::heartbeat_tracker::Heartbeat;
@@ -31,8 +31,6 @@ pub async fn resolve_heartbeat_ids(
     db: &DBContext,
     heartbeat: Heartbeat,
 ) -> Result<ResolvedHeartbeatIDs, anyhow::Error> {
-    debug!("The received heartbeat: {:?}", heartbeat);
-
     let app_id = App::find_or_insert(db, heartbeat.app_name.as_str())
         .await
         .ok();
@@ -62,15 +60,11 @@ pub async fn resolve_heartbeat_ids(
         None => None,
     };
 
-    let resolved = ResolvedHeartbeatIDs {
+    Ok(ResolvedHeartbeatIDs {
         app_id,
         project_id,
         entity_id,
         branch_id,
         language_id,
-    };
-
-    debug!("The resolved heartbeat IDs: {:?}", resolved);
-
-    Ok(resolved)
+    })
 }
