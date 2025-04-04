@@ -16,6 +16,7 @@ pub struct Window {
     pub app_name: String,
     pub title: String,
     pub bundle_id: String,
+    pub path: String,
 }
 
 pub struct WindowTracker {
@@ -78,8 +79,29 @@ impl WindowTracker {
                 }
             };
 
+            let app_path: Option<String> = front_app.and_then(|app| {
+                let url: *mut AnyObject = msg_send![app, bundleURL];
+                if url.is_null() {
+                    return None;
+                }
+                let path_obj: *const AnyObject = msg_send![url, UTF8String];
+                if path_obj.is_null() {
+                    return None;
+                }
+                let c_str: *const i8 = msg_send![path_obj, UTF8String];
+                if c_str.is_null() {
+                    return None;
+                }
+                Some(
+                    std::ffi::CStr::from_ptr(c_str)
+                        .to_string_lossy()
+                        .into_owned(),
+                )
+            });
+
             let app_name_str = app_name.unwrap_or_else(|| "unknown".to_string());
             let bundle_id_str = bundle_id.unwrap_or_else(|| "unknown".to_string());
+            let app_path_str = app_path.unwrap_or_else(|| "unknown".to_string());
 
             let window_title_str = Self::get_active_window_title(&app_name_str);
             pool.drain();
@@ -88,6 +110,7 @@ impl WindowTracker {
                 app_name: app_name_str,
                 title: window_title_str,
                 bundle_id: bundle_id_str,
+                path: app_path_str,
             };
 
             Some(window)
