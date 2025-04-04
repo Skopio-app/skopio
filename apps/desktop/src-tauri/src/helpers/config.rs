@@ -33,7 +33,6 @@ pub enum Theme {
 }
 
 static CONFIG_FILENAME: &str = "config.json";
-
 pub static CONFIG: LazyLock<Mutex<AppConfig>> = LazyLock::new(|| Mutex::new(AppConfig::default()));
 
 impl AppConfig {

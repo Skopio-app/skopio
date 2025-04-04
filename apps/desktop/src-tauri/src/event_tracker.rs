@@ -51,7 +51,7 @@ impl EventTracker {
         }
     }
 
-    pub fn track_event(&self, app_name: &str, app_bundle_id: &str, entity: &str) {
+    pub async fn track_event(&self, app_name: &str, app_bundle_id: &str, entity: &str) {
         let bundle_id = app_bundle_id
             .parse::<MonitoredApp>()
             .unwrap_or(MonitoredApp::Unknown);
@@ -70,25 +70,35 @@ impl EventTracker {
             None
         };
 
-        let mut active = self.active_event.lock().unwrap();
+        let mut should_reset_event = false;
 
-        if let Some(prev_event) = active.clone() {
-            let duration = (now - prev_event.timestamp.unwrap()).num_seconds();
-            if prev_event.app_name != app_name
-                || prev_event.entity_name.as_deref() != Some(entity_name.as_str())
-            {
-                info!(
-                    "Event Ended: App={}, Entity={}, Activity={}, Duration={}s",
-                    prev_event.app_name,
-                    prev_event.entity_name.unwrap_or("unknown".to_string()),
-                    prev_event.activity_type,
-                    duration
-                );
-                *active = None;
+        {
+            let active = self.active_event.lock().unwrap();
+            if let Some(prev_event) = active.as_ref() {
+                let duration = (now - prev_event.timestamp.unwrap()).num_seconds();
+                if prev_event.app_name != app_name
+                    || prev_event.entity_name.as_deref() != Some(entity_name.as_str())
+                {
+                    info!(
+                        "Event Ended: App={}, Entity={}, Activity={}, Duration={}s",
+                        prev_event.app_name,
+                        prev_event
+                            .entity_name
+                            .clone()
+                            .unwrap_or("unknown".to_string()),
+                        prev_event.activity_type,
+                        duration
+                    );
+                    should_reset_event = true;
+                }
             }
         }
 
-        *active = Some(Event {
+        if should_reset_event {
+            *self.active_event.lock().unwrap() = None;
+        }
+
+        *self.active_event.lock().unwrap() = Some(Event {
             timestamp: Some(now),
             duration: None,
             activity_type: category,
@@ -105,13 +115,10 @@ impl EventTracker {
         *self.last_activity.lock().unwrap() = Instant::now();
         let cursor_position = self.cursor_tracker.get_global_cursor_position();
         let (cursor_x, cursor_y) = cursor_position;
-        self.heartbeat_tracker.track_heartbeat(
-            app_name,
-            app_bundle_id,
-            &entity_name,
-            cursor_x,
-            cursor_y,
-        );
+
+        self.heartbeat_tracker
+            .track_heartbeat(app_name, app_bundle_id, &entity_name, cursor_x, cursor_y)
+            .await;
     }
 
     pub fn start_tracking(self: Arc<Self>) {
@@ -149,7 +156,13 @@ impl EventTracker {
                             *last_activity.lock().unwrap() = now;
                             if last_state.as_ref() != Some(&(app_name.clone(), file.clone())) {
                                 last_state = Some((app_name.clone(), file.clone()));
-                                Self::track_event(&self, &app_name, &bundle_id, &file);
+                                let tracker = Arc::clone(&self);
+                                let app_name = app_name.clone();
+                                let bundle_id = bundle_id.clone();
+                                let file = file.clone();
+                                tauri::async_runtime::spawn(async move {
+                                    tracker.track_event(&app_name, &bundle_id, &file).await;
+                                });
                             }
                         } else {
                             let last_active_time = *last_activity.lock().unwrap();

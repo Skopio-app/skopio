@@ -9,4 +9,5 @@ rust-version.workspace = true
 [dependencies]
 chrono = { workspace = true, features = ["serde"] }
 serde = { workspace = true, features = ["derive"] }
-sqlx = { version = "0.8", features = ["sqlite", "runtime-tokio-native-tls", "chrono"] }
+sqlx = { version = "0.8", features = [ "sqlite", "runtime-tokio-native-tls", "chrono" ] }
+log = { workspace = true }
