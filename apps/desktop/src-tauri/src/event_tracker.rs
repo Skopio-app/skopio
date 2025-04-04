@@ -1,31 +1,35 @@
+#![allow(clippy::await_holding_lock)]
 use crate::cursor_tracker::CursorTracker;
 use crate::heartbeat_tracker::HeartbeatTracker;
+use crate::helpers::db::{resolve_event_ids, to_naive_datetime};
 use crate::helpers::git::get_git_branch;
 use crate::keyboard_tracker::KeyboardTracker;
 use crate::monitored_app::{resolve_app_details, Category, Entity, MonitoredApp, IGNORED_APPS};
 use crate::window_tracker::WindowTracker;
 use chrono::{DateTime, Utc};
-use log::info;
+use db::events::Event as DBEvent;
+use db::DBContext;
+use log::{error, info};
 use serde::{Deserialize, Serialize};
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::{Duration, Instant};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
-struct Event {
+pub struct Event {
     #[serde(with = "chrono::serde::ts_seconds_option")]
-    timestamp: Option<DateTime<Utc>>,
-    duration: Option<i64>,
-    activity_type: Category,
-    app_name: String,
-    entity_name: Option<String>,
-    entity_type: Option<Entity>,
-    project_name: Option<String>,
-    project_path: Option<String>,
-    branch_name: Option<String>,
-    language_name: Option<String>,
+    pub timestamp: Option<DateTime<Utc>>,
+    pub duration: Option<i64>,
+    pub activity_type: Category,
+    pub app_name: String,
+    pub entity_name: Option<String>,
+    pub entity_type: Option<Entity>,
+    pub project_name: Option<String>,
+    pub project_path: Option<String>,
+    pub branch_name: Option<String>,
+    pub language_name: Option<String>,
     #[serde(with = "chrono::serde::ts_seconds_option")]
-    end_timestamp: Option<DateTime<Utc>>,
+    pub end_timestamp: Option<DateTime<Utc>>,
 }
 
 pub struct EventTracker {
@@ -34,6 +38,7 @@ pub struct EventTracker {
     cursor_tracker: Arc<CursorTracker>,
     heartbeat_tracker: Arc<HeartbeatTracker>,
     keyboard_tracker: Arc<KeyboardTracker>,
+    db: Arc<DBContext>,
 }
 
 impl EventTracker {
@@ -41,6 +46,7 @@ impl EventTracker {
         cursor_tracker: Arc<CursorTracker>,
         heartbeat_tracker: Arc<HeartbeatTracker>,
         keyboard_tracker: Arc<KeyboardTracker>,
+        db: Arc<DBContext>,
     ) -> Self {
         Self {
             active_event: Arc::new(Mutex::new(None)),
@@ -48,6 +54,7 @@ impl EventTracker {
             cursor_tracker,
             heartbeat_tracker,
             keyboard_tracker,
+            db,
         }
     }
 
@@ -78,6 +85,7 @@ impl EventTracker {
 
         let mut should_reset_event = false;
 
+        #[allow(clippy::await_holding_lock)]
         {
             let active = self.active_event.lock().unwrap();
             if let Some(prev_event) = active.as_ref() {
@@ -85,6 +93,33 @@ impl EventTracker {
                 if prev_event.app_name != app_name
                     || prev_event.entity_name.as_deref() != Some(entity_name.as_str())
                 {
+                    let mut ended_event = prev_event.clone();
+                    ended_event.duration = Some(duration);
+                    ended_event.end_timestamp = Some(now);
+
+                    let db = Arc::clone(&self.db);
+                    let resolved = resolve_event_ids(&db, ended_event.clone()).await;
+
+                    if let Ok(resolved) = resolved {
+                        let db_event = DBEvent {
+                            id: None,
+                            timestamp: to_naive_datetime(ended_event.timestamp)
+                                .unwrap_or_else(|| Utc::now().naive_utc()),
+                            duration: ended_event.duration,
+                            activity_type: ended_event.activity_type.to_string(),
+                            app_id: resolved.app_id.unwrap_or_default(),
+                            entity_id: resolved.entity_id,
+                            project_id: resolved.project_id,
+                            branch_id: resolved.branch_id,
+                            language_id: resolved.language_id,
+                            end_timestamp: to_naive_datetime(ended_event.end_timestamp),
+                        };
+
+                        if let Err(e) = db_event.create(&db).await {
+                            error!("Failed to insert db event: {}", e);
+                        };
+                    }
+
                     info!(
                         "Event Ended: App={}, Entity={}, Activity={}, Duration={}s",
                         prev_event.app_name,
@@ -170,15 +205,20 @@ impl EventTracker {
                             *last_activity.lock().unwrap() = now;
                             if last_state.as_ref() != Some(&(app_name.clone(), file.clone())) {
                                 last_state = Some((app_name.clone(), file.clone()));
+
                                 let tracker = Arc::clone(&self);
                                 let app_name = app_name.clone();
                                 let bundle_id = bundle_id.clone();
                                 let file = file.clone();
                                 let app_path = app_path.clone();
-                                tauri::async_runtime::spawn(async move {
-                                    tracker
-                                        .track_event(&app_name, &bundle_id, &app_path, &file)
-                                        .await;
+
+                                // Move values into async without referencing self directly across .await
+                                std::thread::spawn(move || {
+                                    tauri::async_runtime::block_on(async move {
+                                        tracker
+                                            .track_event(&app_name, &bundle_id, &app_path, &file)
+                                            .await;
+                                    });
                                 });
                             }
                         } else {

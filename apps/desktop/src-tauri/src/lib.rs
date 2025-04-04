@@ -102,6 +102,7 @@ async fn async_setup(app_handle: &AppHandle) -> Result<(), anyhow::Error> {
         Arc::clone(&cursor_tracker),
         Arc::clone(&heartbeat_tracker),
         Arc::clone(&keyboard_tracker),
+        Arc::clone(&db),
     ));
 
     tauri::async_runtime::spawn({
