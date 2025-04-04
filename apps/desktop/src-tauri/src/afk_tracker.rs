@@ -2,9 +2,9 @@ use chrono::{DateTime, Utc};
 use db::afk_events::AFKEvent;
 use db::DBContext;
 use log::{error, info};
-use std::sync::{Arc, Mutex, RwLock};
-use std::thread;
-use std::time::Duration;
+use std::sync::Arc;
+use tokio::sync::{Mutex, RwLock};
+use tokio::time::{sleep, Duration};
 
 use crate::cursor_tracker::CursorTracker;
 use crate::keyboard_tracker::KeyboardTracker;
@@ -43,17 +43,17 @@ impl AFKTracker {
         let keyboard_tracker = Arc::clone(&self.keyboard_tracker);
         let db = Arc::clone(&self.db);
 
-        thread::spawn(move || {
+        tokio::spawn(async move {
             loop {
                 let now = Utc::now();
-                let last_activity_time = *last_activity.read().unwrap();
-                let mut afk_time = afk_start.lock().unwrap();
+                let last_activity_time = *last_activity.read().await;
+                let mut afk_time = afk_start.lock().await;
 
                 // Detect user activity (mouse/keyboard)
                 let mouse_buttons = cursor_tracker.get_pressed_mouse_buttons();
                 let keys_pressed = keyboard_tracker.get_pressed_keys();
 
-                let mouse_active = self.cursor_tracker.has_mouse_moved();
+                let mouse_active = cursor_tracker.has_mouse_moved();
                 let mouse_clicked = mouse_buttons.left
                     || mouse_buttons.right
                     || mouse_buttons.middle
@@ -63,7 +63,7 @@ impl AFKTracker {
                 let activity_detected = mouse_active || mouse_clicked || keyboard_active;
 
                 if activity_detected {
-                    *last_activity.write().unwrap() = now;
+                    *last_activity.write().await = now;
 
                     if let Some(afk_start_time) = *afk_time {
                         let afk_duration = (now - afk_start_time).num_seconds();
@@ -80,11 +80,11 @@ impl AFKTracker {
                             duration: Some(afk_duration),
                         };
 
-                        tauri::async_runtime::spawn(async move {
+                        drop(tokio::spawn(async move {
                             if let Err(e) = afk_event.insert(&db).await {
                                 error!("Failed to insert AFK event: {:?}", e);
                             }
-                        });
+                        }));
                     }
                     *afk_time = None;
                 } else {
@@ -95,7 +95,7 @@ impl AFKTracker {
                     }
                 }
 
-                thread::sleep(Duration::from_secs(1));
+                sleep(Duration::from_secs(1)).await;
             }
         });
     }
