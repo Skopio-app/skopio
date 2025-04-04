@@ -1,5 +1,7 @@
 use chrono::{DateTime, Utc};
-use log::info;
+use db::afk_events::AFKEvent;
+use db::DBContext;
+use log::{error, info};
 use std::sync::{Arc, Mutex, RwLock};
 use std::thread;
 use std::time::Duration;
@@ -13,6 +15,7 @@ pub struct AFKTracker {
     afk_threshold: Duration,
     cursor_tracker: Arc<CursorTracker>,
     keyboard_tracker: Arc<KeyboardTracker>,
+    db: Arc<DBContext>,
 }
 
 impl AFKTracker {
@@ -20,6 +23,7 @@ impl AFKTracker {
         cursor_tracker: Arc<CursorTracker>,
         keyboard_tracker: Arc<KeyboardTracker>,
         afk_timeout: u64,
+        db: Arc<DBContext>,
     ) -> Self {
         Self {
             last_activity: Arc::new(RwLock::new(Utc::now())),
@@ -27,6 +31,7 @@ impl AFKTracker {
             afk_threshold: Duration::from_secs(afk_timeout),
             cursor_tracker,
             keyboard_tracker,
+            db,
         }
     }
 
@@ -36,6 +41,7 @@ impl AFKTracker {
         let afk_threshold = self.afk_threshold;
         let cursor_tracker = Arc::clone(&self.cursor_tracker);
         let keyboard_tracker = Arc::clone(&self.keyboard_tracker);
+        let db = Arc::clone(&self.db);
 
         thread::spawn(move || {
             loop {
@@ -65,6 +71,20 @@ impl AFKTracker {
                             "User returned at: {} (AFK Duration: {}s)",
                             now, afk_duration
                         );
+
+                        let db = db.clone();
+                        let afk_event = AFKEvent {
+                            id: None,
+                            afk_start: afk_start_time,
+                            afk_end: Some(now),
+                            duration: Some(afk_duration),
+                        };
+
+                        tauri::async_runtime::spawn(async move {
+                            if let Err(e) = afk_event.insert(&db).await {
+                                error!("Failed to insert AFK event: {:?}", e);
+                            }
+                        });
                     }
                     *afk_time = None;
                 } else {

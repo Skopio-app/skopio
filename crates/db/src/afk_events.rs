@@ -3,14 +3,14 @@ use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct AfkEvent {
+pub struct AFKEvent {
     pub id: Option<i64>,
     pub afk_start: DateTime<Utc>,
     pub afk_end: Option<DateTime<Utc>>,
     pub duration: Option<i64>,
 }
 
-impl AfkEvent {
+impl AFKEvent {
     /// Insert an AFK event
     pub async fn insert(&self, db_context: &DBContext) -> Result<(), sqlx::Error> {
         let afk_start_str = self.afk_start.to_rfc3339();
