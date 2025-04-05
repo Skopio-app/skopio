@@ -13,6 +13,7 @@ use keyboard_tracker::KeyboardTracker;
 use log::error;
 use std::sync::Arc;
 use tauri::AppHandle;
+use tokio::sync::mpsc;
 use window_tracker::Window;
 
 mod afk_tracker;
@@ -105,41 +106,43 @@ async fn async_setup(app_handle: &AppHandle) -> Result<(), anyhow::Error> {
         Arc::clone(&db),
     ));
 
-    tauri::async_runtime::spawn({
+    let (tx, mut rx) = mpsc::unbounded_channel();
+    let cursor_tracker_tx = Arc::clone(&cursor_tracker);
+    cursor_tracker_tx.start_tracking(tx.clone());
+
+    {
+        let heartbeat_tracker = Arc::clone(&heartbeat_tracker);
+        tokio::spawn(async move {
+            while let Some(activity) = rx.recv().await {
+                heartbeat_tracker
+                    .track_heartbeat(
+                        &activity.app_name,
+                        &activity.bundle_id,
+                        &activity.app_path,
+                        &activity.file,
+                        activity.x,
+                        activity.y,
+                    )
+                    .await;
+            }
+        });
+    }
+
+    tokio::spawn({
         let afk_tracker = Arc::clone(&afk_tracker);
         async move {
             afk_tracker.start_tracking();
         }
     });
 
-    tauri::async_runtime::spawn({
+    tokio::spawn({
         let keyboard_tracker = Arc::clone(&keyboard_tracker);
         async move {
             keyboard_tracker.start_tracking();
         }
     });
 
-    tauri::async_runtime::spawn({
-        let cursor_tracker = Arc::clone(&cursor_tracker);
-        let heartbeat_tracker = Arc::clone(&heartbeat_tracker);
-        async move {
-            cursor_tracker.start_tracking(move |app_name, bundle_id, app_path, file, x, y| {
-                let heartbeat_tracker = Arc::clone(&heartbeat_tracker);
-                let app_name = app_name.to_string();
-                let bundle_id = bundle_id.to_string();
-                let app_path = app_path.to_string();
-                let file = file.to_string();
-
-                tauri::async_runtime::spawn(async move {
-                    heartbeat_tracker
-                        .track_heartbeat(&app_name, &bundle_id, &app_path, &file, x, y)
-                        .await;
-                });
-            });
-        }
-    });
-
-    tauri::async_runtime::spawn({
+    tokio::spawn({
         let window_tracker = Arc::clone(&window_tracker);
         let heartbeat_tracker = Arc::clone(&heartbeat_tracker);
         let cursor_tracker = Arc::clone(&cursor_tracker);
@@ -148,7 +151,7 @@ async fn async_setup(app_handle: &AppHandle) -> Result<(), anyhow::Error> {
                 let cursor_position = cursor_tracker.get_global_cursor_position();
                 let heartbeat_tracker = Arc::clone(&heartbeat_tracker);
 
-                tauri::async_runtime::spawn(async move {
+                tokio::spawn(async move {
                     heartbeat_tracker
                         .track_heartbeat(
                             &window.app_name,
@@ -164,19 +167,21 @@ async fn async_setup(app_handle: &AppHandle) -> Result<(), anyhow::Error> {
         }
     });
 
-    tauri::async_runtime::spawn({
+    tokio::spawn({
         let event_tracker = Arc::clone(&event_tracker);
         async move {
             event_tracker.start_tracking();
         }
     });
 
-    tauri::async_runtime::spawn({
+    tokio::spawn({
         let heartbeat_tracker = Arc::clone(&heartbeat_tracker);
         let cursor_tracker = Arc::clone(&cursor_tracker);
         let window_tracker = Arc::clone(&window_tracker);
         async move {
-            heartbeat_tracker.start_tracking(cursor_tracker, window_tracker);
+            heartbeat_tracker
+                .start_tracking(cursor_tracker, window_tracker)
+                .await;
         }
     });
 

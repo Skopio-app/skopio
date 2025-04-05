@@ -9,6 +9,17 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::Instant;
+use tokio::sync::mpsc::UnboundedSender;
+
+#[derive(Debug, Clone)]
+pub struct CursorActivity {
+    pub app_name: String,
+    pub bundle_id: String,
+    pub app_path: String,
+    pub file: String,
+    pub x: f64,
+    pub y: f64,
+}
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct MouseButtons {
@@ -40,15 +51,11 @@ impl CursorTracker {
         }
     }
 
-    pub fn start_tracking<F>(self: Arc<Self>, heartbeat_callback: F)
-    where
-        F: Fn(&str, &str, &str, &str, f64, f64) + Send + Sync + 'static,
-    {
+    pub fn start_tracking(self: Arc<Self>, tx: UnboundedSender<CursorActivity>) {
         let last_position = Arc::clone(&self.last_position);
         let last_movement = Arc::clone(&self.last_movement);
         let pressed_buttons = Arc::clone(&self.pressed_buttons);
         let mouse_moved = Arc::clone(&self.mouse_moved);
-        let heartbeat_callback = Arc::new(heartbeat_callback);
 
         thread::spawn(move || {
             match CGEventTap::new(
@@ -86,34 +93,25 @@ impl CursorTracker {
                                     let bundle_id = window.bundle_id;
                                     let app_path = window.path;
                                     let file = window.title;
-                                    let callback = Arc::clone(&heartbeat_callback);
-                                    callback(
-                                        &app_name, &bundle_id, &app_path, &file, position.x,
-                                        position.y,
-                                    );
+
+                                    let _ = tx.send(CursorActivity {
+                                        app_name,
+                                        bundle_id,
+                                        app_path,
+                                        file,
+                                        x: position.x,
+                                        y: position.y,
+                                    });
                                 }
                             }
                         }
 
-                        CGEventType::LeftMouseDown => {
-                            buttons.left = true;
-                        }
-                        CGEventType::LeftMouseUp => {
-                            buttons.left = false;
-                        }
-                        CGEventType::RightMouseDown => {
-                            buttons.right = true;
-                        }
-                        CGEventType::RightMouseUp => {
-                            buttons.right = false;
-                        }
-                        CGEventType::OtherMouseDown => {
-                            buttons.other = true;
-                        }
-                        CGEventType::OtherMouseUp => {
-                            buttons.other = false;
-                        }
-
+                        CGEventType::LeftMouseDown => buttons.left = true,
+                        CGEventType::LeftMouseUp => buttons.left = false,
+                        CGEventType::RightMouseDown => buttons.right = true,
+                        CGEventType::RightMouseUp => buttons.right = false,
+                        CGEventType::OtherMouseDown => buttons.other = true,
+                        CGEventType::OtherMouseUp => buttons.other = false,
                         _ => {}
                     }
 

@@ -1,4 +1,4 @@
-use crate::cursor_tracker::CursorTracker;
+use crate::cursor_tracker::{CursorActivity, CursorTracker};
 use crate::helpers::db::resolve_heartbeat_ids;
 use crate::helpers::git::get_git_branch;
 use crate::monitored_app::{resolve_app_details, Entity, MonitoredApp, IGNORED_APPS};
@@ -9,8 +9,9 @@ use db::{heartbeats::Heartbeat as DBHeartbeat, DBContext};
 use log::{debug, error};
 use serde::{Deserialize, Serialize};
 use std::sync::{Arc, Mutex};
-use std::thread;
 use std::time::{Duration, Instant};
+use tokio::sync::mpsc;
+use tokio::time::Duration as TokioDuration;
 
 #[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]
 pub struct Heartbeat {
@@ -46,9 +47,11 @@ impl HeartbeatTracker {
         };
 
         let last_heartbeats_ref = Arc::clone(&tracker.last_heartbeats);
-        thread::spawn(move || loop {
-            thread::sleep(Duration::from_secs(30));
-            Self::cleanup_old_entries(&last_heartbeats_ref);
+        tokio::spawn(async move {
+            loop {
+                tokio::time::sleep(TokioDuration::from_secs(30)).await;
+                Self::cleanup_old_entries(&last_heartbeats_ref);
+            }
         });
 
         tracker
@@ -166,51 +169,54 @@ impl HeartbeatTracker {
                 .or(heartbeat_clone.cursor_y.map(|y| y as i64)),
         };
 
-        let _ = db_heartbeat
-            .create(&db)
-            .await
-            .map_err(|e| error!("Failed to insert heartbeat: {}", e));
+        if let Err(e) = db_heartbeat.create(&db).await {
+            error!("Failed to insert heartbeat: {}", e);
+        }
 
         *self.last_heartbeat.lock().unwrap() = Some(heartbeat);
     }
 
-    pub fn start_tracking(
+    pub async fn start_tracking(
         self: Arc<Self>,
         cursor_tracker: Arc<CursorTracker>,
         window_tracker: Arc<WindowTracker>,
     ) {
-        let heartbeat_tracker = Arc::clone(&self);
+        let heartbeat_tracker_rx = Arc::clone(&self);
+        let (tx, mut rx) = mpsc::unbounded_channel::<CursorActivity>();
         let cursor_tracker_ref = Arc::clone(&cursor_tracker);
 
-        cursor_tracker_ref.start_tracking({
-            let heartbeat_tracker = Arc::clone(&heartbeat_tracker);
-            move |app_name, app_bundle_id, app_path, file, x, y| {
-                let heartbeat_tracker = Arc::clone(&heartbeat_tracker);
-                let app_name = app_name.to_string();
-                let app_bundle_id = app_bundle_id.to_string();
-                let file = file.to_string();
-                let app_path = app_path.to_string();
+        cursor_tracker_ref.start_tracking(tx);
 
-                tauri::async_runtime::spawn(async move {
-                    heartbeat_tracker
-                        .track_heartbeat(&app_name, &app_bundle_id, &app_path, &file, x, y)
+        tokio::spawn(async move {
+            while let Some(activity) = rx.recv().await {
+                let tracker = Arc::clone(&heartbeat_tracker_rx);
+                tokio::spawn(async move {
+                    tracker
+                        .track_heartbeat(
+                            &activity.app_name,
+                            &activity.bundle_id,
+                            &activity.app_path,
+                            &activity.file,
+                            activity.x,
+                            activity.y,
+                        )
                         .await;
                 });
             }
         });
 
+        let heartbeat_tracker_window = Arc::clone(&self);
         let cursor_tracker_ref = Arc::clone(&cursor_tracker);
         window_tracker.start_tracking(Arc::new({
-            let heartbeat_tracker = Arc::clone(&heartbeat_tracker);
             move |window: Window| {
                 let cursor_position = cursor_tracker_ref.get_global_cursor_position();
-                let heartbeat_tracker = Arc::clone(&heartbeat_tracker);
+                let tracker = Arc::clone(&heartbeat_tracker_window);
                 let app_name = window.app_name.clone();
                 let bundle_id = window.bundle_id.clone();
                 let app_path = window.path;
                 let title = window.title.clone();
-                tauri::async_runtime::spawn(async move {
-                    heartbeat_tracker
+                tokio::spawn(async move {
+                    tracker
                         .track_heartbeat(
                             &app_name,
                             &bundle_id,

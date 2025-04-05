@@ -5,8 +5,7 @@ use objc2::msg_send;
 use objc2::rc::Retained;
 use objc2::runtime::{AnyClass, AnyObject};
 use std::sync::{Arc, Mutex};
-use std::thread;
-use std::time::Duration;
+use tokio::time::{sleep, Duration};
 
 use crate::helpers::app::run_osascript;
 
@@ -34,8 +33,8 @@ impl WindowTracker {
     pub fn start_tracking(self: Arc<Self>, event_callback: Arc<dyn Fn(Window) + Send + Sync>) {
         let active_window = Arc::clone(&self.active_window);
 
-        thread::spawn(move || loop {
-            thread::sleep(Duration::from_millis(500));
+        tokio::spawn(async move {
+            sleep(Duration::from_millis(500)).await;
 
             let new_window = WindowTracker::get_active_window();
             if let Some(new_window) = new_window {

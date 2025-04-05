@@ -1,4 +1,3 @@
-#![allow(clippy::await_holding_lock)]
 use crate::cursor_tracker::CursorTracker;
 use crate::heartbeat_tracker::HeartbeatTracker;
 use crate::helpers::db::{resolve_event_ids, to_naive_datetime};
@@ -11,9 +10,9 @@ use db::events::Event as DBEvent;
 use db::DBContext;
 use log::{error, info};
 use serde::{Deserialize, Serialize};
-use std::sync::{Arc, Mutex};
-use std::thread;
-use std::time::{Duration, Instant};
+use std::sync::Arc;
+use tokio::sync::Mutex;
+use tokio::time::{sleep, Duration, Instant};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Event {
@@ -85,9 +84,8 @@ impl EventTracker {
 
         let mut should_reset_event = false;
 
-        #[allow(clippy::await_holding_lock)]
         {
-            let active = self.active_event.lock().unwrap();
+            let mut active = self.active_event.lock().await;
             if let Some(prev_event) = active.as_ref() {
                 let duration = (now - prev_event.timestamp.unwrap()).num_seconds();
                 if prev_event.app_name != app_name
@@ -133,27 +131,27 @@ impl EventTracker {
                     should_reset_event = true;
                 }
             }
-        } // ← Drop lock here before await
 
-        if should_reset_event {
-            *self.active_event.lock().unwrap() = None;
+            if should_reset_event {
+                *active = None;
+            }
+
+            *active = Some(Event {
+                timestamp: Some(now),
+                duration: None,
+                activity_type: category,
+                app_name: app_name.to_string(),
+                entity_name: Some(entity_name.clone()),
+                entity_type: Some(entity_type),
+                project_name,
+                project_path,
+                branch_name,
+                language_name,
+                end_timestamp: None,
+            });
         }
 
-        *self.active_event.lock().unwrap() = Some(Event {
-            timestamp: Some(now),
-            duration: None,
-            activity_type: category,
-            app_name: app_name.to_string(),
-            entity_name: Some(entity_name.clone()),
-            entity_type: Some(entity_type),
-            project_name,
-            project_path,
-            branch_name,
-            language_name,
-            end_timestamp: None,
-        });
-
-        *self.last_activity.lock().unwrap() = Instant::now();
+        *self.last_activity.lock().await = Instant::now();
         let cursor_position = self.cursor_tracker.get_global_cursor_position();
         let (cursor_x, cursor_y) = cursor_position;
 
@@ -170,18 +168,14 @@ impl EventTracker {
     }
 
     pub fn start_tracking(self: Arc<Self>) {
-        let last_activity = Arc::clone(&self.last_activity);
-        let active_event = Arc::clone(&self.active_event);
-
-        thread::spawn(move || {
+        let tracker = Arc::clone(&self);
+        tokio::spawn(async move {
             let mut last_check = Instant::now();
             let mut last_state: Option<(String, String)> = None;
             let timeout_duration = Duration::from_secs(120);
 
             loop {
                 if last_check.elapsed() >= Duration::from_millis(500) {
-                    let now = Instant::now();
-
                     if let Some(window) = WindowTracker::get_active_window() {
                         let app_name = window.app_name.clone();
                         let bundle_id = window.bundle_id;
@@ -202,7 +196,7 @@ impl EventTracker {
                         let activity_detected = mouse_active || mouse_clicked || keyboard_active;
 
                         if activity_detected {
-                            *last_activity.lock().unwrap() = now;
+                            *self.last_activity.lock().await = Instant::now();
                             if last_state.as_ref() != Some(&(app_name.clone(), file.clone())) {
                                 last_state = Some((app_name.clone(), file.clone()));
 
@@ -212,19 +206,17 @@ impl EventTracker {
                                 let file = file.clone();
                                 let app_path = app_path.clone();
 
-                                // Move values into async without referencing self directly across .await
-                                std::thread::spawn(move || {
-                                    tauri::async_runtime::block_on(async move {
-                                        tracker
-                                            .track_event(&app_name, &bundle_id, &app_path, &file)
-                                            .await;
-                                    });
+                                tokio::spawn(async move {
+                                    tracker
+                                        .track_event(&app_name, &bundle_id, &app_path, &file)
+                                        .await;
                                 });
                             }
                         } else {
-                            let last_active_time = *last_activity.lock().unwrap();
-                            if now.duration_since(last_active_time) >= timeout_duration {
-                                if let Some(prev_event) = active_event.lock().unwrap().take() {
+                            let last_active_time = *self.last_activity.lock().await;
+                            if Instant::now().duration_since(last_active_time) >= timeout_duration {
+                                let mut active_event = self.active_event.lock().await;
+                                if let Some(prev_event) = active_event.take() {
                                     let event_duration =
                                         (Utc::now() - prev_event.timestamp.unwrap()).num_seconds();
                                     info!(
@@ -233,14 +225,43 @@ impl EventTracker {
                                         prev_event.entity_name,
                                         prev_event.activity_type,
                                         event_duration
-                                    )
+                                    );
+
+                                    let db = Arc::clone(&tracker.db);
+                                    let mut ended_event = prev_event.clone();
+                                    ended_event.duration = Some(event_duration);
+                                    ended_event.end_timestamp = Some(Utc::now());
+
+                                    let resolved = resolve_event_ids(&db, prev_event).await;
+
+                                    if let Ok(resolved) = resolved {
+                                        let db_event = DBEvent {
+                                            id: None,
+                                            timestamp: to_naive_datetime(ended_event.timestamp)
+                                                .unwrap_or_else(|| Utc::now().naive_utc()),
+                                            duration: ended_event.duration,
+                                            activity_type: ended_event.activity_type.to_string(),
+                                            app_id: resolved.app_id.unwrap_or_default(),
+                                            entity_id: resolved.entity_id,
+                                            project_id: resolved.project_id,
+                                            branch_id: resolved.branch_id,
+                                            language_id: resolved.language_id,
+                                            end_timestamp: to_naive_datetime(
+                                                ended_event.end_timestamp,
+                                            ),
+                                        };
+
+                                        if let Err(e) = db_event.create(&db).await {
+                                            error!("Failed to insert inactive event: {}", e);
+                                        }
+                                    }
                                 }
                             }
                         }
                     }
                     last_check = Instant::now();
                 }
-                thread::sleep(Duration::from_millis(100));
+                sleep(Duration::from_millis(100)).await;
             }
         });
     }
