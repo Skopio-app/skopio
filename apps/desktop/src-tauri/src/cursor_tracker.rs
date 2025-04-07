@@ -51,7 +51,7 @@ impl CursorTracker {
         }
     }
 
-    pub fn start_tracking(self: Arc<Self>, tx: UnboundedSender<CursorActivity>) {
+    pub fn start_tracking(&self, tx: UnboundedSender<CursorActivity>) {
         let last_position = Arc::clone(&self.last_position);
         let last_movement = Arc::clone(&self.last_movement);
         let pressed_buttons = Arc::clone(&self.pressed_buttons);

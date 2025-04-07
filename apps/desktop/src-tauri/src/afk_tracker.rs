@@ -4,7 +4,7 @@ use db::DBContext;
 use log::{error, info};
 use std::sync::Arc;
 use tokio::sync::{Mutex, RwLock};
-use tokio::time::{sleep, Duration};
+use tokio::time::{interval, Duration};
 
 use crate::cursor_tracker::CursorTracker;
 use crate::keyboard_tracker::KeyboardTracker;
@@ -44,7 +44,10 @@ impl AFKTracker {
         let db = Arc::clone(&self.db);
 
         tokio::spawn(async move {
+            let mut interval = interval(Duration::from_secs(1));
             loop {
+                interval.tick().await;
+
                 let now = Utc::now();
                 let last_activity_time = *last_activity.read().await;
                 let mut afk_time = afk_start.lock().await;
@@ -94,8 +97,6 @@ impl AFKTracker {
                         *afk_time = Some(now);
                     }
                 }
-
-                sleep(Duration::from_secs(1)).await;
             }
         });
     }

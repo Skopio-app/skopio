@@ -43,13 +43,13 @@ pub struct ResolvedEventIDs {
 
 pub async fn resolve_heartbeat_ids(
     db: &DBContext,
-    heartbeat: Heartbeat,
+    heartbeat: &Heartbeat,
 ) -> Result<ResolvedHeartbeatIDs, anyhow::Error> {
     let app_id = App::find_or_insert(db, heartbeat.app_name.as_str())
         .await
         .ok();
-    let project_id = match (heartbeat.project_name, heartbeat.project_path) {
-        (Some(name), Some(path)) => Project::find_or_insert(db, &name, &path).await.ok(),
+    let project_id = match (&heartbeat.project_name, &heartbeat.project_path) {
+        (Some(name), Some(path)) => Project::find_or_insert(db, name, path).await.ok(),
         _ => None,
     };
     let entity_id = match project_id {
@@ -64,13 +64,13 @@ pub async fn resolve_heartbeat_ids(
         None => None,
     };
 
-    let branch_id = match (project_id, heartbeat.branch_name) {
-        (Some(pid), Some(branch)) => Branch::find_or_insert(db, pid, &branch).await.ok(),
+    let branch_id = match (project_id, &heartbeat.branch_name) {
+        (Some(pid), Some(branch)) => Branch::find_or_insert(db, pid, branch).await.ok(),
         _ => None,
     };
 
-    let language_id = match heartbeat.language_name {
-        Some(lang) => Language::find_or_insert(db, &lang).await.ok(),
+    let language_id = match &heartbeat.language_name {
+        Some(lang) => Language::find_or_insert(db, lang).await.ok(),
         None => None,
     };
 

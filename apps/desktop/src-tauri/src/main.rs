@@ -3,5 +3,6 @@
 
 #[tokio::main]
 async fn main() {
+    console_subscriber::init();
     desktop_lib::run();
 }

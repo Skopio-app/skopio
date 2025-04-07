@@ -10,8 +10,9 @@ use helpers::{
     db::get_db_path,
 };
 use keyboard_tracker::KeyboardTracker;
-use log::error;
-use std::sync::Arc;
+use log::{debug, error};
+use pprof::ProfilerGuard;
+use std::{sync::Arc, time::Duration};
 use tauri::AppHandle;
 use tokio::sync::mpsc;
 use window_tracker::Window;
@@ -53,7 +54,7 @@ pub fn run() {
             }
 
             let app_handle_clone = app_handle.clone();
-            tauri::async_runtime::spawn(async move {
+            tokio::spawn(async move {
                 if let Err(e) = async_setup(&app_handle_clone).await {
                     error!("Failed async setup: {}", e);
                 }
@@ -182,6 +183,20 @@ async fn async_setup(app_handle: &AppHandle) -> Result<(), anyhow::Error> {
             heartbeat_tracker
                 .start_tracking(cursor_tracker, window_tracker)
                 .await;
+        }
+    });
+
+    let guard = ProfilerGuard::new(100).unwrap();
+
+    tokio::spawn(async move {
+        tokio::time::sleep(Duration::from_secs(30)).await;
+
+        if let Ok(report) = guard.report().build() {
+            let file = std::fs::File::create("pprof_flamegraph.svg").unwrap();
+            report.flamegraph(file).unwrap();
+            debug!("🔥 Flamegraph written to pprof_flamegraph.svg");
+        } else {
+            error!("Failed to build pprof report.");
         }
     });
 

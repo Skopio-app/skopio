@@ -12,7 +12,7 @@ use log::{error, info};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tokio::sync::Mutex;
-use tokio::time::{sleep, Duration, Instant};
+use tokio::time::{interval, Duration, Instant};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Event {
@@ -74,7 +74,7 @@ impl EventTracker {
 
         let now = Utc::now();
         let (project_name, project_path, entity_name, language_name, entity_type, category) =
-            resolve_app_details(&bundle_id, app_name, app_path.to_string(), entity);
+            resolve_app_details(&bundle_id, app_name, app_path, entity);
 
         let branch_name = if app_name == "Xcode" {
             project_path.as_deref().map(get_git_branch)
@@ -168,13 +168,15 @@ impl EventTracker {
     }
 
     pub fn start_tracking(self: Arc<Self>) {
-        let tracker = Arc::clone(&self);
         tokio::spawn(async move {
             let mut last_check = Instant::now();
-            let mut last_state: Option<(String, String)> = None;
+            let mut last_state = None;
             let timeout_duration = Duration::from_secs(120);
+            let mut interval = interval(Duration::from_millis(500));
 
             loop {
+                interval.tick().await;
+
                 if last_check.elapsed() >= Duration::from_millis(500) {
                     if let Some(window) = WindowTracker::get_active_window() {
                         let app_name = window.app_name.clone();
@@ -227,12 +229,11 @@ impl EventTracker {
                                         event_duration
                                     );
 
-                                    let db = Arc::clone(&tracker.db);
                                     let mut ended_event = prev_event.clone();
                                     ended_event.duration = Some(event_duration);
                                     ended_event.end_timestamp = Some(Utc::now());
 
-                                    let resolved = resolve_event_ids(&db, prev_event).await;
+                                    let resolved = resolve_event_ids(&self.db, prev_event).await;
 
                                     if let Ok(resolved) = resolved {
                                         let db_event = DBEvent {
@@ -251,17 +252,16 @@ impl EventTracker {
                                             ),
                                         };
 
-                                        if let Err(e) = db_event.create(&db).await {
+                                        if let Err(e) = db_event.create(&self.db).await {
                                             error!("Failed to insert inactive event: {}", e);
                                         }
                                     }
                                 }
                             }
                         }
+                        last_check = Instant::now();
                     }
-                    last_check = Instant::now();
                 }
-                sleep(Duration::from_millis(100)).await;
             }
         });
     }

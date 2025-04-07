@@ -17,20 +17,19 @@ pub struct Heartbeat {
 }
 
 impl Heartbeat {
-    pub async fn create(self, db_context: &DBContext) -> Result<(), sqlx::Error> {
-        sqlx::query!(
+    pub async fn create(&self, db_context: &DBContext) -> Result<(), sqlx::Error> {
+        sqlx::query(
             "INSERT INTO heartbeats (project_id, entity_id, branch_id, language_id, app_id, timestamp, is_write, lines, cursorpos)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-            self.project_id,
-            self.entity_id,
-            self.branch_id,
-            self.language_id,
-            self.app_id,
-            self.timestamp,
-            self.is_write,
-            self.lines,
-            self.cursorpos
-        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)")
+            .bind(self.project_id)
+            .bind(self.entity_id)
+            .bind(self.branch_id)
+            .bind(self.language_id)
+            .bind(self.app_id)
+            .bind(self.timestamp)
+            .bind(self.is_write)
+            .bind(self.lines)
+            .bind(self.cursorpos)
             .execute(db_context.pool())
             .await?;
 
