@@ -1,7 +1,5 @@
 use chrono::{DateTime, Utc};
-use db::afk_events::AFKEvent;
-use db::DBContext;
-use log::{error, info};
+use log::info;
 use std::sync::Arc;
 use tokio::sync::{Mutex, RwLock};
 use tokio::time::{interval, Duration};
@@ -15,7 +13,7 @@ pub struct AFKTracker {
     afk_threshold: Duration,
     cursor_tracker: Arc<CursorTracker>,
     keyboard_tracker: Arc<KeyboardTracker>,
-    db: Arc<DBContext>,
+    // db: Arc<DBContext>,
 }
 
 impl AFKTracker {
@@ -23,7 +21,7 @@ impl AFKTracker {
         cursor_tracker: Arc<CursorTracker>,
         keyboard_tracker: Arc<KeyboardTracker>,
         afk_timeout: u64,
-        db: Arc<DBContext>,
+        // db: Arc<DBContext>,
     ) -> Self {
         Self {
             last_activity: Arc::new(RwLock::new(Utc::now())),
@@ -31,7 +29,7 @@ impl AFKTracker {
             afk_threshold: Duration::from_secs(afk_timeout),
             cursor_tracker,
             keyboard_tracker,
-            db,
+            // db,
         }
     }
 
@@ -41,7 +39,7 @@ impl AFKTracker {
         let afk_threshold = self.afk_threshold;
         let cursor_tracker = Arc::clone(&self.cursor_tracker);
         let keyboard_tracker = Arc::clone(&self.keyboard_tracker);
-        let db = Arc::clone(&self.db);
+        // let db = Arc::clone(&self.db);
 
         tokio::spawn(async move {
             let mut interval = interval(Duration::from_secs(1));
@@ -75,19 +73,19 @@ impl AFKTracker {
                             now, afk_duration
                         );
 
-                        let db = db.clone();
-                        let afk_event = AFKEvent {
-                            id: None,
-                            afk_start: afk_start_time,
-                            afk_end: Some(now),
-                            duration: Some(afk_duration),
-                        };
+                        // let db = db.clone();
+                        // let afk_event = AFKEvent {
+                        //     id: None,
+                        //     afk_start: afk_start_time,
+                        //     afk_end: Some(now),
+                        //     duration: Some(afk_duration),
+                        // };
 
-                        drop(tokio::spawn(async move {
-                            if let Err(e) = afk_event.insert(&db).await {
-                                error!("Failed to insert AFK event: {:?}", e);
-                            }
-                        }));
+                        // drop(tokio::spawn(async move {
+                        //     if let Err(e) = afk_event.insert(&db).await {
+                        //         error!("Failed to insert AFK event: {:?}", e);
+                        //     }
+                        // }));
                     }
                     *afk_time = None;
                 } else {

@@ -1,5 +1,7 @@
-use crate::window_tracker::WindowTracker;
+use crate::window_tracker::Window;
 use cocoa::appkit::CGPoint;
+use cocoa::base::nil;
+use cocoa::foundation::NSAutoreleasePool;
 use core_foundation::runloop::{kCFRunLoopCommonModes, CFRunLoop};
 use core_graphics::event::{
     CGEventTap, CGEventTapLocation, CGEventTapOptions, CGEventTapPlacement, CGEventType,
@@ -7,16 +9,15 @@ use core_graphics::event::{
 use log::error;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
-use std::thread;
-use std::time::Instant;
-use tokio::sync::mpsc::UnboundedSender;
+use std::time::{Duration, Instant};
+use tokio::sync::watch;
 
 #[derive(Debug, Clone)]
 pub struct CursorActivity {
-    pub app_name: String,
-    pub bundle_id: String,
-    pub app_path: String,
-    pub file: String,
+    pub app_name: Arc<str>,
+    pub bundle_id: Arc<str>,
+    pub app_path: Arc<str>,
+    pub file: Arc<str>,
     pub x: f64,
     pub y: f64,
 }
@@ -34,10 +35,14 @@ pub struct CursorTracker {
     last_movement: Arc<Mutex<Instant>>,
     pressed_buttons: Arc<Mutex<MouseButtons>>,
     mouse_moved: Arc<AtomicBool>,
+    runloop: Arc<Mutex<Option<CFRunLoop>>>,
+    pub tx: watch::Sender<Option<CursorActivity>>,
+    pub rx: watch::Receiver<Option<CursorActivity>>,
 }
 
 impl CursorTracker {
     pub fn new() -> Self {
+        let (tx, rx) = watch::channel(None);
         Self {
             last_position: Arc::new(Mutex::new(CGPoint::new(0.0, 0.0))),
             last_movement: Arc::new(Mutex::new(Instant::now())),
@@ -48,16 +53,22 @@ impl CursorTracker {
                 other: false,
             })),
             mouse_moved: Arc::new(AtomicBool::new(false)),
+            runloop: Arc::new(Mutex::new(None)),
+            tx,
+            rx,
         }
     }
 
-    pub fn start_tracking(&self, tx: UnboundedSender<CursorActivity>) {
+    pub fn start_tracking(&self, window_rx: watch::Receiver<Option<Window>>) {
         let last_position = Arc::clone(&self.last_position);
         let last_movement = Arc::clone(&self.last_movement);
         let pressed_buttons = Arc::clone(&self.pressed_buttons);
         let mouse_moved = Arc::clone(&self.mouse_moved);
+        let runloop_ref = Arc::clone(&self.runloop);
+        let tx = self.tx.clone();
 
-        thread::spawn(move || {
+        tokio::task::spawn_blocking(move || unsafe {
+            let pool = NSAutoreleasePool::new(nil);
             match CGEventTap::new(
                 CGEventTapLocation::HID,
                 CGEventTapPlacement::HeadInsertEventTap,
@@ -81,27 +92,29 @@ impl CursorTracker {
                             let position = event.location();
                             let dx = (position.x - last_pos.x).abs();
                             let dy = (position.y - last_pos.y).abs();
-                            let movement_threshold = 0.5;
+                            let movement_threshold = 100.0;
+                            let debounce_duration = Duration::from_millis(50);
+                            let now = Instant::now();
 
-                            if dx > movement_threshold || dy > movement_threshold {
+                            if (dx > movement_threshold || dy > movement_threshold)
+                                && now.duration_since(*last_move_time) > debounce_duration
+                            {
                                 *last_pos = position;
-                                *last_move_time = Instant::now();
+                                *last_move_time = now;
                                 mouse_moved.store(true, Ordering::Relaxed);
 
-                                if let Some(window) = WindowTracker::get_active_window() {
-                                    let app_name = window.app_name;
-                                    let bundle_id = window.bundle_id;
-                                    let app_path = window.path;
-                                    let file = window.title;
-
-                                    let _ = tx.send(CursorActivity {
-                                        app_name,
-                                        bundle_id,
-                                        app_path,
-                                        file,
+                                let borrowed = window_rx.borrow();
+                                if let Some(window) = borrowed.as_ref() {
+                                    let activity = CursorActivity {
+                                        app_name: Arc::clone(&window.app_name),
+                                        bundle_id: Arc::clone(&window.bundle_id),
+                                        app_path: Arc::clone(&window.path),
+                                        file: Arc::from(window.title.as_ref()),
                                         x: position.x,
                                         y: position.y,
-                                    });
+                                    };
+
+                                    let _ = tx.send(Some(activity));
                                 }
                             }
                         }
@@ -118,7 +131,7 @@ impl CursorTracker {
                     None
                 },
             ) {
-                Ok(tap) => unsafe {
+                Ok(tap) => {
                     let loop_source = match tap.mach_port.create_runloop_source(0) {
                         Ok(source) => source,
                         Err(_) => {
@@ -127,14 +140,17 @@ impl CursorTracker {
                         }
                     };
                     let current = CFRunLoop::get_current();
+                    let current_clone = current.clone();
+                    *runloop_ref.lock().unwrap() = Some(current_clone);
                     current.add_source(&loop_source, kCFRunLoopCommonModes);
                     tap.enable();
                     CFRunLoop::run_current();
-                },
+                }
                 Err(_) => {
                     error!("Failed to create cursor event tap!");
                 }
             }
+            pool.drain();
         });
     }
 
@@ -149,5 +165,15 @@ impl CursorTracker {
 
     pub fn has_mouse_moved(&self) -> bool {
         self.mouse_moved.swap(false, Ordering::Relaxed)
+    }
+
+    pub fn subscribe(&self) -> watch::Receiver<Option<CursorActivity>> {
+        self.rx.clone()
+    }
+
+    pub fn stop_tracking(&self) {
+        if let Some(ref rl) = *self.runloop.lock().unwrap() {
+            CFRunLoop::stop(rl);
+        }
     }
 }

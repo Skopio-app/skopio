@@ -4,18 +4,12 @@ use crate::event_tracker::EventTracker;
 use crate::heartbeat_tracker::HeartbeatTracker;
 use crate::window_tracker::WindowTracker;
 use chrono::Local;
-use db::DBContext;
-use helpers::{
-    config::{AppConfig, CONFIG},
-    db::get_db_path,
-};
+use helpers::config::{AppConfig, CONFIG};
 use keyboard_tracker::KeyboardTracker;
-use log::{debug, error};
-use pprof::ProfilerGuard;
-use std::{sync::Arc, time::Duration};
-use tauri::AppHandle;
-use tokio::sync::mpsc;
-use window_tracker::Window;
+use log::error;
+// use ppfileruard;
+use std::sync::Arc;
+use tauri::{AppHandle, Manager};
 
 mod afk_tracker;
 mod cursor_tracker;
@@ -28,7 +22,13 @@ mod window_tracker;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    let cursor_tracker = Arc::new(CursorTracker::new());
+    let keyboard_tracker = Arc::new(KeyboardTracker::new());
+    let window_tracker = Arc::new(WindowTracker::new());
     tauri::Builder::default()
+        .manage(Arc::clone(&cursor_tracker))
+        .manage(Arc::clone(&keyboard_tracker))
+        .manage(Arc::clone(&window_tracker))
         .setup(|app| {
             let app_handle = app.handle();
             // Enable logging in debug mode
@@ -54,13 +54,22 @@ pub fn run() {
             }
 
             let app_handle_clone = app_handle.clone();
-            tokio::spawn(async move {
+            tauri::async_runtime::spawn(async move {
                 if let Err(e) = async_setup(&app_handle_clone).await {
                     error!("Failed async setup: {}", e);
                 }
             });
 
             Ok(())
+        })
+        .on_window_event(|window, event| {
+            if let tauri::WindowEvent::CloseRequested { .. } = event {
+                let cursor_tracker = window.state::<Arc<CursorTracker>>();
+                let keyboard_tracker = window.state::<Arc<KeyboardTracker>>();
+                cursor_tracker.stop_tracking();
+                keyboard_tracker.stop_tracking();
+                // force_heap_dump();
+            }
         })
         .invoke_handler(tauri::generate_handler![
             crate::helpers::config::get_config,
@@ -76,129 +85,99 @@ async fn async_setup(app_handle: &AppHandle) -> Result<(), anyhow::Error> {
     let config = AppConfig::load(app_handle)?;
     *CONFIG.lock().unwrap() = config.clone();
 
-    let db_path = get_db_path(app_handle);
-    let db_url = format!("sqlite://{}", db_path.to_str().unwrap());
+    // let db_path = get_db_path(app_handle);
+    // let db_url = format!("sqlite://{}", db_path.to_str().unwrap());
 
-    let db = match DBContext::new(&db_url).await {
-        Ok(db) => Arc::new(db),
-        Err(err) => {
-            error!("Failed to connect to database: {}", err);
-            std::process::exit(1);
-        }
-    };
+    // let db = match DBContext::new(&db_url).await {
+    //     Ok(db) => Arc::new(db),
+    //     Err(err) => {
+    //         error!("Failed to connect to database: {}", err);
+    //         std::process::exit(1);
+    //     }
+    // };
 
-    let window_tracker = Arc::new(WindowTracker::new());
-    let cursor_tracker = Arc::new(CursorTracker::new());
-    let keyboard_tracker = Arc::new(KeyboardTracker::new());
+    let window_tracker = app_handle.state::<Arc<WindowTracker>>();
+    let cursor_tracker = app_handle.state::<Arc<CursorTracker>>();
+    let keyboard_tracker = app_handle.state::<Arc<KeyboardTracker>>();
     let afk_tracker = Arc::new(AFKTracker::new(
         Arc::clone(&cursor_tracker),
         Arc::clone(&keyboard_tracker),
         config.afk_timeout,
-        Arc::clone(&db),
+        // Arc::clone(&db),
     ));
     let heartbeat_tracker = Arc::new(HeartbeatTracker::new(
         config.heartbeat_interval,
-        Arc::clone(&db),
+        // Arc::clone(&db),
     ));
     let event_tracker = Arc::new(EventTracker::new(
         Arc::clone(&cursor_tracker),
         Arc::clone(&heartbeat_tracker),
         Arc::clone(&keyboard_tracker),
-        Arc::clone(&db),
+        // Arc::clone(&db),
     ));
 
-    let (tx, mut rx) = mpsc::unbounded_channel();
-    let cursor_tracker_tx = Arc::clone(&cursor_tracker);
-    cursor_tracker_tx.start_tracking(tx.clone());
+    let window_tracker_ref = Arc::clone(&window_tracker);
+    window_tracker_ref.start_tracking();
 
-    {
-        let heartbeat_tracker = Arc::clone(&heartbeat_tracker);
-        tokio::spawn(async move {
-            while let Some(activity) = rx.recv().await {
-                heartbeat_tracker
-                    .track_heartbeat(
-                        &activity.app_name,
-                        &activity.bundle_id,
-                        &activity.app_path,
-                        &activity.file,
-                        activity.x,
-                        activity.y,
-                    )
-                    .await;
-            }
-        });
-    }
+    let cursor_window_rx = window_tracker.subscribe();
+    let event_window_rx = window_tracker.subscribe();
+    let heartbeat_window_rx = window_tracker.subscribe();
 
-    tokio::spawn({
-        let afk_tracker = Arc::clone(&afk_tracker);
-        async move {
-            afk_tracker.start_tracking();
-        }
-    });
+    cursor_tracker.start_tracking(cursor_window_rx);
 
-    tokio::spawn({
-        let keyboard_tracker = Arc::clone(&keyboard_tracker);
-        async move {
-            keyboard_tracker.start_tracking();
-        }
-    });
+    afk_tracker.start_tracking();
 
-    tokio::spawn({
-        let window_tracker = Arc::clone(&window_tracker);
-        let heartbeat_tracker = Arc::clone(&heartbeat_tracker);
-        let cursor_tracker = Arc::clone(&cursor_tracker);
-        async move {
-            window_tracker.start_tracking(Arc::new(move |window: Window| {
-                let cursor_position = cursor_tracker.get_global_cursor_position();
-                let heartbeat_tracker = Arc::clone(&heartbeat_tracker);
+    let keyboard_tracker = Arc::clone(&keyboard_tracker);
+    keyboard_tracker.start_tracking();
 
-                tokio::spawn(async move {
-                    heartbeat_tracker
-                        .track_heartbeat(
-                            &window.app_name,
-                            &window.bundle_id,
-                            &window.path,
-                            &window.title,
-                            cursor_position.0,
-                            cursor_position.1,
-                        )
-                        .await;
-                });
-            }));
-        }
-    });
+    let _ = event_tracker.start_tracking(event_window_rx).await;
 
-    tokio::spawn({
-        let event_tracker = Arc::clone(&event_tracker);
-        async move {
-            event_tracker.start_tracking();
-        }
-    });
-
+    let cursor_rx = cursor_tracker.subscribe();
     tokio::spawn({
         let heartbeat_tracker = Arc::clone(&heartbeat_tracker);
         let cursor_tracker = Arc::clone(&cursor_tracker);
-        let window_tracker = Arc::clone(&window_tracker);
         async move {
             heartbeat_tracker
-                .start_tracking(cursor_tracker, window_tracker)
+                .start_tracking(cursor_tracker, cursor_rx, heartbeat_window_rx)
                 .await;
         }
     });
 
-    let guard = ProfilerGuard::new(100).unwrap();
+    // let guard = ProfilerGuard::new(100).unwrap();
 
-    tokio::spawn(async move {
-        tokio::time::sleep(Duration::from_secs(30)).await;
+    // tokio::spawn(async move {
+    //     tokio::time::sleep(Duration::from_secs(30)).await;
 
-        if let Ok(report) = guard.report().build() {
-            let file = std::fs::File::create("pprof_flamegraph.svg").unwrap();
-            report.flamegraph(file).unwrap();
-            debug!("🔥 Flamegraph written to pprof_flamegraph.svg");
-        } else {
-            error!("Failed to build pprof report.");
-        }
-    });
+    //     if let Ok(report) = guard.report().build() {
+    //         let file = std::fs::File::create("pprof_flamegraph.svg").unwrap();
+    //         report.flamegraph(file).unwrap();
+    //         debug!("🔥 Flamegraph written to pprof_flamegraph.svg");
+    //     } else {
+    //         error!("Failed to build pprof report.");
+    //     }
+    // });
 
     Ok(())
 }
+
+// pub fn force_heap_dump() {
+//     use std::ffi::CString;
+//     use tikv_jemalloc_sys::mallctl;
+
+//     let name = CString::new("prof.dump").unwrap();
+//     unsafe {
+//         let ret = mallctl(
+//             name.as_ptr(),
+//             std::ptr::null_mut(),
+//             std::ptr::null_mut(),
+//             std::ptr::null_mut(),
+//             0,
+//         );
+
+//         if ret != 0 {
+//             error!("⚠️ jemalloc prof.dump failed: {}", ret);
+//         } else {
+//             debug!("✅ jemalloc heap dump written manually.");
+//         }
+//     }
+// }

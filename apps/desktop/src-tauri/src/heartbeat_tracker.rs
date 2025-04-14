@@ -1,16 +1,15 @@
 use crate::cursor_tracker::{CursorActivity, CursorTracker};
-use crate::helpers::db::resolve_heartbeat_ids;
 use crate::helpers::git::get_git_branch;
 use crate::monitored_app::{resolve_app_details, Entity, MonitoredApp, IGNORED_APPS};
-use crate::window_tracker::{Window, WindowTracker};
+use crate::window_tracker::Window;
 use chrono::{DateTime, Utc};
 use dashmap::DashMap;
-use db::{heartbeats::Heartbeat as DBHeartbeat, DBContext};
-use log::{debug, error};
+use log::debug;
 use serde::{Deserialize, Serialize};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
-use tokio::sync::mpsc;
+use tokio::select;
+use tokio::sync::watch;
 use tokio::time::{interval, Duration as TokioDuration};
 
 #[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]
@@ -34,16 +33,19 @@ pub struct HeartbeatTracker {
     last_heartbeat: Arc<Mutex<Option<Heartbeat>>>,
     last_heartbeats: Arc<DashMap<(String, String), Instant>>, // (app_name, entity_name)
     heartbeat_interval: Duration,
-    db: Arc<DBContext>,
+    // db: Arc<DBContext>,
 }
 
 impl HeartbeatTracker {
-    pub fn new(heartbeat_interval: u64, db: Arc<DBContext>) -> Self {
+    pub fn new(
+        heartbeat_interval: u64,
+        //  db: Arc<DBContext>,
+    ) -> Self {
         let tracker = Self {
             last_heartbeat: Arc::new(Mutex::new(None)),
             last_heartbeats: Arc::new(DashMap::new()),
             heartbeat_interval: Duration::from_secs(heartbeat_interval),
-            db,
+            // db,
         };
 
         let last_heartbeats_ref = Arc::clone(&tracker.last_heartbeats);
@@ -106,7 +108,7 @@ impl HeartbeatTracker {
         let bundle_id = app_bundle_id
             .parse::<MonitoredApp>()
             .unwrap_or(MonitoredApp::Unknown);
-        let db = Arc::clone(&self.db);
+        // let db = Arc::clone(&self.db);
 
         if IGNORED_APPS.contains(&bundle_id) {
             return;
@@ -149,29 +151,34 @@ impl HeartbeatTracker {
             cursor_y: Some(cursor_y),
         };
 
-        let resolved = resolve_heartbeat_ids(&db, &heartbeat)
-            .await
-            .unwrap_or_default();
+        debug!(
+            "Logged heartbeat for {:?} and entity {}",
+            heartbeat.app_name, heartbeat.entity_name
+        );
 
-        let db_heartbeat = DBHeartbeat {
-            id: None,
-            project_id: resolved.project_id,
-            entity_id: resolved.entity_id,
-            branch_id: resolved.branch_id,
-            language_id: resolved.language_id,
-            app_id: resolved.app_id,
-            timestamp: heartbeat.timestamp.unwrap_or_else(Utc::now),
-            is_write: Some(heartbeat.is_write),
-            lines: heartbeat.lines,
-            cursorpos: heartbeat
-                .cursor_x
-                .map(|x| x as i64)
-                .or(heartbeat.cursor_y.map(|y| y as i64)),
-        };
+        // let resolved = resolve_heartbeat_ids(&db, &heartbeat)
+        //     .await
+        //     .unwrap_or_default();
 
-        if let Err(e) = db_heartbeat.create(&db).await {
-            error!("Failed to insert heartbeat: {}", e);
-        }
+        // let db_heartbeat = DBHeartbeat {
+        //     id: None,
+        //     project_id: resolved.project_id,
+        //     entity_id: resolved.entity_id,
+        //     branch_id: resolved.branch_id,
+        //     language_id: resolved.language_id,
+        //     app_id: resolved.app_id,
+        //     timestamp: heartbeat.timestamp.unwrap_or_else(Utc::now),
+        //     is_write: Some(heartbeat.is_write),
+        //     lines: heartbeat.lines,
+        //     cursorpos: heartbeat
+        //         .cursor_x
+        //         .map(|x| x as i64)
+        //         .or(heartbeat.cursor_y.map(|y| y as i64)),
+        // };
+
+        // if let Err(e) = db_heartbeat.create(&db).await {
+        //     error!("Failed to insert heartbeat: {}", e);
+        // }
 
         *self.last_heartbeat.lock().unwrap() = Some(heartbeat);
     }
@@ -179,54 +186,64 @@ impl HeartbeatTracker {
     pub async fn start_tracking(
         self: Arc<Self>,
         cursor_tracker: Arc<CursorTracker>,
-        window_tracker: Arc<WindowTracker>,
+        mut cursor_rx: watch::Receiver<Option<CursorActivity>>,
+        mut window_rx: watch::Receiver<Option<Window>>,
     ) {
-        let (tx, mut rx) = mpsc::unbounded_channel::<CursorActivity>();
-
+        let tracker = Arc::clone(&self);
         let cursor_tracker_ref = Arc::clone(&cursor_tracker);
-        cursor_tracker_ref.start_tracking(tx);
 
-        let tracker_cursor = Arc::clone(&self);
         tokio::spawn(async move {
-            while let Some(activity) = rx.recv().await {
-                tracker_cursor
-                    .track_heartbeat(
-                        &activity.app_name,
-                        &activity.bundle_id,
-                        &activity.app_path,
-                        &activity.file,
-                        activity.x,
-                        activity.y,
-                    )
-                    .await;
+            loop {
+                select! {
+                    // Cursor activity (mouse moved)
+                    _ = cursor_rx.changed() => {
+                        if cursor_rx.has_changed().unwrap_or(false) {
+                            let activity = cursor_rx.borrow().clone();
+                            if let Some(activity) = activity {
+                                debug!("---- Cursor change event in heartbeat tracker ----");
+                                tracker
+                                    .track_heartbeat(
+                                        &activity.app_name,
+                                        &activity.bundle_id,
+                                        &activity.app_path,
+                                        &activity.file,
+                                        activity.x,
+                                        activity.y,
+                                    )
+                                    .await;
+                            }
+                        }
+                    }
+
+                    // Window changed
+                    changed = window_rx.changed() => {
+                        if changed.is_ok() {
+                            let maybe_window = {
+                                let guard = window_rx.borrow_and_update();
+                                guard.clone()
+                            };
+
+                            if let Some(window) = maybe_window {
+                                debug!("Window change event ({}) in heartbeat tracker", window.app_name);
+                                // let tracker = Arc::clone(&heartbeat_tracker_window);
+                                let position = cursor_tracker_ref.get_global_cursor_position();
+                                // let tracker = Arc::clone(&tracker);
+                                let app = window.app_name.clone();
+                                let bundle = window.bundle_id.clone();
+                                let path = window.path.clone();
+                                let file = window.title.clone();
+
+                            // tokio::spawn(async move {
+                                // debug!("----Window change heartbeat triggered. New window: {}", app);
+                                tracker
+                                    .track_heartbeat(&app, &bundle, &path, &file, position.0, position.1)
+                                    .await;
+                            // });
+                            }
+                        }
+                    }
+                }
             }
         });
-
-        let heartbeat_tracker_window = Arc::clone(&self);
-        let cursor_tracker_window = Arc::clone(&cursor_tracker);
-        window_tracker.start_tracking(Arc::new({
-            move |window: Window| {
-                let cursor_position = cursor_tracker_window.get_global_cursor_position();
-                let tracker = Arc::clone(&heartbeat_tracker_window);
-
-                let app_name = window.app_name.clone();
-                let bundle_id = window.bundle_id.clone();
-                let app_path = window.path;
-                let title = window.title.clone();
-
-                tokio::spawn(async move {
-                    tracker
-                        .track_heartbeat(
-                            &app_name,
-                            &bundle_id,
-                            &app_path,
-                            &title,
-                            cursor_position.0,
-                            cursor_position.1,
-                        )
-                        .await;
-                });
-            }
-        }) as Arc<dyn Fn(Window) + Send + Sync>);
     }
 }

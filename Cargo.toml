@@ -27,3 +27,14 @@ git2 = "0.20.0"
 reqwest = "0.12.12"
 env_logger = "0.11.6"
 anyhow = "1.0.97"
+moka = "0.12.10"
+percent-encoding = "2.3.1"
+
+# [profile.dev]
+# debug = 2
+# opt-level = 1
+# codegen-units = 1
+# incremental = false
+# lto = false
+# split-debuginfo = "unpacked"
+# strip = "none"
