@@ -111,7 +111,6 @@ async fn async_setup(app_handle: &AppHandle) -> Result<(), anyhow::Error> {
     ));
     let event_tracker = Arc::new(EventTracker::new(
         Arc::clone(&cursor_tracker),
-        Arc::clone(&heartbeat_tracker),
         Arc::clone(&keyboard_tracker),
         // Arc::clone(&db),
     ));
@@ -119,26 +118,30 @@ async fn async_setup(app_handle: &AppHandle) -> Result<(), anyhow::Error> {
     let window_tracker_ref = Arc::clone(&window_tracker);
     window_tracker_ref.start_tracking();
 
-    let cursor_window_rx = window_tracker.subscribe();
     let event_window_rx = window_tracker.subscribe();
     let heartbeat_window_rx = window_tracker.subscribe();
 
-    cursor_tracker.start_tracking(cursor_window_rx);
+    cursor_tracker.start_tracking();
 
     afk_tracker.start_tracking();
 
     let keyboard_tracker = Arc::clone(&keyboard_tracker);
     keyboard_tracker.start_tracking();
 
-    let _ = event_tracker.start_tracking(event_window_rx).await;
-
-    let cursor_rx = cursor_tracker.subscribe();
     tokio::spawn({
-        let heartbeat_tracker = Arc::clone(&heartbeat_tracker);
+        async move {
+            if let Err(e) = event_tracker.start_tracking(event_window_rx).await {
+                error!("Event tracker failed: {}", e);
+            }
+        }
+    });
+
+    tokio::spawn({
         let cursor_tracker = Arc::clone(&cursor_tracker);
+        let cursor_rx = cursor_tracker.subscribe();
         async move {
             heartbeat_tracker
-                .start_tracking(cursor_tracker, cursor_rx, heartbeat_window_rx)
+                .start_tracking(cursor_rx, heartbeat_window_rx)
                 .await;
         }
     });

@@ -1,14 +1,13 @@
-use crate::cursor_tracker::{CursorActivity, CursorTracker};
+use crate::cursor_tracker::CursorActivity;
 use crate::helpers::git::get_git_branch;
 use crate::monitored_app::{resolve_app_details, Entity, MonitoredApp, IGNORED_APPS};
 use crate::window_tracker::Window;
 use chrono::{DateTime, Utc};
 use dashmap::DashMap;
-use log::debug;
+use log::{debug, info};
 use serde::{Deserialize, Serialize};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
-use tokio::select;
 use tokio::sync::watch;
 use tokio::time::{interval, Duration as TokioDuration};
 
@@ -151,7 +150,7 @@ impl HeartbeatTracker {
             cursor_y: Some(cursor_y),
         };
 
-        debug!(
+        info!(
             "Logged heartbeat for {:?} and entity {}",
             heartbeat.app_name, heartbeat.entity_name
         );
@@ -185,62 +184,25 @@ impl HeartbeatTracker {
 
     pub async fn start_tracking(
         self: Arc<Self>,
-        cursor_tracker: Arc<CursorTracker>,
-        mut cursor_rx: watch::Receiver<Option<CursorActivity>>,
+        cursor_rx: watch::Receiver<Option<CursorActivity>>,
         mut window_rx: watch::Receiver<Option<Window>>,
     ) {
         let tracker = Arc::clone(&self);
-        let cursor_tracker_ref = Arc::clone(&cursor_tracker);
 
         tokio::spawn(async move {
             loop {
-                select! {
-                    // Cursor activity (mouse moved)
-                    _ = cursor_rx.changed() => {
-                        if cursor_rx.has_changed().unwrap_or(false) {
-                            let activity = cursor_rx.borrow().clone();
-                            if let Some(activity) = activity {
-                                debug!("---- Cursor change event in heartbeat tracker ----");
-                                tracker
-                                    .track_heartbeat(
-                                        &activity.app_name,
-                                        &activity.bundle_id,
-                                        &activity.app_path,
-                                        &activity.file,
-                                        activity.x,
-                                        activity.y,
-                                    )
-                                    .await;
-                            }
-                        }
-                    }
+                if window_rx.changed().await.is_ok() {
+                    let maybe_window = window_rx.borrow_and_update().clone();
+                    let maybe_cursor = cursor_rx.borrow().clone();
+                    if let (Some(window), Some(cursor)) = (maybe_window, maybe_cursor) {
+                        let app = window.app_name;
+                        let bundle = window.bundle_id;
+                        let path = window.path;
+                        let file = window.title;
 
-                    // Window changed
-                    changed = window_rx.changed() => {
-                        if changed.is_ok() {
-                            let maybe_window = {
-                                let guard = window_rx.borrow_and_update();
-                                guard.clone()
-                            };
-
-                            if let Some(window) = maybe_window {
-                                debug!("Window change event ({}) in heartbeat tracker", window.app_name);
-                                // let tracker = Arc::clone(&heartbeat_tracker_window);
-                                let position = cursor_tracker_ref.get_global_cursor_position();
-                                // let tracker = Arc::clone(&tracker);
-                                let app = window.app_name.clone();
-                                let bundle = window.bundle_id.clone();
-                                let path = window.path.clone();
-                                let file = window.title.clone();
-
-                            // tokio::spawn(async move {
-                                // debug!("----Window change heartbeat triggered. New window: {}", app);
-                                tracker
-                                    .track_heartbeat(&app, &bundle, &path, &file, position.0, position.1)
-                                    .await;
-                            // });
-                            }
-                        }
+                        tracker
+                            .track_heartbeat(&app, &bundle, &path, &file, cursor.x, cursor.y)
+                            .await;
                     }
                 }
             }

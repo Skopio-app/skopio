@@ -1,4 +1,3 @@
-use crate::window_tracker::Window;
 use cocoa::appkit::CGPoint;
 use cocoa::base::nil;
 use cocoa::foundation::NSAutoreleasePool;
@@ -6,7 +5,7 @@ use core_foundation::runloop::{kCFRunLoopCommonModes, CFRunLoop};
 use core_graphics::event::{
     CGEventTap, CGEventTapLocation, CGEventTapOptions, CGEventTapPlacement, CGEventType,
 };
-use log::error;
+use log::{error, warn};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
@@ -14,10 +13,6 @@ use tokio::sync::watch;
 
 #[derive(Debug, Clone)]
 pub struct CursorActivity {
-    pub app_name: Arc<str>,
-    pub bundle_id: Arc<str>,
-    pub app_path: Arc<str>,
-    pub file: Arc<str>,
     pub x: f64,
     pub y: f64,
 }
@@ -59,7 +54,7 @@ impl CursorTracker {
         }
     }
 
-    pub fn start_tracking(&self, window_rx: watch::Receiver<Option<Window>>) {
+    pub fn start_tracking(&self) {
         let last_position = Arc::clone(&self.last_position);
         let last_movement = Arc::clone(&self.last_movement);
         let pressed_buttons = Arc::clone(&self.pressed_buttons);
@@ -103,19 +98,14 @@ impl CursorTracker {
                                 *last_move_time = now;
                                 mouse_moved.store(true, Ordering::Relaxed);
 
-                                let borrowed = window_rx.borrow();
-                                if let Some(window) = borrowed.as_ref() {
-                                    let activity = CursorActivity {
-                                        app_name: Arc::clone(&window.app_name),
-                                        bundle_id: Arc::clone(&window.bundle_id),
-                                        app_path: Arc::clone(&window.path),
-                                        file: Arc::from(window.title.as_ref()),
-                                        x: position.x,
-                                        y: position.y,
-                                    };
+                                let activity = CursorActivity {
+                                    x: position.x,
+                                    y: position.y,
+                                };
 
-                                    let _ = tx.send(Some(activity));
-                                }
+                                if tx.send(Some(activity)).is_err() {
+                                    warn!("No subscribers to receive mouse updates");
+                                };
                             }
                         }
 
@@ -156,11 +146,6 @@ impl CursorTracker {
 
     pub fn get_pressed_mouse_buttons(&self) -> MouseButtons {
         self.pressed_buttons.lock().unwrap().clone()
-    }
-
-    pub fn get_global_cursor_position(&self) -> (f64, f64) {
-        let position = *self.last_position.lock().unwrap();
-        (position.x, position.y)
     }
 
     pub fn has_mouse_moved(&self) -> bool {

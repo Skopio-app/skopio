@@ -1,5 +1,4 @@
 use crate::cursor_tracker::CursorTracker;
-use crate::heartbeat_tracker::HeartbeatTracker;
 use crate::helpers::git::get_git_branch;
 use crate::keyboard_tracker::KeyboardTracker;
 use crate::monitored_app::{resolve_app_details, Category, Entity, MonitoredApp, IGNORED_APPS};
@@ -32,7 +31,6 @@ pub struct EventTracker {
     active_event: Arc<Mutex<Option<Event>>>,
     last_activity: Arc<Mutex<Instant>>,
     cursor_tracker: Arc<CursorTracker>,
-    heartbeat_tracker: Arc<HeartbeatTracker>,
     keyboard_tracker: Arc<KeyboardTracker>,
     // db: Arc<DBContext>,
 }
@@ -40,7 +38,6 @@ pub struct EventTracker {
 impl EventTracker {
     pub fn new(
         cursor_tracker: Arc<CursorTracker>,
-        heartbeat_tracker: Arc<HeartbeatTracker>,
         keyboard_tracker: Arc<KeyboardTracker>,
         // db: Arc<DBContext>,
     ) -> Self {
@@ -48,7 +45,6 @@ impl EventTracker {
             active_event: Arc::new(Mutex::new(None)),
             last_activity: Arc::new(Mutex::new(Instant::now())),
             cursor_tracker,
-            heartbeat_tracker,
             keyboard_tracker,
             // db,
         }
@@ -149,19 +145,6 @@ impl EventTracker {
         }
 
         *self.last_activity.lock().await = Instant::now();
-        let cursor_position = self.cursor_tracker.get_global_cursor_position();
-        let (cursor_x, cursor_y) = cursor_position;
-
-        self.heartbeat_tracker
-            .track_heartbeat(
-                app_name,
-                app_bundle_id,
-                app_path,
-                &entity_name,
-                cursor_x,
-                cursor_y,
-            )
-            .await;
     }
 
     pub fn start_tracking(
