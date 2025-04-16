@@ -1,4 +1,3 @@
-#![cfg(feature = "server")]
 use serde::{Deserialize, Serialize};
 use sqlx::SqlitePool;
 

@@ -36,7 +36,7 @@ anyhow = { workspace = true }
 moka = { workspace = true, features = ["sync"] }
 percent-encoding = { workspace = true }
 
-db = { path = "../../../crates/db", features = ["desktop"], default-features = false }
+db = { path = "../../../crates/db", features = ["desktop"] }
 url = "2.5.4"
 console-subscriber = "0.4.1"
 

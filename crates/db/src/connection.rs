@@ -9,13 +9,6 @@ static MIGRATOR: sqlx::migrate::Migrator = sqlx::migrate!("./migrations/desktop"
 #[cfg(all(feature = "server", not(feature = "desktop")))]
 static MIGRATOR: sqlx::migrate::Migrator = sqlx::migrate!("./migrations/server");
 
-#[cfg(all(
-    not(feature = "desktop"),
-    not(feature = "server"),
-    not(any(test, doctest, clippy))
-))]
-compile_error!("You must enable either the 'desktop' or 'server' feature.");
-
 #[derive(Clone)]
 pub struct DBContext {
     pool: SqlitePool,

@@ -1,5 +1,3 @@
-#![cfg(feature = "desktop")]
-
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 

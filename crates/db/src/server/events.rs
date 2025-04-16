@@ -1,4 +1,3 @@
-#![cfg(feature = "server")]
 use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
 
