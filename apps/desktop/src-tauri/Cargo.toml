@@ -36,11 +36,8 @@ anyhow = { workspace = true }
 moka = { workspace = true, features = ["sync"] }
 percent-encoding = { workspace = true }
 
-db = { path = "../../../crates/db" }
+db = { path = "../../../crates/db", features = ["desktop"], default-features = false }
 url = "2.5.4"
 console-subscriber = "0.4.1"
 
-# [target.'cfg(not(target_env = "msvc"))'.dependencies]
-# tikv-jemallocator = { version = "0.6.0", features = ["profiling", "unprefixed_malloc_on_supported_platforms"] }
-# tikv-jemalloc-sys = { version = "0.6.0", features = ["profiling", "unprefixed_malloc_on_supported_platforms"] }
 # pprof = { version = "0.14.0", features = ["flamegraph", "frame-pointer", "prost-codec"] }

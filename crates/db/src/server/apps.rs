@@ -1,3 +1,4 @@
+#![cfg(feature = "server")]
 use crate::DBContext;
 use serde::{Deserialize, Serialize};
 

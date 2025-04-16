@@ -1,14 +1,31 @@
 use crate::utils::extract_db_file_path;
-use sqlx::migrate::Migrator;
 use sqlx::sqlite::SqliteConnectOptions;
 use sqlx::{sqlite::SqlitePoolOptions, SqlitePool};
 use std::str::FromStr;
 
-static MIGRATOR: Migrator = sqlx::migrate!("./migrations");
+#[cfg(all(feature = "desktop", not(feature = "server")))]
+static MIGRATOR: sqlx::migrate::Migrator = sqlx::migrate!("./migrations/desktop");
+
+#[cfg(all(feature = "server", not(feature = "desktop")))]
+static MIGRATOR: sqlx::migrate::Migrator = sqlx::migrate!("./migrations/server");
+
+// #[cfg(not(any(
+//     all(feature = "desktop", not(feature = "server")),
+//     all(feature = "server", not(feature = "desktop"))
+// )))]
+// compile_error!("You must enable either 'desktop' or 'server', but not both.");
 
 #[derive(Clone)]
 pub struct DBContext {
     pool: SqlitePool,
+}
+
+#[cfg(any(
+    all(feature = "desktop", not(feature = "server")),
+    all(feature = "server", not(feature = "desktop"))
+))]
+async fn run_migrations(pool: &SqlitePool) -> Result<(), sqlx::Error> {
+    MIGRATOR.run(pool).await
 }
 
 impl DBContext {
@@ -28,7 +45,11 @@ impl DBContext {
             .connect_with(connection_options)
             .await?;
 
-        MIGRATOR.run(&pool).await?;
+        #[cfg(any(
+            all(feature = "desktop", not(feature = "server")),
+            all(feature = "server", not(feature = "desktop"))
+        ))]
+        run_migrations(&pool).await?;
 
         Ok(Self { pool })
     }

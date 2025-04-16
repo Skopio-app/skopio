@@ -13,7 +13,7 @@ tokio = { workspace = true, features = ["full"] }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true, features = ["env-filter", "chrono"] }
 
-db = { path = "../../crates/db" }
+db = { path = "../../crates/db" , features = ["server"], default-features = false }
 chrono = { workspace = true, features = ["serde"] }
 dirs = { workspace = true }
 tower-http = { version = "0.6.2", features = ["cors"] }

@@ -1,3 +1,4 @@
+#![cfg(feature = "server")]
 use crate::DBContext;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
