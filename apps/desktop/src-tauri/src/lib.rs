@@ -20,8 +20,10 @@ mod keyboard_tracker;
 mod monitored_app;
 mod window_tracker;
 
-#[cfg_attr(mobile, tauri::mobile_entry_point)]
-pub fn run() {
+#[tokio::main]
+pub async fn run() {
+    tauri::async_runtime::set(tokio::runtime::Handle::current());
+
     let cursor_tracker = Arc::new(CursorTracker::new());
     let keyboard_tracker = Arc::new(KeyboardTracker::new());
     let window_tracker = Arc::new(WindowTracker::new());
@@ -112,6 +114,7 @@ async fn async_setup(app_handle: &AppHandle) -> Result<(), anyhow::Error> {
     let event_tracker = Arc::new(EventTracker::new(
         Arc::clone(&cursor_tracker),
         Arc::clone(&keyboard_tracker),
+        config.afk_timeout,
         // Arc::clone(&db),
     ));
 

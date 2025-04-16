@@ -9,23 +9,16 @@ static MIGRATOR: sqlx::migrate::Migrator = sqlx::migrate!("./migrations/desktop"
 #[cfg(all(feature = "server", not(feature = "desktop")))]
 static MIGRATOR: sqlx::migrate::Migrator = sqlx::migrate!("./migrations/server");
 
-// #[cfg(not(any(
-//     all(feature = "desktop", not(feature = "server")),
-//     all(feature = "server", not(feature = "desktop"))
-// )))]
-// compile_error!("You must enable either 'desktop' or 'server', but not both.");
+#[cfg(all(
+    not(feature = "desktop"),
+    not(feature = "server"),
+    not(any(test, doctest, clippy))
+))]
+compile_error!("You must enable either the 'desktop' or 'server' feature.");
 
 #[derive(Clone)]
 pub struct DBContext {
     pool: SqlitePool,
-}
-
-#[cfg(any(
-    all(feature = "desktop", not(feature = "server")),
-    all(feature = "server", not(feature = "desktop"))
-))]
-async fn run_migrations(pool: &SqlitePool) -> Result<(), sqlx::Error> {
-    MIGRATOR.run(pool).await
 }
 
 impl DBContext {
@@ -49,7 +42,7 @@ impl DBContext {
             all(feature = "desktop", not(feature = "server")),
             all(feature = "server", not(feature = "desktop"))
         ))]
-        run_migrations(&pool).await?;
+        MIGRATOR.run(&pool).await?;
 
         Ok(Self { pool })
     }

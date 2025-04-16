@@ -32,6 +32,7 @@ pub struct EventTracker {
     last_activity: Arc<Mutex<Instant>>,
     cursor_tracker: Arc<CursorTracker>,
     keyboard_tracker: Arc<KeyboardTracker>,
+    afk_threshold: Duration,
     // db: Arc<DBContext>,
 }
 
@@ -39,6 +40,7 @@ impl EventTracker {
     pub fn new(
         cursor_tracker: Arc<CursorTracker>,
         keyboard_tracker: Arc<KeyboardTracker>,
+        afk_timeout: u64,
         // db: Arc<DBContext>,
     ) -> Self {
         Self {
@@ -46,6 +48,7 @@ impl EventTracker {
             last_activity: Arc::new(Mutex::new(Instant::now())),
             cursor_tracker,
             keyboard_tracker,
+            afk_threshold: Duration::from_secs(afk_timeout),
             // db,
         }
     }
@@ -112,12 +115,9 @@ impl EventTracker {
                     // }
 
                     info!(
-                        "Event Ended: App={}, Entity={}, Activity={}, Duration={}s",
+                        "Event Ended: App={}, Entity={:?}, Activity={}, Duration={}s",
                         prev_event.app_name,
-                        prev_event
-                            .entity_name
-                            .clone()
-                            .unwrap_or("unknown".to_string()),
+                        prev_event.entity_name,
                         prev_event.activity_type,
                         duration
                     );
@@ -153,8 +153,8 @@ impl EventTracker {
     ) -> tokio::task::JoinHandle<()> {
         tokio::spawn(async move {
             let mut last_state = None;
-            let timeout_duration = Duration::from_secs(120);
             let mut last_check = Instant::now();
+            let afk_threshold = self.afk_threshold;
 
             loop {
                 tokio::select! {
@@ -197,9 +197,9 @@ impl EventTracker {
                         }
                     }
 
-                    _ = tokio::time::sleep_until(last_check + timeout_duration) => {
+                    _ = tokio::time::sleep_until(last_check + afk_threshold) => {
                         let last_active_time = *self.last_activity.lock().await;
-                        if Instant::now().duration_since(last_active_time) >= timeout_duration {
+                        if Instant::now().duration_since(last_active_time) >= afk_threshold {
                             self.end_active_event().await;
                             last_state = None;
                         }
@@ -218,6 +218,14 @@ impl EventTracker {
             let mut ended_event = prev_event.clone();
             ended_event.duration = Some(event_duration);
             ended_event.end_timestamp = Some(Utc::now());
+
+            info!(
+                "Auto-ending inactive event: App: {}, Entity: {:?}, Activity: {}, Duration: {}s",
+                prev_event.app_name,
+                prev_event.entity_name,
+                prev_event.activity_type,
+                event_duration
+            );
 
             // let resolved = resolve_event_ids(&self.db, ended_event.clone()).await;
 

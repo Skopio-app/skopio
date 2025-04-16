@@ -8,8 +8,7 @@
 // #[global_allocator]
 // static GLOBAL: Jemalloc = Jemalloc;
 
-#[tokio::main]
-async fn main() {
+fn main() {
     console_subscriber::init();
     desktop_lib::run();
 }
