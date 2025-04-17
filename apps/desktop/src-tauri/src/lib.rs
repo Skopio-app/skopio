@@ -12,10 +12,9 @@ use helpers::{
 };
 use keyboard_tracker::KeyboardTracker;
 use log::error;
-use tracking_service::{DBService, TrackingService};
-// use ppfileruard;
 use std::sync::Arc;
 use tauri::{AppHandle, Manager};
+use tracking_service::{DBService, TrackingService};
 
 mod afk_tracker;
 mod buffered_service;
@@ -76,9 +75,14 @@ pub async fn run() {
             if let tauri::WindowEvent::CloseRequested { .. } = event {
                 let cursor_tracker = window.state::<Arc<CursorTracker>>();
                 let keyboard_tracker = window.state::<Arc<KeyboardTracker>>();
+                let buffered_service = window.state::<Arc<BufferedTrackingService>>();
                 cursor_tracker.stop_tracking();
                 keyboard_tracker.stop_tracking();
-                // force_heap_dump();
+
+                let buffered_service = Arc::clone(&buffered_service);
+                tokio::spawn(async move {
+                    buffered_service.shutdown().await;
+                });
             }
         })
         .invoke_handler(tauri::generate_handler![
@@ -107,8 +111,10 @@ async fn async_setup(app_handle: &AppHandle) -> Result<(), anyhow::Error> {
     };
 
     let raw_service = Arc::new(DBService::new(Arc::clone(&db)));
-    let buffered_service: Arc<dyn TrackingService> =
-        Arc::new(BufferedTrackingService::new(raw_service));
+    let buffered_service = Arc::new(BufferedTrackingService::new(raw_service));
+    app_handle.manage(Arc::clone(&buffered_service));
+
+    let service_trait: Arc<dyn TrackingService> = buffered_service.clone();
 
     let window_tracker = app_handle.state::<Arc<WindowTracker>>();
     let cursor_tracker = app_handle.state::<Arc<CursorTracker>>();
@@ -117,18 +123,18 @@ async fn async_setup(app_handle: &AppHandle) -> Result<(), anyhow::Error> {
         Arc::clone(&cursor_tracker),
         Arc::clone(&keyboard_tracker),
         config.afk_timeout,
-        Arc::clone(&buffered_service),
+        Arc::clone(&service_trait),
     ));
 
     let heartbeat_tracker = Arc::new(HeartbeatTracker::new(
         config.heartbeat_interval,
-        Arc::clone(&buffered_service),
+        Arc::clone(&service_trait),
     ));
     let event_tracker = Arc::new(EventTracker::new(
         Arc::clone(&cursor_tracker),
         Arc::clone(&keyboard_tracker),
         config.afk_timeout,
-        Arc::clone(&buffered_service),
+        Arc::clone(&service_trait),
     ));
 
     let window_tracker_ref = Arc::clone(&window_tracker);
@@ -162,41 +168,5 @@ async fn async_setup(app_handle: &AppHandle) -> Result<(), anyhow::Error> {
         }
     });
 
-    // let guard = ProfilerGuard::new(100).unwrap();
-
-    // tokio::spawn(async move {
-    //     tokio::time::sleep(Duration::from_secs(30)).await;
-
-    //     if let Ok(report) = guard.report().build() {
-    //         let file = std::fs::File::create("pprof_flamegraph.svg").unwrap();
-    //         report.flamegraph(file).unwrap();
-    //         debug!("🔥 Flamegraph written to pprof_flamegraph.svg");
-    //     } else {
-    //         error!("Failed to build pprof report.");
-    //     }
-    // });
-
     Ok(())
 }
-
-// pub fn force_heap_dump() {
-//     use std::ffi::CString;
-//     use tikv_jemalloc_sys::mallctl;
-
-//     let name = CString::new("prof.dump").unwrap();
-//     unsafe {
-//         let ret = mallctl(
-//             name.as_ptr(),
-//             std::ptr::null_mut(),
-//             std::ptr::null_mut(),
-//             std::ptr::null_mut(),
-//             0,
-//         );
-
-//         if ret != 0 {
-//             error!("⚠️ jemalloc prof.dump failed: {}", ret);
-//         } else {
-//             debug!("✅ jemalloc heap dump written manually.");
-//         }
-//     }
-// }

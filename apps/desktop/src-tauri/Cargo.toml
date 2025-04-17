@@ -36,9 +36,7 @@ anyhow = { workspace = true }
 moka = { workspace = true, features = ["sync"] }
 percent-encoding = { workspace = true }
 async-trait = { workspace = true }
-
-db = { path = "../../../crates/db", features = ["desktop"] }
 url = "2.5.4"
 console-subscriber = "0.4.1"
 
-# pprof = { version = "0.14.0", features = ["flamegraph", "frame-pointer", "prost-codec"] }
+db = { path = "../../../crates/db", features = ["desktop"] }

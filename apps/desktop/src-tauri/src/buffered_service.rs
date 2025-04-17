@@ -2,7 +2,8 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use db::desktop::{afk_events::AFKEvent, events::Event, heartbeats::Heartbeat};
-use tokio::sync::mpsc;
+use log::info;
+use tokio::sync::{mpsc, oneshot, Mutex};
 use tokio::time::{Duration, Instant};
 
 use crate::tracking_service::TrackingService;
@@ -13,9 +14,9 @@ pub enum TrackingMessage {
     Afk(AFKEvent),
 }
 
-#[derive(Clone)]
 pub struct BufferedTrackingService {
     sender: mpsc::Sender<TrackingMessage>,
+    shutdown_tx: Arc<Mutex<Option<oneshot::Sender<()>>>>,
 }
 
 impl BufferedTrackingService {
@@ -25,27 +26,50 @@ impl BufferedTrackingService {
         let mut buffer: Vec<TrackingMessage> = Vec::new();
         let mut last_flush = Instant::now();
 
+        let (shutdown_tx, mut shutdown_rx) = oneshot::channel::<()>();
+        let shutdown_tx_arc = Arc::new(Mutex::new(Some(shutdown_tx)));
+
+        let inner_clone = Arc::clone(&inner);
+
         tokio::spawn(async move {
             loop {
                 tokio::select! {
                     Some(msg) = rx.recv() => {
                         buffer.push(msg);
                         if buffer.len() >= 10 || last_flush.elapsed() >= flush_interval {
-                            flush(&inner, &mut buffer).await;
+                            flush(&inner_clone, &mut buffer).await;
                             last_flush = Instant::now();
                         }
                     }
                     _ = tokio::time::sleep_until(last_flush + flush_interval) => {
                         if !buffer.is_empty() {
-                            flush(&inner, &mut buffer).await;
+                            flush(&inner_clone, &mut buffer).await;
                             last_flush = Instant::now();
                         }
+                    }
+                    _ = &mut shutdown_rx => {
+                        if !buffer.is_empty() {
+                            info!("Flushing buffer before shutdown ({} items)...", buffer.len());
+                            flush(&inner_clone, &mut buffer).await;
+                        }
+                        info!("Buffer service shut down gracefully.");
+                        break;
                     }
                 }
             }
         });
 
-        Self { sender: tx }
+        Self {
+            sender: tx,
+            shutdown_tx: shutdown_tx_arc,
+        }
+    }
+
+    pub async fn shutdown(&self) {
+        let mut tx_guard = self.shutdown_tx.lock().await;
+        if let Some(tx) = tx_guard.take() {
+            let _ = tx.send(());
+        }
     }
 }
 

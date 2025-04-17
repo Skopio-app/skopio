@@ -106,7 +106,6 @@ impl HeartbeatTracker {
         let bundle_id = app_bundle_id
             .parse::<MonitoredApp>()
             .unwrap_or(MonitoredApp::Unknown);
-        // let db = Arc::clone(&self.db);
 
         if IGNORED_APPS.contains(&bundle_id) {
             return;
