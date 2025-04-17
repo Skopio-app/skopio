@@ -2,9 +2,11 @@ use crate::cursor_tracker::CursorTracker;
 use crate::helpers::git::get_git_branch;
 use crate::keyboard_tracker::KeyboardTracker;
 use crate::monitored_app::{resolve_app_details, Category, Entity, MonitoredApp, IGNORED_APPS};
+use crate::tracking_service::TrackingService;
 use crate::window_tracker::Window;
 use chrono::{DateTime, Utc};
-use log::info;
+use db::desktop::events::Event as DBEvent;
+use log::{error, info};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tokio::sync::{watch, Mutex};
@@ -33,7 +35,7 @@ pub struct EventTracker {
     cursor_tracker: Arc<CursorTracker>,
     keyboard_tracker: Arc<KeyboardTracker>,
     afk_threshold: Duration,
-    // db: Arc<DBContext>,
+    tracker: Arc<dyn TrackingService>,
 }
 
 impl EventTracker {
@@ -41,7 +43,7 @@ impl EventTracker {
         cursor_tracker: Arc<CursorTracker>,
         keyboard_tracker: Arc<KeyboardTracker>,
         afk_timeout: u64,
-        // db: Arc<DBContext>,
+        tracker: Arc<dyn TrackingService>,
     ) -> Self {
         Self {
             active_event: Arc::new(Mutex::new(None)),
@@ -49,7 +51,7 @@ impl EventTracker {
             cursor_tracker,
             keyboard_tracker,
             afk_threshold: Duration::from_secs(afk_timeout),
-            // db,
+            tracker,
         }
     }
 
@@ -91,28 +93,24 @@ impl EventTracker {
                     ended_event.duration = Some(duration);
                     ended_event.end_timestamp = Some(now);
 
-                    // let db = Arc::clone(&self.db);
-                    // let resolved = resolve_event_ids(&db, ended_event.clone()).await;
+                    let db_event = DBEvent {
+                        timestamp: ended_event.timestamp,
+                        duration: ended_event.duration,
+                        activity_type: ended_event.activity_type.to_string(),
+                        app_name: ended_event.app_name,
+                        entity_name: ended_event.entity_name,
+                        entity_type: Some(ended_event.entity_type.unwrap().to_string()),
+                        project_name: ended_event.project_name,
+                        project_path: ended_event.project_path,
+                        branch_name: ended_event.branch_name,
+                        language_name: ended_event.language_name,
+                        end_timestamp: ended_event.end_timestamp,
+                    };
 
-                    // if let Ok(resolved) = resolved {
-                    //     let db_event = DBEvent {
-                    //         id: None,
-                    //         timestamp: to_naive_datetime(ended_event.timestamp)
-                    //             .unwrap_or_else(|| Utc::now().naive_utc()),
-                    //         duration: ended_event.duration,
-                    //         activity_type: ended_event.activity_type.to_string(),
-                    //         app_id: resolved.app_id.unwrap_or_default(),
-                    //         entity_id: resolved.entity_id,
-                    //         project_id: resolved.project_id,
-                    //         branch_id: resolved.branch_id,
-                    //         language_id: resolved.language_id,
-                    //         end_timestamp: to_naive_datetime(ended_event.end_timestamp),
-                    //     };
-
-                    //     if let Err(e) = db_event.create(&db).await {
-                    //         error!("Failed to insert db event: {}", e);
-                    //     };
-                    // }
+                    self.tracker
+                        .insert_event(db_event)
+                        .await
+                        .unwrap_or_else(|error| error!("Failed to batch event: {}", error));
 
                     info!(
                         "Event Ended: App={}, Entity={:?}, Activity={}, Duration={}s",
@@ -219,6 +217,25 @@ impl EventTracker {
             ended_event.duration = Some(event_duration);
             ended_event.end_timestamp = Some(Utc::now());
 
+            let db_event = DBEvent {
+                timestamp: ended_event.timestamp,
+                duration: ended_event.duration,
+                activity_type: ended_event.activity_type.to_string(),
+                app_name: ended_event.app_name,
+                entity_name: ended_event.entity_name,
+                entity_type: Some(ended_event.entity_type.unwrap().to_string()),
+                project_name: ended_event.project_name,
+                project_path: ended_event.project_path,
+                branch_name: ended_event.branch_name,
+                language_name: ended_event.language_name,
+                end_timestamp: ended_event.end_timestamp,
+            };
+
+            self.tracker
+                .insert_event(db_event)
+                .await
+                .unwrap_or_else(|error| error!("Failed to batch event: {}", error));
+
             info!(
                 "Auto-ending inactive event: App: {}, Entity: {:?}, Activity: {}, Duration: {}s",
                 prev_event.app_name,
@@ -226,36 +243,6 @@ impl EventTracker {
                 prev_event.activity_type,
                 event_duration
             );
-
-            // let resolved = resolve_event_ids(&self.db, ended_event.clone()).await;
-
-            // if let Ok(resolved) = resolved {
-            //     let db_event = DBEvent {
-            //         id: None,
-            //         timestamp: to_naive_datetime(ended_event.timestamp)
-            //             .unwrap_or_else(|| Utc::now().naive_utc()),
-            //         duration: ended_event.duration,
-            //         activity_type: ended_event.activity_type.to_string(),
-            //         app_id: resolved.app_id.unwrap_or_default(),
-            //         entity_id: resolved.entity_id,
-            //         project_id: resolved.project_id,
-            //         branch_id: resolved.branch_id,
-            //         language_id: resolved.language_id,
-            //         end_timestamp: to_naive_datetime(ended_event.end_timestamp),
-            //     };
-
-            //     if let Err(e) = db_event.create(&self.db).await {
-            //         error!("Failed to insert inactive event: {}", e);
-            //     } else {
-            //         info!(
-            //             "Auto-ending inactive event: App: {}, Entity: {:?}, Activity: {}, Duration: {}s",
-            //             prev_event.app_name,
-            //             prev_event.entity_name,
-            //             prev_event.activity_type,
-            //             event_duration
-            //         );
-            //     }
-            // }
         }
     }
 }

@@ -3,21 +3,29 @@ use crate::cursor_tracker::CursorTracker;
 use crate::event_tracker::EventTracker;
 use crate::heartbeat_tracker::HeartbeatTracker;
 use crate::window_tracker::WindowTracker;
+use buffered_service::BufferedTrackingService;
 use chrono::Local;
-use helpers::config::{AppConfig, CONFIG};
+use db::DBContext;
+use helpers::{
+    config::{AppConfig, CONFIG},
+    db::get_db_path,
+};
 use keyboard_tracker::KeyboardTracker;
 use log::error;
+use tracking_service::{DBService, TrackingService};
 // use ppfileruard;
 use std::sync::Arc;
 use tauri::{AppHandle, Manager};
 
 mod afk_tracker;
+mod buffered_service;
 mod cursor_tracker;
 mod event_tracker;
 mod heartbeat_tracker;
 mod helpers;
 mod keyboard_tracker;
 mod monitored_app;
+mod tracking_service;
 mod window_tracker;
 
 #[tokio::main]
@@ -56,7 +64,7 @@ pub async fn run() {
             }
 
             let app_handle_clone = app_handle.clone();
-            tauri::async_runtime::spawn(async move {
+            tokio::spawn(async move {
                 if let Err(e) = async_setup(&app_handle_clone).await {
                     error!("Failed async setup: {}", e);
                 }
@@ -87,16 +95,20 @@ async fn async_setup(app_handle: &AppHandle) -> Result<(), anyhow::Error> {
     let config = AppConfig::load(app_handle)?;
     *CONFIG.lock().unwrap() = config.clone();
 
-    // let db_path = get_db_path(app_handle);
-    // let db_url = format!("sqlite://{}", db_path.to_str().unwrap());
+    let db_path = get_db_path(app_handle);
+    let db_url = format!("sqlite://{}", db_path.to_str().unwrap());
 
-    // let db = match DBContext::new(&db_url).await {
-    //     Ok(db) => Arc::new(db),
-    //     Err(err) => {
-    //         error!("Failed to connect to database: {}", err);
-    //         std::process::exit(1);
-    //     }
-    // };
+    let db = match DBContext::new(&db_url).await {
+        Ok(db) => Arc::new(db),
+        Err(err) => {
+            error!("Failed to connect to database: {}", err);
+            std::process::exit(1);
+        }
+    };
+
+    let raw_service = Arc::new(DBService::new(Arc::clone(&db)));
+    let buffered_service: Arc<dyn TrackingService> =
+        Arc::new(BufferedTrackingService::new(raw_service));
 
     let window_tracker = app_handle.state::<Arc<WindowTracker>>();
     let cursor_tracker = app_handle.state::<Arc<CursorTracker>>();
@@ -105,17 +117,18 @@ async fn async_setup(app_handle: &AppHandle) -> Result<(), anyhow::Error> {
         Arc::clone(&cursor_tracker),
         Arc::clone(&keyboard_tracker),
         config.afk_timeout,
-        // Arc::clone(&db),
+        Arc::clone(&buffered_service),
     ));
+
     let heartbeat_tracker = Arc::new(HeartbeatTracker::new(
         config.heartbeat_interval,
-        // Arc::clone(&db),
+        Arc::clone(&buffered_service),
     ));
     let event_tracker = Arc::new(EventTracker::new(
         Arc::clone(&cursor_tracker),
         Arc::clone(&keyboard_tracker),
         config.afk_timeout,
-        // Arc::clone(&db),
+        Arc::clone(&buffered_service),
     ));
 
     let window_tracker_ref = Arc::clone(&window_tracker);

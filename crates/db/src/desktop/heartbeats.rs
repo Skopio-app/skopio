@@ -23,7 +23,7 @@ impl Heartbeat {
     pub async fn insert(self, db_context: &DBContext) -> Result<(), sqlx::Error> {
         sqlx::query!(
             "
-            INSERT INTO heartbeats (timestamp, project_name, project_path, entity_name, entity_name, branch_name, language_name, app_name, is_write, lines, cursorpos)
+            INSERT INTO heartbeats (timestamp, project_name, project_path, entity_name, entity_type, branch_name, language_name, app_name, is_write, lines, cursorpos)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ",
             self.timestamp,

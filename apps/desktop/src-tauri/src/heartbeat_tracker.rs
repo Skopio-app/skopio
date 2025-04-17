@@ -1,10 +1,12 @@
 use crate::cursor_tracker::CursorActivity;
 use crate::helpers::git::get_git_branch;
 use crate::monitored_app::{resolve_app_details, Entity, MonitoredApp, IGNORED_APPS};
+use crate::tracking_service::TrackingService;
 use crate::window_tracker::Window;
 use chrono::{DateTime, Utc};
 use dashmap::DashMap;
-use log::{debug, info};
+use db::desktop::heartbeats::Heartbeat as DBHeartbeat;
+use log::{debug, error, info};
 use serde::{Deserialize, Serialize};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
@@ -32,19 +34,16 @@ pub struct HeartbeatTracker {
     last_heartbeat: Arc<Mutex<Option<Heartbeat>>>,
     last_heartbeats: Arc<DashMap<(String, String), Instant>>, // (app_name, entity_name)
     heartbeat_interval: Duration,
-    // db: Arc<DBContext>,
+    tracker: Arc<dyn TrackingService>,
 }
 
 impl HeartbeatTracker {
-    pub fn new(
-        heartbeat_interval: u64,
-        //  db: Arc<DBContext>,
-    ) -> Self {
+    pub fn new(heartbeat_interval: u64, tracker: Arc<dyn TrackingService>) -> Self {
         let tracker = Self {
             last_heartbeat: Arc::new(Mutex::new(None)),
             last_heartbeats: Arc::new(DashMap::new()),
             heartbeat_interval: Duration::from_secs(heartbeat_interval),
-            // db,
+            tracker,
         };
 
         let last_heartbeats_ref = Arc::clone(&tracker.last_heartbeats);
@@ -150,34 +149,29 @@ impl HeartbeatTracker {
             cursor_y: Some(cursor_y),
         };
 
+        let db_heartbeat = DBHeartbeat {
+            timestamp: heartbeat.timestamp,
+            project_name: heartbeat.project_name.clone(),
+            project_path: heartbeat.project_path.clone(),
+            entity_name: heartbeat.entity_name.clone(),
+            entity_type: heartbeat.entity_type.to_string(),
+            branch_name: heartbeat.branch_name.clone(),
+            language_name: heartbeat.language_name.clone(),
+            app_name: heartbeat.app_name.clone(),
+            is_write: heartbeat.is_write,
+            lines: heartbeat.lines,
+            cursorpos: Some(cursor_x as i64),
+        };
+
         info!(
             "Logged heartbeat for {:?} and entity {}",
             heartbeat.app_name, heartbeat.entity_name
         );
 
-        // let resolved = resolve_heartbeat_ids(&db, &heartbeat)
-        //     .await
-        //     .unwrap_or_default();
-
-        // let db_heartbeat = DBHeartbeat {
-        //     id: None,
-        //     project_id: resolved.project_id,
-        //     entity_id: resolved.entity_id,
-        //     branch_id: resolved.branch_id,
-        //     language_id: resolved.language_id,
-        //     app_id: resolved.app_id,
-        //     timestamp: heartbeat.timestamp.unwrap_or_else(Utc::now),
-        //     is_write: Some(heartbeat.is_write),
-        //     lines: heartbeat.lines,
-        //     cursorpos: heartbeat
-        //         .cursor_x
-        //         .map(|x| x as i64)
-        //         .or(heartbeat.cursor_y.map(|y| y as i64)),
-        // };
-
-        // if let Err(e) = db_heartbeat.create(&db).await {
-        //     error!("Failed to insert heartbeat: {}", e);
-        // }
+        self.tracker
+            .insert_heartbeat(db_heartbeat)
+            .await
+            .unwrap_or_else(|error| error!("Failed to batch heartbeat: {}", error));
 
         *self.last_heartbeat.lock().unwrap() = Some(heartbeat);
     }
