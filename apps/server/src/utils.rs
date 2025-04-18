@@ -1,6 +1,5 @@
 use axum::http::StatusCode;
 use axum::Json;
-use chrono::{DateTime, NaiveDateTime, Utc};
 use dirs::data_dir;
 use std::path::PathBuf;
 use tracing::error;
@@ -16,8 +15,4 @@ pub fn error_response<E: std::fmt::Display>(err: E) -> (StatusCode, Json<String>
         StatusCode::INTERNAL_SERVER_ERROR,
         Json(format!("Error: {}", err)),
     )
-}
-
-pub fn to_naive_datetime(datetime: Option<DateTime<Utc>>) -> Option<NaiveDateTime> {
-    datetime.map(|dt| dt.naive_utc())
 }

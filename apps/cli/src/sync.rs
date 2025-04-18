@@ -44,6 +44,7 @@ pub fn sync_data(conn: &Connection) -> Result<(), Box<dyn std::error::Error>> {
             let timestamp_unix: Option<i64> = row.get(0)?;
             let end_timestamp_unix: Option<i64> = row.get(9)?;
 
+            // TODO: Modify to send over NaiveDateTime instead of DateTime<Utc>
             let timestamp_utc: Option<DateTime<Utc>> = timestamp_unix.map(|ts| Utc.timestamp_opt(ts, 0).unwrap());
             let end_timestamp_utc: Option<DateTime<Utc>> = end_timestamp_unix.map(|ts| Utc.timestamp_opt(ts, 0).unwrap());
 

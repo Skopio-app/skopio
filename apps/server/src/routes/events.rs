@@ -1,9 +1,9 @@
-use crate::utils::{error_response, to_naive_datetime};
+use crate::utils::error_response;
 use axum::extract::State;
 use axum::http::StatusCode;
 use axum::routing::post;
 use axum::{Json, Router};
-use chrono::{DateTime, Utc};
+use chrono::NaiveDateTime;
 use db::server::apps::App;
 use db::server::branches::Branch;
 use db::server::entities::Entity;
@@ -18,8 +18,7 @@ use tracing::info;
 
 #[derive(Serialize, Deserialize, Debug)]
 struct EventInput {
-    #[serde(with = "chrono::serde::ts_seconds_option")]
-    timestamp: Option<DateTime<Utc>>,
+    timestamp: Option<NaiveDateTime>,
     duration: Option<i64>,
     activity_type: String,
     app_name: String,
@@ -29,8 +28,7 @@ struct EventInput {
     project_path: String,
     branch_name: String,
     language_name: String,
-    #[serde(with = "chrono::serde::ts_seconds_option")]
-    end_timestamp: Option<DateTime<Utc>>,
+    end_timestamp: Option<NaiveDateTime>,
 }
 
 async fn handle_events(
@@ -61,7 +59,7 @@ async fn handle_events(
 
         let event = Event {
             id: None,
-            timestamp: to_naive_datetime(event.timestamp).unwrap_or_else(|| Utc::now().naive_utc()),
+            timestamp: event.timestamp.unwrap_or_default(),
             duration: event.duration,
             activity_type: event.activity_type,
             app_id,
@@ -69,7 +67,7 @@ async fn handle_events(
             project_id: Some(project_id),
             branch_id: Some(branch_id),
             language_id: Some(language_id),
-            end_timestamp: to_naive_datetime(event.end_timestamp),
+            end_timestamp: event.end_timestamp,
         };
 
         event.create(&db).await.map_err(error_response)?;

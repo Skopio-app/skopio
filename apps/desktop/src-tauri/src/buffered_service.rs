@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use chrono::{DateTime, Utc};
+use chrono::NaiveDateTime;
 use db::desktop::{afk_events::AFKEvent, events::Event, heartbeats::Heartbeat};
 use db::DBContext;
 use log::{error, info};
@@ -23,8 +23,7 @@ pub enum TrackingMessage {
 // TODO: Add structs to `core` crate for ease of reuse across desktop, server and CLI apps
 #[derive(Serialize, Deserialize, Debug)]
 struct EventInput {
-    #[serde(with = "chrono::serde::ts_seconds_option")]
-    timestamp: Option<DateTime<Utc>>,
+    timestamp: Option<NaiveDateTime>,
     duration: Option<i64>,
     activity_type: String,
     app_name: String,
@@ -34,14 +33,12 @@ struct EventInput {
     project_path: String,
     branch_name: String,
     language_name: String,
-    #[serde(with = "chrono::serde::ts_seconds_option")]
-    end_timestamp: Option<DateTime<Utc>>,
+    end_timestamp: Option<NaiveDateTime>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 struct HeartbeatInput {
-    #[serde(with = "chrono::serde::ts_seconds_option")]
-    timestamp: Option<DateTime<Utc>>,
+    timestamp: Option<NaiveDateTime>,
     project_name: String,
     project_path: String,
     entity_name: String,
@@ -52,6 +49,13 @@ struct HeartbeatInput {
     is_write: bool,
     lines: Option<i64>,
     cursorpos: Option<i64>,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+struct AFKEventInput {
+    afk_start: NaiveDateTime,
+    afk_end: Option<NaiveDateTime>,
+    duration: Option<i64>,
 }
 
 pub struct BufferedTrackingService {
@@ -192,9 +196,7 @@ async fn sync_with_server(db_context: &Arc<DBContext>) -> Result<(), anyhow::Err
         let payload: Vec<HeartbeatInput> = heartbeats
             .iter()
             .map(|hb| HeartbeatInput {
-                timestamp: hb
-                    .timestamp
-                    .map(|t| DateTime::from_naive_utc_and_offset(t, Utc)),
+                timestamp: hb.timestamp,
                 project_name: hb.project_name.clone().unwrap_or_default(),
                 project_path: hb.project_path.clone().unwrap_or_default(),
                 entity_name: hb.entity_name.clone(),
@@ -229,9 +231,7 @@ async fn sync_with_server(db_context: &Arc<DBContext>) -> Result<(), anyhow::Err
         let payload: Vec<EventInput> = events
             .iter()
             .map(|ev| EventInput {
-                timestamp: ev
-                    .timestamp
-                    .map(|t| DateTime::from_naive_utc_and_offset(t, Utc)),
+                timestamp: ev.timestamp,
                 duration: ev.duration,
                 activity_type: ev.activity_type.clone().unwrap_or_default(),
                 app_name: ev.app_name.clone(),
@@ -241,9 +241,7 @@ async fn sync_with_server(db_context: &Arc<DBContext>) -> Result<(), anyhow::Err
                 project_path: ev.project_path.clone().unwrap_or_default(),
                 branch_name: ev.branch_name.clone().unwrap_or_default(),
                 language_name: ev.language_name.clone().unwrap_or_default(),
-                end_timestamp: ev
-                    .end_timestamp
-                    .map(|t| DateTime::from_naive_utc_and_offset(t, Utc)),
+                end_timestamp: ev.end_timestamp,
             })
             .collect();
 
@@ -261,6 +259,34 @@ async fn sync_with_server(db_context: &Arc<DBContext>) -> Result<(), anyhow::Err
                 "Something went wrong trying to sync events: {:?}",
                 res.text().await
             );
+        }
+    }
+
+    let afk_events = AFKEvent::unsynced(db_context).await?;
+    if !afk_events.is_empty() {
+        let payload: Vec<AFKEventInput> = afk_events
+            .iter()
+            .map(|afk| AFKEventInput {
+                afk_start: afk.afk_start.unwrap_or_default(),
+                afk_end: afk.afk_end,
+                duration: afk.duration,
+            })
+            .collect();
+
+        let res = client
+            .post(format!("{}/afk", SERVER_URL))
+            .json(&payload)
+            .send()
+            .await?;
+
+        if res.status().is_success() {
+            AFKEvent::mark_as_synced(db_context, &afk_events).await?;
+            info!("Synced {} afk events", afk_events.len());
+        } else {
+            error!(
+                "Something went wrong trying to sync AFK events: {:?}",
+                res.text().await
+            )
         }
     }
 

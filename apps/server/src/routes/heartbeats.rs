@@ -3,7 +3,7 @@ use axum::extract::State;
 use axum::http::StatusCode;
 use axum::routing::post;
 use axum::{Json, Router};
-use chrono::{DateTime, Utc};
+use chrono::NaiveDateTime;
 use db::server::apps::App;
 use db::server::branches::Branch;
 use db::server::entities::Entity;
@@ -18,8 +18,7 @@ use tracing::info;
 
 #[derive(Serialize, Deserialize, Debug)]
 struct HeartbeatInput {
-    #[serde(with = "chrono::serde::ts_seconds_option")]
-    timestamp: Option<DateTime<Utc>>,
+    timestamp: Option<NaiveDateTime>,
     project_name: String,
     project_path: String,
     entity_name: String,
@@ -70,7 +69,7 @@ async fn handle_heartbeats(
             branch_id: Some(branch_id),
             language_id,
             app_id: Some(app_id),
-            timestamp: hb.timestamp.unwrap_or_else(Utc::now),
+            timestamp: hb.timestamp.unwrap_or_default(),
             is_write: Some(hb.is_write),
             lines: hb.lines,
             cursorpos: hb.cursorpos,
