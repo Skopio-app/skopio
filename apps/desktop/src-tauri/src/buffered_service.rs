@@ -14,7 +14,7 @@ use crate::tracking_service::TrackingService;
 
 const SERVER_URL: &str = "http://localhost:8080";
 
-pub enum TrackingMessage {
+enum TrackingStats {
     Heartbeat(Heartbeat),
     Event(Event),
     Afk(AFKEvent),
@@ -59,61 +59,23 @@ struct AFKEventInput {
 }
 
 pub struct BufferedTrackingService {
-    sender: mpsc::Sender<TrackingMessage>,
+    sender: mpsc::Sender<TrackingStats>,
     shutdown_tx: Arc<Mutex<Option<oneshot::Sender<()>>>>,
 }
 
 impl BufferedTrackingService {
     pub fn new(inner: Arc<dyn TrackingService>, db: Arc<DBContext>) -> Self {
-        let (tx, mut rx) = mpsc::channel::<TrackingMessage>(100);
-        let flush_interval = Duration::from_secs(120);
-        let mut buffer: Vec<TrackingMessage> = Vec::new();
-        let mut retry_queue: Vec<TrackingMessage> = Vec::new();
-        let mut last_flush = Instant::now();
+        let (tx, rx) = mpsc::channel::<TrackingStats>(100);
 
-        let (shutdown_tx, mut shutdown_rx) = oneshot::channel::<()>();
+        let (shutdown_tx, shutdown_rx) = oneshot::channel::<()>();
         let shutdown_tx_arc = Arc::new(Mutex::new(Some(shutdown_tx)));
 
         let inner_clone = Arc::clone(&inner);
         let db_clone = Arc::clone(&db);
 
-        tokio::spawn(async move {
-            loop {
-                tokio::select! {
-                    Some(msg) = rx.recv() => {
-                        buffer.push(msg);
-                        if buffer.len() >= 10 || last_flush.elapsed() >= flush_interval {
-                            flush(&inner_clone, &mut buffer, &mut retry_queue).await;
-                            last_flush = Instant::now();
-                        }
-                    }
-                    _ = tokio::time::sleep_until(last_flush + flush_interval) => {
-                        if !buffer.is_empty() {
-                            flush(&inner_clone, &mut buffer, &mut retry_queue).await;
-                            last_flush = Instant::now();
-                        }
-                    }
-                    _ = &mut shutdown_rx => {
-                        if !buffer.is_empty() {
-                            info!("Flushing buffer before shutdown ({} items)...", buffer.len());
-                            flush(&inner_clone, &mut buffer, &mut retry_queue).await;
-                        }
-                        info!("Buffer service shut down gracefully.");
-                        break;
-                    }
-                }
-            }
-        });
+        tokio::spawn(run_buffer_flush_loop(rx, shutdown_rx, inner_clone));
 
-        tokio::spawn(async move {
-            let mut interval = interval(Duration::from_secs(60));
-            loop {
-                interval.tick().await;
-                if let Err(e) = sync_with_server(&db_clone).await {
-                    error!("Sync with server failed: {}", e);
-                }
-            }
-        });
+        tokio::spawn(run_sync_loop(db_clone));
 
         Self {
             sender: tx,
@@ -132,25 +94,95 @@ impl BufferedTrackingService {
 #[async_trait]
 impl TrackingService for BufferedTrackingService {
     async fn insert_heartbeat(&self, hb: Heartbeat) -> Result<(), anyhow::Error> {
-        let _ = self.sender.send(TrackingMessage::Heartbeat(hb)).await;
+        let _ = self.sender.send(TrackingStats::Heartbeat(hb)).await;
         Ok(())
     }
 
     async fn insert_event(&self, event: Event) -> Result<(), anyhow::Error> {
-        let _ = self.sender.send(TrackingMessage::Event(event)).await;
+        let _ = self.sender.send(TrackingStats::Event(event)).await;
         Ok(())
     }
 
     async fn insert_afk(&self, afk: AFKEvent) -> Result<(), anyhow::Error> {
-        let _ = self.sender.send(TrackingMessage::Afk(afk)).await;
+        let _ = self.sender.send(TrackingStats::Afk(afk)).await;
         Ok(())
+    }
+}
+
+async fn run_buffer_flush_loop(
+    mut rx: mpsc::Receiver<TrackingStats>,
+    mut shutdown_rx: oneshot::Receiver<()>,
+    inner: Arc<dyn TrackingService>,
+) {
+    let flush_interval = Duration::from_secs(120);
+    let mut buffer: Vec<TrackingStats> = Vec::with_capacity(20);
+    let mut retry_queue: Vec<TrackingStats> = Vec::with_capacity(20);
+    let mut last_flush = Instant::now();
+
+    loop {
+        tokio::select! {
+            Some(msg) = rx.recv() => {
+                        buffer.push(msg);
+                        if buffer.len() >= 10 || last_flush.elapsed() >= flush_interval {
+                            let inner = Arc::clone(&inner);
+                            let mut flush_data = buffer.split_off(0);
+                            let mut retry_data = retry_queue.split_off(0);
+
+                            tokio::spawn(async move {
+                                flush(&inner, &mut flush_data, &mut retry_data).await;
+                            });
+
+                            last_flush = Instant::now();
+                        }
+                    }
+            _ = tokio::time::sleep_until(last_flush + flush_interval) => {
+                if !buffer.is_empty() {
+                   let inner = Arc::clone(&inner);
+                   let mut flush_data = buffer.split_off(0);
+                   let mut retry_data = retry_queue.split_off(0);
+
+                    tokio::spawn(async move {
+                        flush(&inner, &mut flush_data, &mut retry_data).await;
+                    });
+
+                    last_flush = Instant::now();
+                }
+            }
+            _ = &mut shutdown_rx => {
+                if !buffer.is_empty() {
+                    let inner = Arc::clone(&inner);
+                    let mut flush_data = buffer.split_off(0);
+                    let mut retry_data = retry_queue.split_off(0);
+
+                    tokio::spawn(async move {
+                        info!("Flushing buffer before shutdown ({}) items...", flush_data.len());
+                        flush(&inner, &mut flush_data, &mut retry_data).await;
+                        info!("Buffer service shut down gracefully.");
+                    });
+                }
+                break;
+            }
+        }
+    }
+}
+
+async fn run_sync_loop(db: Arc<DBContext>) {
+    let mut interval = interval(Duration::from_secs(180));
+    loop {
+        interval.tick().await;
+        let db_clone = Arc::clone(&db);
+        tokio::spawn(async move {
+            if let Err(e) = sync_with_server(&db_clone).await {
+                error!("Sync with server failed: {}", e);
+            }
+        });
     }
 }
 
 async fn flush(
     inner: &Arc<dyn TrackingService>,
-    buffer: &mut Vec<TrackingMessage>,
-    retry_queue: &mut Vec<TrackingMessage>,
+    buffer: &mut Vec<TrackingStats>,
+    retry_queue: &mut Vec<TrackingStats>,
 ) {
     let start = Instant::now();
     let mut combined = Vec::new();
@@ -163,9 +195,9 @@ async fn flush(
 
         let result = loop {
             let res = match &msg {
-                TrackingMessage::Heartbeat(hb) => inner.insert_heartbeat(hb.clone()).await,
-                TrackingMessage::Event(ev) => inner.insert_event(ev.clone()).await,
-                TrackingMessage::Afk(afk) => inner.insert_afk(afk.clone()).await,
+                TrackingStats::Heartbeat(hb) => inner.insert_heartbeat(hb.clone()).await,
+                TrackingStats::Event(ev) => inner.insert_event(ev.clone()).await,
+                TrackingStats::Afk(afk) => inner.insert_afk(afk.clone()).await,
             };
 
             match res {

@@ -63,7 +63,7 @@ pub async fn run() {
             }
 
             let app_handle_clone = app_handle.clone();
-            tokio::spawn(async move {
+            tauri::async_runtime::spawn(async move {
                 if let Err(e) = async_setup(&app_handle_clone).await {
                     error!("Failed async setup: {}", e);
                 }
@@ -102,7 +102,11 @@ async fn async_setup(app_handle: &AppHandle) -> Result<(), anyhow::Error> {
     let db_path = get_db_path(app_handle);
     let db_url = format!("sqlite://{}", db_path.to_str().unwrap());
 
-    let db = match DBContext::new(&db_url).await {
+    let db_result = tokio::spawn(async move { DBContext::new(&db_url).await })
+        .await
+        .expect("DB task panicked");
+
+    let db = match db_result {
         Ok(db) => Arc::new(db),
         Err(err) => {
             error!("Failed to connect to database: {}", err);
