@@ -233,6 +233,8 @@ fn get_category_for_app(app: &MonitoredApp, entity: Option<&str>, url: Option<&s
 
 pub fn resolve_app_details(
     app: &MonitoredApp,
+    app_name: &str,
+    app_path: &str,
     entity: &str,
 ) -> (
     Option<String>,
@@ -255,19 +257,19 @@ pub fn resolve_app_details(
             )
         }
         _ if BROWSER_APPS.contains(app) => {
-            let url = get_browser_active_tab(app);
+            let (domain, url, tab) = get_browser_active_tab(app);
             (
-                None,
-                None,
-                url.clone(),
+                Some(domain),
+                Some(url.clone()),
+                tab,
                 None,
                 get_entity_for_app(app),
                 get_category_for_app(app, None, Some(&url)),
             )
         }
         _ => (
-            None,
-            None,
+            Some(app_name.to_lowercase()),
+            Some(app_path.to_string()),
             entity.to_string(),
             None,
             Entity::App,

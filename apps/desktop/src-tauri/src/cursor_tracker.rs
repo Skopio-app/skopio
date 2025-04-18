@@ -1,14 +1,21 @@
-use crate::window_tracker::WindowTracker;
 use cocoa::appkit::CGPoint;
+use cocoa::base::nil;
+use cocoa::foundation::NSAutoreleasePool;
 use core_foundation::runloop::{kCFRunLoopCommonModes, CFRunLoop};
 use core_graphics::event::{
     CGEventTap, CGEventTapLocation, CGEventTapOptions, CGEventTapPlacement, CGEventType,
 };
-use log::error;
+use log::{error, warn};
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
-use std::thread;
-use std::time::Instant;
+use std::time::{Duration, Instant};
+use tokio::sync::watch;
+
+#[derive(Debug, Clone)]
+pub struct CursorActivity {
+    pub x: f64,
+    pub y: f64,
+}
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct MouseButtons {
@@ -23,10 +30,14 @@ pub struct CursorTracker {
     last_movement: Arc<Mutex<Instant>>,
     pressed_buttons: Arc<Mutex<MouseButtons>>,
     mouse_moved: Arc<AtomicBool>,
+    runloop: Arc<Mutex<Option<CFRunLoop>>>,
+    pub tx: watch::Sender<Option<CursorActivity>>,
+    pub rx: watch::Receiver<Option<CursorActivity>>,
 }
 
 impl CursorTracker {
     pub fn new() -> Self {
+        let (tx, rx) = watch::channel(None);
         Self {
             last_position: Arc::new(Mutex::new(CGPoint::new(0.0, 0.0))),
             last_movement: Arc::new(Mutex::new(Instant::now())),
@@ -37,20 +48,22 @@ impl CursorTracker {
                 other: false,
             })),
             mouse_moved: Arc::new(AtomicBool::new(false)),
+            runloop: Arc::new(Mutex::new(None)),
+            tx,
+            rx,
         }
     }
 
-    pub fn start_tracking<F>(self: Arc<Self>, heartbeat_callback: F)
-    where
-        F: Fn(&str, &str, &str, f64, f64) + Send + Sync + 'static,
-    {
+    pub fn start_tracking(&self) {
         let last_position = Arc::clone(&self.last_position);
         let last_movement = Arc::clone(&self.last_movement);
         let pressed_buttons = Arc::clone(&self.pressed_buttons);
         let mouse_moved = Arc::clone(&self.mouse_moved);
-        let heartbeat_callback = Arc::new(heartbeat_callback);
+        let runloop_ref = Arc::clone(&self.runloop);
+        let tx = self.tx.clone();
 
-        thread::spawn(move || {
+        tokio::task::spawn_blocking(move || unsafe {
+            let pool = NSAutoreleasePool::new(nil);
             match CGEventTap::new(
                 CGEventTapLocation::HID,
                 CGEventTapPlacement::HeadInsertEventTap,
@@ -74,49 +87,41 @@ impl CursorTracker {
                             let position = event.location();
                             let dx = (position.x - last_pos.x).abs();
                             let dy = (position.y - last_pos.y).abs();
-                            let movement_threshold = 0.5;
+                            let movement_threshold = 100.0;
+                            let debounce_duration = Duration::from_millis(50);
+                            let now = Instant::now();
 
-                            if dx > movement_threshold || dy > movement_threshold {
+                            if (dx > movement_threshold || dy > movement_threshold)
+                                && now.duration_since(*last_move_time) > debounce_duration
+                            {
                                 *last_pos = position;
-                                *last_move_time = Instant::now();
+                                *last_move_time = now;
                                 mouse_moved.store(true, Ordering::Relaxed);
 
-                                if let Some(window) = WindowTracker::get_active_window() {
-                                    let app_name = window.app_name;
-                                    let bundle_id = window.bundle_id;
-                                    let file = window.title;
-                                    let callback = Arc::clone(&heartbeat_callback);
-                                    callback(&app_name, &bundle_id, &file, position.x, position.y);
-                                }
+                                let activity = CursorActivity {
+                                    x: position.x,
+                                    y: position.y,
+                                };
+
+                                if tx.send(Some(activity)).is_err() {
+                                    warn!("No subscribers to receive mouse updates");
+                                };
                             }
                         }
 
-                        CGEventType::LeftMouseDown => {
-                            buttons.left = true;
-                        }
-                        CGEventType::LeftMouseUp => {
-                            buttons.left = false;
-                        }
-                        CGEventType::RightMouseDown => {
-                            buttons.right = true;
-                        }
-                        CGEventType::RightMouseUp => {
-                            buttons.right = false;
-                        }
-                        CGEventType::OtherMouseDown => {
-                            buttons.other = true;
-                        }
-                        CGEventType::OtherMouseUp => {
-                            buttons.other = false;
-                        }
-
+                        CGEventType::LeftMouseDown => buttons.left = true,
+                        CGEventType::LeftMouseUp => buttons.left = false,
+                        CGEventType::RightMouseDown => buttons.right = true,
+                        CGEventType::RightMouseUp => buttons.right = false,
+                        CGEventType::OtherMouseDown => buttons.other = true,
+                        CGEventType::OtherMouseUp => buttons.other = false,
                         _ => {}
                     }
 
                     None
                 },
             ) {
-                Ok(tap) => unsafe {
+                Ok(tap) => {
                     let loop_source = match tap.mach_port.create_runloop_source(0) {
                         Ok(source) => source,
                         Err(_) => {
@@ -125,14 +130,17 @@ impl CursorTracker {
                         }
                     };
                     let current = CFRunLoop::get_current();
+                    let current_clone = current.clone();
+                    *runloop_ref.lock().unwrap() = Some(current_clone);
                     current.add_source(&loop_source, kCFRunLoopCommonModes);
                     tap.enable();
                     CFRunLoop::run_current();
-                },
+                }
                 Err(_) => {
                     error!("Failed to create cursor event tap!");
                 }
             }
+            pool.drain();
         });
     }
 
@@ -140,12 +148,17 @@ impl CursorTracker {
         self.pressed_buttons.lock().unwrap().clone()
     }
 
-    pub fn get_global_cursor_position(&self) -> (f64, f64) {
-        let position = *self.last_position.lock().unwrap();
-        (position.x, position.y)
-    }
-
     pub fn has_mouse_moved(&self) -> bool {
         self.mouse_moved.swap(false, Ordering::Relaxed)
+    }
+
+    pub fn subscribe(&self) -> watch::Receiver<Option<CursorActivity>> {
+        self.rx.clone()
+    }
+
+    pub fn stop_tracking(&self) {
+        if let Some(ref rl) = *self.runloop.lock().unwrap() {
+            CFRunLoop::stop(rl);
+        }
     }
 }

@@ -1,5 +1,5 @@
 use crate::DBContext;
-use chrono::{DateTime, Utc};
+use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, sqlx::FromRow)]
@@ -10,27 +10,26 @@ pub struct Heartbeat {
     pub branch_id: Option<i64>,
     pub language_id: Option<i64>,
     pub app_id: Option<i64>,
-    pub timestamp: DateTime<Utc>,
+    pub timestamp: NaiveDateTime,
     pub is_write: Option<bool>,
     pub lines: Option<i64>,
     pub cursorpos: Option<i64>,
 }
 
 impl Heartbeat {
-    pub async fn create(self, db_context: &DBContext) -> Result<(), sqlx::Error> {
-        sqlx::query!(
+    pub async fn create(&self, db_context: &DBContext) -> Result<(), sqlx::Error> {
+        sqlx::query(
             "INSERT INTO heartbeats (project_id, entity_id, branch_id, language_id, app_id, timestamp, is_write, lines, cursorpos)
-VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
-            self.project_id,
-            self.entity_id,
-            self.branch_id,
-            self.language_id,
-            self.app_id,
-            self.timestamp,
-            self.is_write,
-            self.lines,
-            self.cursorpos
-        )
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)")
+            .bind(self.project_id)
+            .bind(self.entity_id)
+            .bind(self.branch_id)
+            .bind(self.language_id)
+            .bind(self.app_id)
+            .bind(self.timestamp)
+            .bind(self.is_write)
+            .bind(self.lines)
+            .bind(self.cursorpos)
             .execute(db_context.pool())
             .await?;
 
@@ -53,7 +52,7 @@ VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
                 branch_id: row.branch_id,
                 language_id: row.language_id,
                 app_id: Some(row.app_id),
-                timestamp: DateTime::<Utc>::from_naive_utc_and_offset(row.timestamp, Utc),
+                timestamp: row.timestamp,
                 is_write: row.is_write,
                 lines: row.lines,
                 cursorpos: row.cursorpos,

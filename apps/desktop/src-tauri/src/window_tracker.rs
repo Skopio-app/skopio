@@ -1,146 +1,220 @@
-use cocoa::base::nil;
-use cocoa::foundation::NSAutoreleasePool;
-use log::warn;
+use core_foundation::base::{CFRelease, TCFType};
+use core_foundation::string::CFString;
+use log::{debug, warn};
 use objc2::msg_send;
-use objc2::rc::Retained;
+use objc2::rc::{autoreleasepool, Retained};
 use objc2::runtime::{AnyClass, AnyObject};
-use std::sync::{Arc, Mutex};
-use std::thread;
-use std::time::Duration;
+use std::os::raw::c_void;
+use std::ptr;
+use std::sync::Arc;
+use tokio::sync::watch;
+use tokio::time::{interval, Duration};
 
-use crate::helpers::app::run_osascript;
+#[link(name = "ApplicationServices", kind = "framework")]
+extern "C" {
+    fn AXUIElementCopyAttributeValue(
+        element: *const c_void,
+        attribute: *const c_void,
+        value: *mut *const c_void,
+    ) -> i32;
+
+    fn AXUIElementCreateApplication(pid: i32) -> *const c_void;
+}
 
 /// Represents an actively tracked app window.
 #[derive(Clone, PartialEq, Debug)]
 pub struct Window {
-    pub app_name: String,
-    pub title: String,
-    pub bundle_id: String,
+    pub app_name: Arc<str>,
+    pub title: Arc<str>,
+    pub bundle_id: Arc<str>,
+    /// Refers to the executable path of a binary
+    pub path: Arc<str>,
 }
 
+#[derive(Clone)]
 pub struct WindowTracker {
-    active_window: Arc<Mutex<Option<Window>>>,
+    rx: watch::Receiver<Option<Window>>,
+    tx: watch::Sender<Option<Window>>,
 }
 
 impl WindowTracker {
     pub fn new() -> Self {
-        Self {
-            active_window: Arc::new(Mutex::new(None)),
-        }
+        let (tx, rx) = watch::channel(None);
+        Self { tx, rx }
     }
 
-    pub fn start_tracking(self: Arc<Self>, event_callback: Arc<dyn Fn(Window) + Send + Sync>) {
-        let active_window = Arc::clone(&self.active_window);
+    pub fn start_tracking(self: Arc<Self>) {
+        let tx = self.tx.clone();
 
-        thread::spawn(move || loop {
-            thread::sleep(Duration::from_millis(500));
+        tokio::spawn(async move {
+            let mut interval = interval(Duration::from_millis(500));
+            let mut last_window: Option<Window> = None;
 
-            let new_window = WindowTracker::get_active_window();
-            if let Some(new_window) = new_window {
-                let mut active_window_lock = active_window.lock().unwrap();
+            loop {
+                interval.tick().await;
+                if let Some(window) = Self::get_active_window() {
+                    let should_send = match &last_window {
+                        Some(prev) if prev != &window => true,
+                        None => true,
+                        _ => false,
+                    };
 
-                if *active_window_lock != Some(new_window.clone()) {
-                    *active_window_lock = Some(new_window.clone());
-                    event_callback(new_window);
+                    if should_send {
+                        debug!(
+                            "Window switched to {} with title {}",
+                            window.app_name, window.title
+                        );
+                    }
+                    last_window = Some(window.clone());
+                    if tx.send(Some(window)).is_err() {
+                        warn!("No subscribers to receive active window update");
+                    }
                 }
             }
         });
     }
 
-    pub fn get_active_window() -> Option<Window> {
-        unsafe {
-            let pool = NSAutoreleasePool::new(nil);
+    fn get_active_window() -> Option<Window> {
+        autoreleasepool(|_| unsafe {
             let class_name = c"NSWorkspace";
             let workspace_class = AnyClass::get(class_name)?;
             let workspace: Retained<AnyObject> = msg_send![workspace_class, sharedWorkspace];
 
-            let front_app: Option<&AnyObject> = msg_send![&*workspace, frontmostApplication];
-            if front_app.is_none() {
+            let front_app_ptr: *mut AnyObject = msg_send![&*workspace, frontmostApplication];
+            if front_app_ptr.is_null() {
                 warn!("No active application found.");
                 return None;
             }
-            let app_name: Option<String> = front_app.and_then(|app| {
-                let app_name: Option<&AnyObject> = msg_send![app, localizedName];
-                app_name.map(|app_name| {
-                    let s: *const i8 = msg_send![app_name, UTF8String];
-                    std::ffi::CStr::from_ptr(s).to_string_lossy().into_owned()
-                })
-            });
 
-            let bundle_id: Option<String> = {
-                let bundle_id: Option<&AnyObject> =
-                    front_app.map(|app| msg_send![app, bundleIdentifier]);
-                if let Some(bundle_id) = bundle_id {
-                    let s: *const i8 = msg_send![bundle_id, UTF8String];
-                    Some(std::ffi::CStr::from_ptr(s).to_string_lossy().into_owned())
+            let front_app = &*front_app_ptr;
+
+            let app_name: Arc<str> = {
+                let name_obj: Option<&AnyObject> = msg_send![front_app, localizedName];
+                name_obj.map_or_else(
+                    || Arc::from("unknown"),
+                    |nsstr| {
+                        let c_str: *const i8 = msg_send![nsstr, UTF8String];
+                        Arc::from(
+                            std::ffi::CStr::from_ptr(c_str)
+                                .to_string_lossy()
+                                .into_owned()
+                                .into_boxed_str(),
+                        )
+                    },
+                )
+            };
+
+            let bundle_id: Arc<str> = {
+                let id_obj: *mut AnyObject = msg_send![front_app, bundleIdentifier];
+                if id_obj.is_null() {
+                    Arc::from("unknown")
                 } else {
-                    None
+                    let c_str: *const i8 = msg_send![id_obj, UTF8String];
+                    if c_str.is_null() {
+                        Arc::from("unknown")
+                    } else {
+                        Arc::from(
+                            std::ffi::CStr::from_ptr(c_str)
+                                .to_string_lossy()
+                                .into_owned()
+                                .into_boxed_str(),
+                        )
+                    }
                 }
             };
 
-            let app_name_str = app_name.unwrap_or_else(|| "unknown".to_string());
-            let bundle_id_str = bundle_id.unwrap_or_else(|| "unknown".to_string());
+            let path: Arc<str> = {
+                let url: *mut AnyObject = msg_send![front_app, executableURL];
+                if url.is_null() {
+                    Arc::from("unknown")
+                } else {
+                    let path_obj: *const AnyObject = msg_send![url, path];
+                    if path_obj.is_null() {
+                        Arc::from("unknown")
+                    } else {
+                        let c_str: *const i8 = msg_send![path_obj, UTF8String];
+                        if c_str.is_null() {
+                            Arc::from("unknown")
+                        } else {
+                            Arc::from(
+                                std::ffi::CStr::from_ptr(c_str)
+                                    .to_string_lossy()
+                                    .into_owned()
+                                    .into_boxed_str(),
+                            )
+                        }
+                    }
+                }
+            };
 
-            let window_title_str = Self::get_active_window_title(&app_name_str);
-            pool.drain();
+            let pid: i32 = msg_send![front_app, processIdentifier];
+
+            let title = match Self::get_active_window_title(pid) {
+                Some(title) => Arc::from(title.into_boxed_str()),
+                None => Arc::from("unknown"),
+            };
 
             let window = Window {
-                app_name: app_name_str,
-                title: window_title_str,
-                bundle_id: bundle_id_str,
+                app_name,
+                title,
+                bundle_id,
+                path,
             };
 
             Some(window)
-        }
+        })
     }
 
-    fn get_active_window_title(app_name: &str) -> String {
-        let script = format!(
-            r#"
-            tell application "System Events"
-                tell process "{}"
-                    if exists (attribute "AXFocusedUIElement") then
-                        try
-                            return value of attribute "AXTitle" of AXFocusedUIElement
-                        on error
-                            return "missing"
-                        end try
-                    end if
-                end tell
-            end tell
-            "#,
-            app_name
-        );
+    fn get_active_window_title(pid: i32) -> Option<String> {
+        autoreleasepool(|_| unsafe {
+            let app_element = AXUIElementCreateApplication(pid);
+            if app_element.is_null() {
+                return None;
+            }
 
-        let title = run_osascript(&script);
-        if !title.is_empty() && title != "missing" {
-            return title;
-        }
+            let mut focused_window: *const c_void = ptr::null_mut();
+            let err = AXUIElementCopyAttributeValue(
+                app_element,
+                CFString::new("AXFocusedWindow").as_concrete_TypeRef() as *const _,
+                &mut focused_window,
+            );
 
-        let fallback_script = format!(
-            r#"
-            tell application "System Events"
-                tell process "{}"
-                    repeat with win in every window
-                        if value of attribute "AXMain" of win is true then
-                            try
-                                return value of attribute "AXTitle" of win
-                            on error
-                                return "missing"
-                            end try
-                        end if
-                    end repeat
-                end tell
-            end tell
-            "#,
-            app_name
-        );
+            if err != 0 || focused_window.is_null() {
+                CFRelease(app_element);
+                return None;
+            }
 
-        let fallback_title = run_osascript(&fallback_script);
-        if !fallback_title.is_empty() && fallback_title != "missing" {
-            return fallback_title;
-        }
+            let mut title_value: *const c_void = ptr::null_mut();
+            let err = AXUIElementCopyAttributeValue(
+                focused_window,
+                CFString::new("AXTitle").as_concrete_TypeRef() as *const _,
+                &mut title_value,
+            );
 
-        "unknown".to_string()
+            if err != 0 || title_value.is_null() {
+                CFRelease(focused_window);
+                CFRelease(app_element);
+                return None;
+            }
+
+            let cf_title: CFString = CFString::wrap_under_create_rule(
+                title_value as *mut core_foundation::string::__CFString,
+            );
+
+            let title = cf_title.to_string();
+
+            CFRelease(focused_window);
+            CFRelease(app_element);
+
+            if title.trim().is_empty() {
+                None
+            } else {
+                Some(title)
+            }
+        })
+    }
+
+    pub fn subscribe(&self) -> watch::Receiver<Option<Window>> {
+        self.rx.clone()
     }
 }

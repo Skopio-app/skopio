@@ -1,11 +1,14 @@
 use chrono::{DateTime, Utc};
-use log::info;
-use std::sync::{Arc, Mutex, RwLock};
-use std::thread;
-use std::time::Duration;
+use db::desktop::afk_events::AFKEvent;
+use log::{error, info};
+use std::sync::Arc;
+use tokio::sync::{Mutex, RwLock};
+use tokio::time::{interval, Duration};
 
 use crate::cursor_tracker::CursorTracker;
+use crate::helpers::db::to_naive_datetime;
 use crate::keyboard_tracker::KeyboardTracker;
+use crate::tracking_service::TrackingService;
 
 pub struct AFKTracker {
     last_activity: Arc<RwLock<DateTime<Utc>>>,
@@ -13,16 +16,23 @@ pub struct AFKTracker {
     afk_threshold: Duration,
     cursor_tracker: Arc<CursorTracker>,
     keyboard_tracker: Arc<KeyboardTracker>,
+    tracker: Arc<dyn TrackingService>,
 }
 
 impl AFKTracker {
-    pub fn new(cursor_tracker: Arc<CursorTracker>, keyboard_tracker: Arc<KeyboardTracker>) -> Self {
+    pub fn new(
+        cursor_tracker: Arc<CursorTracker>,
+        keyboard_tracker: Arc<KeyboardTracker>,
+        afk_timeout: u64,
+        tracker: Arc<dyn TrackingService>,
+    ) -> Self {
         Self {
             last_activity: Arc::new(RwLock::new(Utc::now())),
             afk_start: Arc::new(Mutex::new(None)),
-            afk_threshold: Duration::from_secs(60),
+            afk_threshold: Duration::from_secs(afk_timeout),
             cursor_tracker,
             keyboard_tracker,
+            tracker,
         }
     }
 
@@ -32,18 +42,22 @@ impl AFKTracker {
         let afk_threshold = self.afk_threshold;
         let cursor_tracker = Arc::clone(&self.cursor_tracker);
         let keyboard_tracker = Arc::clone(&self.keyboard_tracker);
+        let buffer_tracker = Arc::clone(&self.tracker);
 
-        thread::spawn(move || {
+        tokio::spawn(async move {
+            let mut interval = interval(Duration::from_secs(1));
             loop {
+                interval.tick().await;
+
                 let now = Utc::now();
-                let last_activity_time = *last_activity.read().unwrap();
-                let mut afk_time = afk_start.lock().unwrap();
+                let last_activity_time = *last_activity.read().await;
+                let mut afk_time = afk_start.lock().await;
 
                 // Detect user activity (mouse/keyboard)
                 let mouse_buttons = cursor_tracker.get_pressed_mouse_buttons();
                 let keys_pressed = keyboard_tracker.get_pressed_keys();
 
-                let mouse_active = self.cursor_tracker.has_mouse_moved();
+                let mouse_active = cursor_tracker.has_mouse_moved();
                 let mouse_clicked = mouse_buttons.left
                     || mouse_buttons.right
                     || mouse_buttons.middle
@@ -53,7 +67,7 @@ impl AFKTracker {
                 let activity_detected = mouse_active || mouse_clicked || keyboard_active;
 
                 if activity_detected {
-                    *last_activity.write().unwrap() = now;
+                    *last_activity.write().await = now;
 
                     if let Some(afk_start_time) = *afk_time {
                         let afk_duration = (now - afk_start_time).num_seconds();
@@ -61,6 +75,18 @@ impl AFKTracker {
                             "User returned at: {} (AFK Duration: {}s)",
                             now, afk_duration
                         );
+
+                        let afk_event = AFKEvent {
+                            id: None,
+                            afk_start: to_naive_datetime(Some(afk_start_time)),
+                            afk_end: to_naive_datetime(Some(now)),
+                            duration: Some(afk_duration),
+                        };
+
+                        buffer_tracker
+                            .insert_afk(afk_event)
+                            .await
+                            .unwrap_or_else(|error| error!("Failed to batch afk event: {}", error));
                     }
                     *afk_time = None;
                 } else {
@@ -70,8 +96,6 @@ impl AFKTracker {
                         *afk_time = Some(now);
                     }
                 }
-
-                thread::sleep(Duration::from_secs(1));
             }
         });
     }

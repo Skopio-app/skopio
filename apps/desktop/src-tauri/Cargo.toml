@@ -25,10 +25,19 @@ tauri-plugin-log = "2.0.0-rc"
 chrono = { workspace = true, features = ["serde"] }
 cocoa = "0.26.0"
 core-graphics = "0.24.0"
-tokio = { workspace = true, features = ["full"] }
+tokio = { workspace = true, features = ["full", "tracing"] }
 core-foundation = "0.10.0"
 objc2 = "0.6.0"
 strum_macros = "0.27.1"
 strum = "0.27.1"
 tokei = "12.1.2"
 dashmap = "6.1.0"
+anyhow = { workspace = true }
+moka = { workspace = true, features = ["sync"] }
+percent-encoding = { workspace = true }
+async-trait = { workspace = true }
+url = "2.5.4"
+console-subscriber = "0.4.1"
+reqwest = { workspace = true, features = ["json", "rustls-tls"] }
+
+db = { path = "../../../crates/db", features = ["desktop"] }

@@ -6,7 +6,13 @@ license.workspace = true
 repository.workspace = true
 rust-version.workspace = true
 
+[features]
+default = []
+desktop = []
+server = []
+
 [dependencies]
 chrono = { workspace = true, features = ["serde"] }
 serde = { workspace = true, features = ["derive"] }
-sqlx = { version = "0.8", features = ["sqlite", "runtime-tokio-native-tls", "chrono"] }
+sqlx = { workspace = true, features = [ "sqlite", "runtime-tokio", "tls-native-tls", "chrono", "macros", "migrate", "derive" ] }
+log = { workspace = true }

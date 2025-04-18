@@ -3,13 +3,13 @@ use axum::extract::State;
 use axum::http::StatusCode;
 use axum::routing::post;
 use axum::{Json, Router};
-use chrono::{DateTime, Utc};
-use db::apps::App;
-use db::branches::Branch;
-use db::entities::Entity;
-use db::heartbeats::Heartbeat;
-use db::languages::Language;
-use db::projects::Project;
+use chrono::NaiveDateTime;
+use db::server::apps::App;
+use db::server::branches::Branch;
+use db::server::entities::Entity;
+use db::server::heartbeats::Heartbeat;
+use db::server::languages::Language;
+use db::server::projects::Project;
 use db::DBContext;
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
@@ -18,8 +18,7 @@ use tracing::info;
 
 #[derive(Serialize, Deserialize, Debug)]
 struct HeartbeatInput {
-    #[serde(with = "chrono::serde::ts_seconds_option")]
-    timestamp: Option<DateTime<Utc>>,
+    timestamp: Option<NaiveDateTime>,
     project_name: String,
     project_path: String,
     entity_name: String,
@@ -38,7 +37,7 @@ async fn handle_heartbeats(
 ) -> Result<Json<String>, (StatusCode, Json<String>)> {
     let db = db.lock().await;
 
-    info!("Handling {} heartbeats from plugin CLI", payload.len());
+    info!("Handling {} heartbeats", payload.len());
 
     for hb in payload {
         let app_id = App::find_or_insert(&db, &hb.app_name)
@@ -70,7 +69,7 @@ async fn handle_heartbeats(
             branch_id: Some(branch_id),
             language_id,
             app_id: Some(app_id),
-            timestamp: hb.timestamp.unwrap_or_else(Utc::now),
+            timestamp: hb.timestamp.unwrap_or_default(),
             is_write: Some(hb.is_write),
             lines: hb.lines,
             cursorpos: hb.cursorpos,

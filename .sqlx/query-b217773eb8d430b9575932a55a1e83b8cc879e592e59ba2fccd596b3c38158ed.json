@@ -1,0 +1,86 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            SELECT\n             id,\n             timestamp,\n             project_name,\n             project_path,\n             entity_name,\n             entity_type,\n             branch_name,\n             language_name,\n             app_name,\n             is_write,\n             lines,\n             cursorpos\n            FROM heartbeats\n            WHERE synced = 0\n            LIMIT 100\n            ",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Integer"
+      },
+      {
+        "name": "timestamp",
+        "ordinal": 1,
+        "type_info": "Datetime"
+      },
+      {
+        "name": "project_name",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "project_path",
+        "ordinal": 3,
+        "type_info": "Text"
+      },
+      {
+        "name": "entity_name",
+        "ordinal": 4,
+        "type_info": "Text"
+      },
+      {
+        "name": "entity_type",
+        "ordinal": 5,
+        "type_info": "Text"
+      },
+      {
+        "name": "branch_name",
+        "ordinal": 6,
+        "type_info": "Text"
+      },
+      {
+        "name": "language_name",
+        "ordinal": 7,
+        "type_info": "Text"
+      },
+      {
+        "name": "app_name",
+        "ordinal": 8,
+        "type_info": "Text"
+      },
+      {
+        "name": "is_write",
+        "ordinal": 9,
+        "type_info": "Bool"
+      },
+      {
+        "name": "lines",
+        "ordinal": 10,
+        "type_info": "Integer"
+      },
+      {
+        "name": "cursorpos",
+        "ordinal": 11,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false,
+      true,
+      true,
+      true,
+      false,
+      false,
+      true,
+      true,
+      false,
+      true,
+      true,
+      true
+    ]
+  },
+  "hash": "b217773eb8d430b9575932a55a1e83b8cc879e592e59ba2fccd596b3c38158ed"
+}

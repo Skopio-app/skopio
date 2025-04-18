@@ -1,0 +1,33 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            SELECT\n             id,\n             afk_start,\n             afk_end,\n             duration\n            FROM afk_events\n            WHERE synced = 0\n            LIMIT 100\n            ",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Integer"
+      },
+      {
+        "name": "afk_start",
+        "ordinal": 1,
+        "type_info": "Datetime"
+      },
+      {
+        "name": "afk_end",
+        "ordinal": 2,
+        "type_info": "Datetime"
+      },
+      {
+        "name": "duration",
+        "ordinal": 3,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [false, true, true, true]
+  },
+  "hash": "cefe1351c9125301e36ebe438f142928b57876d069c06a7e1ee53e8edcfae6e0"
+}

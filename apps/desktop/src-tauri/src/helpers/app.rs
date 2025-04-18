@@ -1,16 +1,21 @@
 use std::{panic, process::Command};
 
 use log::{error, warn};
+use url::Url;
 
 use crate::{helpers::language::detect_language, monitored_app::MonitoredApp};
 
-pub fn get_browser_active_tab(bundle_id: &MonitoredApp) -> String {
+/// Returns (domain, url, tab title) from the active tab of a supported browser
+pub fn get_browser_active_tab(bundle_id: &MonitoredApp) -> (String, String, String) {
     let script = match bundle_id {
         MonitoredApp::Chrome => {
             r#"
             tell application "Google Chrome"
                 if (count of windows) > 0 and (count of tabs of front window) > 0 then
-                    return URL of active tab of front window
+                    set theTab to active tab of front window
+                    set theURL to URL of the theTab
+                    set theTitle to title of theTab
+                    return theURL & "||" & theTitle
                 else
                     return "No active tab"
                 end if
@@ -29,7 +34,7 @@ pub fn get_browser_active_tab(bundle_id: &MonitoredApp) -> String {
                 end tell
                 delay 0.2
                 set clipboard_content to the clipboard
-                return clipboard_content
+                return clipboard_content & "||unknown"
             end tell
         "#
         }
@@ -37,23 +42,45 @@ pub fn get_browser_active_tab(bundle_id: &MonitoredApp) -> String {
             r#"
             tell application "Safari"
                 if (count of windows) > 0 and (count of tabs of front window) > 0 then
-                    return URL of current tab of front window
+                    set theTab to current tab of front window
+                    set theURL to URL of theTab
+                    set theTitle to name of theTab
+                    return theURL & "||" & theTitle
                 else
                     return "No active tab"
                 end if
             end tell
         "#
         }
-        _ => return "".to_string(),
+        _ => {
+            return (
+                "unknown".to_string(),
+                "unknown".to_string(),
+                "unknown".to_string(),
+            )
+        }
     };
 
     let output = run_osascript(script);
     if output == "No active tab" || output.is_empty() {
         warn!("No active tab detected for {}", bundle_id);
-        return "unknown".to_string();
+        return (
+            "unknown".to_string(),
+            "unknown".to_string(),
+            "unknown".to_string(),
+        );
     }
 
-    output
+    let parts: Vec<&str> = output.split("||").collect();
+    let url = parts.first().unwrap_or(&"unknown").trim();
+    let title = parts.get(1).unwrap_or(&"unknown").trim();
+
+    let domain = Url::parse(url)
+        .ok()
+        .and_then(|u| u.domain().map(|d| d.to_string()))
+        .unwrap_or_else(|| "unknown".to_string());
+
+    (domain, url.to_string(), title.to_string())
 }
 
 pub fn get_xcode_project_details() -> (Option<String>, Option<String>, String, Option<String>) {

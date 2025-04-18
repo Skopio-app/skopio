@@ -1,15 +1,17 @@
-pub mod afk_events;
-pub mod apps;
-pub mod branches;
+#[cfg(all(
+    not(feature = "desktop"),
+    not(feature = "server"),
+    not(any(test, doctest, clippy))
+))]
+compile_error!("You must enable either the 'desktop' or 'server' feature.");
+
 pub mod connection;
-pub mod entities;
-pub mod events;
-pub mod goals;
-pub mod heartbeats;
-pub mod languages;
-pub mod projects;
-pub mod tags;
 mod utils;
-pub mod yearly_summaries;
 
 pub use connection::DBContext;
+
+#[cfg(feature = "server")]
+pub mod server;
+
+#[cfg(feature = "desktop")]
+pub mod desktop;

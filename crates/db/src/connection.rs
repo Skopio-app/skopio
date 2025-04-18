@@ -1,10 +1,13 @@
 use crate::utils::extract_db_file_path;
-use sqlx::migrate::Migrator;
 use sqlx::sqlite::SqliteConnectOptions;
 use sqlx::{sqlite::SqlitePoolOptions, SqlitePool};
 use std::str::FromStr;
 
-static MIGRATOR: Migrator = sqlx::migrate!("./migrations");
+#[cfg(all(feature = "desktop", not(feature = "server")))]
+static MIGRATOR: sqlx::migrate::Migrator = sqlx::migrate!("./migrations/desktop");
+
+#[cfg(all(feature = "server", not(feature = "desktop")))]
+static MIGRATOR: sqlx::migrate::Migrator = sqlx::migrate!("./migrations/server");
 
 #[derive(Clone)]
 pub struct DBContext {
@@ -28,6 +31,10 @@ impl DBContext {
             .connect_with(connection_options)
             .await?;
 
+        #[cfg(any(
+            all(feature = "desktop", not(feature = "server")),
+            all(feature = "server", not(feature = "desktop"))
+        ))]
         MIGRATOR.run(&pool).await?;
 
         Ok(Self { pool })
