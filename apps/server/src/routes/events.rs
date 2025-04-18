@@ -39,7 +39,7 @@ async fn handle_events(
 ) -> Result<Json<String>, (StatusCode, Json<String>)> {
     let db = db.lock().await;
 
-    info!("Handling {} events from plugin CLI", payload.len());
+    info!("Handling {} events", payload.len());
 
     for event in payload {
         let app_id = App::find_or_insert(&db, &event.app_name)

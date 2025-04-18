@@ -111,7 +111,7 @@ async fn async_setup(app_handle: &AppHandle) -> Result<(), anyhow::Error> {
     };
 
     let raw_service = Arc::new(DBService::new(Arc::clone(&db)));
-    let buffered_service = Arc::new(BufferedTrackingService::new(raw_service));
+    let buffered_service = Arc::new(BufferedTrackingService::new(raw_service, Arc::clone(&db)));
     app_handle.manage(Arc::clone(&buffered_service));
 
     let service_trait: Arc<dyn TrackingService> = buffered_service.clone();

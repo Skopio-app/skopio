@@ -38,7 +38,7 @@ async fn handle_heartbeats(
 ) -> Result<Json<String>, (StatusCode, Json<String>)> {
     let db = db.lock().await;
 
-    info!("Handling {} heartbeats from plugin CLI", payload.len());
+    info!("Handling {} heartbeats", payload.len());
 
     for hb in payload {
         let app_id = App::find_or_insert(&db, &hb.app_name)

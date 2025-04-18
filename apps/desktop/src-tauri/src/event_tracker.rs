@@ -1,4 +1,5 @@
 use crate::cursor_tracker::CursorTracker;
+use crate::helpers::db::to_naive_datetime;
 use crate::helpers::git::get_git_branch;
 use crate::keyboard_tracker::KeyboardTracker;
 use crate::monitored_app::{resolve_app_details, Category, Entity, MonitoredApp, IGNORED_APPS};
@@ -94,9 +95,10 @@ impl EventTracker {
                     ended_event.end_timestamp = Some(now);
 
                     let db_event = DBEvent {
-                        timestamp: ended_event.timestamp,
+                        id: None,
+                        timestamp: to_naive_datetime(ended_event.timestamp),
                         duration: ended_event.duration,
-                        activity_type: ended_event.activity_type.to_string(),
+                        activity_type: Some(ended_event.activity_type.to_string()),
                         app_name: ended_event.app_name,
                         entity_name: ended_event.entity_name,
                         entity_type: Some(ended_event.entity_type.unwrap().to_string()),
@@ -104,7 +106,7 @@ impl EventTracker {
                         project_path: ended_event.project_path,
                         branch_name: ended_event.branch_name,
                         language_name: ended_event.language_name,
-                        end_timestamp: ended_event.end_timestamp,
+                        end_timestamp: to_naive_datetime(ended_event.end_timestamp),
                     };
 
                     self.tracker
@@ -218,9 +220,10 @@ impl EventTracker {
             ended_event.end_timestamp = Some(Utc::now());
 
             let db_event = DBEvent {
-                timestamp: ended_event.timestamp,
+                id: None,
+                timestamp: to_naive_datetime(ended_event.timestamp),
                 duration: ended_event.duration,
-                activity_type: ended_event.activity_type.to_string(),
+                activity_type: Some(ended_event.activity_type.to_string()),
                 app_name: ended_event.app_name,
                 entity_name: ended_event.entity_name,
                 entity_type: Some(ended_event.entity_type.unwrap().to_string()),
@@ -228,7 +231,7 @@ impl EventTracker {
                 project_path: ended_event.project_path,
                 branch_name: ended_event.branch_name,
                 language_name: ended_event.language_name,
-                end_timestamp: ended_event.end_timestamp,
+                end_timestamp: to_naive_datetime(ended_event.end_timestamp),
             };
 
             self.tracker

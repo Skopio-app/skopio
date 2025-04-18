@@ -1,14 +1,14 @@
-use chrono::{DateTime, Utc};
+use chrono::NaiveDateTime;
 use serde::{Deserialize, Serialize};
 
-use crate::DBContext;
+use crate::{utils::update_synced_in, DBContext};
 
-#[derive(Serialize, Deserialize, Debug, sqlx::FromRow)]
+#[derive(Serialize, Deserialize, Clone, Debug, sqlx::FromRow)]
 pub struct Event {
-    #[serde(with = "chrono::serde::ts_seconds_option")]
-    pub timestamp: Option<DateTime<Utc>>,
+    pub id: Option<i64>,
+    pub timestamp: Option<NaiveDateTime>,
     pub duration: Option<i64>,
-    pub activity_type: String,
+    pub activity_type: Option<String>,
     pub app_name: String,
     pub entity_name: Option<String>,
     pub entity_type: Option<String>,
@@ -16,8 +16,7 @@ pub struct Event {
     pub project_path: Option<String>,
     pub branch_name: Option<String>,
     pub language_name: Option<String>,
-    #[serde(with = "chrono::serde::ts_seconds_option")]
-    pub end_timestamp: Option<DateTime<Utc>>,
+    pub end_timestamp: Option<NaiveDateTime>,
 }
 
 impl Event {
@@ -43,5 +42,39 @@ impl Event {
         .await?;
 
         Ok(())
+    }
+
+    pub async fn unsynced(db_context: &DBContext) -> Result<Vec<Self>, sqlx::Error> {
+        sqlx::query_as!(
+            Event,
+            "
+            SELECT
+             id,
+             timestamp,
+             duration,
+             activity_type,
+             app_name,
+             entity_name,
+             entity_type,
+             project_name,
+             project_path,
+             branch_name,
+             language_name,
+             end_timestamp
+            FROM events
+            WHERE synced = 0
+            LIMIT 100
+            "
+        )
+        .fetch_all(db_context.pool())
+        .await
+    }
+
+    pub async fn mark_as_synced(
+        db_context: &DBContext,
+        events: &[Self],
+    ) -> Result<(), sqlx::Error> {
+        let ids: Vec<i64> = events.iter().filter_map(|e| e.id).collect();
+        update_synced_in(db_context, "events", &ids).await
     }
 }

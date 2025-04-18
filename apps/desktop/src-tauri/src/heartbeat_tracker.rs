@@ -1,4 +1,5 @@
 use crate::cursor_tracker::CursorActivity;
+use crate::helpers::db::to_naive_datetime;
 use crate::helpers::git::get_git_branch;
 use crate::monitored_app::{resolve_app_details, Entity, MonitoredApp, IGNORED_APPS};
 use crate::tracking_service::TrackingService;
@@ -149,7 +150,8 @@ impl HeartbeatTracker {
         };
 
         let db_heartbeat = DBHeartbeat {
-            timestamp: heartbeat.timestamp,
+            id: None,
+            timestamp: to_naive_datetime(heartbeat.timestamp),
             project_name: heartbeat.project_name.clone(),
             project_path: heartbeat.project_path.clone(),
             entity_name: heartbeat.entity_name.clone(),
@@ -157,7 +159,7 @@ impl HeartbeatTracker {
             branch_name: heartbeat.branch_name.clone(),
             language_name: heartbeat.language_name.clone(),
             app_name: heartbeat.app_name.clone(),
-            is_write: heartbeat.is_write,
+            is_write: Some(heartbeat.is_write),
             lines: heartbeat.lines,
             cursorpos: Some(cursor_x as i64),
         };
