@@ -5,15 +5,17 @@ use std::sync::Arc;
 use tokio::sync::{Mutex, RwLock};
 use tokio::time::{interval, Duration};
 
-use crate::cursor_tracker::CursorTracker;
+use crate::helpers::config::AppConfig;
 use crate::helpers::db::to_naive_datetime;
-use crate::keyboard_tracker::KeyboardTracker;
 use crate::tracking_service::TrackingService;
+
+use super::cursor_tracker::CursorTracker;
+use super::keyboard_tracker::KeyboardTracker;
 
 pub struct AFKTracker {
     last_activity: Arc<RwLock<DateTime<Utc>>>,
     afk_start: Arc<Mutex<Option<DateTime<Utc>>>>,
-    afk_threshold: Duration,
+    config: Arc<RwLock<AppConfig>>,
     cursor_tracker: Arc<CursorTracker>,
     keyboard_tracker: Arc<KeyboardTracker>,
     tracker: Arc<dyn TrackingService>,
@@ -23,13 +25,13 @@ impl AFKTracker {
     pub fn new(
         cursor_tracker: Arc<CursorTracker>,
         keyboard_tracker: Arc<KeyboardTracker>,
-        afk_timeout: u64,
+        config: Arc<RwLock<AppConfig>>,
         tracker: Arc<dyn TrackingService>,
     ) -> Self {
         Self {
             last_activity: Arc::new(RwLock::new(Utc::now())),
             afk_start: Arc::new(Mutex::new(None)),
-            afk_threshold: Duration::from_secs(afk_timeout),
+            config,
             cursor_tracker,
             keyboard_tracker,
             tracker,
@@ -39,10 +41,10 @@ impl AFKTracker {
     pub fn start_tracking(self: Arc<Self>) {
         let last_activity = Arc::clone(&self.last_activity);
         let afk_start = Arc::clone(&self.afk_start);
-        let afk_threshold = self.afk_threshold;
         let cursor_tracker = Arc::clone(&self.cursor_tracker);
         let keyboard_tracker = Arc::clone(&self.keyboard_tracker);
         let buffer_tracker = Arc::clone(&self.tracker);
+        let config = Arc::clone(&self.config);
 
         tokio::spawn(async move {
             let mut interval = interval(Duration::from_secs(1));
@@ -90,6 +92,12 @@ impl AFKTracker {
                     }
                     *afk_time = None;
                 } else {
+                    // Dynamically retrieve afk timeout from app settings config
+                    let afk_timeout = {
+                        let config = config.read().await;
+                        config.afk_timeout
+                    };
+                    let afk_threshold = Duration::from_secs(afk_timeout);
                     let idle_duration = (now - last_activity_time).num_seconds();
                     if idle_duration >= afk_threshold.as_secs() as i64 && afk_time.is_none() {
                         info!("User went AFK at: {}", now);

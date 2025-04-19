@@ -1,8 +1,3 @@
-use crate::afk_tracker::AFKTracker;
-use crate::cursor_tracker::CursorTracker;
-use crate::event_tracker::EventTracker;
-use crate::heartbeat_tracker::HeartbeatTracker;
-use crate::window_tracker::WindowTracker;
 use buffered_service::BufferedTrackingService;
 use chrono::Local;
 use db::DBContext;
@@ -10,22 +5,21 @@ use helpers::{
     config::{AppConfig, CONFIG},
     db::get_db_path,
 };
-use keyboard_tracker::KeyboardTracker;
 use log::error;
 use std::sync::Arc;
 use tauri::{AppHandle, Manager};
+use trackers::{
+    afk_tracker::AFKTracker, cursor_tracker::CursorTracker, event_tracker::EventTracker,
+    heartbeat_tracker::HeartbeatTracker, keyboard_tracker::KeyboardTracker,
+    window_tracker::WindowTracker,
+};
 use tracking_service::{DBService, TrackingService};
 
-mod afk_tracker;
 mod buffered_service;
-mod cursor_tracker;
-mod event_tracker;
-mod heartbeat_tracker;
 mod helpers;
-mod keyboard_tracker;
 mod monitored_app;
+mod trackers;
 mod tracking_service;
-mod window_tracker;
 
 #[tokio::main]
 pub async fn run() {
@@ -96,8 +90,11 @@ pub async fn run() {
 }
 
 async fn async_setup(app_handle: &AppHandle) -> Result<(), anyhow::Error> {
-    let config = AppConfig::load(app_handle)?;
-    *CONFIG.lock().unwrap() = config.clone();
+    AppConfig::load(app_handle)
+        .await
+        .unwrap_or_else(|e| error!("Failed to load app config: {}", e));
+
+    let config = Arc::clone(&CONFIG);
 
     let db_path = get_db_path(app_handle);
     let db_url = format!("sqlite://{}", db_path.to_str().unwrap());
@@ -126,18 +123,18 @@ async fn async_setup(app_handle: &AppHandle) -> Result<(), anyhow::Error> {
     let afk_tracker = Arc::new(AFKTracker::new(
         Arc::clone(&cursor_tracker),
         Arc::clone(&keyboard_tracker),
-        config.afk_timeout,
+        Arc::clone(&config),
         Arc::clone(&service_trait),
     ));
 
     let heartbeat_tracker = Arc::new(HeartbeatTracker::new(
-        config.heartbeat_interval,
+        Arc::clone(&config),
         Arc::clone(&service_trait),
     ));
     let event_tracker = Arc::new(EventTracker::new(
         Arc::clone(&cursor_tracker),
         Arc::clone(&keyboard_tracker),
-        config.afk_timeout,
+        Arc::clone(&config),
         Arc::clone(&service_trait),
     ));
 

@@ -27,7 +27,7 @@ pub struct Window {
     pub app_name: Arc<str>,
     pub title: Arc<str>,
     pub bundle_id: Arc<str>,
-    /// Refers to the executable path of a binary
+    /// Refers to the executable path of the app binary
     pub path: Arc<str>,
 }
 

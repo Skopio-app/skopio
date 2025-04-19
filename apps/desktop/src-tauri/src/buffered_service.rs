@@ -114,6 +114,7 @@ async fn run_buffer_flush_loop(
     mut shutdown_rx: oneshot::Receiver<()>,
     inner: Arc<dyn TrackingService>,
 ) {
+    // TODO: Manage flush interval from app config
     let flush_interval = Duration::from_secs(120);
     let mut buffer: Vec<TrackingStats> = Vec::with_capacity(20);
     let mut retry_queue: Vec<TrackingStats> = Vec::with_capacity(20);
@@ -167,6 +168,7 @@ async fn run_buffer_flush_loop(
 }
 
 async fn run_sync_loop(db: Arc<DBContext>) {
+    // TODO: Manage sync interval from app config
     let mut interval = interval(Duration::from_secs(180));
     loop {
         interval.tick().await;
