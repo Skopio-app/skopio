@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Manager, Runtime};
 use tokio::sync::RwLock;
 
-#[derive(Debug, Serialize, Deserialize, Clone)]
+#[derive(Debug, Serialize, Deserialize, Clone, specta::Type)]
 pub struct AppConfig {
     pub theme: Theme,
     pub heartbeat_interval: u64,
@@ -26,7 +26,7 @@ impl Default for AppConfig {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq, specta::Type)]
 pub enum Theme {
     Light,
     Dark,
@@ -89,11 +89,13 @@ impl AppConfig {
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn get_config() -> AppConfig {
     AppConfig::get().await
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn set_heartbeat_interval<R: Runtime>(
     interval: u64,
     app: AppHandle<R>,
@@ -106,6 +108,7 @@ pub async fn set_heartbeat_interval<R: Runtime>(
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn set_theme<R: Runtime>(theme: Theme, app: AppHandle<R>) -> Result<(), String> {
     AppConfig::update(&app, |config| {
         config.theme = theme;
@@ -115,6 +118,7 @@ pub async fn set_theme<R: Runtime>(theme: Theme, app: AppHandle<R>) -> Result<()
 }
 
 #[tauri::command]
+#[specta::specta]
 pub async fn set_afk_timeout<R: Runtime>(timeout: u64, app: AppHandle<R>) -> Result<(), String> {
     AppConfig::update(&app, |config| {
         config.afk_timeout = timeout;

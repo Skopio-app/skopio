@@ -7,7 +7,7 @@ use helpers::{
 };
 use log::error;
 use std::sync::Arc;
-use tauri::{AppHandle, Manager};
+use tauri::{AppHandle, Manager, Runtime};
 use trackers::{
     afk_tracker::AFKTracker, cursor_tracker::CursorTracker, event_tracker::EventTracker,
     heartbeat_tracker::HeartbeatTracker, keyboard_tracker::KeyboardTracker,
@@ -28,12 +28,17 @@ pub async fn run() {
     let cursor_tracker = Arc::new(CursorTracker::new());
     let keyboard_tracker = Arc::new(KeyboardTracker::new());
     let window_tracker = Arc::new(WindowTracker::new());
+
+    let specta_builder = make_specta_builder();
+
     tauri::Builder::default()
         .manage(Arc::clone(&cursor_tracker))
         .manage(Arc::clone(&keyboard_tracker))
         .manage(Arc::clone(&window_tracker))
-        .setup(|app| {
-            let app_handle = app.handle();
+        .setup(move |app| {
+            let app_handle = app.handle().clone();
+
+            specta_builder.mount_events(&app_handle);
             // Enable logging in debug mode
             if cfg!(debug_assertions) {
                 app_handle.plugin(
@@ -58,7 +63,7 @@ pub async fn run() {
 
             let app_handle_clone = app_handle.clone();
             tauri::async_runtime::spawn(async move {
-                if let Err(e) = async_setup(&app_handle_clone).await {
+                if let Err(e) = setup_trackers(&app_handle_clone).await {
                     error!("Failed async setup: {}", e);
                 }
             });
@@ -79,17 +84,11 @@ pub async fn run() {
                 });
             }
         })
-        .invoke_handler(tauri::generate_handler![
-            crate::helpers::config::get_config,
-            crate::helpers::config::set_theme,
-            crate::helpers::config::set_afk_timeout,
-            crate::helpers::config::set_heartbeat_interval,
-        ])
         .run(tauri::generate_context!())
         .expect("Error while running Tauri application");
 }
 
-async fn async_setup(app_handle: &AppHandle) -> Result<(), anyhow::Error> {
+async fn setup_trackers(app_handle: &AppHandle) -> Result<(), anyhow::Error> {
     AppConfig::load(app_handle)
         .await
         .unwrap_or_else(|e| error!("Failed to load app config: {}", e));
@@ -170,4 +169,28 @@ async fn async_setup(app_handle: &AppHandle) -> Result<(), anyhow::Error> {
     });
 
     Ok(())
+}
+
+fn make_specta_builder<R: Runtime>() -> tauri_specta::Builder<R> {
+    let builder = tauri_specta::Builder::<R>::new()
+        .commands(tauri_specta::collect_commands![
+            crate::helpers::config::get_config,
+            crate::helpers::config::set_theme::<tauri::Wry>,
+            crate::helpers::config::set_afk_timeout::<tauri::Wry>,
+            crate::helpers::config::set_heartbeat_interval::<tauri::Wry>,
+        ])
+        .error_handling(tauri_specta::ErrorHandlingMode::Throw);
+
+    #[cfg(debug_assertions)]
+    builder
+        .export(
+            specta_typescript::Typescript::default()
+                .formatter(specta_typescript::formatter::prettier)
+                .bigint(specta_typescript::BigIntExportBehavior::Number)
+                .header("/* eslint-disable */\n// @ts-nocheck\n\n"),
+            "../src/types/tauri.gen.ts",
+        )
+        .expect("Failed to export typescript bindings");
+
+    builder
 }

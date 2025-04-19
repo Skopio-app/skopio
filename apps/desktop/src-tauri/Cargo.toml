@@ -40,4 +40,8 @@ url = "2.5.4"
 console-subscriber = "0.4.1"
 reqwest = { workspace = true, features = ["json", "rustls-tls"] }
 
+specta = { workspace = true }
+specta-typescript = { workspace = true }
+tauri-specta = { workspace = true, features = ["derive", "typescript"] }
+
 db = { path = "../../../crates/db", features = ["desktop"] }

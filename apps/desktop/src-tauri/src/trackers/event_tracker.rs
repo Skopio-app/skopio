@@ -159,59 +159,59 @@ impl EventTracker {
 
             loop {
                 tokio::select! {
-                                changed = window_rx.changed() => {
-                                    if changed.is_err() {
-                                        break;
-                                    }
-                                    let window = match window_rx.borrow_and_update().clone() {
-                                        Some(w) => w,
-                                        None => continue,
-                                    };
+                    changed = window_rx.changed() => {
+                        if changed.is_err() {
+                            break;
+                        }
+                        let window = match window_rx.borrow_and_update().clone() {
+                            Some(w) => w,
+                            None => continue,
+                        };
 
-                                    let app_name = window.app_name.clone();
-                                    let bundle_id = window.bundle_id.clone();
-                                    let file = window.title.clone();
-                                    let app_path = window.path.clone();
+                        let app_name = window.app_name.clone();
+                        let bundle_id = window.bundle_id.clone();
+                        let file = window.title.clone();
+                        let app_path = window.path.clone();
 
-                                    let activity_detected = {
-                                        let mouse_buttons = self.cursor_tracker.get_pressed_mouse_buttons();
-                                        let keys_pressed = self.keyboard_tracker.get_pressed_keys();
-                                        let mouse_active = self.cursor_tracker.has_mouse_moved();
-                                        let mouse_clicked = mouse_buttons.left || mouse_buttons.right || mouse_buttons.middle || mouse_buttons.other;
-                                        let keyboard_active = !keys_pressed.is_empty();
-                                        mouse_active || mouse_clicked || keyboard_active
-                                    };
+                        let activity_detected = {
+                            let mouse_buttons = self.cursor_tracker.get_pressed_mouse_buttons();
+                            let keys_pressed = self.keyboard_tracker.get_pressed_keys();
+                            let mouse_active = self.cursor_tracker.has_mouse_moved();
+                            let mouse_clicked = mouse_buttons.left || mouse_buttons.right || mouse_buttons.middle || mouse_buttons.other;
+                            let keyboard_active = !keys_pressed.is_empty();
+                            mouse_active || mouse_clicked || keyboard_active
+                        };
 
-                                    if activity_detected {
-                                        *self.last_activity.lock().await = Instant::now();
-                                        last_check = Instant::now();
+                        if activity_detected {
+                            *self.last_activity.lock().await = Instant::now();
+                            last_check = Instant::now();
 
-                                        let changed = last_state
-                                            .as_ref()
-                                            .map(|(prev_app, prev_file)| prev_app != &app_name || prev_file != &file)
-                                            .unwrap_or(true);
+                            let changed = last_state
+                                .as_ref()
+                                .map(|(prev_app, prev_file)| prev_app != &app_name || prev_file != &file)
+                                .unwrap_or(true);
 
-                                        if changed {
-                                            last_state = Some((app_name.clone(), file.clone()));
-                                            self.track_event(&app_name, &bundle_id, &app_path, &file).await;
-                                        }
-                                    }
-                                }
-
-                                _ = tokio::time::sleep_until(last_check + {
-                                    let config = self.config.read().await;
-                                    Duration::from_secs(config.afk_timeout)
-                                }) => {
-                                    let last_active_time = *self.last_activity.lock().await;
-                                    let config = self.config.read().await;
-                let afk_threshold = Duration::from_secs(config.afk_timeout);
-                                    if Instant::now().duration_since(last_active_time) >= afk_threshold {
-                                        self.end_active_event().await;
-                                        last_state = None;
-                                    }
-                                    last_check = Instant::now();
-                                }
+                            if changed {
+                                last_state = Some((app_name.clone(), file.clone()));
+                                self.track_event(&app_name, &bundle_id, &app_path, &file).await;
                             }
+                        }
+                    }
+
+                    _ = tokio::time::sleep_until(last_check + {
+                        let config = self.config.read().await;
+                        Duration::from_secs(config.afk_timeout)
+                    }) => {
+                        let last_active_time = *self.last_activity.lock().await;
+                        let config = self.config.read().await;
+                        let afk_threshold = Duration::from_secs(config.afk_timeout);
+                        if Instant::now().duration_since(last_active_time) >= afk_threshold {
+                            self.end_active_event().await;
+                            last_state = None;
+                        }
+                        last_check = Instant::now();
+                    }
+                }
             }
         })
     }
