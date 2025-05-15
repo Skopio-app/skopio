@@ -30,6 +30,8 @@ export type AppConfig = {
   theme: Theme;
   heartbeat_interval: number;
   afk_timeout: number;
+  flush_interval: number;
+  sync_interval: number;
 };
 export type Theme = "Light" | "Dark" | "System";
 

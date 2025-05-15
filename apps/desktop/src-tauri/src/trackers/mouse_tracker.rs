@@ -12,7 +12,7 @@ use std::time::{Duration, Instant};
 use tokio::sync::watch;
 
 #[derive(Debug, Clone)]
-pub struct CursorActivity {
+pub struct CursorPosition {
     pub x: f64,
     pub y: f64,
 }
@@ -25,17 +25,17 @@ pub struct MouseButtons {
     pub other: bool,
 }
 
-pub struct CursorTracker {
+pub struct MouseTracker {
     last_position: Arc<Mutex<CGPoint>>,
     last_movement: Arc<Mutex<Instant>>,
     pressed_buttons: Arc<Mutex<MouseButtons>>,
     mouse_moved: Arc<AtomicBool>,
     runloop: Arc<Mutex<Option<CFRunLoop>>>,
-    pub tx: watch::Sender<Option<CursorActivity>>,
-    pub rx: watch::Receiver<Option<CursorActivity>>,
+    pub tx: watch::Sender<Option<CursorPosition>>,
+    pub rx: watch::Receiver<Option<CursorPosition>>,
 }
 
-impl CursorTracker {
+impl MouseTracker {
     pub fn new() -> Self {
         let (tx, rx) = watch::channel(None);
         Self {
@@ -98,7 +98,7 @@ impl CursorTracker {
                                 *last_move_time = now;
                                 mouse_moved.store(true, Ordering::Relaxed);
 
-                                let activity = CursorActivity {
+                                let activity = CursorPosition {
                                     x: position.x,
                                     y: position.y,
                                 };
@@ -152,7 +152,7 @@ impl CursorTracker {
         self.mouse_moved.swap(false, Ordering::Relaxed)
     }
 
-    pub fn subscribe(&self) -> watch::Receiver<Option<CursorActivity>> {
+    pub fn subscribe(&self) -> watch::Receiver<Option<CursorPosition>> {
         self.rx.clone()
     }
 

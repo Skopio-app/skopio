@@ -1,4 +1,3 @@
-use crate::helpers::config::AppConfig;
 use crate::helpers::db::to_naive_datetime;
 use crate::helpers::git::get_git_branch;
 use crate::monitored_app::{resolve_app_details, Entity, MonitoredApp, IGNORED_APPS};
@@ -10,10 +9,10 @@ use log::{debug, error, info};
 use serde::{Deserialize, Serialize};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
-use tokio::sync::{watch, RwLock};
+use tokio::sync::watch;
 use tokio::time::{interval, Duration as TokioDuration};
 
-use super::cursor_tracker::CursorActivity;
+use super::mouse_tracker::CursorPosition;
 use super::window_tracker::Window;
 
 #[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]
@@ -36,16 +35,19 @@ pub struct Heartbeat {
 pub struct HeartbeatTracker {
     last_heartbeat: Arc<Mutex<Option<Heartbeat>>>,
     last_heartbeats: Arc<DashMap<(String, String), Instant>>, // (app_name, entity_name)
-    config: Arc<RwLock<AppConfig>>,
+    heartbeat_interval_rx: watch::Receiver<u64>,
     tracker: Arc<dyn TrackingService>,
 }
 
 impl HeartbeatTracker {
-    pub fn new(config: Arc<RwLock<AppConfig>>, tracker: Arc<dyn TrackingService>) -> Self {
+    pub fn new(
+        heartbeat_interval_rx: watch::Receiver<u64>,
+        tracker: Arc<dyn TrackingService>,
+    ) -> Self {
         let tracker = Self {
             last_heartbeat: Arc::new(Mutex::new(None)),
             last_heartbeats: Arc::new(DashMap::new()),
-            config,
+            heartbeat_interval_rx,
             tracker,
         };
 
@@ -84,13 +86,7 @@ impl HeartbeatTracker {
         let now = Instant::now();
         let key = (app.to_string(), entity.to_string());
 
-        // Dynamically retrieve heartbeat interval from app settings config
-        let interval_secs = {
-            let config = self.config.read().await;
-            config.heartbeat_interval
-        };
-
-        let interval = Duration::from_secs(interval_secs);
+        let interval = Duration::from_secs(*self.heartbeat_interval_rx.borrow());
         let should_log = match self.last_heartbeats.get(&key) {
             Some(entry) => now.duration_since(*entry.value()) >= interval,
             None => true,
@@ -188,7 +184,7 @@ impl HeartbeatTracker {
 
     pub async fn start_tracking(
         self: Arc<Self>,
-        cursor_rx: watch::Receiver<Option<CursorActivity>>,
+        cursor_rx: watch::Receiver<Option<CursorPosition>>,
         mut window_rx: watch::Receiver<Option<Window>>,
     ) {
         let tracker = Arc::clone(&self);

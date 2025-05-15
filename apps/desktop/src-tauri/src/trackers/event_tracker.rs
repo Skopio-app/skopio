@@ -1,4 +1,3 @@
-use crate::helpers::config::AppConfig;
 use crate::helpers::db::to_naive_datetime;
 use crate::helpers::git::get_git_branch;
 use crate::monitored_app::{resolve_app_details, Category, Entity, MonitoredApp, IGNORED_APPS};
@@ -8,11 +7,11 @@ use db::desktop::events::Event as DBEvent;
 use log::{error, info};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
-use tokio::sync::{watch, Mutex, RwLock};
+use tokio::sync::{watch, Mutex};
 use tokio::time::{Duration, Instant};
 
-use super::cursor_tracker::CursorTracker;
 use super::keyboard_tracker::KeyboardTracker;
+use super::mouse_tracker::MouseTracker;
 use super::window_tracker::Window;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -35,17 +34,17 @@ pub struct Event {
 pub struct EventTracker {
     active_event: Arc<Mutex<Option<Event>>>,
     last_activity: Arc<Mutex<Instant>>,
-    cursor_tracker: Arc<CursorTracker>,
+    cursor_tracker: Arc<MouseTracker>,
     keyboard_tracker: Arc<KeyboardTracker>,
-    config: Arc<RwLock<AppConfig>>,
+    afk_timeout_rx: watch::Receiver<u64>,
     tracker: Arc<dyn TrackingService>,
 }
 
 impl EventTracker {
     pub fn new(
-        cursor_tracker: Arc<CursorTracker>,
+        cursor_tracker: Arc<MouseTracker>,
         keyboard_tracker: Arc<KeyboardTracker>,
-        config: Arc<RwLock<AppConfig>>,
+        afk_timeout_rx: watch::Receiver<u64>,
         tracker: Arc<dyn TrackingService>,
     ) -> Self {
         Self {
@@ -53,7 +52,7 @@ impl EventTracker {
             last_activity: Arc::new(Mutex::new(Instant::now())),
             cursor_tracker,
             keyboard_tracker,
-            config,
+            afk_timeout_rx,
             tracker,
         }
     }
@@ -199,12 +198,10 @@ impl EventTracker {
                     }
 
                     _ = tokio::time::sleep_until(last_check + {
-                        let config = self.config.read().await;
-                        Duration::from_secs(config.afk_timeout)
+                        Duration::from_secs(*self.afk_timeout_rx.borrow())
                     }) => {
                         let last_active_time = *self.last_activity.lock().await;
-                        let config = self.config.read().await;
-                        let afk_threshold = Duration::from_secs(config.afk_timeout);
+                        let afk_threshold = Duration::from_secs(*self.afk_timeout_rx.borrow());
                         if Instant::now().duration_since(last_active_time) >= afk_threshold {
                             self.end_active_event().await;
                             last_state = None;

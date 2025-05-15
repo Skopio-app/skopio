@@ -7,7 +7,7 @@ use db::DBContext;
 use log::{error, info};
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
-use tokio::sync::{mpsc, oneshot, Mutex};
+use tokio::sync::{mpsc, oneshot, watch, Mutex};
 use tokio::time::{interval, Duration, Instant};
 
 use crate::tracking_service::TrackingService;
@@ -64,7 +64,12 @@ pub struct BufferedTrackingService {
 }
 
 impl BufferedTrackingService {
-    pub fn new(inner: Arc<dyn TrackingService>, db: Arc<DBContext>) -> Self {
+    pub fn new(
+        inner: Arc<dyn TrackingService>,
+        db: Arc<DBContext>,
+        flush_interval_rx: watch::Receiver<u64>,
+        sync_interval_rx: watch::Receiver<u64>,
+    ) -> Self {
         let (tx, rx) = mpsc::channel::<TrackingStats>(100);
 
         let (shutdown_tx, shutdown_rx) = oneshot::channel::<()>();
@@ -73,9 +78,14 @@ impl BufferedTrackingService {
         let inner_clone = Arc::clone(&inner);
         let db_clone = Arc::clone(&db);
 
-        tokio::spawn(run_buffer_flush_loop(rx, shutdown_rx, inner_clone));
+        tokio::spawn(run_buffer_flush_loop(
+            rx,
+            shutdown_rx,
+            inner_clone,
+            flush_interval_rx,
+        ));
 
-        tokio::spawn(run_sync_loop(db_clone));
+        tokio::spawn(run_sync_loop(db_clone, sync_interval_rx));
 
         Self {
             sender: tx,
@@ -113,9 +123,9 @@ async fn run_buffer_flush_loop(
     mut rx: mpsc::Receiver<TrackingStats>,
     mut shutdown_rx: oneshot::Receiver<()>,
     inner: Arc<dyn TrackingService>,
+    flush_interval_rx: watch::Receiver<u64>,
 ) {
-    // TODO: Manage flush interval from app config
-    let flush_interval = Duration::from_secs(120);
+    let flush_interval = Duration::from_secs(*flush_interval_rx.borrow());
     let mut buffer: Vec<TrackingStats> = Vec::with_capacity(20);
     let mut retry_queue: Vec<TrackingStats> = Vec::with_capacity(20);
     let mut last_flush = Instant::now();
@@ -167,9 +177,8 @@ async fn run_buffer_flush_loop(
     }
 }
 
-async fn run_sync_loop(db: Arc<DBContext>) {
-    // TODO: Manage sync interval from app config
-    let mut interval = interval(Duration::from_secs(180));
+async fn run_sync_loop(db: Arc<DBContext>, sync_interval_rx: watch::Receiver<u64>) {
+    let mut interval = interval(Duration::from_secs(*sync_interval_rx.borrow()));
     loop {
         interval.tick().await;
         let db_clone = Arc::clone(&db);
