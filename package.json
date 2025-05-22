@@ -1,0 +1,12 @@
+{
+  "name": "skopio",
+  "private": true,
+  "workspaces": [
+    "apps/desktop",
+    "packages/*"
+  ],
+  "packageManager": "yarn@4.9.1",
+  "devDependencies": {
+    "typescript": "^5.8.3"
+  }
+}

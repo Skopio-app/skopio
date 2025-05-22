@@ -1,0 +1,10 @@
+{
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@skopio/desktop": ["apps/desktop"],
+      "@skopio/manifest": ["packages/manifest"]
+    }
+  },
+  "include": ["packages", "apps"]
+}
