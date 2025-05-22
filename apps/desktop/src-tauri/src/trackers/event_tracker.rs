@@ -36,7 +36,6 @@ pub struct EventTracker {
     last_activity: Arc<Mutex<Instant>>,
     cursor_tracker: Arc<MouseTracker>,
     keyboard_tracker: Arc<KeyboardTracker>,
-    afk_timeout_rx: watch::Receiver<u64>,
     tracker: Arc<dyn TrackingService>,
 }
 
@@ -44,7 +43,6 @@ impl EventTracker {
     pub fn new(
         cursor_tracker: Arc<MouseTracker>,
         keyboard_tracker: Arc<KeyboardTracker>,
-        afk_timeout_rx: watch::Receiver<u64>,
         tracker: Arc<dyn TrackingService>,
     ) -> Self {
         Self {
@@ -52,7 +50,6 @@ impl EventTracker {
             last_activity: Arc::new(Mutex::new(Instant::now())),
             cursor_tracker,
             keyboard_tracker,
-            afk_timeout_rx,
             tracker,
         }
     }
@@ -151,12 +148,16 @@ impl EventTracker {
     pub fn start_tracking(
         self: Arc<Self>,
         mut window_rx: watch::Receiver<Option<Window>>,
+        mut afk_timeout_rx: watch::Receiver<u64>,
     ) -> tokio::task::JoinHandle<()> {
         tokio::spawn(async move {
             let mut last_state = None;
             let mut last_check = Instant::now();
 
             loop {
+                let afk_timeout_secs = *afk_timeout_rx.borrow_and_update();
+                let afk_threshold = Duration::from_secs(afk_timeout_secs);
+
                 tokio::select! {
                     changed = window_rx.changed() => {
                         if changed.is_err() {
@@ -197,11 +198,8 @@ impl EventTracker {
                         }
                     }
 
-                    _ = tokio::time::sleep_until(last_check + {
-                        Duration::from_secs(*self.afk_timeout_rx.borrow())
-                    }) => {
+                    _ = tokio::time::sleep_until(last_check + afk_threshold) => {
                         let last_active_time = *self.last_activity.lock().await;
-                        let afk_threshold = Duration::from_secs(*self.afk_timeout_rx.borrow());
                         if Instant::now().duration_since(last_active_time) >= afk_threshold {
                             self.end_active_event().await;
                             last_state = None;

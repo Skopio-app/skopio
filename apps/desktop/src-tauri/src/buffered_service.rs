@@ -123,9 +123,9 @@ async fn run_buffer_flush_loop(
     mut rx: mpsc::Receiver<TrackingStats>,
     mut shutdown_rx: oneshot::Receiver<()>,
     inner: Arc<dyn TrackingService>,
-    flush_interval_rx: watch::Receiver<u64>,
+    mut flush_interval_rx: watch::Receiver<u64>,
 ) {
-    let flush_interval = Duration::from_secs(*flush_interval_rx.borrow());
+    let flush_interval = Duration::from_secs(*flush_interval_rx.borrow_and_update());
     let mut buffer: Vec<TrackingStats> = Vec::with_capacity(20);
     let mut retry_queue: Vec<TrackingStats> = Vec::with_capacity(20);
     let mut last_flush = Instant::now();
@@ -177,8 +177,8 @@ async fn run_buffer_flush_loop(
     }
 }
 
-async fn run_sync_loop(db: Arc<DBContext>, sync_interval_rx: watch::Receiver<u64>) {
-    let mut interval = interval(Duration::from_secs(*sync_interval_rx.borrow()));
+async fn run_sync_loop(db: Arc<DBContext>, mut sync_interval_rx: watch::Receiver<u64>) {
+    let mut interval = interval(Duration::from_secs(*sync_interval_rx.borrow_and_update()));
     loop {
         interval.tick().await;
         let db_clone = Arc::clone(&db);
