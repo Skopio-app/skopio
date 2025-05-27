@@ -31,6 +31,7 @@ struct HeartbeatInput {
     cursorpos: Option<i64>,
 }
 
+// TODO: Investigate the need for optimizations in the for loop
 async fn handle_heartbeats(
     State(db): State<Arc<Mutex<DBContext>>>,
     Json(payload): Json<Vec<HeartbeatInput>>,

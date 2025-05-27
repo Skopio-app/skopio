@@ -65,7 +65,7 @@ export const ExtensionPackageJson = z.object({
     z.union([
       z.string().describe("The URL of the repository"),
       z.object({
-        type: z.string(),
+        type: z.string().describe("The type of repository"),
         url: z.string(),
       }),
     ]),

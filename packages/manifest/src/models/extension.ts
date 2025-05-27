@@ -6,9 +6,9 @@ import z from "zod";
 export const ExtensionLabelMap = z.record(
   z.string(), // Window label
   z.object({
-    path: z.string(), // Path to the extension
-    processes: z.array(z.number()),
-    dist: z.optional(z.nullable(z.string())),
+    path: z.string().describe("Path to the extension"),
+    processes: z.number().array(),
+    dist: z.string().optional().nullable(),
   }),
 );
 export type ExtensionLabelMap = z.infer<typeof ExtensionLabelMap>;
@@ -19,8 +19,8 @@ export const Extension = z.object({
   version: z.string(),
   enabled: z.boolean(),
   installedAt: z.string(),
-  path: z.optional(z.nullable(z.string())),
-  data: z.optional(z.any()),
+  path: z.string().optional().nullable(),
+  data: z.any().optional(),
 });
 export type Extension = z.infer<typeof Extension>;
 
@@ -37,8 +37,8 @@ export const ExtensionCommand = z.object({
   name: z.string(),
   type: ExtensionType,
   data: z.string(),
-  alias: z.optional(z.nullable(z.string())),
-  hotkey: z.optional(z.nullable(z.string())),
+  alias: z.string().optional().nullable(),
+  hotkey: z.string().optional().nullable(),
   enabled: z.boolean(),
 });
 export type ExtensionCommand = z.infer<typeof ExtensionCommand>;
@@ -47,8 +47,8 @@ export const ExtensionData = z.object({
   dataId: z.number(),
   extId: z.number(),
   dataType: z.string(),
-  data: z.optional(z.string()),
-  searchText: z.optional(z.string()),
+  data: z.string().optional(),
+  searchText: z.string().optional(),
   createdAt: z.date(),
   updatedAt: z.date(),
 });
