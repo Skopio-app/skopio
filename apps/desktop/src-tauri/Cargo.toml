@@ -45,3 +45,4 @@ specta-typescript = { workspace = true }
 tauri-specta = { workspace = true, features = ["derive", "typescript"] }
 
 db = { path = "../../../crates/db", features = ["desktop"] }
+common = { path = "../../../crates/common" }

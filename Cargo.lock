@@ -799,6 +799,7 @@ version = "0.1.0"
 dependencies = [
  "chrono",
  "clap 4.5.29",
+ "common",
  "dirs 6.0.0",
  "env_logger 0.11.6",
  "git2",
@@ -853,6 +854,15 @@ checksum = "ba5a308b75df32fe02788e748662718f03fde005016435c444eea572398219fd"
 dependencies = [
  "bytes",
  "memchr",
+]
+
+[[package]]
+name = "common"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
@@ -1210,6 +1220,7 @@ dependencies = [
  "async-trait",
  "chrono",
  "cocoa",
+ "common",
  "console-subscriber",
  "core-foundation 0.10.0",
  "core-graphics",
@@ -4938,6 +4949,7 @@ version = "0.1.0"
 dependencies = [
  "axum 0.8.1",
  "chrono",
+ "common",
  "db",
  "dirs 6.0.0",
  "serde",

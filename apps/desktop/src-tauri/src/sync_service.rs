@@ -1,12 +1,11 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use chrono::NaiveDateTime;
+use common::models::inputs::{AFKEventInput, EventInput, HeartbeatInput};
 use db::desktop::{afk_events::AFKEvent, events::Event, heartbeats::Heartbeat};
 use db::DBContext;
 use log::{error, info};
 use reqwest::Client;
-use serde::{Deserialize, Serialize};
 use tokio::sync::{mpsc, oneshot, watch, Mutex};
 use tokio::time::{interval, Duration, Instant};
 
@@ -18,44 +17,6 @@ enum TrackingStats {
     Heartbeat(Heartbeat),
     Event(Event),
     Afk(AFKEvent),
-}
-
-// TODO: Add structs to `core` crate for ease of reuse across desktop, server and CLI apps
-#[derive(Serialize, Deserialize, Debug)]
-struct EventInput {
-    timestamp: Option<NaiveDateTime>,
-    duration: Option<i64>,
-    activity_type: String,
-    app_name: String,
-    entity_name: String,
-    entity_type: String,
-    project_name: String,
-    project_path: String,
-    branch_name: String,
-    language_name: String,
-    end_timestamp: Option<NaiveDateTime>,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-struct HeartbeatInput {
-    timestamp: Option<NaiveDateTime>,
-    project_name: String,
-    project_path: String,
-    entity_name: String,
-    entity_type: String,
-    branch_name: String,
-    language_name: Option<String>,
-    app_name: String,
-    is_write: bool,
-    lines: Option<i64>,
-    cursorpos: Option<i64>,
-}
-
-#[derive(Serialize, Deserialize, Debug)]
-struct AFKEventInput {
-    afk_start: NaiveDateTime,
-    afk_end: Option<NaiveDateTime>,
-    duration: Option<i64>,
 }
 
 pub struct BufferedTrackingService {

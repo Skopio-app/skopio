@@ -1,9 +1,9 @@
-use buffered_service::BufferedTrackingService;
 use chrono::Local;
 use db::DBContext;
 use helpers::{config::ConfigStore, db::get_db_path};
 use log::error;
 use std::sync::Arc;
+use sync_service::BufferedTrackingService;
 use tauri::{AppHandle, Manager, Runtime};
 use trackers::{
     afk_tracker::AFKTracker, event_tracker::EventTracker, heartbeat_tracker::HeartbeatTracker,
@@ -11,9 +11,9 @@ use trackers::{
 };
 use tracking_service::{DBService, TrackingService};
 
-mod buffered_service;
 mod helpers;
 mod monitored_app;
+mod sync_service;
 mod trackers;
 mod tracking_service;
 

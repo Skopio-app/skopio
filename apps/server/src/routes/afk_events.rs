@@ -1,20 +1,12 @@
+use common::models::inputs::AFKEventInput;
 use std::sync::Arc;
 
 use axum::{extract::State, http::StatusCode, routing::post, Json, Router};
-use chrono::NaiveDateTime;
 use db::{server::afk_events::AFKEvent, DBContext};
-use serde::{Deserialize, Serialize};
 use tokio::sync::Mutex;
 use tracing::info;
 
 use crate::utils::error_response;
-
-#[derive(Serialize, Deserialize, Debug)]
-struct AFKEventInput {
-    afk_start: NaiveDateTime,
-    afk_end: Option<NaiveDateTime>,
-    duration: Option<i64>,
-}
 
 async fn handle_afk_events(
     State(db): State<Arc<Mutex<DBContext>>>,
