@@ -579,6 +579,16 @@ __metadata:
   languageName: unknown
   linkType: soft
 
+"@skopio/rpc@workspace:packages/rpc":
+  version: 0.0.0-use.local
+  resolution: "@skopio/rpc@workspace:packages/rpc"
+  dependencies:
+    "@types/node": "npm:^22.15.23"
+    typescript: "npm:^5.8.3"
+    zod: "npm:^3.25.32"
+  languageName: unknown
+  linkType: soft
+
 "@swc/core-darwin-arm64@npm:1.11.29":
   version: 1.11.29
   resolution: "@swc/core-darwin-arm64@npm:1.11.29"
@@ -859,6 +869,15 @@ __metadata:
   dependencies:
     undici-types: "npm:~6.21.0"
   checksum: 10c0/f092bbccda2131c2b2c8f720338080aa0ef1d928f5f1062c03954a4f7dafa7ee3ed29bc3e51bd4e2584473b3d943c637a2b39ad7174898970818270187cf10c1
+  languageName: node
+  linkType: hard
+
+"@types/node@npm:^22.15.23":
+  version: 22.15.23
+  resolution: "@types/node@npm:22.15.23"
+  dependencies:
+    undici-types: "npm:~6.21.0"
+  checksum: 10c0/e3ae0629dfb4357dad2a7838c481656abf089d852d83f0d0f14368f03ad21ce276cbecfdf62be2276ef39920db6b114e5bc8d87c37714bbab9aefb0ce1eb1473
   languageName: node
   linkType: hard
 
@@ -2958,5 +2977,12 @@ __metadata:
   version: 3.25.20
   resolution: "zod@npm:3.25.20"
   checksum: 10c0/f3b3e8875e1e02ca25bbfd45332aa1010f1b252b60a619c94c15bd6de637f841d344a3975d6950b2fbee68db4160ddb534cb9571c517fac17983871739085278
+  languageName: node
+  linkType: hard
+
+"zod@npm:^3.25.32":
+  version: 3.25.32
+  resolution: "zod@npm:3.25.32"
+  checksum: 10c0/de0bc052a7666578b3d5dd42bc522f02f27e1c798236439c0f6b6bc1b311a221706aebdafb1f58399d5f558b1fab7860c6970e096fe8d6947743bc791d567c4b
   languageName: node
   linkType: hard

@@ -3,7 +3,8 @@
     "baseUrl": ".",
     "paths": {
       "@skopio/desktop": ["apps/desktop"],
-      "@skopio/manifest": ["packages/manifest"]
+      "@skopio/manifest": ["packages/manifest"],
+      "@skopio/rpc": ["packages/rpc"]
     }
   },
   "include": ["packages", "apps"]
