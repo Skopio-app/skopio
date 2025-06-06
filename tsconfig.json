@@ -4,8 +4,13 @@
     "paths": {
       "@skopio/desktop": ["apps/desktop"],
       "@skopio/manifest": ["packages/manifest"],
-      "@skopio/rpc": ["packages/rpc"]
-    }
+      "@skopio/rpc": ["packages/rpc"],
+      "@skopio/ui": ["packages/ui"]
+    },
+    "moduleResolution": "node",
+    "module": "esnext",
+    "target": "esnext",
+    "jsx": "react-jsx"
   },
   "include": ["packages", "apps"]
 }

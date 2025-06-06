@@ -1,5 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { getDevExtensionUrl } from "./utils/load-extension";
+import { Button } from "@skopio/ui";
 
 export const OpenDevExtensionButton = () => {
   const navigate = useNavigate();
@@ -16,5 +17,9 @@ export const OpenDevExtensionButton = () => {
     navigate(url);
   };
 
-  return <button onClick={open}>Open Dev Extension</button>;
+  return (
+    <Button variant="default" onClick={open}>
+      Open Dev Extension
+    </Button>
+  );
 };

@@ -2,8 +2,8 @@
 
 import { createBrowserRouter } from "react-router";
 import App from "./App";
-import { Home } from "./home";
 import { ExtensionIfrane } from "./extension-iframe";
+import DashboardPage from "./pages/DashboardPage";
 
 // export default [
 //     route("dashboard", "./App.tsx", [
@@ -18,7 +18,7 @@ const router = createBrowserRouter([
     children: [
       {
         index: true,
-        element: <Home />,
+        element: <DashboardPage />,
       },
       {
         path: "app/extension",
