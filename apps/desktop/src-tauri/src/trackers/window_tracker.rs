@@ -1,3 +1,5 @@
+#![cfg(target_os = "macos")]
+
 use core_foundation::base::{CFRelease, TCFType};
 use core_foundation::string::CFString;
 use log::{debug, warn};

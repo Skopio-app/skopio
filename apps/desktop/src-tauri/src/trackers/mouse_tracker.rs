@@ -1,11 +1,12 @@
-use cocoa::appkit::CGPoint;
-use cocoa::base::nil;
-use cocoa::foundation::NSAutoreleasePool;
+#![cfg(target_os = "macos")]
+
 use core_foundation::runloop::{kCFRunLoopCommonModes, CFRunLoop};
 use core_graphics::event::{
     CGEventTap, CGEventTapLocation, CGEventTapOptions, CGEventTapPlacement, CGEventType,
 };
+use core_graphics::geometry::CGPoint;
 use log::{error, warn};
+use objc2_foundation::NSAutoreleasePool;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
@@ -63,7 +64,7 @@ impl MouseTracker {
         let tx = self.tx.clone();
 
         tokio::task::spawn_blocking(move || unsafe {
-            let pool = NSAutoreleasePool::new(nil);
+            let pool = NSAutoreleasePool::new();
             match CGEventTap::new(
                 CGEventTapLocation::HID,
                 CGEventTapPlacement::HeadInsertEventTap,
@@ -140,7 +141,7 @@ impl MouseTracker {
                     error!("Failed to create cursor event tap!");
                 }
             }
-            pool.drain();
+            drop(pool);
         });
     }
 

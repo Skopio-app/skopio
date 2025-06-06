@@ -23,11 +23,7 @@ log = { workspace = true }
 tauri = { version = "2.1.0", features = ["objc-exception", "specta"] }
 tauri-plugin-log = "2.0.0-rc"
 chrono = { workspace = true, features = ["serde"] }
-cocoa = "0.26.0"
-core-graphics = "0.24.0"
 tokio = { workspace = true, features = ["full", "tracing"] }
-core-foundation = "0.10.0"
-objc2 = "0.6.0"
 strum_macros = "0.27.1"
 strum = "0.27.1"
 tokei = "12.1.2"
@@ -46,3 +42,9 @@ tauri-specta = { workspace = true, features = ["derive", "typescript"] }
 
 db = { path = "../../../crates/db", features = ["desktop"] }
 common = { path = "../../../crates/common" }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+core-foundation = "0.10.0"
+objc2 = "0.6.0"
+core-graphics = "0.24.0"
+objc2-foundation = "0.3.1"

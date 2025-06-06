@@ -1,10 +1,11 @@
-use cocoa::base::nil;
-use cocoa::foundation::NSAutoreleasePool;
+#![cfg(target_os = "macos")]
+
 use core_foundation::runloop::{kCFRunLoopCommonModes, CFRunLoop};
 use core_graphics::event::{
     CGEventTap, CGEventTapLocation, CGEventTapOptions, CGEventTapPlacement, CGEventType,
 };
 use log::error;
+use objc2_foundation::NSAutoreleasePool;
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
 
@@ -29,7 +30,7 @@ impl KeyboardTracker {
         let runloop_ref = Arc::clone(&self.runloop);
 
         tokio::task::spawn_blocking(move || unsafe {
-            let pool = NSAutoreleasePool::new(nil);
+            let pool = NSAutoreleasePool::new();
             let current = CFRunLoop::get_current();
             match CGEventTap::new(
                 CGEventTapLocation::HID,
@@ -83,7 +84,7 @@ impl KeyboardTracker {
                     error!("Failed to create keyboard event tap!");
                 }
             }
-            pool.drain();
+            drop(pool);
         });
     }
 
