@@ -25,6 +25,18 @@ export const BaseExtension = z.object({
   devUrl: z.string().describe("The URL to load in development"),
 });
 
+export const BaseBuiltInExtensionManifestSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  description: z.string(),
+  type: ExtensionType,
+  icon: z.string(),
+  permissions: z.array(z.string()),
+});
+export type BaseBuiltInExtensionManifest = z.infer<
+  typeof BaseBuiltInExtensionManifestSchema
+>;
+
 export const TabExtension = BaseExtension.extend({
   type: ExtensionType.optional().default(ExtensionTypeEnum.Tab),
 });
