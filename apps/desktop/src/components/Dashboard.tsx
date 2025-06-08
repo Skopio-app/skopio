@@ -14,8 +14,15 @@ import {
   SidebarTrigger,
 } from "@skopio/ui";
 import { ReactNode } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
+import { builtinExtensionRegistry } from "../extensions/registry";
 
 const DashboardLayout = ({ children }: { children: ReactNode }) => {
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  const tabExtensions = [...builtinExtensionRegistry.getTabExtensions()];
+
   return (
     <SidebarProvider className="bg-muted relative">
       <div
@@ -35,24 +42,19 @@ const DashboardLayout = ({ children }: { children: ReactNode }) => {
         <SidebarHeader />
         <SidebarContent>
           <SidebarGroup>
-            <SidebarGroupLabel>General</SidebarGroupLabel>
+            <SidebarGroupLabel>Builtin Extensions</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
-                <SidebarMenuItem>
-                  <SidebarMenuButton isActive>Dashboard</SidebarMenuButton>
-                </SidebarMenuItem>
-                <SidebarMenuItem>
-                  <SidebarMenuButton>Projects</SidebarMenuButton>
-                </SidebarMenuItem>
-                <SidebarMenuItem>
-                  <SidebarMenuButton>Insights</SidebarMenuButton>
-                </SidebarMenuItem>
-                <SidebarMenuItem>
-                  <SidebarMenuButton>Reports</SidebarMenuButton>
-                </SidebarMenuItem>
-                <SidebarMenuItem>
-                  <SidebarMenuButton>Plugins</SidebarMenuButton>
-                </SidebarMenuItem>
+                {tabExtensions.map((ext) => (
+                  <SidebarMenuItem key={ext.manifest.id}>
+                    <SidebarMenuButton
+                      isActive={location.pathname === "/tab/" + ext.manifest.id}
+                      onClick={() => navigate("/tab/" + ext.manifest.id)}
+                    >
+                      {ext.manifest.name}
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
