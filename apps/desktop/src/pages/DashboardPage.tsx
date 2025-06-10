@@ -1,11 +1,5 @@
-import DashboardLayout from "../components/Dashboard";
-
 const DashboardPage = () => {
-  return (
-    <DashboardLayout>
-      <div className="text-muted-foreground">Dashboard content</div>
-    </DashboardLayout>
-  );
+  return <div className="text-muted-foreground">Dashboard content</div>;
 };
 
 export default DashboardPage;

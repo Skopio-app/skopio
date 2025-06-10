@@ -1678,11 +1678,13 @@ __metadata:
     "@eslint/js": "npm:^9.17.0"
     "@react-router/dev": "npm:^7.6.1"
     "@skopio/manifest": "workspace:*"
+    "@skopio/rpc": "workspace:*"
     "@skopio/ui": "workspace:*"
     "@tailwindcss/vite": "npm:^4.1.8"
     "@tanstack/react-virtual": "npm:^3.13.9"
     "@tauri-apps/api": "npm:^2.5.0"
     "@tauri-apps/cli": "npm:^2.1.0"
+    "@tauri-apps/plugin-dialog": "npm:^2.2.2"
     "@types/node": "npm:^22.10.2"
     "@types/react": "npm:^18.3.18"
     "@types/react-dom": "npm:^18.3.5"
@@ -1695,10 +1697,12 @@ __metadata:
     prettier: "npm:3.5.3"
     react-router: "npm:^7.6.1"
     react-router-dom: "npm:^7.6.1"
+    sonner: "npm:^2.0.5"
     tailwindcss: "npm:^4.1.8"
     typescript: "npm:~5.6.2"
     typescript-eslint: "npm:^8.18.2"
     vite: "npm:^6.0.5"
+    zod: "npm:^3.25.56"
   languageName: unknown
   linkType: soft
 
@@ -1710,13 +1714,22 @@ __metadata:
   languageName: unknown
   linkType: soft
 
-"@skopio/rpc@workspace:packages/rpc":
+"@skopio/rpc@workspace:*, @skopio/rpc@workspace:packages/rpc":
   version: 0.0.0-use.local
   resolution: "@skopio/rpc@workspace:packages/rpc"
   dependencies:
     "@types/node": "npm:^22.15.23"
     typescript: "npm:^5.8.3"
     zod: "npm:^3.25.32"
+  languageName: unknown
+  linkType: soft
+
+"@skopio/sdk@workspace:packages/sdk":
+  version: 0.0.0-use.local
+  resolution: "@skopio/sdk@workspace:packages/sdk"
+  dependencies:
+    "@skopio/rpc": "workspace:*"
+    sonner: "npm:^2.0.5"
   languageName: unknown
   linkType: soft
 
@@ -2076,7 +2089,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@tauri-apps/api@npm:^2.5.0":
+"@tauri-apps/api@npm:^2.0.0, @tauri-apps/api@npm:^2.5.0":
   version: 2.5.0
   resolution: "@tauri-apps/api@npm:2.5.0"
   checksum: 10c0/8eeb28049d48f5f89a5419cdf313bb159305204b193a5f27ebddbe0704ff43037c8b2e78518de831d7393e00178f0c0ac66cef1a57b99c632de71eca29f562c0
@@ -2201,6 +2214,15 @@ __metadata:
   bin:
     tauri: tauri.js
   checksum: 10c0/5ce96349371692b7d6c6b9c20af6b137f57373335331d806904e3e37d0a4feac2bbd2fd394bfcffcc2d352ba25b579142e784e18946a83a405a69912078d33bb
+  languageName: node
+  linkType: hard
+
+"@tauri-apps/plugin-dialog@npm:^2.2.2":
+  version: 2.2.2
+  resolution: "@tauri-apps/plugin-dialog@npm:2.2.2"
+  dependencies:
+    "@tauri-apps/api": "npm:^2.0.0"
+  checksum: 10c0/d08a30c35d93bb99ac9f8a33c98d8e4bab83308346b8db0ecf54ad8dffc798623fc4db16fb4c40167b905d894012e04577106b96b2fcccb53960d5a9544e8ccd
   languageName: node
   linkType: hard
 
@@ -4606,6 +4628,16 @@ __metadata:
   languageName: node
   linkType: hard
 
+"sonner@npm:^2.0.5":
+  version: 2.0.5
+  resolution: "sonner@npm:2.0.5"
+  peerDependencies:
+    react: ^18.0.0 || ^19.0.0 || ^19.0.0-rc
+    react-dom: ^18.0.0 || ^19.0.0 || ^19.0.0-rc
+  checksum: 10c0/38ec98e2f5d7e086825307f737a90bdc8639182d184e002719c2368bf3a9259c340f41afda731716d2b78c40e5e3aa9165058375be42f6a93bda0876b9b433ba
+  languageName: node
+  linkType: hard
+
 "source-map-js@npm:^1.2.1":
   version: 1.2.1
   resolution: "source-map-js@npm:1.2.1"
@@ -5217,5 +5249,12 @@ __metadata:
   version: 3.25.49
   resolution: "zod@npm:3.25.49"
   checksum: 10c0/2b70269b18abcd9b8d282ed6361a327a71d9a91433d3add02c4ab69750a271d97675145b393ccc968b5d61360d8d4000180fbc8a347dc186320b9e118c7a1df9
+  languageName: node
+  linkType: hard
+
+"zod@npm:^3.25.56":
+  version: 3.25.56
+  resolution: "zod@npm:3.25.56"
+  checksum: 10c0/3800f01d4b1df932b91354eb1e648f69cc7e5561549e6d2bf83827d930a5f33bbf92926099445f6fc1ebb64ca9c6513ef9ae5e5409cfef6325f354bcf6fc9a24
   languageName: node
   linkType: hard

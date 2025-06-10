@@ -13,11 +13,10 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from "@skopio/ui";
-import { ReactNode } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { builtinExtensionRegistry } from "../extensions/registry";
 
-const DashboardLayout = ({ children }: { children: ReactNode }) => {
+const DashboardLayout = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -62,7 +61,7 @@ const DashboardLayout = ({ children }: { children: ReactNode }) => {
       </Sidebar>
 
       <SidebarInset>
-        <div className="flex-1 overflow-auto px-3 py-6">{children}</div>
+        <Outlet />
       </SidebarInset>
     </SidebarProvider>
   );

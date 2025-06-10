@@ -12,14 +12,18 @@
   },
   "dependencies": {
     "@skopio/manifest": "workspace:*",
+    "@skopio/rpc": "workspace:*",
     "@skopio/ui": "workspace:*",
     "@tailwindcss/vite": "^4.1.8",
     "@tanstack/react-virtual": "^3.13.9",
     "@tauri-apps/api": "^2.5.0",
+    "@tauri-apps/plugin-dialog": "^2.2.2",
     "date-fns": "^4.1.0",
     "react-router": "^7.6.1",
     "react-router-dom": "^7.6.1",
-    "tailwindcss": "^4.1.8"
+    "sonner": "^2.0.5",
+    "tailwindcss": "^4.1.8",
+    "zod": "^3.25.56"
   },
   "devDependencies": {
     "@eslint/js": "^9.17.0",
