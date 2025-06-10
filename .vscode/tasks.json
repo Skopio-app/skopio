@@ -17,7 +17,6 @@
     {
       "label": "ui:build",
       "type": "shell",
-      // change this to your `beforeBuildCommand`:
       "command": "yarn",
       "args": ["build"]
     }

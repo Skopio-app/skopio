@@ -1,9 +1,7 @@
-export { RPCChannel } from "./core/rpc-channel";
+export * from "./adapters/iframe";
+export * from "./adapters/worker";
 
-// Transports
-export { WindowTransport } from "./transport/window-transport";
-export { WorkerTransport } from "./transport/worker-transport";
-export type { Transport } from "./transport/transport";
+export * from "./core/channel";
 
-// Types
-export * from "./core/message-types";
+export * from "./types/message";
+export * from "./types/transport";

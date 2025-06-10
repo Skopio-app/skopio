@@ -15,7 +15,7 @@ import {
   isStreamMessage,
 } from "../utils/message";
 
-interface RPCMethod {
+export interface RPCMethod {
   input: ZodTypeAny;
   output: ZodTypeAny;
   handler: (input: any, context?: any) => any | Promise<any>;
