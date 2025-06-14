@@ -26,4 +26,44 @@ impl AFKEvent {
         .await?;
         Ok(())
     }
+
+    /// Fetch AFK events within a date range
+    pub async fn fetch_in_range(
+        db_context: &DBContext,
+        start: NaiveDateTime,
+        end: NaiveDateTime,
+    ) -> Result<Vec<AFKEvent>, sqlx::Error> {
+        sqlx::query_as!(
+            AFKEvent,
+            r#"
+            SELECT id, afk_start, afk_end, duration
+            FROM afk_events
+            WHERE afk_start BETWEEN ? AND ?
+            ORDER BY afk_start ASC
+            "#,
+            start,
+            end
+        )
+        .fetch_all(db_context.pool())
+        .await
+    }
+}
+
+/// Fetch recent AFK events
+pub async fn fetch_recent(
+    db_context: &DBContext,
+    since: NaiveDateTime,
+) -> Result<Vec<AFKEvent>, sqlx::Error> {
+    sqlx::query_as!(
+        AFKEvent,
+        r#"
+        SELECT id, afk_start, afk_end, duration
+        FROM afk_events
+        WHERE afk_start >= ?
+        ORDER BY afk_events.afk_start ASC
+        "#,
+        since
+    )
+    .fetch_all(db_context.pool())
+    .await
 }

@@ -17,6 +17,20 @@ pub struct Event {
     pub end_timestamp: Option<NaiveDateTime>,
 }
 
+#[derive(Debug, Serialize, sqlx::FromRow)]
+pub struct StreamableEvent {
+    pub id: i64,
+    pub timestamp: NaiveDateTime,
+    pub end_timestamp: Option<NaiveDateTime>,
+    pub duration: Option<i64>,
+    pub activity_type: String,
+    pub app: Option<String>,
+    pub entity: Option<String>,
+    pub project: Option<String>,
+    pub branch: Option<String>,
+    pub language: Option<String>,
+}
+
 impl Event {
     // Create a new event
     pub async fn create(self, db_context: &DBContext) -> Result<(), sqlx::Error> {
@@ -39,61 +53,38 @@ impl Event {
         .await?;
         Ok(())
     }
+}
 
-    // // Fetch events within a time range
-    // pub async fn fetch_events_in_range(
-    //     pool: &SqlitePool,
-    //     start_time: DateTime<Utc>,
-    //     end_time: DateTime<Utc>,
-    // ) -> Result<Vec<Event>, sqlx::Error> {
-    //     let events = sqlx::query_as!(
-    //         Event,
-    //         r#"
-    //         SELECT
-    //             id,
-    //             timestamp,
-    //             duration,
-    //             activity_type,
-    //             app_name,
-    //             file_name,
-    //             project_id,
-    //             branch_name,
-    //             language,
-    //             metadata,
-    //             status,
-    //             end_timestamp
-    //         FROM events
-    //         WHERE timestamp BETWEEN ? AND ?
-    //         "#,
-    //         start_time,
-    //         end_time
-    //     )
-    //     .fetch_all(pool)
-    //     .await?;
-    //
-    //     Ok(events)
-    // }
-
-    pub async fn fetch_by_project(
-        db_context: &DBContext,
-        project_id: i64,
-    ) -> Result<Vec<Self>, sqlx::Error> {
-        sqlx::query_as!(
-            Self,
-            "SELECT * FROM events WHERE project_id = ?",
-            project_id
-        )
-        .fetch_all(db_context.pool())
-        .await
-    }
-
-    pub async fn delete(self, db_context: &DBContext) -> Result<(), sqlx::Error> {
-        if let Some(id) = self.id {
-            sqlx::query!("DELETE FROM events WHERE id = ?", id)
-                .execute(db_context.pool())
-                .await?;
-        }
-
-        Ok(())
-    }
+/// Fetch recent events
+pub async fn fetch_recent(
+    db: &DBContext,
+    since: NaiveDateTime,
+) -> Result<Vec<StreamableEvent>, sqlx::Error> {
+    sqlx::query_as!(
+        StreamableEvent,
+        r#"
+            SELECT
+                events.id,
+                events.timestamp,
+                events.end_timestamp,
+                events.duration,
+                events.activity_type,
+                apps.name AS app,
+                entities.name AS entity,
+                projects.name AS project,
+                branches.name AS branch,
+                languages.name AS language
+            FROM events
+            LEFT JOIN apps ON events.app_id = apps.id
+            LEFT JOIN entities ON events.entity_id = entities.id
+            LEFT JOIN projects ON events.project_id = projects.id
+            LEFT JOIN branches ON events.branch_id = branches.id
+            LEFT JOIN languages ON events.language_id = languages.id
+            WHERE events.timestamp > ?
+            ORDER BY events.timestamp ASC
+            "#,
+        since
+    )
+    .fetch_all(db.pool())
+    .await
 }

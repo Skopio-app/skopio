@@ -1,310 +1,336 @@
-import { useVirtualizer } from "@tanstack/react-virtual";
-import { format } from "date-fns";
-import React, {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import React, { useEffect, useRef, useMemo } from "react";
+import { Timeline, TimelineOptions, DataSet } from "vis-timeline/standalone";
+import Color from "color";
+import _ from "lodash";
+import {
+  parseISO,
+  addSeconds,
+  differenceInSeconds,
+  isValid as isValidDate,
+} from "date-fns";
 
-export type TimelineBin = {
-  timestamp: number;
-  afk: number;
-  vscode: number;
-  general: number;
+import "vis-timeline/styles/vis-timeline-graph2d.css";
+import { AfkEventStream, StreamableEvent } from "./index";
+
+type Props = {
+  afkEventStream: AfkEventStream[];
+  eventStream: StreamableEvent[];
+  queriedInterval?: [Date, Date];
+  showQueriedInterval?: boolean;
+  durationMinutes: number;
 };
 
-export type TimelineViewProps = {
-  data: TimelineBin[];
-  stream?: AsyncIterable<TimelineBin>;
-};
+// TODO: Check for other properties to add.
+interface TimelineDataItem {
+  id: string;
+  start: Date;
+  end: Date;
+  group: string;
+  content: string;
+  title: string;
+  style: string;
+}
 
-const TIME_INTERVALS = [
-  15 * 60 * 1000,
-  30 * 60 * 1000,
-  60 * 60 * 1000,
-  2 * 60 * 60 * 1000,
-  3 * 60 * 60 * 1000,
-  4 * 60 * 60 * 1000,
-  6 * 60 * 60 * 1000,
-  12 * 60 * 60 * 1000,
-  24 * 60 * 60 * 1000,
-  48 * 60 * 60 * 1000,
-];
-
-const BAR_HEIGHT = 20;
-const ROW_HEIGHT = 30;
-const LABEL_WIDTH = 100;
-
-const binData = (
-  data: TimelineBin[],
-  interval: number,
-  from: number,
-  to: number,
-): TimelineBin[] => {
-  const buckets: Record<number, TimelineBin> = {};
-
-  for (const item of data) {
-    if (item.timestamp < from || item.timestamp > to) continue;
-    const bucket = Math.floor(item.timestamp / interval) * interval;
-    if (!buckets[bucket]) {
-      buckets[bucket] = { timestamp: bucket, afk: 0, vscode: 0, general: 0 };
-    }
-    buckets[bucket].afk += item.afk;
-    buckets[bucket].vscode += item.vscode;
-    buckets[bucket].general += item.general;
-  }
-
-  return Object.values(buckets).sort((a, b) => a.timestamp - b.timestamp);
-};
-
-const TrackRow = ({
-  label,
-  color,
-  data,
-  //   index,
-  style,
-}: {
-  label: string;
-  color: string;
-  data: TimelineBin[];
-  index: number;
-  style: React.CSSProperties;
+export const TimelineView: React.FC<Props> = ({
+  afkEventStream,
+  eventStream,
+  queriedInterval,
+  showQueriedInterval = true,
+  durationMinutes,
 }) => {
-  return (
-    <div className="flex items-center" style={style}>
-      <div className="w-[100px] text-sm text-gray-500 pr-2 text-right">
-        {label}
-      </div>
-      <div className="flex-1 flex h-[20px]">
-        {data.map((bin) => (
-          <div
-            key={bin.timestamp}
-            title={`${format(new Date(bin.timestamp), "HH:mm")}\n${label}: ${Math.round(
-              bin[label.toLowerCase() as keyof TimelineBin] * 100,
-            )}`}
-            style={{
-              width: 4,
-              height: BAR_HEIGHT,
-              backgroundColor: color,
-              opacity: bin[label.toLowerCase() as keyof TimelineBin],
-            }}
-            className="hover:opacity-100 opacity-70 transition-opacity duration-150"
-          ></div>
-        ))}
-      </div>
-    </div>
-  );
-};
+  const containerRef = useRef<HTMLDivElement>(null);
+  const timelineRef = useRef<Timeline | null>(null);
+  const dataSetRef = useRef<DataSet<any> | null>(null);
 
-const TimeAxis = ({ bins }: { bins: TimelineBin[] }) => {
-  const labelWidth = 40; // px
-  const step = Math.ceil(labelWidth / 4); // Show every Nth bin depending on zoom
-
-  return (
-    <div
-      className="flex items-end text-[10px] text-gray-500 pl-[100px] h-5"
-      style={{ gap: "0px" }}
-    >
-      {bins.map((bin, i) => (
-        <div
-          key={bin.timestamp}
-          style={{
-            width: 4,
-            height: "100%",
-            display: "flex",
-            justifyContent: "center",
-          }}
-        >
-          {i % step === 0 ? (
-            <div
-              style={{
-                transform: "translateX(-50%)",
-                whiteSpace: "nowrap",
-              }}
-            >
-              {format(new Date(bin.timestamp), "HH:mm")}
-            </div>
-          ) : null}
-        </div>
-      ))}
-    </div>
-  );
-};
-
-export const TimelineView: React.FC<TimelineViewProps> = ({
-  data: initialData,
-  stream,
-}) => {
-  const [intervalIndex, setIntervalIndex] = useState(2); // Default 1hr
-  const [liveData, setLiveData] = useState<TimelineBin[]>(initialData);
-  const [from, setFrom] = useState(() => Date.now() - 24 * 60 * 60 * 1000); // Default last 24hrs
-  const [to, setTo] = useState(() => Date.now());
-  const interval = TIME_INTERVALS[intervalIndex];
-
-  useEffect(() => {
-    if (!stream) return;
-
-    let active = true;
-    const process = async () => {
-      for await (const item of stream) {
-        if (!active) break;
-        setLiveData((prev) => [...prev, item]);
-      }
-    };
-
-    process();
-    return () => {
-      active = false;
-    };
-  }, [stream]);
-
-  const fullBinned = useMemo(
-    () =>
-      binData(
-        liveData,
-        interval,
-        Number.MIN_SAFE_INTEGER,
-        Number.MAX_SAFE_INTEGER,
-      ),
-    [liveData, interval],
-  );
-
-  const visibleBinned = useMemo(
-    () =>
-      fullBinned.filter((bin) => bin.timestamp >= from && bin.timestamp <= to),
-    [fullBinned, from, to],
-  );
-
-  const handleWheel = useCallback(
-    (e: WheelEvent) => {
-      if (e.ctrlKey || e.metaKey) {
-        e.preventDefault();
-        setIntervalIndex((prev) => {
-          const delta = Math.sign(e.deltaY);
-          const next = Math.min(
-            Math.max(prev + delta, 0),
-            TIME_INTERVALS.length - 1,
-          );
-          return next;
-        });
-      } else {
-        const delta = Math.sign(e.deltaY) * interval;
-        setFrom((prev) => prev + delta);
-        setTo((prev) => prev + delta);
-      }
-    },
-    [interval],
-  );
-
-  useEffect(() => {
-    window.addEventListener("wheel", handleWheel, { passive: false });
-    return () => {
-      window.removeEventListener("wheel", handleWheel);
-    };
-  }, [handleWheel]);
-
-  const handleZoomChange = useCallback(
-    (e: React.ChangeEvent<HTMLSelectElement>) => {
-      setIntervalIndex(Number(e.target.value));
-    },
+  const groups = useMemo(
+    () => [
+      { id: "AFK", content: "AFK" },
+      { id: "VSCode", content: "skopio-vscode" },
+      { id: "General", content: "skopio-desktop" },
+    ],
     [],
   );
 
-  const rows = useMemo(
-    () => [
-      { label: "AFK", color: "gray", data: visibleBinned },
-      { label: "VSCode", color: "purple", data: visibleBinned },
-      { label: "General", color: "blue", data: visibleBinned },
-    ],
-    [visibleBinned],
-  );
+  const safeParseISO = (dateInput: unknown): Date | null => {
+    if (typeof dateInput === "number") {
+      if (dateInput > 1e12) return new Date(dateInput); // ms
+      if (dateInput > 1e9) return new Date(dateInput * 1000); // s
+      return null;
+    }
 
-  const parentRef = useRef<HTMLDivElement | null>(null);
-  const virtualizer = useVirtualizer({
-    count: rows.length,
-    getScrollElement: () => parentRef.current,
-    estimateSize: () => ROW_HEIGHT,
-    overscan: 2,
-  });
+    if (typeof dateInput === "string") {
+      const trimmed = dateInput.replace(/\.(\d{3})\d+/, ".$1");
+
+      try {
+        const parsed = parseISO(trimmed);
+        return isValidDate(parsed) ? parsed : null;
+      } catch {
+        return null;
+      }
+    }
+
+    return null;
+  };
+
+  const getGroupId = (app?: string | null): string => {
+    if (!app) return "General";
+    const name = app.toLowerCase();
+    return name === "vscode" || name === "code" ? "VSCode" : "General";
+  };
+
+  const getColorForActivity = (type: string): string => {
+    const colors: Record<string, string> = {
+      Browsing: "#4dabf7",
+      "Code Reviewing": "#63e6be",
+      Coding: "#5d8b14",
+      Debugging: "#ffd43b",
+      Testing: "#f783ac",
+    };
+    return colors[type] || "#dbe4ed";
+  };
+
+  const getTimelineRange = (
+    dataItems: TimelineDataItem[],
+    currentDurationMinutes: number,
+  ): { min: Date; max: Date } => {
+    const allStarts = dataItems.map((e) => e.start).filter(Boolean);
+    const allEnds = dataItems.map((e) => e.end).filter(Boolean);
+
+    const now = new Date();
+
+    if (!allStarts.length || !allEnds.length) {
+      const max = new Date(now.getTime() + 2 * 60 * 1000);
+      const min = new Date(max.getTime() - currentDurationMinutes * 60 * 1000);
+      return { min, max };
+    }
+
+    const earliest = new Date(Math.min(...allStarts.map((d) => d.getTime())));
+    const latest = new Date(Math.max(...allEnds.map((d) => d.getTime())));
+
+    const calculatedMin = new Date(
+      latest.getTime() - currentDurationMinutes * 60 * 1000,
+    );
+    const min = calculatedMin < earliest ? earliest : calculatedMin;
+    const max = new Date(min.getTime() + currentDurationMinutes * 60 * 1000);
+
+    return { min, max };
+  };
+
+  useEffect(() => {
+    if (!containerRef.current) return;
+
+    if (timelineRef.current) {
+      timelineRef.current.destroy();
+      timelineRef.current = null;
+    }
+
+    if (dataSetRef.current) {
+      dataSetRef.current.clear();
+      dataSetRef.current = null;
+    }
+
+    const options: TimelineOptions = {
+      zoomMin: 60_000,
+      zoomMax: 1000 * 60 * 60 * 24 * 31 * 3, // 3 months
+      stack: false,
+      showMinorLabels: true,
+      tooltip: {
+        followMouse: true,
+        overflowMethod: "cap",
+        delay: 0,
+      },
+    };
+
+    dataSetRef.current = new DataSet();
+    timelineRef.current = new Timeline(
+      containerRef.current,
+      dataSetRef.current,
+      groups,
+      options,
+    );
+
+    const now = new Date();
+    const initialMax = new Date(now.getTime() + 5 * 60 * 1000);
+    const initialMin = new Date(
+      initialMax.getTime() - durationMinutes * 60 * 1000,
+    );
+
+    timelineRef.current.setOptions({
+      min: initialMin,
+      max: initialMax,
+      start: initialMin,
+      end: initialMax,
+    });
+
+    return () => {
+      if (timelineRef.current) {
+        timelineRef.current.destroy();
+        timelineRef.current = null;
+      }
+
+      if (dataSetRef.current) {
+        dataSetRef.current.clear();
+        dataSetRef.current = null;
+      }
+    };
+  }, [groups, durationMinutes]);
+
+  useEffect(() => {
+    if (!dataSetRef.current || !timelineRef.current) {
+      console.warn(
+        "Timeline or DataSet not initialized, skipping data update.",
+      );
+      return;
+    }
+
+    const itemsToUpdateOrAdd: any[] = [];
+    const itemsToRemoveIds: string[] = [];
+    const currentDataSetIds = new Set(dataSetRef.current.getIds());
+
+    const eventStreamItemIds = new Set<string>();
+    for (const e of eventStream.values()) {
+      const start = safeParseISO(e.timestamp);
+      const end = e.endTimestamp
+        ? safeParseISO(e.endTimestamp)
+        : addSeconds(start ?? 0, e.duration ?? 0);
+
+      if (!start || !end || differenceInSeconds(end, start) <= 1) continue;
+
+      const id = String(e.id);
+      eventStreamItemIds.add(id);
+
+      const group = getGroupId(e.app);
+      const color = getColorForActivity(e.activity_type);
+
+      const item: TimelineDataItem = {
+        id,
+        group,
+        content: `${e.app ?? "unknown"}`,
+        start,
+        end,
+        title: `App: ${e.app}<br/>Entity: ${e.entity}`,
+        style: `background-color: ${color}; border-color: ${Color(color).darken(0.6)};`,
+      };
+
+      if (currentDataSetIds.has(id)) {
+        dataSetRef.current.update(item);
+      } else {
+        itemsToUpdateOrAdd.push(item);
+      }
+    }
+
+    const afkEventStreamItemIds = new Set<string>();
+    for (const e of afkEventStream.values()) {
+      const start = safeParseISO(e.afk_start);
+      const end = e.afk_end
+        ? safeParseISO(e.afk_end)
+        : addSeconds(start ?? 0, e.duration ?? 0);
+      if (!start || !end || isNaN(start.getTime()) || isNaN(end.getTime()))
+        continue;
+
+      const id = `afk-${e.id}`;
+      afkEventStreamItemIds.add(id);
+
+      const item: TimelineDataItem = {
+        id,
+        group: "AFK",
+        content: "AFK",
+        start,
+        end,
+        title: `AFK for ${e.duration} seconds`,
+        style: "background-color: #868e96; border-color: #495057;",
+      };
+
+      if (currentDataSetIds.has(id)) {
+        dataSetRef.current.update(item);
+      } else {
+        itemsToUpdateOrAdd.push(item);
+      }
+    }
+
+    const queriedIntervalId = "query-interval";
+    if (queriedInterval && showQueriedInterval) {
+      const [start, end] = queriedInterval;
+      const queryItem: TimelineDataItem = {
+        id: queriedIntervalId,
+        group: "Query",
+        content: "Query Range",
+        title: "Queried Time Interval",
+        start,
+        end,
+        style: "background-color: #aaa; height: 10px;",
+      };
+      if (currentDataSetIds.has(queriedIntervalId)) {
+        dataSetRef.current.update(queryItem);
+      } else {
+        itemsToUpdateOrAdd.push(queryItem);
+      }
+    } else {
+      if (currentDataSetIds.has(queriedIntervalId)) {
+        itemsToRemoveIds.push(queriedIntervalId);
+      }
+    }
+
+    dataSetRef.current.getIds().forEach((id: any) => {
+      if (id === queriedIntervalId && queriedInterval && showQueriedInterval) {
+        return;
+      }
+      if (!eventStreamItemIds.has(id) && !afkEventStreamItemIds.has(id)) {
+        itemsToRemoveIds.push(id);
+      }
+    });
+
+    if (itemsToUpdateOrAdd.length > 0) {
+      dataSetRef.current.add(itemsToUpdateOrAdd);
+    }
+    if (itemsToRemoveIds.length > 0) {
+      dataSetRef.current.remove(itemsToRemoveIds);
+    }
+
+    const allItemsInDataSet = dataSetRef.current.get() as TimelineDataItem[];
+    const viewRange = getTimelineRange(allItemsInDataSet, durationMinutes);
+
+    if (viewRange) {
+      timelineRef.current.setOptions({
+        min: viewRange.min,
+        max: viewRange.max,
+      });
+
+      const latestOverallEnd = _.maxBy(allItemsInDataSet, "end")?.end ?? null;
+      if (latestOverallEnd) {
+        timelineRef.current.moveTo(latestOverallEnd, { animation: true });
+      } else {
+        timelineRef.current.moveTo(viewRange.max, { animation: true });
+      }
+    } else {
+      const now = new Date();
+      const initialMax = new Date(now.getTime() + 5 * 60 * 1000);
+      const initialMin = new Date(
+        initialMax.getTime() - durationMinutes * 60 * 1000,
+      );
+      timelineRef.current.setOptions({
+        min: initialMin,
+        max: initialMax,
+        start: initialMin,
+        end: initialMax,
+      });
+      timelineRef.current.moveTo(initialMax, { animation: true });
+    }
+  }, [
+    eventStream,
+    afkEventStream,
+    queriedInterval,
+    showQueriedInterval,
+    durationMinutes,
+  ]);
 
   return (
-    <div className="p-4 space-y-2 overflow-x-auto">
-      <div className="flex items-center gap-4 mb-2">
-        <div className="flex items-center gap-2">
-          <label className="text-sm text-gray-600">Time interval:</label>
-          <select
-            value={intervalIndex}
-            onChange={handleZoomChange}
-            className="border rounded px-2 py-1 text-sm"
-          >
-            {TIME_INTERVALS.map((ms, idx) => (
-              <option key={idx} value={idx}>
-                {ms / 1000 / 60 >= 60
-                  ? `${ms / 1000 / 60 / 60}hr`
-                  : `${ms / 1000 / 60}min`}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <label className="text-sm text-gray-600">From:</label>
-          <input
-            type="datetime-local"
-            className="border rounded px-2 py-1 text-sm"
-            value={new Date(to).toISOString().slice(0, 16)}
-            onChange={(e) => setFrom(new Date(e.target.value).getTime())}
-          />
-        </div>
-
-        <div className="flex items-center gap-2">
-          <label className="text-sm text-gray-600">To:</label>
-          <input
-            type="datetime-local"
-            className="border rounded px-2 py-1 text-sm"
-            value={new Date(to).toISOString().slice(0, 16)}
-            onChange={(e) => setTo(new Date(e.target.value).getTime())}
-          />
-        </div>
-      </div>
-
-      <div ref={parentRef} className="overflow-y-auto h-[96px]">
-        <div
-          style={{
-            height: virtualizer.getTotalSize(),
-            position: "relative",
-            width: Math.max(600, visibleBinned.length * 4 + LABEL_WIDTH),
-          }}
-        >
-          {virtualizer.getVirtualItems().map((virtualRow) => {
-            const row = rows[virtualRow.index];
-            return (
-              <div
-                key={row.label}
-                style={{
-                  position: "absolute",
-                  top: 0,
-                  left: 0,
-                  width: "100%",
-                  transform: `translateY(${virtualRow.start}px)`,
-                }}
-              >
-                <TrackRow
-                  index={virtualRow.index}
-                  style={{ height: ROW_HEIGHT }}
-                  label={row.label}
-                  color={row.color}
-                  data={row.data}
-                />
-              </div>
-            );
-          })}
-        </div>
-      </div>
-
-      <TimeAxis bins={visibleBinned} />
+    <div className="flex justify-center px-4">
+      <div
+        ref={containerRef}
+        id="visualization"
+        className="w-full max-w-7xl my-10"
+      />
     </div>
   );
 };

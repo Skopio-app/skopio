@@ -5,7 +5,7 @@ use crate::tracking_service::TrackingService;
 use chrono::{DateTime, Utc};
 use dashmap::DashMap;
 use db::desktop::heartbeats::Heartbeat as DBHeartbeat;
-use log::{debug, error, info};
+use log::{debug, error};
 use serde::{Deserialize, Serialize};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
@@ -169,7 +169,7 @@ impl HeartbeatTracker {
             cursorpos: Some(cursor_x as i64),
         };
 
-        info!(
+        debug!(
             "Logged heartbeat for {:?} and entity {}",
             heartbeat.app_name, heartbeat.entity_name
         );

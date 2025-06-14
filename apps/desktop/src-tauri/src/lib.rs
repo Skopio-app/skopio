@@ -31,6 +31,10 @@ pub async fn run() {
         .manage(Arc::clone(&cursor_tracker))
         .manage(Arc::clone(&keyboard_tracker))
         .manage(Arc::clone(&window_tracker))
+        .invoke_handler({
+            let handler = specta_builder.invoke_handler();
+            move |invoke| handler(invoke)
+        })
         .setup(move |app| {
             let app_handle = app.handle().clone();
 
@@ -80,6 +84,7 @@ pub async fn run() {
                 });
             }
         })
+        .plugin(tauri_plugin_dialog::init())
         .run(tauri::generate_context!())
         .expect("Error while running Tauri application");
 }
