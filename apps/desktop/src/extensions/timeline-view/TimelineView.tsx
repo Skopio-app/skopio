@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useMemo } from "react";
+import React, { useEffect, useRef, useMemo, useCallback } from "react";
 import { Timeline, TimelineOptions, DataSet } from "vis-timeline/standalone";
 import Color from "color";
 import _ from "lodash";
@@ -10,13 +10,12 @@ import {
 } from "date-fns";
 
 import "vis-timeline/styles/vis-timeline-graph2d.css";
-import { AfkEventStream, StreamableEvent } from "./index";
+import { AFKEventStream, EventStream } from "./index";
 
 type Props = {
-  afkEventStream: AfkEventStream[];
-  eventStream: StreamableEvent[];
-  queriedInterval?: [Date, Date];
-  showQueriedInterval?: boolean;
+  requestDataForRange: (start: Date, end: Date) => void;
+  afkEventStream: AFKEventStream[];
+  eventStream: EventStream[];
   durationMinutes: number;
 };
 
@@ -32,15 +31,19 @@ interface TimelineDataItem {
 }
 
 export const TimelineView: React.FC<Props> = ({
+  requestDataForRange,
   afkEventStream,
   eventStream,
-  queriedInterval,
-  showQueriedInterval = true,
   durationMinutes,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const timelineRef = useRef<Timeline | null>(null);
-  const dataSetRef = useRef<DataSet<any> | null>(null);
+  const dataSetRef = useRef<DataSet<TimelineDataItem> | null>(null);
+  const animationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const FETCH_BUFFER_MINUTES = 30; // Fetch 30 mins before and after the visible range
+  const PRUNE_BUFFER_MINUTES = 60; // Prune items 60 minutes outside the visible range
+  const ANIMATION_INACTIVITY_DELAY_MS = 5000; // Animate to latest after 10 seconds
 
   const groups = useMemo(
     () => [
@@ -89,32 +92,59 @@ export const TimelineView: React.FC<Props> = ({
     return colors[type] || "#dbe4ed";
   };
 
-  const getTimelineRange = (
-    dataItems: TimelineDataItem[],
-    currentDurationMinutes: number,
-  ): { min: Date; max: Date } => {
-    const allStarts = dataItems.map((e) => e.start).filter(Boolean);
-    const allEnds = dataItems.map((e) => e.end).filter(Boolean);
-
-    const now = new Date();
-
-    if (!allStarts.length || !allEnds.length) {
-      const max = new Date(now.getTime() + 2 * 60 * 1000);
-      const min = new Date(max.getTime() - currentDurationMinutes * 60 * 1000);
-      return { min, max };
+  const clearAnimationTimeout = useCallback(() => {
+    if (animationTimeoutRef.current) {
+      clearTimeout(animationTimeoutRef.current);
+      animationTimeoutRef.current = null;
     }
+  }, []);
 
-    const earliest = new Date(Math.min(...allStarts.map((d) => d.getTime())));
-    const latest = new Date(Math.max(...allEnds.map((d) => d.getTime())));
+  const handleRangeChanged = useMemo(() => {
+    return _.debounce(({ start, end }: { start: Date; end: Date }) => {
+      if (!dataSetRef.current || !timelineRef.current) return;
 
-    const calculatedMin = new Date(
-      latest.getTime() - currentDurationMinutes * 60 * 1000,
-    );
-    const min = calculatedMin < earliest ? earliest : calculatedMin;
-    const max = new Date(min.getTime() + currentDurationMinutes * 60 * 1000);
+      console.log(
+        `Range changed: ${start.toISOString()} to ${end.toISOString()}`,
+      );
 
-    return { min, max };
-  };
+      clearAnimationTimeout();
+
+      // Request new data for the expanded range (visible range + buffer)
+      const fetchStart = new Date(
+        start.getTime() - FETCH_BUFFER_MINUTES * 60 * 1000,
+      );
+      const fetchEnd = new Date(
+        end.getTime() + FETCH_BUFFER_MINUTES * 60 * 1000,
+      );
+      requestDataForRange(fetchStart, fetchEnd);
+
+      // Prune data outside a larger buffer from the DataSet
+      const pruneStart = new Date(
+        start.getTime() - PRUNE_BUFFER_MINUTES * 60 * 1000,
+      );
+      const pruneEnd = new Date(
+        end.getTime() + PRUNE_BUFFER_MINUTES * 60 * 1000,
+      );
+
+      const itemsToRemove: string[] = [];
+      dataSetRef.current.forEach((item: any) => {
+        // Remove items whose entire range is outside the prune buffer
+        if (item.end < pruneStart || item.start > pruneEnd) {
+          itemsToRemove.push(item.id);
+        }
+      });
+
+      if (itemsToRemove.length > 0) {
+        console.log(`Pruning ${itemsToRemove.length} items from DataSet`);
+        dataSetRef.current.remove(itemsToRemove);
+      }
+    }, 500); // debounce for 500ms
+  }, [
+    requestDataForRange,
+    FETCH_BUFFER_MINUTES,
+    PRUNE_BUFFER_MINUTES,
+    clearAnimationTimeout,
+  ]);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -141,7 +171,7 @@ export const TimelineView: React.FC<Props> = ({
       },
     };
 
-    dataSetRef.current = new DataSet();
+    dataSetRef.current = new DataSet<TimelineDataItem>();
     timelineRef.current = new Timeline(
       containerRef.current,
       dataSetRef.current,
@@ -162,8 +192,15 @@ export const TimelineView: React.FC<Props> = ({
       end: initialMax,
     });
 
+    timelineRef.current.on("rangechanged", handleRangeChanged);
+
+    // Initial data request for the default view
+    requestDataForRange(initialMin, initialMax);
+
     return () => {
       if (timelineRef.current) {
+        timelineRef.current.off("rangechanged", handleRangeChanged);
+        handleRangeChanged.cancel();
         timelineRef.current.destroy();
         timelineRef.current = null;
       }
@@ -172,8 +209,16 @@ export const TimelineView: React.FC<Props> = ({
         dataSetRef.current.clear();
         dataSetRef.current = null;
       }
+
+      clearAnimationTimeout();
     };
-  }, [groups, durationMinutes]);
+  }, [
+    groups,
+    durationMinutes,
+    handleRangeChanged,
+    requestDataForRange,
+    clearAnimationTimeout,
+  ]);
 
   useEffect(() => {
     if (!dataSetRef.current || !timelineRef.current) {
@@ -183,11 +228,8 @@ export const TimelineView: React.FC<Props> = ({
       return;
     }
 
-    const itemsToUpdateOrAdd: any[] = [];
-    const itemsToRemoveIds: string[] = [];
-    const currentDataSetIds = new Set(dataSetRef.current.getIds());
+    const itemsToProcess: TimelineDataItem[] = [];
 
-    const eventStreamItemIds = new Set<string>();
     for (const e of eventStream.values()) {
       const start = safeParseISO(e.timestamp);
       const end = e.endTimestamp
@@ -197,8 +239,6 @@ export const TimelineView: React.FC<Props> = ({
       if (!start || !end || differenceInSeconds(end, start) <= 1) continue;
 
       const id = String(e.id);
-      eventStreamItemIds.add(id);
-
       const group = getGroupId(e.app);
       const color = getColorForActivity(e.activity_type);
 
@@ -212,14 +252,9 @@ export const TimelineView: React.FC<Props> = ({
         style: `background-color: ${color}; border-color: ${Color(color).darken(0.6)};`,
       };
 
-      if (currentDataSetIds.has(id)) {
-        dataSetRef.current.update(item);
-      } else {
-        itemsToUpdateOrAdd.push(item);
-      }
+      itemsToProcess.push(item);
     }
 
-    const afkEventStreamItemIds = new Set<string>();
     for (const e of afkEventStream.values()) {
       const start = safeParseISO(e.afk_start);
       const end = e.afk_end
@@ -229,7 +264,6 @@ export const TimelineView: React.FC<Props> = ({
         continue;
 
       const id = `afk-${e.id}`;
-      afkEventStreamItemIds.add(id);
 
       const item: TimelineDataItem = {
         id,
@@ -240,96 +274,42 @@ export const TimelineView: React.FC<Props> = ({
         title: `AFK for ${e.duration} seconds`,
         style: "background-color: #868e96; border-color: #495057;",
       };
-
-      if (currentDataSetIds.has(id)) {
-        dataSetRef.current.update(item);
-      } else {
-        itemsToUpdateOrAdd.push(item);
-      }
+      itemsToProcess.push(item); // Add for batch update/add
     }
 
-    const queriedIntervalId = "query-interval";
-    if (queriedInterval && showQueriedInterval) {
-      const [start, end] = queriedInterval;
-      const queryItem: TimelineDataItem = {
-        id: queriedIntervalId,
-        group: "Query",
-        content: "Query Range",
-        title: "Queried Time Interval",
-        start,
-        end,
-        style: "background-color: #aaa; height: 10px;",
-      };
-      if (currentDataSetIds.has(queriedIntervalId)) {
-        dataSetRef.current.update(queryItem);
-      } else {
-        itemsToUpdateOrAdd.push(queryItem);
-      }
-    } else {
-      if (currentDataSetIds.has(queriedIntervalId)) {
-        itemsToRemoveIds.push(queriedIntervalId);
-      }
-    }
-
-    dataSetRef.current.getIds().forEach((id: any) => {
-      if (id === queriedIntervalId && queriedInterval && showQueriedInterval) {
-        return;
-      }
-      if (!eventStreamItemIds.has(id) && !afkEventStreamItemIds.has(id)) {
-        itemsToRemoveIds.push(id);
-      }
-    });
-
-    if (itemsToUpdateOrAdd.length > 0) {
-      dataSetRef.current.add(itemsToUpdateOrAdd);
-    }
-    if (itemsToRemoveIds.length > 0) {
-      dataSetRef.current.remove(itemsToRemoveIds);
+    if (itemsToProcess.length > 0) {
+      dataSetRef.current.update(itemsToProcess);
     }
 
     const allItemsInDataSet = dataSetRef.current.get() as TimelineDataItem[];
-    const viewRange = getTimelineRange(allItemsInDataSet, durationMinutes);
+    const latestOverallEnd = _.maxBy(allItemsInDataSet, "end")?.end ?? null;
 
-    if (viewRange) {
-      timelineRef.current.setOptions({
-        min: viewRange.min,
-        max: viewRange.max,
-      });
+    if (latestOverallEnd) {
+      const currentRange = timelineRef.current.getWindow();
 
-      const latestOverallEnd = _.maxBy(allItemsInDataSet, "end")?.end ?? null;
-      if (latestOverallEnd) {
-        timelineRef.current.moveTo(latestOverallEnd, { animation: true });
-      } else {
-        timelineRef.current.moveTo(viewRange.max, { animation: true });
+      const isLatestOutsideView =
+        latestOverallEnd > currentRange.end ||
+        latestOverallEnd < currentRange.start;
+      if (isLatestOutsideView) {
+        // Clear any pending animations
+        clearAnimationTimeout();
+
+        animationTimeoutRef.current = setTimeout(() => {
+          if (timelineRef.current) {
+            console.log("Animating to latest entry after inactivity.");
+            timelineRef.current.moveTo(latestOverallEnd, { animation: true });
+          }
+        }, ANIMATION_INACTIVITY_DELAY_MS);
       }
-    } else {
-      const now = new Date();
-      const initialMax = new Date(now.getTime() + 5 * 60 * 1000);
-      const initialMin = new Date(
-        initialMax.getTime() - durationMinutes * 60 * 1000,
-      );
-      timelineRef.current.setOptions({
-        min: initialMin,
-        max: initialMax,
-        start: initialMin,
-        end: initialMax,
-      });
-      timelineRef.current.moveTo(initialMax, { animation: true });
     }
-  }, [
-    eventStream,
-    afkEventStream,
-    queriedInterval,
-    showQueriedInterval,
-    durationMinutes,
-  ]);
+  }, [eventStream, afkEventStream, clearAnimationTimeout]);
 
   return (
-    <div className="flex justify-center px-4">
+    <div className="flex justify-center items-center">
       <div
         ref={containerRef}
         id="visualization"
-        className="w-full max-w-7xl my-10"
+        className="w-full max-w-8xl my-10"
       />
     </div>
   );

@@ -1,0 +1,63 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            SELECT\n                events.id,\n                events.timestamp,\n                events.end_timestamp,\n                events.duration,\n                events.activity_type,\n                apps.name AS app,\n                entities.name AS entity,\n                projects.name AS project,\n                branches.name AS branch,\n                languages.name AS language\n            FROM events\n            LEFT JOIN apps ON events.app_id = apps.id\n            LEFT JOIN entities ON events.entity_id = entities.id\n            LEFT JOIN projects ON events.project_id = projects.id\n            LEFT JOIN branches ON events.branch_id = branches.id\n            LEFT JOIN languages ON events.language_id = languages.id\n            WHERE events.timestamp >= ? AND events.timestamp <= ?\n            ORDER BY events.timestamp ASC\n            ",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Integer"
+      },
+      {
+        "name": "timestamp",
+        "ordinal": 1,
+        "type_info": "Datetime"
+      },
+      {
+        "name": "end_timestamp",
+        "ordinal": 2,
+        "type_info": "Datetime"
+      },
+      {
+        "name": "duration",
+        "ordinal": 3,
+        "type_info": "Integer"
+      },
+      {
+        "name": "activity_type",
+        "ordinal": 4,
+        "type_info": "Text"
+      },
+      {
+        "name": "app",
+        "ordinal": 5,
+        "type_info": "Text"
+      },
+      {
+        "name": "entity",
+        "ordinal": 6,
+        "type_info": "Text"
+      },
+      {
+        "name": "project",
+        "ordinal": 7,
+        "type_info": "Text"
+      },
+      {
+        "name": "branch",
+        "ordinal": 8,
+        "type_info": "Text"
+      },
+      {
+        "name": "language",
+        "ordinal": 9,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": [false, false, true, true, false, true, true, true, true, true]
+  },
+  "hash": "a6fb0573f295e8d5b751500d935f48bda88d829bb685fc853ee6c6f00de0fb99"
+}

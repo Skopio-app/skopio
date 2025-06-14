@@ -18,7 +18,7 @@ pub struct Event {
 }
 
 #[derive(Debug, Serialize, sqlx::FromRow)]
-pub struct StreamableEvent {
+pub struct FullEvent {
     pub id: i64,
     pub timestamp: NaiveDateTime,
     pub end_timestamp: Option<NaiveDateTime>,
@@ -59,9 +59,9 @@ impl Event {
 pub async fn fetch_recent(
     db: &DBContext,
     since: NaiveDateTime,
-) -> Result<Vec<StreamableEvent>, sqlx::Error> {
+) -> Result<Vec<FullEvent>, sqlx::Error> {
     sqlx::query_as!(
-        StreamableEvent,
+        FullEvent,
         r#"
             SELECT
                 events.id,
@@ -84,6 +84,41 @@ pub async fn fetch_recent(
             ORDER BY events.timestamp ASC
             "#,
         since
+    )
+    .fetch_all(db.pool())
+    .await
+}
+
+pub async fn fetch_range(
+    db: &DBContext,
+    start_time: NaiveDateTime,
+    end_time: NaiveDateTime,
+) -> Result<Vec<FullEvent>, sqlx::Error> {
+    sqlx::query_as!(
+        FullEvent,
+        r#"
+            SELECT
+                events.id,
+                events.timestamp,
+                events.end_timestamp,
+                events.duration,
+                events.activity_type,
+                apps.name AS app,
+                entities.name AS entity,
+                projects.name AS project,
+                branches.name AS branch,
+                languages.name AS language
+            FROM events
+            LEFT JOIN apps ON events.app_id = apps.id
+            LEFT JOIN entities ON events.entity_id = entities.id
+            LEFT JOIN projects ON events.project_id = projects.id
+            LEFT JOIN branches ON events.branch_id = branches.id
+            LEFT JOIN languages ON events.language_id = languages.id
+            WHERE events.timestamp >= ? AND events.timestamp <= ?
+            ORDER BY events.timestamp ASC
+            "#,
+        start_time,
+        end_time,
     )
     .fetch_all(db.pool())
     .await

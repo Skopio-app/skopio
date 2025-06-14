@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { TimelineView } from "./TimelineView";
+import { formatISO } from "date-fns";
 
-export type StreamableEvent = {
+export type EventStream = {
   id: number;
   timestamp: string;
   endTimestamp?: string | null;
@@ -14,7 +15,7 @@ export type StreamableEvent = {
   language?: string | null;
 };
 
-export type AfkEventStream = {
+export type AFKEventStream = {
   id: number;
   afk_start: string;
   afk_end: string | null;
@@ -35,114 +36,169 @@ const durations = [
 ];
 
 const TimelineExtension = () => {
-  const [eventData, setEventData] = useState<StreamableEvent[]>([]);
-  const [afkEventData, setAfkEventData] = useState<AfkEventStream[]>([]);
-  const [durationMinutes, setDurationMinutes] = useState<number>(15);
+  const [eventDataMap, setEventDataMap] = useState<Map<string, EventStream>>(
+    new Map(),
+  );
+  const [afkEventDataMap, setAfkEventDataMap] = useState<
+    Map<string, AFKEventStream>
+  >(new Map());
+  const [currentDurationMinutes, setCurrentDurationMinutes] =
+    useState<number>(15);
 
   const eventSocketRef = useRef<WebSocket | null>(null);
   const afkSocketRef = useRef<WebSocket | null>(null);
 
-  const openEventStream = (minutes: number) => {
-    eventSocketRef.current?.close();
-    const socket = new WebSocket("ws://localhost:8080/ws/events");
+  const updateMapState = useCallback(
+    (
+      prevMap: Map<string, any>,
+      newData: any[],
+      idKey: string | ((item: any) => string),
+    ) => {
+      const newMap = new Map(prevMap);
+      newData.forEach((item) => {
+        const id =
+          typeof idKey === "function" ? idKey(item) : String(item[idKey]);
+        newMap.set(id, item);
+      });
+      return newMap;
+    },
+    [],
+  );
 
-    socket.onopen = () => {
-      console.log("Event WebSocket connected");
-      socket.send(
+  const requestDataForRange = useCallback((start: Date, end: Date) => {
+    console.log(
+      `Requesting data for range: ${formatISO(start)} to ${formatISO(end)}`,
+    );
+
+    if (eventSocketRef.current?.readyState === WebSocket.OPEN) {
+      eventSocketRef.current.send(
         JSON.stringify({
-          type: "duration_request",
-          minutes,
+          type: "range_request",
+          start_timestamp: formatISO(start),
+          end_timestamp: formatISO(end),
         }),
       );
-    };
+    } else {
+      console.warn("Event WebSocket not open to send range request.");
+    }
 
-    socket.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data) as StreamableEvent[];
-        console.log("Received events:", data);
-        setEventData(data);
-      } catch (e) {
-        console.error("Failed to parse event stream:", e);
-      }
-    };
-
-    socket.onerror = (err) => {
-      console.error("WebSocket error:", err);
-    };
-
-    socket.onclose = () => {
-      console.warn("Event WebSocket closed");
-    };
-
-    eventSocketRef.current = socket;
-  };
-
-  const openAfkStream = (minutes: number) => {
-    afkSocketRef.current?.close();
-    const socket = new WebSocket("ws://localhost:8080/ws/afk");
-
-    socket.onopen = () => {
-      console.log("AFK event WebSocket connected");
-      socket.send(
+    if (afkSocketRef.current?.readyState === WebSocket.OPEN) {
+      afkSocketRef.current.send(
         JSON.stringify({
-          type: "duration_request",
-          minutes,
+          type: "range_request",
+          start_timestamp: formatISO(start),
+          end_timestamp: formatISO(end),
         }),
       );
-    };
+    } else {
+      console.warn("AFK WebSocket not open to range request");
+    }
+  }, []);
 
-    socket.onmessage = (event) => {
-      try {
-        const data = JSON.parse(event.data) as AfkEventStream[];
-        console.log("Received AFK events: ", data);
-        setAfkEventData(data);
-      } catch (e) {
-        console.error("Failed to parse AFK event stream: ", e);
+  const setupWebSocket = useCallback(
+    (
+      url: string,
+      onMessage: (data: any) => void,
+      socketRef: React.MutableRefObject<WebSocket | null>,
+    ) => {
+      const currentSocketInstance = socketRef.current;
+      if (currentSocketInstance) {
+        currentSocketInstance.close();
       }
-    };
 
-    socket.onerror = (err) => {
-      console.error("WebSocket error: ", err);
-    };
+      const socket = new WebSocket(url);
 
-    socket.onclose = () => {
-      console.log("AFK event WebSocket closed");
-    };
+      socket.onopen = () => {
+        console.log(`${url} WebSocket connected`);
 
-    afkSocketRef.current = socket;
-  };
+        socket.send(
+          JSON.stringify({
+            type: "duration_request",
+            minutes: currentDurationMinutes,
+          }),
+        );
+      };
+      socket.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          onMessage(data);
+        } catch (err) {
+          console.error(`Failed to parse WebSocket message from ${url}:`, err);
+        }
+      };
+
+      socket.onerror = (err) => {
+        console.error(`WebSocket error for ${url}: `, err);
+      };
+
+      socket.onclose = () => {
+        console.warn(`${url} WebSocket closed`);
+      };
+
+      socketRef.current = socket;
+
+      return () => {
+        console.log(`Cleaning up ${url} socket: `, socket);
+        socket.close();
+      };
+    },
+    [currentDurationMinutes],
+  );
 
   useEffect(() => {
-    openEventStream(durationMinutes);
-    openAfkStream(durationMinutes);
+    const cleanupEventSocket = setupWebSocket(
+      "ws://localhost:8080/ws/events",
+      (data: EventStream[]) => {
+        setEventDataMap((prevMap) => updateMapState(prevMap, data, "id"));
+      },
+      eventSocketRef,
+    );
+
+    const cleanupAFKEventSocket = setupWebSocket(
+      "ws://localhost:8080/ws/afk",
+      (data: AFKEventStream[]) => {
+        setAfkEventDataMap((prevMap) => updateMapState(prevMap, data, "id"));
+      },
+      afkSocketRef,
+    );
 
     return () => {
-      eventSocketRef.current?.close();
-      afkSocketRef.current?.close();
+      cleanupEventSocket();
+      cleanupAFKEventSocket();
     };
-  }, [durationMinutes]);
+  }, [setupWebSocket, updateMapState]);
+
+  const eventDataArray = useMemo(
+    () => Array.from(eventDataMap.values()),
+    [eventDataMap],
+  );
+  const afkEventDataArray = useMemo(
+    () => Array.from(afkEventDataMap.values()),
+    [afkEventDataMap],
+  );
 
   return (
-    <div className="flex-col tems-center space-y-4 px-4 py-20">
+    <div className="flex-col items-center h-full w-full space-y-4 px-4 py-20">
       <div className="flex flex-wrap justify-center gap-2">
         {durations.map((d) => (
           <button
             key={d.minutes}
             className={`px-3 py-1 rounded text-sm font-medium border transition ${
-              durationMinutes === d.minutes
+              currentDurationMinutes === d.minutes
                 ? "bg-blue-600 text-white border-blue-700"
                 : "bg-white text-gray-800 border-gray-300 hover:bg-gray-100"
             }`}
-            onClick={() => setDurationMinutes(d.minutes)}
+            onClick={() => setCurrentDurationMinutes(d.minutes)}
           >
             {d.label}
           </button>
         ))}
       </div>
       <TimelineView
-        afkEventStream={afkEventData}
-        eventStream={eventData}
-        durationMinutes={durationMinutes}
+        afkEventStream={afkEventDataArray}
+        eventStream={eventDataArray}
+        durationMinutes={currentDurationMinutes}
+        requestDataForRange={requestDataForRange}
       />
     </div>
   );

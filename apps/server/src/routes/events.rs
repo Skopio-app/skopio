@@ -1,4 +1,4 @@
-use crate::models::DurationRequest;
+use crate::models::ClientMessage;
 use crate::utils::error_response;
 use axum::extract::ws::{Message, WebSocket};
 use axum::extract::{State, WebSocketUpgrade};
@@ -6,12 +6,12 @@ use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum::routing::{get, post};
 use axum::{Json, Router};
-use chrono::Utc;
+use chrono::{DateTime, NaiveDateTime, Utc};
 use common::models::inputs::EventInput;
 use db::server::apps::App;
 use db::server::branches::Branch;
 use db::server::entities::Entity;
-use db::server::events::{fetch_recent, Event};
+use db::server::events::{fetch_range, fetch_recent, Event};
 use db::server::languages::Language;
 use db::server::projects::Project;
 use db::DBContext;
@@ -75,20 +75,53 @@ pub async fn event_ws_handler(
 }
 
 async fn handle_event_ws(mut socket: WebSocket, db: Arc<Mutex<DBContext>>) {
-    let mut duration = chrono::Duration::minutes(15);
-    let mut last_check = Utc::now().naive_utc() - duration;
+    let duration = chrono::Duration::minutes(15);
+    let mut current_start: NaiveDateTime = Utc::now().naive_utc() - duration;
+    let mut current_end: NaiveDateTime = Utc::now().naive_utc();
+    let mut last_event_timestamp: NaiveDateTime = current_start; // Tracking continuous updates
 
     loop {
         tokio::select! {
             msg = socket.recv() => {
                 match msg {
                     Some(Ok(Message::Text(text))) => {
-                        if let Ok(parsed) = serde_json::from_str::<DurationRequest>(&text) {
-                            duration = chrono::Duration::minutes(parsed.minutes);
-                            last_check = Utc::now().naive_utc() - duration;
-                            debug!("Updated duration to {} minutes", parsed.minutes);
+                        if let Ok(client_msg) = serde_json::from_str::<ClientMessage>(&text) {
+                            match client_msg {
+                                ClientMessage::Duration(req) => {
+                                    let duration = chrono::Duration::minutes(req.minutes);
+                                    current_start = current_end - duration;
+                                    last_event_timestamp = current_start;
+                                    debug!("Updated duration to {} minutes", req.minutes);
+
+                                    if let Err(e) = send_range_data(&mut socket, &db, current_start, current_end).await {
+                                        error!("Error sending initial duration data: {}", e);
+                                        break;
+                                    }
+                                }
+
+                                ClientMessage::Range(req) => {
+                                    let parse_utc_time = |s: &str| {
+                                        DateTime::parse_from_rfc3339(s)
+                                            .map_err(|e| format!("RFC3339 parse error: {}", e))
+                                            .map(|dt_utc| dt_utc.naive_utc())
+                                    };
+
+                                    if let (Ok(start_ts), Ok(end_ts)) = (parse_utc_time(&req.start_timestamp), parse_utc_time(&req.end_timestamp)) {
+                                        debug!("Received range request: {} to {}", start_ts, end_ts);
+                                        current_start = start_ts;
+                                        current_end = end_ts;
+
+                                        if let Err(e) = send_range_data(&mut socket, &db, current_start, current_end).await {
+                                            error!("Error sending range data: {}", e);
+                                            break;
+                                        }
+                                    } else {
+                                        warn!("Invalid range timestamp: {} - {}", req.start_timestamp, req.end_timestamp);
+                                    }
+                                }
+                            }
                         } else {
-                            warn!("Invalid duration payload: {}", text);
+                            warn!("Invalid client payload: {}", text);
                         }
                     }
                     Some(Ok(_)) => {} // Ignore non-text messages
@@ -102,13 +135,13 @@ async fn handle_event_ws(mut socket: WebSocket, db: Arc<Mutex<DBContext>>) {
 
             _ = sleep(Duration::from_secs(5)) => {
                 let db = db.lock().await;
-                match fetch_recent(&db, last_check).await {
+                match fetch_recent(&db, last_event_timestamp).await {
                     Ok(events) if !events.is_empty() => {
-                        last_check = events.last().unwrap().timestamp;
+                        last_event_timestamp = events.last().map(|e| e.timestamp).unwrap_or(last_event_timestamp);
                         let json = serde_json::to_string(&events).unwrap_or_else(|_| "[]".into());
                         if let Err(e) = socket.send(Message::Text(json.into())).await {
-                        error!("Error sending message: {}", e);
-                            break;
+                        error!("Error sending new events: {}", e);
+                        break;
                     }
                 }
                 Ok(_) => {}
@@ -118,6 +151,26 @@ async fn handle_event_ws(mut socket: WebSocket, db: Arc<Mutex<DBContext>>) {
                 }
             }
         }
+        }
+    }
+}
+
+async fn send_range_data(
+    socket: &mut WebSocket,
+    db: &Arc<Mutex<DBContext>>,
+    start: NaiveDateTime,
+    end: NaiveDateTime,
+) -> Result<(), axum::Error> {
+    let db_guard = db.lock().await;
+    match fetch_range(&db_guard, start, end).await {
+        Ok(events) => {
+            let json = serde_json::to_string(&events).unwrap_or_else(|_| "[]".into());
+            socket.send(Message::Text(json.into())).await?;
+            Ok(())
+        }
+        Err(e) => {
+            error!("Error fetching events for range: {}", e);
+            Err(axum::Error::new(e))
         }
     }
 }

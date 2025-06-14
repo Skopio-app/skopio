@@ -67,3 +67,23 @@ pub async fn fetch_recent(
     .fetch_all(db_context.pool())
     .await
 }
+
+pub async fn fetch_range(
+    db_context: &DBContext,
+    start_time: NaiveDateTime,
+    end_time: NaiveDateTime,
+) -> Result<Vec<AFKEvent>, sqlx::Error> {
+    sqlx::query_as!(
+        AFKEvent,
+        r#"
+        SELECT id, afk_start, afk_end, duration
+        FROM afk_events
+        WHERE afk_start >= ? AND afk_start <= ?
+        ORDER BY afk_events.afk_start ASC
+        "#,
+        start_time,
+        end_time,
+    )
+    .fetch_all(db_context.pool())
+    .await
+}

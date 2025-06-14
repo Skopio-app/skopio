@@ -18,9 +18,6 @@ export const commands = {
   async setHeartbeatInterval(interval: number): Promise<null> {
     return await TAURI_INVOKE("set_heartbeat_interval", { interval });
   },
-  async startAfkWsClient(onEvent: TAURI_CHANNEL<StreamMessage>): Promise<void> {
-    await TAURI_INVOKE("start_afk_ws_client", { onEvent });
-  },
 };
 
 /** user-defined events **/
@@ -29,12 +26,6 @@ export const commands = {
 
 /** user-defined types **/
 
-export type AFKEvent = {
-  id: number | null;
-  afk_start: string | null;
-  afk_end: string | null;
-  duration: number | null;
-};
 export type AppConfig = {
   theme: Theme;
   heartbeat_interval: number;
@@ -42,8 +33,6 @@ export type AppConfig = {
   flush_interval: number;
   sync_interval: number;
 };
-export type StreamMessage = { event: "afk"; data: AFKEvent };
-export type TAURI_CHANNEL<TSend> = null;
 export type Theme = "Light" | "Dark" | "System";
 
 /** tauri-specta globals **/
