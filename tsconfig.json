@@ -5,7 +5,8 @@
       "@skopio/desktop": ["apps/desktop"],
       "@skopio/manifest": ["packages/manifest"],
       "@skopio/rpc": ["packages/rpc"],
-      "@skopio/ui": ["packages/ui"]
+      "@skopio/ui": ["packages/ui"],
+      "@skopio/sdk": ["packages/sdk"]
     },
     "moduleResolution": "node",
     "module": "esnext",
