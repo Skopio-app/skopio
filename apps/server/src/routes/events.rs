@@ -78,7 +78,7 @@ async fn handle_event_ws(mut socket: WebSocket, db: Arc<Mutex<DBContext>>) {
     let duration = chrono::Duration::minutes(15);
     let mut current_start: NaiveDateTime = Utc::now().naive_utc() - duration;
     let mut current_end: NaiveDateTime = Utc::now().naive_utc();
-    let mut last_event_timestamp: NaiveDateTime = current_start; // Tracking continuous updates
+    let mut last_event_timestamp: NaiveDateTime = current_start;
 
     loop {
         tokio::select! {
@@ -93,8 +93,7 @@ async fn handle_event_ws(mut socket: WebSocket, db: Arc<Mutex<DBContext>>) {
                                     last_event_timestamp = current_start;
                                     debug!("Updated duration to {} minutes", req.minutes);
 
-                                    if let Err(e) = send_range_data(&mut socket, &db, current_start, current_end).await {
-                                        error!("Error sending initial duration data: {}", e);
+                                    if send_range_data(&mut socket, &db, current_start, current_end).await.is_err() {
                                         break;
                                     }
                                 }
@@ -111,8 +110,7 @@ async fn handle_event_ws(mut socket: WebSocket, db: Arc<Mutex<DBContext>>) {
                                         current_start = start_ts;
                                         current_end = end_ts;
 
-                                        if let Err(e) = send_range_data(&mut socket, &db, current_start, current_end).await {
-                                            error!("Error sending range data: {}", e);
+                                        if send_range_data(&mut socket, &db, current_start, current_end).await.is_err() {
                                             break;
                                         }
                                     } else {

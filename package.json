@@ -1,11 +1,10 @@
 {
+  "name": "skopio",
   "private": true,
-  "workspaces": {
-    "packages": [
-      "apps/desktop",
-      "packages/*"
-    ]
-  },
+  "workspaces": [
+    "apps/desktop",
+    "packages/*"
+  ],
   "packageManager": "yarn@4.9.2",
   "devDependencies": {
     "@types/react": "^18.3.18",

@@ -1,6 +1,14 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { TimelineView } from "./TimelineView";
-import { formatISO } from "date-fns";
+import {
+  endOfDay,
+  formatISO,
+  parseISO,
+  startOfDay,
+  isValid as isValidDate,
+  addDays,
+  differenceInMonths,
+} from "date-fns";
 
 export type EventStream = {
   id: number;
@@ -44,6 +52,14 @@ const TimelineExtension = () => {
   >(new Map());
   const [currentDurationMinutes, setCurrentDurationMinutes] =
     useState<number>(15);
+
+  const [customStartDate, setCustomStartDate] = useState<string>("");
+  const [customEndDate, setCustomEndDate] = useState<string>("");
+
+  const [queriedInterval, setQueriedInterval] = useState<
+    [Date, Date] | undefined
+  >(undefined);
+  // const [showQueriedInterval, setShowQueriedInterval] = useState<boolean>(false);
 
   const eventSocketRef = useRef<WebSocket | null>(null);
   const afkSocketRef = useRef<WebSocket | null>(null);
@@ -168,6 +184,48 @@ const TimelineExtension = () => {
     };
   }, [setupWebSocket, updateMapState]);
 
+  const handleApplyCustomRange = useCallback(() => {
+    const start = customStartDate
+      ? startOfDay(parseISO(customStartDate))
+      : null;
+    const end = customEndDate ? endOfDay(parseISO(customEndDate)) : null;
+
+    if (!start || !end || !isValidDate(start) || !isValidDate(end)) {
+      alert("Please select valid end and start dates");
+      return;
+    }
+
+    if (start >= end) {
+      alert("End date must be after start date");
+      return;
+    }
+
+    const adjustedEnd = addDays(end, 1);
+    if (differenceInMonths(adjustedEnd, start) > 1) {
+      alert("The selected duration cannot be more than one month");
+      return;
+    }
+
+    setQueriedInterval([start, end]);
+    // setShowQueriedInterval(true);
+    requestDataForRange(start, end);
+
+    setCurrentDurationMinutes(0);
+  }, [customStartDate, customEndDate, requestDataForRange]);
+
+  useEffect(() => {
+    if (currentDurationMinutes > 0) {
+      // setShowQueriedInterval(false);
+      setQueriedInterval(undefined);
+      const now = new Date();
+      const initialMax = new Date(now.getTime() + 5 * 60 * 1000);
+      const initialMin = new Date(
+        initialMax.getTime() - currentDurationMinutes * 60 * 1000,
+      );
+      requestDataForRange(initialMin, initialMax);
+    }
+  }, [currentDurationMinutes, requestDataForRange]);
+
   const eventDataArray = useMemo(
     () => Array.from(eventDataMap.values()),
     [eventDataMap],
@@ -194,11 +252,42 @@ const TimelineExtension = () => {
           </button>
         ))}
       </div>
+
+      <div className="flex flex-wrap justify-center items-center gap-2 mt-4">
+        <label htmlFor="startDate" className="text-gray-700">
+          Show from
+        </label>
+        <input
+          type="date"
+          id="startDate"
+          value={customStartDate}
+          onChange={(e) => setCustomStartDate(e.target.value)}
+          className="p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+        <label htmlFor="endDate" className="text-gray-700">
+          to
+        </label>
+        <input
+          type="date"
+          id="endDate"
+          value={customEndDate}
+          onChange={(e) => setCustomEndDate(e.target.value)}
+          className="p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+        <button
+          onClick={handleApplyCustomRange}
+          className="px-4 py-2 bg-green-400 text-neutral-200 rounded font-medium border border-green-700 hover:bg-green-700 transition"
+        >
+          Apply
+        </button>
+      </div>
       <TimelineView
         afkEventStream={afkEventDataArray}
         eventStream={eventDataArray}
         durationMinutes={currentDurationMinutes}
         requestDataForRange={requestDataForRange}
+        queriedInterval={queriedInterval}
+        // showQueriedInterval={showQueriedInterval}
       />
     </div>
   );

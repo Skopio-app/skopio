@@ -89,6 +89,7 @@ pub async fn fetch_recent(
     .await
 }
 
+/// Fetches events given a range
 pub async fn fetch_range(
     db: &DBContext,
     start_time: NaiveDateTime,

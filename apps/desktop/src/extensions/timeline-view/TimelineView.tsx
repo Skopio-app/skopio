@@ -17,6 +17,8 @@ type Props = {
   afkEventStream: AFKEventStream[];
   eventStream: EventStream[];
   durationMinutes: number;
+  queriedInterval?: [Date, Date];
+  // showQueriedInterval?: boolean;
 };
 
 // TODO: Check for other properties to add.
@@ -35,6 +37,8 @@ export const TimelineView: React.FC<Props> = ({
   afkEventStream,
   eventStream,
   durationMinutes,
+  queriedInterval,
+  // showQueriedInterval = false,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const timelineRef = useRef<Timeline | null>(null);
@@ -50,6 +54,7 @@ export const TimelineView: React.FC<Props> = ({
       { id: "AFK", content: "AFK" },
       { id: "VSCode", content: "skopio-vscode" },
       { id: "General", content: "skopio-desktop" },
+      // { id: "Query", content: "Query" },
     ],
     [],
   );
@@ -128,6 +133,13 @@ export const TimelineView: React.FC<Props> = ({
 
       const itemsToRemove: string[] = [];
       dataSetRef.current.forEach((item: any) => {
+        // if (
+        //   item.id === "query-interval" &&
+        //   queriedInterval &&
+        //   showQueriedInterval
+        // ) {
+        //   return;
+        // }
         // Remove items whose entire range is outside the prune buffer
         if (item.end < pruneStart || item.start > pruneEnd) {
           itemsToRemove.push(item.id);
@@ -144,6 +156,8 @@ export const TimelineView: React.FC<Props> = ({
     FETCH_BUFFER_MINUTES,
     PRUNE_BUFFER_MINUTES,
     clearAnimationTimeout,
+    // queriedInterval,
+    // showQueriedInterval,
   ]);
 
   useEffect(() => {
@@ -179,18 +193,34 @@ export const TimelineView: React.FC<Props> = ({
       options,
     );
 
-    const now = new Date();
-    const initialMax = new Date(now.getTime() + 5 * 60 * 1000);
-    const initialMin = new Date(
-      initialMax.getTime() - durationMinutes * 60 * 1000,
-    );
+    let initialMin: Date = new Date();
+    let initialMax: Date = new Date();
 
-    timelineRef.current.setOptions({
-      min: initialMin,
-      max: initialMax,
-      start: initialMin,
-      end: initialMax,
-    });
+    if (queriedInterval) {
+      initialMin = queriedInterval[0];
+      initialMax = queriedInterval[1];
+
+      const buffer = (initialMax.getTime() - initialMin.getTime()) * 0.1;
+      timelineRef.current.setOptions({
+        min: new Date(initialMin.getTime() - buffer),
+        max: new Date(initialMax.getTime() + buffer),
+        start: new Date(initialMin.getTime() - buffer),
+        end: new Date(initialMax.getTime() + buffer),
+      });
+    } else {
+      const now = new Date();
+      const initialMax = new Date(now.getTime() + 5 * 60 * 1000);
+      const initialMin = new Date(
+        initialMax.getTime() - durationMinutes * 60 * 1000,
+      );
+
+      timelineRef.current.setOptions({
+        min: initialMin,
+        max: initialMax,
+        start: initialMin,
+        end: initialMax,
+      });
+    }
 
     timelineRef.current.on("rangechanged", handleRangeChanged);
 
@@ -218,6 +248,8 @@ export const TimelineView: React.FC<Props> = ({
     handleRangeChanged,
     requestDataForRange,
     clearAnimationTimeout,
+    queriedInterval,
+    // showQueriedInterval
   ]);
 
   useEffect(() => {
@@ -277,6 +309,25 @@ export const TimelineView: React.FC<Props> = ({
       itemsToProcess.push(item); // Add for batch update/add
     }
 
+    // const queriedIntervalId = "query-interval";
+    // if (queriedInterval && showQueriedInterval) {
+    //   const [start, end] = queriedInterval;
+    //   const queryItem: TimelineDataItem = {
+    //     id: queriedIntervalId,
+    //     group: "Query",
+    //     content: "Query Range",
+    //     title: "Queried Time Interval",
+    //     start,
+    //     end,
+    //     style: "background-color: rgba(173, 216, 230, 0.3); border: 1px dashed #6495ED;",
+    //   };
+    //   itemsToProcess.push(queryItem);
+    // } else {
+    //   if (dataSetRef.current.get(queriedIntervalId)) {
+    //     dataSetRef.current.remove(queriedIntervalId);
+    //   }
+    // }
+
     if (itemsToProcess.length > 0) {
       dataSetRef.current.update(itemsToProcess);
     }
@@ -291,7 +342,6 @@ export const TimelineView: React.FC<Props> = ({
         latestOverallEnd > currentRange.end ||
         latestOverallEnd < currentRange.start;
       if (isLatestOutsideView) {
-        // Clear any pending animations
         clearAnimationTimeout();
 
         animationTimeoutRef.current = setTimeout(() => {
