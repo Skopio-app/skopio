@@ -7,6 +7,7 @@ pub fn extract_db_file_path(database_url: &str) -> std::path::PathBuf {
     Path::new(db_path).to_path_buf()
 }
 
+#[allow(dead_code)]
 pub(crate) async fn update_synced_in(
     db_context: &DBContext,
     table: &str,

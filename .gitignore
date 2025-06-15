@@ -5,6 +5,8 @@ logs
 **/*.backup.*
 **/*.back.*
 
+**/.yarn/install-state.gz
+
 node_modules
 bower_components
 

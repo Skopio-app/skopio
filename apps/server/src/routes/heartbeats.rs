@@ -3,7 +3,7 @@ use axum::extract::State;
 use axum::http::StatusCode;
 use axum::routing::post;
 use axum::{Json, Router};
-use chrono::NaiveDateTime;
+use common::models::inputs::HeartbeatInput;
 use db::server::apps::App;
 use db::server::branches::Branch;
 use db::server::entities::Entity;
@@ -11,26 +11,11 @@ use db::server::heartbeats::Heartbeat;
 use db::server::languages::Language;
 use db::server::projects::Project;
 use db::DBContext;
-use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use tracing::info;
 
-#[derive(Serialize, Deserialize, Debug)]
-struct HeartbeatInput {
-    timestamp: Option<NaiveDateTime>,
-    project_name: String,
-    project_path: String,
-    entity_name: String,
-    entity_type: String,
-    branch_name: String,
-    language_name: Option<String>,
-    app_name: String,
-    is_write: bool,
-    lines: Option<i64>,
-    cursorpos: Option<i64>,
-}
-
+// TODO: Investigate the need for optimizations in the for loop
 async fn handle_heartbeats(
     State(db): State<Arc<Mutex<DBContext>>>,
     Json(payload): Json<Vec<HeartbeatInput>>,

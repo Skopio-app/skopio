@@ -20,14 +20,10 @@ tauri-build = { version = "2.0.2", features = [] }
 serde_json = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 log = { workspace = true }
-tauri = { version = "2.1.0", features = ["objc-exception"] }
+tauri = { version = "2.1.0", features = ["objc-exception", "specta"] }
 tauri-plugin-log = "2.0.0-rc"
 chrono = { workspace = true, features = ["serde"] }
-cocoa = "0.26.0"
-core-graphics = "0.24.0"
 tokio = { workspace = true, features = ["full", "tracing"] }
-core-foundation = "0.10.0"
-objc2 = "0.6.0"
 strum_macros = "0.27.1"
 strum = "0.27.1"
 tokei = "12.1.2"
@@ -39,5 +35,18 @@ async-trait = { workspace = true }
 url = "2.5.4"
 console-subscriber = "0.4.1"
 reqwest = { workspace = true, features = ["json", "rustls-tls"] }
+tauri-plugin-dialog = "2.0.0"
+tokio-tungstenite = { workspace = true }
+
+specta = { workspace = true , features = ["chrono"] }
+specta-typescript = { workspace = true }
+tauri-specta = { workspace = true, features = ["derive", "typescript"] }
 
 db = { path = "../../../crates/db", features = ["desktop"] }
+common = { path = "../../../crates/common" }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+core-foundation = "0.10.0"
+objc2 = "0.6.0"
+core-graphics = "0.24.0"
+objc2-foundation = "0.3.1"

@@ -3,7 +3,7 @@ members = [
     "apps/cli",
     "apps/desktop/src-tauri",
     "apps/server",
-    "crates/db"
+    "crates/*"
 ]
 resolver = "2"
 
@@ -31,6 +31,13 @@ moka = "0.12.10"
 percent-encoding = "2.3.1"
 sqlx = "0.8.5"
 async-trait = "0.1.88"
+tokio-tungstenite = "0.26.2"
+tokio-stream = "0.1.17"
+
+specta = "2.0.0-rc.22"
+tauri-specta = "2.0.0-rc.21"
+specta-typescript = "0.0.9"
+
 
 [profile.dev.package.sqlx-macros]
 opt-level = 3

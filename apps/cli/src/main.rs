@@ -11,7 +11,6 @@ mod cli;
 mod db;
 mod event;
 mod heartbeat;
-mod models;
 mod sync;
 mod utils;
 

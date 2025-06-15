@@ -1,0 +1,8 @@
+{
+  "name": "@skopio/sdk",
+  "packageManager": "yarn@4.9.2",
+  "dependencies": {
+    "@skopio/rpc": "workspace:*",
+    "sonner": "^2.0.5"
+  }
+}

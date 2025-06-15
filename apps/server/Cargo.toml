@@ -7,13 +7,15 @@ repository.workspace = true
 rust-version.workspace = true
 
 [dependencies]
-axum = "0.8.1"
+axum = { version = "0.8.1", features = ["ws"] }
 serde = { workspace = true, features = ["derive"] }
+serde_json = { workspace = true }
 tokio = { workspace = true, features = ["full"] }
 tracing = { workspace = true }
 tracing-subscriber = { workspace = true, features = ["env-filter", "chrono"] }
 
-db = { path = "../../crates/db" , features = ["server"] }
+db = { path = "../../crates/db", features = ["server"] }
 chrono = { workspace = true, features = ["serde"] }
 dirs = { workspace = true }
 tower-http = { version = "0.6.2", features = ["cors"] }
+common = { path = "../../crates/common" }

@@ -1,0 +1,33 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            SELECT id, afk_start, afk_end, duration\n            FROM afk_events\n            WHERE afk_start BETWEEN ? AND ?\n            ORDER BY afk_start ASC\n            ",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Integer"
+      },
+      {
+        "name": "afk_start",
+        "ordinal": 1,
+        "type_info": "Datetime"
+      },
+      {
+        "name": "afk_end",
+        "ordinal": 2,
+        "type_info": "Datetime"
+      },
+      {
+        "name": "duration",
+        "ordinal": 3,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": [false, false, true, true]
+  },
+  "hash": "d2c77055613280f51c4b016d6b4e53f52ca92a4b43d579909fc53769b9222959"
+}
