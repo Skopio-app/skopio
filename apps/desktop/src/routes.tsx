@@ -30,14 +30,6 @@ const router = createBrowserRouter([
           },
         ],
       },
-      // {
-      //   path: "app/extension",
-      //   element: <ExtensionIfrane />,
-      // },
-      // {
-      //   path: "tab/:id",
-      //   element: <TabExtensionPage />
-      // }
     ],
   },
 ]);
