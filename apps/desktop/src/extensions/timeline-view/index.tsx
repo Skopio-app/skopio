@@ -15,7 +15,7 @@ export type EventStream = {
   timestamp: string;
   endTimestamp?: string | null;
   duration?: number | null;
-  activity_type: string;
+  activityType: string;
   app?: string | null;
   entity?: string | null;
   project?: string | null;
@@ -25,8 +25,8 @@ export type EventStream = {
 
 export type AFKEventStream = {
   id: number;
-  afk_start: string;
-  afk_end: string | null;
+  afkStart: string;
+  afkEnd: string | null;
   duration: number;
 };
 

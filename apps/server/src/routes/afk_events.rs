@@ -18,7 +18,10 @@ use std::{sync::Arc, time::Duration};
 use tokio::{sync::Mutex, time::sleep};
 use tracing::{debug, error, info, warn};
 
-use crate::{models::ClientMessage, utils::error_response};
+use crate::{
+    models::{AFKEventOutput, ClientMessage},
+    utils::error_response,
+};
 
 async fn handle_afk_events(
     State(db): State<Arc<Mutex<DBContext>>>,
@@ -136,8 +139,15 @@ async fn send_range_data(
     let db_guard = db.lock().await;
     match fetch_range(&db_guard, start, end).await {
         Ok(afk_events) => {
-            let json = serde_json::to_string(&afk_events).unwrap_or_else(|_| "[]".into());
-            socket.send(Message::Text(json.into())).await?;
+            let serialized = serde_json::to_string(
+                &afk_events
+                    .into_iter()
+                    .map(AFKEventOutput::from)
+                    .collect::<Vec<_>>(),
+            )
+            .unwrap();
+            // let json = serde_json::to_string(&afk_events).unwrap_or_else(|_| "[]".into());
+            socket.send(Message::Text(serialized.into())).await?;
             Ok(())
         }
         Err(e) => {

@@ -1,4 +1,4 @@
-use crate::models::ClientMessage;
+use crate::models::{ClientMessage, EventOutput};
 use crate::utils::error_response;
 use axum::extract::ws::{Message, WebSocket};
 use axum::extract::{State, WebSocketUpgrade};
@@ -162,8 +162,15 @@ async fn send_range_data(
     let db_guard = db.lock().await;
     match fetch_range(&db_guard, start, end).await {
         Ok(events) => {
-            let json = serde_json::to_string(&events).unwrap_or_else(|_| "[]".into());
-            socket.send(Message::Text(json.into())).await?;
+            let serialized = serde_json::to_string(
+                &events
+                    .into_iter()
+                    .map(EventOutput::from)
+                    .collect::<Vec<_>>(),
+            )
+            .unwrap();
+            // let json = serde_json::to_string(&events).unwrap_or_else(|_| "[]".into());
+            socket.send(Message::Text(serialized.into())).await?;
             Ok(())
         }
         Err(e) => {

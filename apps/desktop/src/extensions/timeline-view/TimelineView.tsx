@@ -293,7 +293,7 @@ export const TimelineView: React.FC<Props> = ({
 
       const id = String(e.id);
       const group = getGroupId(e.app);
-      const color = getColorForActivity(e.activity_type);
+      const color = getColorForActivity(e.activityType);
 
       const item: TimelineDataItem = {
         id,
@@ -309,9 +309,9 @@ export const TimelineView: React.FC<Props> = ({
     }
 
     for (const e of afkEventStream.values()) {
-      const start = safeParseISO(e.afk_start);
-      const end = e.afk_end
-        ? safeParseISO(e.afk_end)
+      const start = safeParseISO(e.afkStart);
+      const end = e.afkEnd
+        ? safeParseISO(e.afkEnd)
         : addSeconds(start ?? 0, e.duration ?? 0);
       if (!start || !end || isNaN(start.getTime()) || isNaN(end.getTime()))
         continue;
