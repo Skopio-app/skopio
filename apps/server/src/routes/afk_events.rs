@@ -16,7 +16,7 @@ use db::{
 };
 use std::{sync::Arc, time::Duration};
 use tokio::{sync::Mutex, time::sleep};
-use tracing::{debug, error, info, warn};
+use tracing::{debug, error, warn};
 
 use crate::{
     models::{AFKEventOutput, ClientMessage},
@@ -29,7 +29,7 @@ async fn handle_afk_events(
 ) -> Result<Json<String>, (StatusCode, Json<String>)> {
     let db = db.lock().await;
 
-    info!("Handling {} afk events", payload.len());
+    debug!("Handling {} afk events", payload.len());
 
     for afk in payload {
         let afk_event = AFKEvent {
@@ -42,8 +42,7 @@ async fn handle_afk_events(
         afk_event.create(&db).await.map_err(error_response)?;
     }
 
-    info!("AFK event details stored successfully");
-    Ok(Json("AFK events recorded".to_owned()))
+    Ok(Json("AFK events saved".to_owned()))
 }
 
 pub async fn afk_ws_handler(

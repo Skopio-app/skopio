@@ -19,7 +19,7 @@ use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::Mutex;
 use tokio::time::sleep;
-use tracing::{debug, error, info, warn};
+use tracing::{debug, error, warn};
 
 async fn handle_events(
     State(db): State<Arc<Mutex<DBContext>>>,
@@ -27,7 +27,7 @@ async fn handle_events(
 ) -> Result<Json<String>, (StatusCode, Json<String>)> {
     let db = db.lock().await;
 
-    info!("Handling {} events", payload.len());
+    debug!("Handling {} events", payload.len());
 
     for event in payload {
         let app_id = App::find_or_insert(&db, &event.app_name)
@@ -62,9 +62,7 @@ async fn handle_events(
 
         event.create(&db).await.map_err(error_response)?;
     }
-
-    info!("Event details stored successfully");
-    Ok(Json("Events recorded".to_string()))
+    Ok(Json("Events saved".to_string()))
 }
 
 pub async fn event_ws_handler(
