@@ -5,6 +5,14 @@ import { useEffect, useMemo, useState } from "react";
 import { XIcon } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
 import { DATE_RANGE_LABELS, DateRangeType, getRangeDates } from "./dateRanges";
+import "react-grid-layout/css/styles.css";
+import "react-resizable/css/styles.css";
+import { Layouts, Responsive, WidthProvider } from "react-grid-layout";
+import ProjectChartWidget from "./widgets/ProjectChartWidget";
+
+const ResponsiveGridLayout = WidthProvider(
+  Responsive,
+) as React.ComponentType<any>;
 
 const DashboardView = () => {
   const [customStart, setCustomStart] = useState<Date>(new Date());
@@ -70,6 +78,10 @@ const DashboardView = () => {
 
   const timeLogged = 4567;
   const formattedDuration = formatDuration(timeLogged);
+
+  const layouts: Layouts = {
+    lg: [{ i: "weekly-project", x: 0, y: 0, w: 6, h: 4 }],
+  };
 
   return (
     <main className="p-6 space-y-4">
@@ -195,6 +207,20 @@ const DashboardView = () => {
         </span>{" "}
         <span className="text-gray-500">{formattedDuration}</span>
       </p>
+      <ResponsiveGridLayout
+        className="mt-4"
+        layouts={layouts}
+        breakpoints={{ lg: 1024, md: 768, sm: 480 }}
+        cols={{ lg: 12, md: 10, sm: 6 }}
+        rowHeight={100}
+        isResizable
+        isDraggable
+        draggableHandle="#widget-drag-handle"
+      >
+        <div key="weekly-project">
+          <ProjectChartWidget />
+        </div>
+      </ResponsiveGridLayout>
     </main>
   );
 };
