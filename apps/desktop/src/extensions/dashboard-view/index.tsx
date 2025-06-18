@@ -1,57 +1,81 @@
 import * as Dialog from "@radix-ui/react-dialog";
 import { Calendar, cn } from "@skopio/ui";
-import { format } from "date-fns";
-import { useState } from "react";
+import { addDays, format, startOfDay } from "date-fns";
+import { useEffect, useMemo, useState } from "react";
 import { XIcon } from "lucide-react";
-
-const formatDuration = (seconds: number): string => {
-  const hrs = Math.floor(seconds / 3600);
-  const mins = Math.floor((seconds % 3600) / 60);
-  const secs = seconds % 60;
-
-  const padded = (n: number) => String(n).padStart(2, "0");
-  const hrStr = `${hrs}h`;
-  const minStr = `${padded(mins)}m`;
-  const secStr = `${padded(secs)}s`;
-  if (hrs > 0) {
-    return `${hrStr} ${minStr} ${secStr}`;
-  } else if (mins > 0) {
-    return `${mins} ${secStr}`;
-  } else {
-    return `${secStr}`;
-  }
-};
-
-const predefinedRanges = [
-  "Today",
-  "Yesterday",
-  "Last 7 days",
-  "Last 14 days",
-  "Last 30 days",
-  "This week",
-  "Last week",
-  "This month",
-  "Last month",
-  "Custom range",
-];
+import { useSearchParams } from "react-router-dom";
+import { DATE_RANGE_LABELS, DateRangeType, getRangeDates } from "./dateRanges";
 
 const DashboardView = () => {
-  const now = Date.now();
-  const formattedDate = format(now, "EEEE, MMMM do, yyyy");
+  const [customStart, setCustomStart] = useState<Date>(new Date());
+  const [customEnd, setCustomEnd] = useState<Date>(new Date());
+
+  const [pendingStart, setPendingStart] = useState<Date>(customStart);
+  const [pendingEnd, setPendindEnd] = useState<Date>(customEnd);
+
+  const [searchParams, setSearchParams] = useSearchParams();
+  const paramRange = searchParams.get("range") as DateRangeType;
+  const [selectedRange, setSelectedRange] = useState<DateRangeType>(
+    paramRange && DATE_RANGE_LABELS.includes(paramRange)
+      ? paramRange
+      : DateRangeType.Today,
+  );
+
+  const isCustom = selectedRange === DateRangeType.Custom;
+
+  useEffect(() => {
+    const params = new URLSearchParams(searchParams);
+    params.set("range", selectedRange);
+    setSearchParams(params, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedRange]);
+
+  useEffect(() => {
+    if (!isCustom) return;
+    const maxEnd = addDays(startOfDay(customStart ?? 0), 30);
+    if (customEnd) {
+      if (customEnd > maxEnd) setCustomEnd(maxEnd);
+    }
+  }, [customStart, customEnd, isCustom]);
+
+  const [startDate, endDate] = useMemo(
+    () => getRangeDates(selectedRange, customStart, customEnd),
+    [selectedRange, customStart, customEnd],
+  );
+
+  const formattedRange = useMemo(() => {
+    const sameDay = format(startDate, "PPP") === format(endDate, "PPP");
+    return sameDay
+      ? format(startDate, "PPP")
+      : `${format(startDate, "PPP")} - ${format(endDate, "PPP")}`;
+  }, [startDate, endDate]);
+
+  const formatDuration = (seconds: number): string => {
+    const hrs = Math.floor(seconds / 3600);
+    const mins = Math.floor((seconds % 3600) / 60);
+    const secs = seconds % 60;
+
+    const padded = (n: number) => String(n).padStart(2, "0");
+    const hrStr = `${hrs}h`;
+    const minStr = `${padded(mins)}m`;
+    const secStr = `${padded(secs)}s`;
+    if (hrs > 0) {
+      return `${hrStr} ${minStr} ${secStr}`;
+    } else if (mins > 0) {
+      return `${mins} ${secStr}`;
+    } else {
+      return `${secStr}`;
+    }
+  };
+
   const timeLogged = 4567;
   const formattedDuration = formatDuration(timeLogged);
-
-  const [selectedRange, setSelectedRange] = useState("Today");
-  const [customStart, setCustomStart] = useState<Date | undefined>(new Date());
-  const [customEnd, setCustomEnd] = useState<Date | undefined>(new Date());
-
-  const isCustom = selectedRange === "Custom range";
 
   return (
     <main className="p-6 space-y-4">
       <h1 className="text-2xl font-bold">
         <span className="text-gray-900">Activity for </span>
-        <span className="text-gray-500">{formattedDate}</span>
+        <span className="text-gray-500">{formattedRange}</span>
       </h1>
 
       <p className="text-lg">
@@ -82,7 +106,7 @@ const DashboardView = () => {
                     end date.
                   </Dialog.Description>
 
-                  {predefinedRanges.map((range) => (
+                  {DATE_RANGE_LABELS.map((range) => (
                     <button
                       key={range}
                       className={cn(
@@ -98,36 +122,66 @@ const DashboardView = () => {
                 </div>
 
                 {isCustom && (
-                  <div className="flex gap-6">
+                  <div className="flex flex-col gap-4">
                     {" "}
-                    <div className="space-y-2">
-                      <label className="block text-sm font-medium text-gray-700 mt-4">
-                        Start Date
-                      </label>
-                      <Calendar
-                        mode="single"
-                        className="rounded-md border shadow-sm p-6"
-                        selected={customStart}
-                        onSelect={setCustomStart}
-                        captionLayout="dropdown"
-                      />
+                    <div className="flex gap-6">
+                      <div className="space-y-2">
+                        <label className="block text-sm font-medium text-gray-700 mb-2 mt-4">
+                          Start Date
+                        </label>
+                        <Calendar
+                          mode="single"
+                          className="rounded-md border shadow-sm p-6"
+                          selected={pendingStart}
+                          onSelect={(date) => date && setPendingStart(date)}
+                          captionLayout="dropdown"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <label className="block text-sm font-medium text-gray-700 mb-2 mt-4">
+                          End Date
+                        </label>
+                        <Calendar
+                          mode="single"
+                          className="rounded-md border shadow-sm p-6"
+                          selected={pendingEnd}
+                          onSelect={(date) => date && setPendindEnd(date)}
+                          captionLayout="dropdown"
+                          hidden={{
+                            before: pendingStart,
+                            after: addDays(startOfDay(pendingStart), 30),
+                          }}
+                        />
+                      </div>
                     </div>
-                    <div className="space-y-2">
-                      <label className="block text-sm font-medium text-gray-700 mb-1 mt-4">
-                        End Date
-                      </label>
-                      <Calendar
-                        mode="single"
-                        className="rounded-md border shadow-sm p-6"
-                        selected={customEnd}
-                        onSelect={setCustomEnd}
-                        captionLayout="dropdown"
-                      />
+                    <div>
+                      <button
+                        disabled={pendingStart > pendingEnd}
+                        onClick={() => {
+                          setCustomStart(pendingStart);
+                          setCustomEnd(pendingEnd);
+                          const params = new URLSearchParams(searchParams);
+                          params.set("range", DateRangeType.Custom);
+                          setSearchParams(params, { replace: true });
+                        }}
+                        className={cn(
+                          "mt-2 inline-block px-4 py-2 rounded-md font-medium transition-all text-white",
+                          pendingStart > pendingEnd
+                            ? "bg-red-400 cursor-not-allowed"
+                            : "bg-blue-600 hover:bg-blue-700",
+                        )}
+                      >
+                        Apply
+                      </button>
+                      {pendingStart > pendingEnd && (
+                        <p className="text-sm text-red-500 mt-1">
+                          Start date must be before and equal to end date.
+                        </p>
+                      )}
                     </div>
                   </div>
                 )}
 
-                {/* Close Button */}
                 <Dialog.Close asChild>
                   <button className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 rounded-full p-1 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500">
                     <XIcon className="w-5 h-5" />
