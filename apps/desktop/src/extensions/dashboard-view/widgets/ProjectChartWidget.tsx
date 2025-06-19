@@ -1,4 +1,4 @@
-import ProjectBarChart from "../ProjectBarChart";
+import ProjectBarChart from "../charts/ProjectBarChart";
 import WidgetCard from "../WidgetCard";
 
 const mockData = [

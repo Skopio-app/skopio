@@ -1,6 +1,6 @@
 import { ResponsiveBar } from "@nivo/bar";
 
-export interface ProjectBarChartProps {
+interface ProjectBarChartProps {
   data: {
     week: string;
     [project: string]: string | number;

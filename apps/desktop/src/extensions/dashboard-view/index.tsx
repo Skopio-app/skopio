@@ -9,6 +9,7 @@ import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
 import { Layouts, Responsive, WidthProvider } from "react-grid-layout";
 import ProjectChartWidget from "./widgets/ProjectChartWidget";
+import AppPieChartWidget from "./widgets/AppPieChartWidget";
 
 const ResponsiveGridLayout = WidthProvider(
   Responsive,
@@ -80,7 +81,10 @@ const DashboardView = () => {
   const formattedDuration = formatDuration(timeLogged);
 
   const layouts: Layouts = {
-    lg: [{ i: "weekly-project", x: 0, y: 0, w: 6, h: 4 }],
+    lg: [
+      { i: "weekly-project", x: 0, y: 0, w: 6, h: 4 },
+      { i: "app-duration", x: 1, y: 0, w: 4, h: 6 },
+    ],
   };
 
   return (
@@ -219,6 +223,9 @@ const DashboardView = () => {
       >
         <div key="weekly-project">
           <ProjectChartWidget />
+        </div>
+        <div key="app-duration">
+          <AppPieChartWidget />
         </div>
       </ResponsiveGridLayout>
     </main>
