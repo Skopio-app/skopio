@@ -88,6 +88,58 @@ impl SummaryQueryBuilder {
         self
     }
 
+    pub async fn execute_grouped_summary_by(
+        self,
+        db: &DBContext,
+        group_key_field: &str,
+    ) -> Result<Vec<GroupedTimeSummary>, sqlx::Error> {
+        self.group_by(group_key_field)
+            .execute_range_summary(db)
+            .await
+    }
+
+    pub async fn execute_apps_summary(
+        self,
+        db: &DBContext,
+    ) -> Result<Vec<GroupedTimeSummary>, sqlx::Error> {
+        self.execute_grouped_summary_by(db, "app").await
+    }
+
+    pub async fn execute_projects_summary(
+        self,
+        db: &DBContext,
+    ) -> Result<Vec<GroupedTimeSummary>, sqlx::Error> {
+        self.execute_grouped_summary_by(db, "project").await
+    }
+
+    pub async fn execute_branches_summary(
+        self,
+        db: &DBContext,
+    ) -> Result<Vec<GroupedTimeSummary>, sqlx::Error> {
+        self.execute_grouped_summary_by(db, "branch").await
+    }
+
+    pub async fn execute_entities_summary(
+        self,
+        db: &DBContext,
+    ) -> Result<Vec<GroupedTimeSummary>, sqlx::Error> {
+        self.execute_grouped_summary_by(db, "entity").await
+    }
+
+    pub async fn execute_languages_summary(
+        self,
+        db: &DBContext,
+    ) -> Result<Vec<GroupedTimeSummary>, sqlx::Error> {
+        self.execute_grouped_summary_by(db, "language").await
+    }
+
+    pub async fn execute_activity_type_summary(
+        self,
+        db: &DBContext,
+    ) -> Result<Vec<GroupedTimeSummary>, sqlx::Error> {
+        self.execute_grouped_summary_by(db, "activity_type").await
+    }
+
     pub async fn execute_range_summary(
         &self,
         db: &DBContext,
@@ -99,7 +151,7 @@ impl SummaryQueryBuilder {
             Some("branch") => "branches.name",
             Some("activity_type") => "events.activity_type",
             Some("entity") => "entities.name",
-            _ => "projects.name",
+            _ => "'Total'",
         };
 
         let mut base_query = format!(
@@ -124,26 +176,86 @@ impl SummaryQueryBuilder {
             base_query.push('\'');
         }
 
-        base_query.push_str(" GROUP BY ");
-        base_query.push_str(group_key);
-
-        let mut union_query = base_query;
-
-        if self.include_afk {
-            if let Some(start) = self.start {
-                union_query.push_str(" UNION ALL SELECT 'AFK' as group_key, SUM(duration) as total_seconds FROM afk_events WHERE afk_start >= '");
-                union_query.push_str(&start.to_string());
-                union_query.push('\'');
-
-                if let Some(end) = self.end {
-                    union_query.push_str(" AND afk_end <= '");
-                    union_query.push_str(&end.to_string());
-                    union_query.push('\'');
-                }
-            }
+        if let Some(apps) = &self.app_names {
+            let app_list = apps
+                .iter()
+                .map(|a| format!("'{}'", a))
+                .collect::<Vec<_>>()
+                .join(", ");
+            base_query.push_str(&format!(" AND apps.name IN ({})", app_list));
         }
 
-        let records = sqlx::query_as::<_, GroupedTimeSummary>(&union_query)
+        if let Some(projects) = &self.project_names {
+            let proj_list = projects
+                .iter()
+                .map(|p| format!("'{}'", p))
+                .collect::<Vec<_>>()
+                .join(", ");
+            base_query.push_str(&format!(" AND projects.name IN ({})", proj_list));
+        }
+
+        if let Some(activity_types) = &self.activity_types {
+            let list = activity_types
+                .iter()
+                .map(|v| format!("'{}'", v))
+                .collect::<Vec<_>>()
+                .join(", ");
+            base_query.push_str(&format!(" AND events.activity_type IN ({})", list));
+        }
+
+        if let Some(entities) = &self.entity_names {
+            let list = entities
+                .iter()
+                .map(|v| format!("'{}'", v))
+                .collect::<Vec<_>>()
+                .join(", ");
+            base_query.push_str(&format!(" AND entities.name IN ({})", list));
+        }
+
+        if let Some(branches) = &self.branch_names {
+            let list = branches
+                .iter()
+                .map(|v| format!("'{}'", v))
+                .collect::<Vec<_>>()
+                .join(", ");
+            base_query.push_str(&format!(" AND branches.name IN ({})", list));
+        }
+
+        if let Some(langs) = &self.language_names {
+            let list = langs
+                .iter()
+                .map(|v| format!("'{}'", v))
+                .collect::<Vec<_>>()
+                .join(", ");
+            base_query.push_str(&format!(" AND languages.name IN ({})", list));
+        }
+
+        if self.group_by.is_some() {
+            base_query.push_str(" GROUP BY ");
+            base_query.push_str(group_key);
+        }
+
+        let mut final_query = base_query.clone();
+
+        if self.include_afk {
+            let mut afk_query = String::from("SELECT 'AFK' as group_key, SUM(duration) as total_seconds FROM afk_events WHERE 1=1");
+
+            if let Some(start) = self.start {
+                afk_query.push_str(" AND afk_start >= '");
+                afk_query.push_str(&start.to_string());
+                afk_query.push('\'');
+            }
+
+            if let Some(end) = self.end {
+                afk_query.push_str(" AND afk_end <= '");
+                afk_query.push_str(&end.to_string());
+                afk_query.push('\'');
+            }
+
+            final_query = format!("{} UNION ALL {}", base_query, afk_query);
+        }
+
+        let records = sqlx::query_as::<_, GroupedTimeSummary>(&final_query)
             .fetch_all(db.pool())
             .await?;
 
