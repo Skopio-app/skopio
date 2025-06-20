@@ -10,6 +10,7 @@ import "react-resizable/css/styles.css";
 import { Layouts, Responsive, WidthProvider } from "react-grid-layout";
 import ProjectChartWidget from "./widgets/ProjectChartWidget";
 import AppPieChartWidget from "./widgets/AppPieChartWidget";
+import { useDashboardFilter } from "./stores/useDashboardFilter";
 
 const ResponsiveGridLayout = WidthProvider(
   Responsive,
@@ -51,6 +52,13 @@ const DashboardView = () => {
     () => getRangeDates(selectedRange, customStart, customEnd),
     [selectedRange, customStart, customEnd],
   );
+
+  useEffect(() => {
+    useDashboardFilter.setState({
+      startDate,
+      endDate,
+    });
+  }, [startDate, endDate]);
 
   const formattedRange = useMemo(() => {
     const sameDay = format(startDate, "PPP") === format(endDate, "PPP");

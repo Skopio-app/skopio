@@ -1,4 +1,4 @@
-use chrono::NaiveDateTime;
+use chrono::{DateTime, NaiveDateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -40,13 +40,20 @@ pub struct AFKEventInput {
 
 #[derive(Debug, Serialize, Deserialize, specta::Type)]
 pub struct SummaryQueryInput {
-    pub start: Option<NaiveDateTime>,
-    pub end: Option<NaiveDateTime>,
+    pub start: Option<DateTime<Utc>>,
+    pub end: Option<DateTime<Utc>>,
+    #[specta(optional)]
     pub app_names: Option<Vec<String>>,
+    #[specta(optional)]
     pub project_names: Option<Vec<String>>,
+    #[specta(optional)]
     pub activity_types: Option<Vec<String>>,
+    #[specta(optional)]
     pub entity_names: Option<Vec<String>>,
+    #[specta(optional)]
     pub branch_names: Option<Vec<String>>,
+    #[specta(optional)]
     pub language_names: Option<Vec<String>>,
+    #[specta(optional)]
     pub include_afk: bool,
 }

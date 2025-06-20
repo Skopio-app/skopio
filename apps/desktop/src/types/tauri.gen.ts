@@ -52,13 +52,13 @@ export type GroupedTimeSummary = { group_key: string; total_seconds: number };
 export type SummaryQueryInput = {
   start: string | null;
   end: string | null;
-  app_names: string[] | null;
-  project_names: string[] | null;
-  activity_types: string[] | null;
-  entity_names: string[] | null;
-  branch_names: string[] | null;
-  language_names: string[] | null;
-  include_afk: boolean;
+  app_names?: string[] | null;
+  project_names?: string[] | null;
+  activity_types?: string[] | null;
+  entity_names?: string[] | null;
+  branch_names?: string[] | null;
+  language_names?: string[] | null;
+  include_afk?: boolean;
 };
 export type Theme = "Light" | "Dark" | "System";
 

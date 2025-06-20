@@ -14,11 +14,11 @@ pub fn summary_query_from_input(input: SummaryQueryInput) -> SummaryQueryBuilder
     let mut builder = SummaryQueryBuilder::default();
 
     if let Some(start) = input.start {
-        builder = builder.start(start);
+        builder = builder.start(start.naive_utc());
     }
 
     if let Some(end) = input.end {
-        builder = builder.end(end);
+        builder = builder.end(end.naive_utc());
     }
 
     if let Some(apps) = input.app_names {
