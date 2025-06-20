@@ -18,6 +18,21 @@ export const commands = {
   async setHeartbeatInterval(interval: number): Promise<null> {
     return await TAURI_INVOKE("set_heartbeat_interval", { interval });
   },
+  async fetchAppSummary(
+    query: SummaryQueryInput,
+  ): Promise<GroupedTimeSummary[]> {
+    return await TAURI_INVOKE("fetch_app_summary", { query });
+  },
+  async fetchProjectsSummary(
+    query: SummaryQueryInput,
+  ): Promise<GroupedTimeSummary[]> {
+    return await TAURI_INVOKE("fetch_projects_summary", { query });
+  },
+  async fetchActivityTypesSummary(
+    query: SummaryQueryInput,
+  ): Promise<GroupedTimeSummary[]> {
+    return await TAURI_INVOKE("fetch_activity_types_summary", { query });
+  },
 };
 
 /** user-defined events **/
@@ -32,6 +47,18 @@ export type AppConfig = {
   afk_timeout: number;
   flush_interval: number;
   sync_interval: number;
+};
+export type GroupedTimeSummary = { group_key: string; total_seconds: number };
+export type SummaryQueryInput = {
+  start: string | null;
+  end: string | null;
+  app_names: string[] | null;
+  project_names: string[] | null;
+  activity_types: string[] | null;
+  entity_names: string[] | null;
+  branch_names: string[] | null;
+  language_names: string[] | null;
+  include_afk: boolean;
 };
 export type Theme = "Light" | "Dark" | "System";
 

@@ -1,69 +1,53 @@
 use std::sync::Arc;
 
 use axum::{extract::State, http::StatusCode, routing::post, Json, Router};
-use chrono::NaiveDateTime;
+use common::models::inputs::SummaryQueryInput;
 use db::{
     server::summary::{GroupedTimeSummary, SummaryQueryBuilder},
     DBContext,
 };
-use serde::Deserialize;
 use tokio::sync::Mutex;
 
 use crate::utils::error_response;
 
-#[derive(Debug, Deserialize)]
-pub struct SummaryQueryInput {
-    pub start: Option<NaiveDateTime>,
-    pub end: Option<NaiveDateTime>,
-    pub app_names: Option<Vec<String>>,
-    pub project_names: Option<Vec<String>>,
-    pub activity_types: Option<Vec<String>>,
-    pub entity_names: Option<Vec<String>>,
-    pub branch_names: Option<Vec<String>>,
-    pub language_names: Option<Vec<String>>,
-    pub include_afk: bool,
-}
+pub fn summary_query_from_input(input: SummaryQueryInput) -> SummaryQueryBuilder {
+    let mut builder = SummaryQueryBuilder::default();
 
-impl From<SummaryQueryInput> for SummaryQueryBuilder {
-    fn from(input: SummaryQueryInput) -> Self {
-        let mut builder = SummaryQueryBuilder::default();
-
-        if let Some(start) = input.start {
-            builder = builder.start(start);
-        }
-
-        if let Some(end) = input.end {
-            builder = builder.end(end);
-        }
-
-        if let Some(apps) = input.app_names {
-            builder = builder.app_names(apps);
-        }
-
-        if let Some(projects) = input.project_names {
-            builder = builder.project_names(projects);
-        }
-
-        if let Some(types) = input.activity_types {
-            builder = builder.activity_types(types);
-        }
-
-        if let Some(entities) = input.entity_names {
-            builder = builder.entity_names(entities);
-        }
-
-        if let Some(branches) = input.branch_names {
-            builder = builder.branch_names(branches);
-        }
-
-        if let Some(langs) = input.language_names {
-            builder = builder.language_names(langs);
-        }
-
-        builder = builder.include_afk(input.include_afk);
-
-        builder
+    if let Some(start) = input.start {
+        builder = builder.start(start);
     }
+
+    if let Some(end) = input.end {
+        builder = builder.end(end);
+    }
+
+    if let Some(apps) = input.app_names {
+        builder = builder.app_names(apps);
+    }
+
+    if let Some(projects) = input.project_names {
+        builder = builder.project_names(projects);
+    }
+
+    if let Some(types) = input.activity_types {
+        builder = builder.activity_types(types);
+    }
+
+    if let Some(entities) = input.entity_names {
+        builder = builder.entity_names(entities);
+    }
+
+    if let Some(branches) = input.branch_names {
+        builder = builder.branch_names(branches);
+    }
+
+    if let Some(langs) = input.language_names {
+        builder = builder.language_names(langs);
+    }
+
+    builder = builder.include_afk(input.include_afk);
+
+    builder
 }
 
 pub async fn total_time_handler(
@@ -72,7 +56,7 @@ pub async fn total_time_handler(
 ) -> Result<Json<i64>, (StatusCode, Json<String>)> {
     let db = db.lock().await;
 
-    let builder: SummaryQueryBuilder = payload.into();
+    let builder: SummaryQueryBuilder = summary_query_from_input(payload);
     builder
         .execute_total_time(&db)
         .await
@@ -86,7 +70,7 @@ pub async fn summary_by_apps(
 ) -> Result<Json<Vec<GroupedTimeSummary>>, (StatusCode, Json<String>)> {
     let db = db.lock().await;
 
-    let builder: SummaryQueryBuilder = payload.into();
+    let builder: SummaryQueryBuilder = summary_query_from_input(payload);
     builder
         .execute_apps_summary(&db)
         .await
@@ -100,7 +84,7 @@ pub async fn summary_by_projects(
 ) -> Result<Json<Vec<GroupedTimeSummary>>, (StatusCode, Json<String>)> {
     let db = db.lock().await;
 
-    let builder: SummaryQueryBuilder = payload.into();
+    let builder: SummaryQueryBuilder = summary_query_from_input(payload);
     builder
         .execute_projects_summary(&db)
         .await
@@ -114,7 +98,7 @@ pub async fn summary_by_entities(
 ) -> Result<Json<Vec<GroupedTimeSummary>>, (StatusCode, Json<String>)> {
     let db = db.lock().await;
 
-    let builder: SummaryQueryBuilder = payload.into();
+    let builder: SummaryQueryBuilder = summary_query_from_input(payload);
     builder
         .execute_entities_summary(&db)
         .await
@@ -128,7 +112,7 @@ pub async fn summary_by_branches(
 ) -> Result<Json<Vec<GroupedTimeSummary>>, (StatusCode, Json<String>)> {
     let db = db.lock().await;
 
-    let builder: SummaryQueryBuilder = payload.into();
+    let builder: SummaryQueryBuilder = summary_query_from_input(payload);
     builder
         .execute_branches_summary(&db)
         .await
@@ -142,7 +126,7 @@ pub async fn summary_by_activity_types(
 ) -> Result<Json<Vec<GroupedTimeSummary>>, (StatusCode, Json<String>)> {
     let db = db.lock().await;
 
-    let builder: SummaryQueryBuilder = payload.into();
+    let builder: SummaryQueryBuilder = summary_query_from_input(payload);
     builder
         .execute_activity_type_summary(&db)
         .await

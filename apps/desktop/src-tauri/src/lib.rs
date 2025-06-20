@@ -13,6 +13,7 @@ use tracking_service::{DBService, TrackingService};
 
 mod helpers;
 mod monitored_app;
+mod summaries;
 mod sync_service;
 mod trackers;
 mod tracking_service;
@@ -188,6 +189,9 @@ fn make_specta_builder<R: Runtime>() -> tauri_specta::Builder<R> {
             crate::helpers::config::set_theme::<tauri::Wry>,
             crate::helpers::config::set_afk_timeout::<tauri::Wry>,
             crate::helpers::config::set_heartbeat_interval::<tauri::Wry>,
+            crate::summaries::fetch_app_summary,
+            crate::summaries::fetch_projects_summary,
+            crate::summaries::fetch_activity_types_summary,
         ])
         .error_handling(tauri_specta::ErrorHandlingMode::Throw);
 

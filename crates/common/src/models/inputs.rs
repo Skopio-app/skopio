@@ -37,3 +37,16 @@ pub struct AFKEventInput {
     pub afk_end: Option<NaiveDateTime>,
     pub duration: Option<i64>,
 }
+
+#[derive(Debug, Serialize, Deserialize, specta::Type)]
+pub struct SummaryQueryInput {
+    pub start: Option<NaiveDateTime>,
+    pub end: Option<NaiveDateTime>,
+    pub app_names: Option<Vec<String>>,
+    pub project_names: Option<Vec<String>>,
+    pub activity_types: Option<Vec<String>>,
+    pub entity_names: Option<Vec<String>>,
+    pub branch_names: Option<Vec<String>>,
+    pub language_names: Option<Vec<String>>,
+    pub include_afk: bool,
+}
