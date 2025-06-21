@@ -1,6 +1,7 @@
 use chrono::{Datelike, Duration, Local, NaiveDate, NaiveDateTime};
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, Serialize, Deserialize, specta::Type)]
 pub enum TimeBucket {
     Day,
     Week,
@@ -8,7 +9,7 @@ pub enum TimeBucket {
     Hour,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
 pub enum TimeRangePreset {
     Today,
     Yesterday,
@@ -25,7 +26,7 @@ pub enum TimeRangePreset {
     },
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
 pub struct TimeRange {
     start: NaiveDateTime,
     end: NaiveDateTime,

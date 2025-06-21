@@ -1,4 +1,5 @@
 use chrono::NaiveDateTime;
+use common::time::TimeBucket;
 use serde::Serialize;
 
 use crate::DBContext;
@@ -6,6 +7,13 @@ use crate::DBContext;
 #[derive(Debug, Serialize, sqlx::FromRow)]
 pub struct GroupedTimeSummary {
     pub group_key: String,
+    pub total_seconds: i64,
+}
+
+#[derive(Debug, Serialize, sqlx::FromRow)]
+pub struct BucketTimeSummary {
+    pub group_key: String,
+    pub bucket: String,
     pub total_seconds: i64,
 }
 
@@ -20,6 +28,7 @@ pub struct SummaryQueryBuilder {
     language_names: Option<Vec<String>>,
     group_by: Option<String>,
     include_afk: bool,
+    time_bucket: Option<TimeBucket>,
 }
 
 impl SummaryQueryBuilder {
@@ -35,6 +44,7 @@ impl SummaryQueryBuilder {
             language_names: None,
             group_by: None,
             include_afk: false,
+            time_bucket: None,
         }
     }
 
@@ -85,6 +95,11 @@ impl SummaryQueryBuilder {
 
     pub fn include_afk(mut self, include: bool) -> Self {
         self.include_afk = include;
+        self
+    }
+
+    pub fn time_bucket(mut self, bucket: TimeBucket) -> Self {
+        self.time_bucket = Some(bucket);
         self
     }
 
@@ -343,6 +358,115 @@ impl SummaryQueryBuilder {
             .await?;
 
         Ok(result.unwrap_or(0))
+    }
+
+    pub async fn execute_range_summary_with_bucket(
+        &self,
+        db: &DBContext,
+    ) -> Result<Vec<BucketTimeSummary>, sqlx::Error> {
+        let group_key = match self.group_by.as_deref() {
+            Some("app") => "apps.name",
+            Some("project") => "projects.name",
+            Some("language") => "languages.name",
+            Some("branch") => "branches.name",
+            Some("activity_type") => "events.activity_type",
+            Some("entity") => "entities.name",
+            _ => "'Total'",
+        };
+
+        let time_bucket_expr = match self.time_bucket {
+            Some(TimeBucket::Hour) => "strftime('%Y-%m-%d %H:00:00', events.timestamp)",
+            Some(TimeBucket::Day) => "strftime('%Y-%m-%d', events.timestamp)",
+            Some(TimeBucket::Week) => "strftime('%Y-W%W', events.timestamp)",
+            Some(TimeBucket::Month) => "strftime('%Y-%m', events.timestamp)",
+            _ => "'Unbucketed'",
+        };
+
+        let mut base_query = format!(
+            "SELECT {group_key} as group_key, {time_bucket_expr} as bucket, SUM(duration) as total_seconds FROM events \
+            LEFT JOIN apps ON events.app_id = apps.id \
+            LEFT JOIN projects ON events.project_id = projects.id \
+            LEFT JOIN entities ON events.entity_id = entities.id \
+            LEFT JOIN branches ON events.branch_id = branches.id \
+            LEFT JOIN languages ON events.language_id = languages.id WHERE 1=1",
+            group_key = group_key,
+            time_bucket_expr = time_bucket_expr
+        );
+
+        if let Some(start) = self.start {
+            base_query.push_str(" AND events.timestamp >= '");
+            base_query.push_str(&start.to_string());
+            base_query.push('\'');
+        }
+
+        if let Some(end) = self.end {
+            base_query.push_str(" AND events.end_timestamp <= '");
+            base_query.push_str(&end.to_string());
+            base_query.push('\'');
+        }
+
+        if let Some(apps) = &self.app_names {
+            let list = apps
+                .iter()
+                .map(|v| format!("'{}'", v))
+                .collect::<Vec<_>>()
+                .join(", ");
+            base_query.push_str(&format!(" AND apps.name IN ({})", list));
+        }
+
+        if let Some(projects) = &self.project_names {
+            let list = projects
+                .iter()
+                .map(|v| format!("'{}'", v))
+                .collect::<Vec<_>>()
+                .join(", ");
+            base_query.push_str(&format!(" AND projects.name IN ({})", list));
+        }
+
+        if let Some(activity_types) = &self.activity_types {
+            let list = activity_types
+                .iter()
+                .map(|v| format!("'{}'", v))
+                .collect::<Vec<_>>()
+                .join(", ");
+            base_query.push_str(&format!(" AND events.activity_type IN ({})", list));
+        }
+
+        if let Some(entities) = &self.entity_names {
+            let list = entities
+                .iter()
+                .map(|v| format!("'{}'", v))
+                .collect::<Vec<_>>()
+                .join(", ");
+            base_query.push_str(&format!(" AND entities.name IN ({})", list));
+        }
+
+        if let Some(branches) = &self.branch_names {
+            let list = branches
+                .iter()
+                .map(|v| format!("'{}'", v))
+                .collect::<Vec<_>>()
+                .join(", ");
+            base_query.push_str(&format!(" AND branches.name IN ({})", list));
+        }
+
+        if let Some(langs) = &self.language_names {
+            let list = langs
+                .iter()
+                .map(|v| format!("'{}'", v))
+                .collect::<Vec<_>>()
+                .join(", ");
+            base_query.push_str(&format!(" AND languages.name IN ({})", list));
+        }
+
+        base_query.push_str(" GROUP BY bucket, ");
+        base_query.push_str(group_key);
+
+        let records = sqlx::query_as::<_, BucketTimeSummary>(&base_query)
+            .fetch_all(db.pool())
+            .await?;
+
+        Ok(records)
     }
 }
 

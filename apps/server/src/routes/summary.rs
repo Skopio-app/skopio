@@ -1,9 +1,12 @@
 use std::sync::Arc;
 
 use axum::{extract::State, http::StatusCode, routing::post, Json, Router};
-use common::models::inputs::SummaryQueryInput;
+use common::{
+    models::inputs::{BucketedSummaryInput, SummaryQueryInput},
+    time::TimeRange,
+};
 use db::{
-    server::summary::{GroupedTimeSummary, SummaryQueryBuilder},
+    server::summary::{BucketTimeSummary, GroupedTimeSummary, SummaryQueryBuilder},
     DBContext,
 };
 use tokio::sync::Mutex;
@@ -134,6 +137,70 @@ pub async fn summary_by_activity_types(
         .map_err(error_response)
 }
 
+pub async fn get_bucketed_summary(
+    State(db): State<Arc<Mutex<DBContext>>>,
+    Json(payload): Json<BucketedSummaryInput>,
+) -> Result<Json<Vec<BucketTimeSummary>>, (StatusCode, Json<String>)> {
+    let db = db.lock().await;
+
+    let range = TimeRange::from(payload.preset);
+
+    let builder = SummaryQueryBuilder::default()
+        .start(range.start())
+        .end(range.end())
+        .time_bucket(range.bucket())
+        .include_afk(payload.include_afk);
+
+    let builder = if let Some(names) = payload.app_names {
+        builder.app_names(names)
+    } else {
+        builder
+    };
+
+    let builder = if let Some(names) = payload.project_names {
+        builder.project_names(names)
+    } else {
+        builder
+    };
+
+    let builder = if let Some(names) = payload.entity_names {
+        builder.entity_names(names)
+    } else {
+        builder
+    };
+
+    let builder = if let Some(names) = payload.activity_types {
+        builder.activity_types(names)
+    } else {
+        builder
+    };
+
+    let builder = if let Some(names) = payload.branch_names {
+        builder.branch_names(names)
+    } else {
+        builder
+    };
+
+    let builder = if let Some(names) = payload.language_names {
+        builder.language_names(names)
+    } else {
+        builder
+    };
+
+    let builder = if let Some(group_by) = &payload.group_by {
+        builder.group_by(group_by)
+    } else {
+        builder
+    };
+
+    let records = builder
+        .execute_range_summary_with_bucket(&db)
+        .await
+        .map_err(error_response)?;
+
+    Ok(Json(records))
+}
+
 pub fn summary_routes(db: Arc<Mutex<DBContext>>) -> Router {
     Router::new()
         .route("/summary/total-time", post(total_time_handler))
@@ -142,5 +209,6 @@ pub fn summary_routes(db: Arc<Mutex<DBContext>>) -> Router {
         .route("/summary/entities", post(summary_by_entities))
         .route("/summary/branches", post(summary_by_branches))
         .route("/summary/activity-types", post(summary_by_activity_types))
+        .route("/summary/buckets", post(get_bucketed_summary))
         .with_state(db)
 }

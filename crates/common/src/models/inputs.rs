@@ -1,6 +1,8 @@
 use chrono::{DateTime, NaiveDateTime, Utc};
 use serde::{Deserialize, Serialize};
 
+use crate::time::TimeRangePreset;
+
 #[derive(Serialize, Deserialize, Debug)]
 pub struct EventInput {
     pub timestamp: Option<NaiveDateTime>,
@@ -55,5 +57,25 @@ pub struct SummaryQueryInput {
     #[specta(optional)]
     pub language_names: Option<Vec<String>>,
     #[specta(optional)]
+    pub include_afk: bool,
+}
+
+// #[derive(specta::Type)]
+// pub enum MyCustomType {
+//     VariantOne,
+//     VariantTwo(String, i32),
+//     VariantThree { name: String, age: i32 },
+// }
+
+#[derive(Debug, Serialize, Deserialize, specta::Type)]
+pub struct BucketedSummaryInput {
+    pub preset: TimeRangePreset,
+    pub app_names: Option<Vec<String>>,
+    pub project_names: Option<Vec<String>>,
+    pub entity_names: Option<Vec<String>>,
+    pub activity_types: Option<Vec<String>>,
+    pub branch_names: Option<Vec<String>>,
+    pub language_names: Option<Vec<String>>,
+    pub group_by: Option<String>,
     pub include_afk: bool,
 }

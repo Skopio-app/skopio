@@ -9,5 +9,4 @@ pub mod languages;
 pub mod projects;
 pub mod summary;
 pub mod tags;
-pub mod utils;
 pub mod yearly_summaries;

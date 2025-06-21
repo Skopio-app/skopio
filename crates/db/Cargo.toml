@@ -16,3 +16,4 @@ chrono = { workspace = true, features = ["serde"] }
 serde = { workspace = true, features = ["derive"] }
 sqlx = { workspace = true, features = [ "sqlite", "runtime-tokio", "tls-native-tls", "chrono", "macros", "migrate", "derive" ] }
 log = { workspace = true }
+common = { path = "../common"}
