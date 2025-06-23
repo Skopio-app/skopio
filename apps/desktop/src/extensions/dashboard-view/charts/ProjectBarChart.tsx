@@ -1,6 +1,7 @@
 import { ResponsiveBar } from "@nivo/bar";
-import { useMemo } from "react";
+import { useMemo, useRef, useState } from "react";
 import { schemeCategory10 } from "d3-scale-chromatic";
+import ChartTooltipPortal from "../ChartTooltipPortal";
 interface ProjectBarChartProps {
   data: {
     label: string;
@@ -34,6 +35,12 @@ const ProjectBarChart: React.FC<ProjectBarChartProps> = ({
   keys,
   bucketLabel = "Time",
 }) => {
+  const [tooltip, setTooltip] = useState<React.ReactNode>(null);
+  const [mousePos, setMousePos] = useState<{ x: number; y: number } | null>(
+    null,
+  );
+  const containerRef = useRef<HTMLDivElement>(null);
+
   const sortedkeys = useMemo(() => {
     const totals: Record<string, number> = {};
 
@@ -55,7 +62,25 @@ const ProjectBarChart: React.FC<ProjectBarChartProps> = ({
   }, [sortedkeys]);
 
   return (
-    <div className="h-[400px] w-full">
+    <div
+      ref={containerRef}
+      className="h-[400px] w-full relative"
+      onMouseMove={(e) => {
+        if (!containerRef.current) return;
+        const rect = containerRef.current?.getBoundingClientRect();
+
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+
+        setMousePos({
+          x,
+          y,
+        });
+      }}
+      onMouseLeave={() => {
+        setTooltip(null);
+      }}
+    >
       <ResponsiveBar
         data={data}
         keys={sortedkeys}
@@ -90,7 +115,8 @@ const ProjectBarChart: React.FC<ProjectBarChartProps> = ({
               return value > 0 ? { key, value: value } : null;
             })
             .filter(Boolean) as { key: string; value: number }[];
-          return (
+
+          const content = (
             <div
               className="rounded-md border border-gray-300 bg-white px-4 py-3 text-sm shadow-lg text-gray-800 min-w-[180px] max-w-[300px] whitespace-nowrap overflow-visible"
               style={{
@@ -112,6 +138,19 @@ const ProjectBarChart: React.FC<ProjectBarChartProps> = ({
               ))}
             </div>
           );
+
+          setTooltip(
+            <ChartTooltipPortal
+              style={{
+                top: mousePos?.y ?? 0 + 20,
+                left: mousePos?.x ?? 0 + 10,
+              }}
+            >
+              {content}
+            </ChartTooltipPortal>,
+          );
+
+          return null;
         }}
         label={""}
         labelSkipWidth={12}
@@ -125,6 +164,7 @@ const ProjectBarChart: React.FC<ProjectBarChartProps> = ({
         role="application"
         ariaLabel="Time bucket project summary chart"
       />
+      {tooltip}
     </div>
   );
 };
