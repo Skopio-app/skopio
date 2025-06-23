@@ -132,7 +132,7 @@ export const formatDuration = (seconds: number): string => {
   if (hrs > 0) {
     return `${hrStr} ${minStr} ${secStr}`;
   } else if (mins > 0) {
-    return `${mins} ${secStr}`;
+    return `${minStr} ${secStr}`;
   } else {
     return `${secStr}`;
   }

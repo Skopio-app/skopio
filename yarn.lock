@@ -882,7 +882,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@nivo/colors@npm:0.99.0":
+"@nivo/colors@npm:0.99.0, @nivo/colors@npm:^0.99.0":
   version: 0.99.0
   resolution: "@nivo/colors@npm:0.99.0"
   dependencies:
@@ -1975,6 +1975,7 @@ __metadata:
   dependencies:
     "@eslint/js": "npm:^9.17.0"
     "@nivo/bar": "npm:^0.99.0"
+    "@nivo/colors": "npm:^0.99.0"
     "@nivo/core": "npm:^0.99.0"
     "@nivo/pie": "npm:^0.99.0"
     "@radix-ui/react-dialog": "npm:^1.1.14"
@@ -1987,7 +1988,6 @@ __metadata:
     "@tauri-apps/api": "npm:^2.5.0"
     "@tauri-apps/cli": "npm:^2.1.0"
     "@tauri-apps/plugin-dialog": "npm:^2.2.2"
-    "@types/d3-scale-chromatic": "npm:^3"
     "@types/lodash": "npm:^4.17.17"
     "@types/node": "npm:^22.10.2"
     "@types/react": "npm:^18.3.18"
@@ -1995,7 +1995,6 @@ __metadata:
     "@types/react-grid-layout": "npm:^1"
     "@vitejs/plugin-react-swc": "npm:^3.5.0"
     color: "npm:^5.0.0"
-    d3-scale-chromatic: "npm:^3.1.0"
     date-fns: "npm:^4.1.0"
     eslint: "npm:^9.17.0"
     eslint-plugin-react-hooks: "npm:^5.0.0"
@@ -2577,7 +2576,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/d3-scale-chromatic@npm:^3, @types/d3-scale-chromatic@npm:^3.0.0":
+"@types/d3-scale-chromatic@npm:^3.0.0":
   version: 3.1.0
   resolution: "@types/d3-scale-chromatic@npm:3.1.0"
   checksum: 10c0/93c564e02d2e97a048e18fe8054e4a935335da6ab75a56c3df197beaa87e69122eef0dfbeb7794d4a444a00e52e3123514ee27cec084bd21f6425b7037828cc2
@@ -3259,7 +3258,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"d3-scale-chromatic@npm:^3.0.0, d3-scale-chromatic@npm:^3.1.0":
+"d3-scale-chromatic@npm:^3.0.0":
   version: 3.1.0
   resolution: "d3-scale-chromatic@npm:3.1.0"
   dependencies:

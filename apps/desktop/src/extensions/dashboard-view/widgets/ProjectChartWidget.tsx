@@ -8,7 +8,6 @@ import {
   commands,
 } from "../../../types/tauri.gen";
 import { format, parseISO } from "date-fns";
-import { toHours } from "../dateRanges";
 
 type BarChartData = {
   label: string;
@@ -28,7 +27,6 @@ const ProjectChartWidget = () => {
         include_afk: false,
       };
       const result = await commands.fetchBucketedSummary(input);
-      console.log("The result: ", result);
 
       if (!Array.isArray(result)) return;
 
@@ -42,7 +40,7 @@ const ProjectChartWidget = () => {
       } of result as BucketTimeSummary[]) {
         const label = format(parseISO(bucket), "MMM d");
         if (!grouped[label]) grouped[label] = {};
-        grouped[label][group_key] = toHours(total_seconds);
+        grouped[label][group_key] = total_seconds;
         allKeys.add(group_key);
       }
 
@@ -52,7 +50,6 @@ const ProjectChartWidget = () => {
           ...groupTotals,
         }),
       );
-      console.log("The data: ", chartData);
       setData(chartData);
       setKeys(Array.from(allKeys));
     };

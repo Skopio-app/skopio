@@ -1,37 +1,55 @@
+import { useEffect, useState } from "react";
 import AppPieChart from "../charts/AppPieChart";
+import { useDashboardFilter } from "../stores/useDashboardFilter";
 import WidgetCard from "../WidgetCard";
+import { BucketedSummaryInput, commands } from "../../../types/tauri.gen";
 
-const mockData = [
-  {
-    id: "Code",
-    label: "Code",
-    value: 20,
-    color: "hsl(333, 70%, 50%)",
-  },
-  {
-    id: "desktop",
-    label: "desktop",
-    value: 35,
-    color: "hsl(352, 70%, 50%)",
-  },
-  {
-    id: "iPhone Mirroring",
-    label: "iPhone Mirroring",
-    value: 15,
-    color: "hsl(240, 70%, 50%)",
-  },
-  {
-    id: "Activity Monitor",
-    label: "Activity Monitor",
-    value: 62,
-    color: "hsl(202, 70%, 50%)",
-  },
-];
+type PieChartData = {
+  id: string;
+  label: string;
+  value: number;
+};
 
 const AppPieChartWidget = () => {
+  const { preset } = useDashboardFilter();
+  const [data, setData] = useState<PieChartData[]>([]);
+
+  useEffect(() => {
+    const run = async () => {
+      const input: BucketedSummaryInput = {
+        preset,
+        group_by: "app",
+        include_afk: false,
+      };
+      const result = await commands.fetchBucketedSummary(input);
+      console.log("The result: ", result);
+
+      if (!Array.isArray(result)) return;
+
+      const totals: Record<string, number> = {};
+
+      for (const { group_key, total_seconds } of result) {
+        if (!totals[group_key]) totals[group_key] = 0;
+        totals[group_key] += total_seconds;
+      }
+
+      console.log("totals: ", totals);
+      const chartData: PieChartData[] = Object.entries(totals).map(
+        ([app, seconds]) => ({
+          id: app,
+          label: app,
+          value: seconds,
+        }),
+      );
+      setData(chartData);
+    };
+
+    run();
+  }, [preset]);
+
   return (
     <WidgetCard title="Apps" onRemove={() => {}}>
-      <AppPieChart data={mockData} />
+      <AppPieChart data={data} />
     </WidgetCard>
   );
 };
