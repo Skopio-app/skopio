@@ -1,6 +1,6 @@
 use std::{sync::LazyLock, time::Duration};
 
-use common::models::inputs::SummaryQueryInput;
+use common::models::inputs::{BucketedSummaryInput, SummaryQueryInput};
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 
@@ -13,10 +13,17 @@ static HTTP_CLIENT: LazyLock<Client> = LazyLock::new(|| {
 
 const SERVER_URL: &str = "http://localhost:8080";
 
-// TODO: Find a way to reuse this struct
+// TODO: Find a way to reuse these structs
 #[derive(Serialize, Deserialize, specta::Type)]
 pub struct GroupedTimeSummary {
     pub group_key: String,
+    pub total_seconds: i64,
+}
+
+#[derive(Serialize, Deserialize, specta::Type)]
+pub struct BucketTimeSummary {
+    pub group_key: String,
+    pub bucket: String,
     pub total_seconds: i64,
 }
 
@@ -87,6 +94,32 @@ pub async fn fetch_activity_types_summary(
     if res.status().is_success() {
         let data = res
             .json::<Vec<GroupedTimeSummary>>()
+            .await
+            .map_err(|e| e.to_string())?;
+        Ok(data)
+    } else {
+        Err(res
+            .text()
+            .await
+            .unwrap_or_else(|_| "Unknown error".to_string()))
+    }
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn fetch_bucketed_summary(
+    query: BucketedSummaryInput,
+) -> Result<Vec<BucketTimeSummary>, String> {
+    let res = HTTP_CLIENT
+        .post(format!("{}/summary/buckets", SERVER_URL))
+        .json(&query)
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
+
+    if res.status().is_success() {
+        let data = res
+            .json::<Vec<BucketTimeSummary>>()
             .await
             .map_err(|e| e.to_string())?;
         Ok(data)

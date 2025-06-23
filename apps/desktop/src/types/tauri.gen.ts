@@ -33,6 +33,11 @@ export const commands = {
   ): Promise<GroupedTimeSummary[]> {
     return await TAURI_INVOKE("fetch_activity_types_summary", { query });
   },
+  async fetchBucketedSummary(
+    query: BucketedSummaryInput,
+  ): Promise<BucketTimeSummary[]> {
+    return await TAURI_INVOKE("fetch_bucketed_summary", { query });
+  },
 };
 
 /** user-defined events **/
@@ -48,6 +53,22 @@ export type AppConfig = {
   flush_interval: number;
   sync_interval: number;
 };
+export type BucketTimeSummary = {
+  group_key: string;
+  bucket: string;
+  total_seconds: number;
+};
+export type BucketedSummaryInput = {
+  preset: TimeRangePreset;
+  app_names?: string[] | null;
+  project_names?: string[] | null;
+  entity_names?: string[] | null;
+  activity_types?: string[] | null;
+  branch_names?: string[] | null;
+  language_names?: string[] | null;
+  group_by?: string | null;
+  include_afk: boolean;
+};
 export type GroupedTimeSummary = { group_key: string; total_seconds: number };
 export type SummaryQueryInput = {
   start: string | null;
@@ -61,6 +82,17 @@ export type SummaryQueryInput = {
   include_afk?: boolean;
 };
 export type Theme = "Light" | "Dark" | "System";
+export type TimeBucket = "Day" | "Week" | "Month" | "Hour";
+export type TimeRangePreset =
+  | "Today"
+  | "Yesterday"
+  | "ThisWeek"
+  | "LastWeek"
+  | "ThisMonth"
+  | "LastMonth"
+  | { LastNDays: number }
+  | { LastNWeeks: number }
+  | { Custom: { start: string; end: string; bucket: TimeBucket } };
 
 /** tauri-specta globals **/
 

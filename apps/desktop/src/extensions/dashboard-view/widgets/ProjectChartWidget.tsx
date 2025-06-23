@@ -2,58 +2,63 @@ import { useEffect, useState } from "react";
 import ProjectBarChart from "../charts/ProjectBarChart";
 import { useDashboardFilter } from "../stores/useDashboardFilter";
 import WidgetCard from "../WidgetCard";
-import { commands, SummaryQueryInput } from "../../../types/tauri.gen";
-import { eachDayOfInterval, format } from "date-fns";
+import {
+  BucketedSummaryInput,
+  BucketTimeSummary,
+  commands,
+} from "../../../types/tauri.gen";
+import { format, parseISO } from "date-fns";
+import { toHours } from "../dateRanges";
 
 type BarChartData = {
-  week: string;
+  label: string;
   [project: string]: number | string;
 };
 
 const ProjectChartWidget = () => {
-  const { startDate, endDate } = useDashboardFilter();
+  const { preset } = useDashboardFilter();
   const [data, setData] = useState<BarChartData[]>([]);
   const [keys, setKeys] = useState<string[]>([]);
 
   useEffect(() => {
     const run = async () => {
-      const query: SummaryQueryInput = {
-        start: startDate.toISOString(),
-        end: endDate.toISOString(),
+      const input: BucketedSummaryInput = {
+        preset: preset,
+        group_by: "project",
         include_afk: false,
       };
-      console.log("[query]", query);
-
-      const result = await commands.fetchProjectsSummary(query);
-
-      console.log("[result]", result);
+      const result = await commands.fetchBucketedSummary(input);
+      console.log("The result: ", result);
 
       if (!Array.isArray(result)) return;
 
-      const days = eachDayOfInterval({ start: startDate, end: endDate });
-      const dateLabels = days.map((d) => format(d, "MMM d"));
+      const grouped: Record<string, Record<string, number>> = {};
+      const allKeys = new Set<string>();
 
-      const groupByProject: Record<string, number> = {};
-      for (const item of result) {
-        groupByProject[item.group_key] = item.total_seconds;
+      for (const {
+        group_key,
+        bucket,
+        total_seconds,
+      } of result as BucketTimeSummary[]) {
+        const label = format(parseISO(bucket), "MMM d");
+        if (!grouped[label]) grouped[label] = {};
+        grouped[label][group_key] = toHours(total_seconds);
+        allKeys.add(group_key);
       }
 
-      const chartData: BarChartData[] = [
-        {
-          week:
-            dateLabels.length === 1
-              ? dateLabels[0]
-              : `${dateLabels[0]} → ${dateLabels.at(-1)}`,
-          ...groupByProject,
-        },
-      ];
-
+      const chartData: BarChartData[] = Object.entries(grouped).map(
+        ([label, groupTotals]) => ({
+          label,
+          ...groupTotals,
+        }),
+      );
+      console.log("The data: ", chartData);
       setData(chartData);
-      setKeys(Object.keys(groupByProject));
+      setKeys(Array.from(allKeys));
     };
 
     run();
-  }, [startDate, endDate]);
+  }, [preset]);
 
   return (
     <WidgetCard title="Projects" onRemove={() => {}}>

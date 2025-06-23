@@ -60,22 +60,22 @@ pub struct SummaryQueryInput {
     pub include_afk: bool,
 }
 
-// #[derive(specta::Type)]
-// pub enum MyCustomType {
-//     VariantOne,
-//     VariantTwo(String, i32),
-//     VariantThree { name: String, age: i32 },
-// }
-
 #[derive(Debug, Serialize, Deserialize, specta::Type)]
 pub struct BucketedSummaryInput {
     pub preset: TimeRangePreset,
+    #[specta(optional)]
     pub app_names: Option<Vec<String>>,
+    #[specta(optional)]
     pub project_names: Option<Vec<String>>,
+    #[specta(optional)]
     pub entity_names: Option<Vec<String>>,
+    #[specta(optional)]
     pub activity_types: Option<Vec<String>>,
+    #[specta(optional)]
     pub branch_names: Option<Vec<String>>,
+    #[specta(optional)]
     pub language_names: Option<Vec<String>>,
+    #[specta(optional)]
     pub group_by: Option<String>,
     pub include_afk: bool,
 }

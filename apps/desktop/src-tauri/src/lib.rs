@@ -192,6 +192,7 @@ fn make_specta_builder<R: Runtime>() -> tauri_specta::Builder<R> {
             crate::summaries::fetch_app_summary,
             crate::summaries::fetch_projects_summary,
             crate::summaries::fetch_activity_types_summary,
+            crate::summaries::fetch_bucketed_summary,
         ])
         .error_handling(tauri_specta::ErrorHandlingMode::Throw);
 

@@ -1,15 +1,12 @@
 import { create } from "zustand";
+import { TimeRangePreset } from "../../../types/tauri.gen";
 
 interface DashboardFilterState {
-  startDate: Date;
-  endDate: Date;
-  setStartDate: (date: Date) => void;
-  setEndDate: (date: Date) => void;
+  preset: TimeRangePreset;
+  setPreset: (preset: TimeRangePreset) => void;
 }
 
 export const useDashboardFilter = create<DashboardFilterState>((set) => ({
-  startDate: new Date(),
-  endDate: new Date(),
-  setStartDate: (startDate) => set({ startDate }),
-  setEndDate: (endDate) => set({ endDate }),
+  preset: "Today",
+  setPreset: (preset) => set({ preset }),
 }));

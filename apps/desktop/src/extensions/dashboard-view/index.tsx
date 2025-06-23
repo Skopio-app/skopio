@@ -4,7 +4,13 @@ import { addDays, format, startOfDay } from "date-fns";
 import { useEffect, useMemo, useState } from "react";
 import { XIcon } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
-import { DATE_RANGE_LABELS, DateRangeType, getRangeDates } from "./dateRanges";
+import {
+  DATE_RANGE_LABELS,
+  DateRangeType,
+  formatDuration,
+  getRangeDates,
+  mapRangeToPreset,
+} from "./dateRanges";
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
 import { Layouts, Responsive, WidthProvider } from "react-grid-layout";
@@ -55,8 +61,7 @@ const DashboardView = () => {
 
   useEffect(() => {
     useDashboardFilter.setState({
-      startDate,
-      endDate,
+      preset: mapRangeToPreset(selectedRange, customStart, customEnd),
     });
   }, [startDate, endDate]);
 
@@ -66,24 +71,6 @@ const DashboardView = () => {
       ? format(startDate, "PPP")
       : `${format(startDate, "PPP")} - ${format(endDate, "PPP")}`;
   }, [startDate, endDate]);
-
-  const formatDuration = (seconds: number): string => {
-    const hrs = Math.floor(seconds / 3600);
-    const mins = Math.floor((seconds % 3600) / 60);
-    const secs = seconds % 60;
-
-    const padded = (n: number) => String(n).padStart(2, "0");
-    const hrStr = `${hrs}h`;
-    const minStr = `${padded(mins)}m`;
-    const secStr = `${padded(secs)}s`;
-    if (hrs > 0) {
-      return `${hrStr} ${minStr} ${secStr}`;
-    } else if (mins > 0) {
-      return `${mins} ${secStr}`;
-    } else {
-      return `${secStr}`;
-    }
-  };
 
   const timeLogged = 4567;
   const formattedDuration = formatDuration(timeLogged);
