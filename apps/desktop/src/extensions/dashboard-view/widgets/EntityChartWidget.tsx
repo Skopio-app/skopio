@@ -1,16 +1,16 @@
 import { useEffect, useState } from "react";
-import StackedBarChart from "../charts/StackedBarChart";
 import { useDashboardFilter } from "../stores/useDashboardFilter";
-import WidgetCard from "../WidgetCard";
+import { BarChartData } from "../types";
 import {
   BucketedSummaryInput,
   BucketTimeSummary,
   commands,
 } from "../../../types/tauri.gen";
 import { format, parseISO } from "date-fns";
-import { BarChartData } from "../types";
+import WidgetCard from "../WidgetCard";
+import StackedBarChart from "../charts/StackedBarChart";
 
-const ProjectChartWidget = () => {
+const EntityChartWidget = () => {
   const { preset } = useDashboardFilter();
   const [data, setData] = useState<BarChartData[]>([]);
   const [keys, setKeys] = useState<string[]>([]);
@@ -19,7 +19,7 @@ const ProjectChartWidget = () => {
     const run = async () => {
       const input: BucketedSummaryInput = {
         preset,
-        group_by: "project",
+        group_by: "entity",
         include_afk: false,
       };
       const result = await commands.fetchBucketedSummary(input);
@@ -54,10 +54,10 @@ const ProjectChartWidget = () => {
   }, [preset]);
 
   return (
-    <WidgetCard title="Projects" onRemove={() => {}}>
+    <WidgetCard title="Entities" onRemove={() => {}}>
       <StackedBarChart data={data} keys={keys} />
     </WidgetCard>
   );
 };
 
-export default ProjectChartWidget;
+export default EntityChartWidget;

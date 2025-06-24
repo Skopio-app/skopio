@@ -3,3 +3,8 @@ export type PieChartData = {
   label: string;
   value: number;
 };
+
+export type BarChartData = {
+  label: string;
+  [value: string]: number | string;
+};

@@ -18,6 +18,8 @@ import ProjectChartWidget from "./widgets/ProjectChartWidget";
 import AppPieChartWidget from "./widgets/AppPieChartWidget";
 import { useDashboardFilter } from "./stores/useDashboardFilter";
 import LanguagePieChartWidget from "./widgets/LanguagePieChartWidget";
+import CategoryChartWidget from "./widgets/CategoryChartWidget";
+import EntityChartWidget from "./widgets/EntityChartWidget";
 
 const ResponsiveGridLayout = WidthProvider(
   Responsive,
@@ -78,9 +80,11 @@ const DashboardView = () => {
 
   const layouts: Layouts = {
     lg: [
-      { i: "weekly-project", x: 0, y: 0, w: 6, h: 4 },
-      { i: "app-duration", x: 1, y: 0, w: 4, h: 6 },
-      { i: "languages", x: 1, y: 0, w: 4, h: 6 },
+      { i: "projects", x: 0, y: 0, w: 6, h: 3 },
+      { i: "apps", x: 6, y: 0, w: 6, h: 3 },
+      { i: "languages", x: 0, y: 0, w: 6, h: 3 },
+      { i: "categories", x: 6, y: 1, w: 6, h: 3 },
+      { i: "entities", x: 3, y: 2, w: 7, h: 3 },
     ],
   };
 
@@ -218,14 +222,20 @@ const DashboardView = () => {
         isDraggable
         draggableHandle="#widget-drag-handle"
       >
-        <div key="weekly-project">
+        <div key="projects">
           <ProjectChartWidget />
         </div>
-        <div key="app-duration">
+        <div key="apps">
           <AppPieChartWidget />
         </div>
         <div key="languages">
           <LanguagePieChartWidget />
+        </div>
+        <div key="categories">
+          <CategoryChartWidget />
+        </div>
+        <div key="entities">
+          <EntityChartWidget />
         </div>
       </ResponsiveGridLayout>
     </main>
