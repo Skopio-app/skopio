@@ -3,6 +3,7 @@ import {
   endOfDay,
   endOfMonth,
   endOfWeek,
+  format,
   startOfDay,
   startOfMonth,
   startOfWeek,
@@ -11,6 +12,30 @@ import {
   subWeeks,
 } from "date-fns";
 import { TimeBucket, TimeRangePreset } from "../../types/tauri.gen";
+
+/**
+ * Converts a JavaScript `Date` object to a naive datetime string in the format
+ * `YYYY-MM-DDTHH:mm:ss`, which is compatible with Rust's `chrono::NaiveDateTime`.
+ *
+ * This format:
+ * - Preserves the local date and time (does not convert to UTC)
+ * - Omits timezone information
+ * - Uses a `'T'` separator between date and time for JSON compatibility
+ * - Is safe to pass to Tauri IPC commands and compatible with Serde parsing
+ *
+ * Example:
+ * ```ts
+ * const date = new Date(2025, 5, 24, 14, 30, 0); // June 24, 2025, 14:30:00
+ * const naive = toNaiveDateTime(date);
+ * console.log(naive); // "2025-06-24T14:30:00"
+ * ```
+ *
+ * @param date - A valid JavaScript `Date` object
+ * @returns A string in the format `"YYYY-MM-DDTHH:mm:ss"` representing the naive datetime
+ */
+const toNaiveDateTime = (date: Date): string => {
+  return format(date, "yyyy-MM-dd'T'HH:mm:ss");
+};
 
 export enum DateRangeType {
   Today = "Today",
@@ -103,8 +128,8 @@ export const mapRangeToPreset = (
 
       return {
         Custom: {
-          start: start.toISOString(),
-          end: end.toISOString(),
+          start: toNaiveDateTime(start),
+          end: toNaiveDateTime(end),
           bucket,
         },
       };
@@ -112,8 +137,8 @@ export const mapRangeToPreset = (
     default:
       return {
         Custom: {
-          start: start.toISOString(),
-          end: end.toISOString(),
+          start: toNaiveDateTime(start),
+          end: toNaiveDateTime(end),
           bucket: "Day",
         },
       };

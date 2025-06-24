@@ -1,4 +1,4 @@
-use chrono::{Datelike, Duration, Local, NaiveDate, NaiveDateTime};
+use chrono::{Datelike, Duration, NaiveDate, NaiveDateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, specta::Type)]
@@ -35,7 +35,7 @@ pub struct TimeRange {
 
 impl From<TimeRangePreset> for TimeRange {
     fn from(preset: TimeRangePreset) -> Self {
-        let now = Local::now().naive_local().date();
+        let now = Utc::now().naive_utc().date();
 
         match preset {
             TimeRangePreset::Today => {
