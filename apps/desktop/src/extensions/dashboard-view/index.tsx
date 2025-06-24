@@ -1,8 +1,5 @@
-import * as Dialog from "@radix-ui/react-dialog";
-import { Calendar, cn } from "@skopio/ui";
 import { addDays, format, startOfDay } from "date-fns";
 import { useEffect, useMemo, useState } from "react";
-import { XIcon } from "lucide-react";
 import { useSearchParams } from "react-router-dom";
 import {
   DATE_RANGE_LABELS,
@@ -20,6 +17,8 @@ import { useDashboardFilter } from "./stores/useDashboardFilter";
 import LanguagePieChartWidget from "./widgets/LanguagePieChartWidget";
 import CategoryChartWidget from "./widgets/CategoryChartWidget";
 import EntityChartWidget from "./widgets/EntityChartWidget";
+import RangeSelectionDialog from "./components/RangeSelectionDialog";
+import { commands, SummaryQueryInput } from "../../types/tauri.gen";
 
 const ResponsiveGridLayout = WidthProvider(
   Responsive,
@@ -30,7 +29,7 @@ const DashboardView = () => {
   const [customEnd, setCustomEnd] = useState<Date>(new Date());
 
   const [pendingStart, setPendingStart] = useState<Date>(customStart);
-  const [pendingEnd, setPendindEnd] = useState<Date>(customEnd);
+  const [pendingEnd, setPendingEnd] = useState<Date>(customEnd);
 
   const [searchParams, setSearchParams] = useSearchParams();
   const paramRange = searchParams.get("range") as DateRangeType;
@@ -39,6 +38,7 @@ const DashboardView = () => {
       ? paramRange
       : DateRangeType.Today,
   );
+  const [timeLogged, setTimeLogged] = useState<number>(0);
 
   const isCustom = selectedRange === DateRangeType.Custom;
 
@@ -75,7 +75,29 @@ const DashboardView = () => {
       : `${format(startDate, "PPP")} - ${format(endDate, "PPP")}`;
   }, [startDate, endDate]);
 
-  const timeLogged = 4567;
+  useEffect(() => {
+    const run = async () => {
+      if (!startDate || !endDate) {
+        console.warn("Missing start or end date!");
+        return;
+      }
+      const input: SummaryQueryInput = {
+        start: startDate.toISOString(),
+        end: endDate.toISOString(),
+        include_afk: false,
+      };
+
+      try {
+        const time = await commands.fetchTotalTime(input);
+        setTimeLogged(time);
+      } catch (err) {
+        console.error("Error fetching total time: ", err);
+      }
+    };
+
+    run();
+  }, [startDate, endDate]);
+
   const formattedDuration = formatDuration(timeLogged);
 
   const layouts: Layouts = {
@@ -98,116 +120,19 @@ const DashboardView = () => {
       <p className="text-lg">
         <span className="text-gray-700 font-medium">
           Time logged for{" "}
-          <Dialog.Root>
-            <Dialog.Trigger asChild>
-              <button className="underline decoration-dotted underline-offset-4 text-blue-600 hover:text-blue-800">
-                {selectedRange.toLowerCase()}
-              </button>
-            </Dialog.Trigger>
-
-            <Dialog.Portal>
-              <Dialog.Overlay className="fixed inset-0 bg-black/50 z-50" />
-              <Dialog.Content
-                className={cn(
-                  "fixed top-1/2 left-1/2 z-50 w-full translate-x-[-50%] translate-y-[-50%] rounded-lg border border-border bg-white p-6 shadow-lg",
-                  "grid grid-cols-[auto_1fr] gap-x-8 items-start",
-                  isCustom ? "max-w-4xl" : "max-w-xl",
-                )}
-              >
-                <div className="flex flex-col gap-2 min-w-[180px] flex-shrink-0">
-                  <Dialog.Title className="text-lg font-semibold text-gray-800 mb-2">
-                    Select a date range
-                  </Dialog.Title>
-                  <Dialog.Description className="text-sm text-muted-foreground sr-only">
-                    Choose from a predefined range or pick a custom start and
-                    end date.
-                  </Dialog.Description>
-
-                  {DATE_RANGE_LABELS.map((range) => (
-                    <button
-                      key={range}
-                      className={cn(
-                        "text-left w-full px-3 py-1.5 rounded-md hover:bg-muted text-gray-700",
-                        selectedRange === range &&
-                          "bg-muted font-semibold text-gray-900",
-                      )}
-                      onClick={() => setSelectedRange(range)}
-                    >
-                      {range}
-                    </button>
-                  ))}
-                </div>
-
-                {isCustom && (
-                  <div className="flex flex-col gap-4">
-                    {" "}
-                    <div className="flex gap-6">
-                      <div className="space-y-2">
-                        <label className="block text-sm font-medium text-gray-700 mb-2 mt-4">
-                          Start Date
-                        </label>
-                        <Calendar
-                          mode="single"
-                          className="rounded-md border shadow-sm p-6"
-                          selected={pendingStart}
-                          onSelect={(date) => date && setPendingStart(date)}
-                          captionLayout="dropdown"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <label className="block text-sm font-medium text-gray-700 mb-2 mt-4">
-                          End Date
-                        </label>
-                        <Calendar
-                          mode="single"
-                          className="rounded-md border shadow-sm p-6"
-                          selected={pendingEnd}
-                          onSelect={(date) => date && setPendindEnd(date)}
-                          captionLayout="dropdown"
-                          hidden={{
-                            before: pendingStart,
-                            after: addDays(startOfDay(pendingStart), 30),
-                          }}
-                        />
-                      </div>
-                    </div>
-                    <div>
-                      <button
-                        disabled={pendingStart > pendingEnd}
-                        onClick={() => {
-                          setCustomStart(pendingStart);
-                          setCustomEnd(pendingEnd);
-                          const params = new URLSearchParams(searchParams);
-                          params.set("range", DateRangeType.Custom);
-                          setSearchParams(params, { replace: true });
-                        }}
-                        className={cn(
-                          "mt-2 inline-block px-4 py-2 rounded-md font-medium transition-all text-white",
-                          pendingStart > pendingEnd
-                            ? "bg-red-400 cursor-not-allowed"
-                            : "bg-blue-600 hover:bg-blue-700",
-                        )}
-                      >
-                        Apply
-                      </button>
-                      {pendingStart > pendingEnd && (
-                        <p className="text-sm text-red-500 mt-1">
-                          Start date must be before and equal to end date.
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                )}
-
-                <Dialog.Close asChild>
-                  <button className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 rounded-full p-1 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500">
-                    <XIcon className="w-5 h-5" />
-                    <span className="sr-only">Close</span>
-                  </button>
-                </Dialog.Close>
-              </Dialog.Content>
-            </Dialog.Portal>
-          </Dialog.Root>
+          <RangeSelectionDialog
+            selectedRange={selectedRange}
+            setSelectedRange={setSelectedRange}
+            pendingStart={pendingStart}
+            setPendingStart={setPendingStart}
+            pendingEnd={pendingEnd}
+            setPendingEnd={setPendingEnd}
+            setCustomStart={setCustomStart}
+            setCustomEnd={setCustomStart}
+            isCustom={isCustom}
+            searchParams={searchParams}
+            setSearchParams={setSearchParams}
+          />
           :
         </span>{" "}
         <span className="text-gray-500">{formattedDuration}</span>

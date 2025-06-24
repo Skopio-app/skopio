@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import CustomPieChart from "../charts/CustomPieChart";
 import { useDashboardFilter } from "../stores/useDashboardFilter";
-import WidgetCard from "../WidgetCard";
+import WidgetCard from "../components/WidgetCard";
 import { BucketedSummaryInput, commands } from "../../../types/tauri.gen";
 import { PieChartData } from "../types";
 

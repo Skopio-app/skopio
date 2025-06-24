@@ -38,6 +38,9 @@ export const commands = {
   ): Promise<BucketTimeSummary[]> {
     return await TAURI_INVOKE("fetch_bucketed_summary", { query });
   },
+  async fetchTotalTime(query: SummaryQueryInput): Promise<number> {
+    return await TAURI_INVOKE("fetch_total_time", { query });
+  },
 };
 
 /** user-defined events **/
@@ -79,7 +82,7 @@ export type SummaryQueryInput = {
   entity_names?: string[] | null;
   branch_names?: string[] | null;
   language_names?: string[] | null;
-  include_afk?: boolean;
+  include_afk: boolean;
 };
 export type Theme = "Light" | "Dark" | "System";
 export type TimeBucket = "Day" | "Week" | "Month" | "Hour";

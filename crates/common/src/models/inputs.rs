@@ -56,7 +56,6 @@ pub struct SummaryQueryInput {
     pub branch_names: Option<Vec<String>>,
     #[specta(optional)]
     pub language_names: Option<Vec<String>>,
-    #[specta(optional)]
     pub include_afk: bool,
 }
 

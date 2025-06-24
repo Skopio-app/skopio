@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useDashboardFilter } from "../stores/useDashboardFilter";
 import { PieChartData } from "../types";
 import { BucketedSummaryInput, commands } from "../../../types/tauri.gen";
-import WidgetCard from "../WidgetCard";
+import WidgetCard from "../components/WidgetCard";
 import CustomPieChart from "../charts/CustomPieChart";
 
 const LanguagePieChartWidget = () => {

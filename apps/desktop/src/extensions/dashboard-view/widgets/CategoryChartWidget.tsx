@@ -7,7 +7,7 @@ import {
   commands,
 } from "../../../types/tauri.gen";
 import { format, parseISO } from "date-fns";
-import WidgetCard from "../WidgetCard";
+import WidgetCard from "../components/WidgetCard";
 import StackedBarChart from "../charts/StackedBarChart";
 
 const CategoryChartWidget = () => {

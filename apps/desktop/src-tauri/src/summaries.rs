@@ -55,6 +55,27 @@ pub async fn fetch_app_summary(
 
 #[tauri::command]
 #[specta::specta]
+pub async fn fetch_total_time(query: SummaryQueryInput) -> Result<i64, String> {
+    let res = HTTP_CLIENT
+        .post(format!("{}/summary/total-time", SERVER_URL))
+        .json(&query)
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
+
+    if res.status().is_success() {
+        let data = res.json::<i64>().await.map_err(|e| e.to_string())?;
+        Ok(data)
+    } else {
+        Err(res
+            .text()
+            .await
+            .unwrap_or_else(|_| "Unknown error".to_string()))
+    }
+}
+
+#[tauri::command]
+#[specta::specta]
 pub async fn fetch_projects_summary(
     query: SummaryQueryInput,
 ) -> Result<Vec<GroupedTimeSummary>, String> {

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import StackedBarChart from "../charts/StackedBarChart";
 import { useDashboardFilter } from "../stores/useDashboardFilter";
-import WidgetCard from "../WidgetCard";
+import WidgetCard from "../components/WidgetCard";
 import {
   BucketedSummaryInput,
   BucketTimeSummary,
