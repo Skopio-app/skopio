@@ -19,6 +19,7 @@ import CategoryChartWidget from "./widgets/CategoryChartWidget";
 import EntityChartWidget from "./widgets/EntityChartWidget";
 import RangeSelectionDialog from "./components/RangeSelectionDialog";
 import { commands, SummaryQueryInput } from "../../types/tauri.gen";
+import ActivityChartWidget from "./widgets/ActivityChartWidget";
 
 const ResponsiveGridLayout = WidthProvider(
   Responsive,
@@ -78,7 +79,6 @@ const DashboardView = () => {
   useEffect(() => {
     const run = async () => {
       if (!startDate || !endDate) {
-        console.warn("Missing start or end date!");
         return;
       }
       const input: SummaryQueryInput = {
@@ -106,7 +106,8 @@ const DashboardView = () => {
       { i: "apps", x: 6, y: 0, w: 6, h: 3 },
       { i: "languages", x: 0, y: 0, w: 6, h: 3 },
       { i: "categories", x: 6, y: 1, w: 6, h: 3 },
-      { i: "entities", x: 3, y: 2, w: 7, h: 3 },
+      { i: "entities", x: 0, y: 2, w: 6, h: 3 },
+      { i: "activity", x: 6, y: 2, w: 6, h: 3 },
     ],
   };
 
@@ -161,6 +162,9 @@ const DashboardView = () => {
         </div>
         <div key="entities">
           <EntityChartWidget />
+        </div>
+        <div key="activity">
+          <ActivityChartWidget />
         </div>
       </ResponsiveGridLayout>
     </main>

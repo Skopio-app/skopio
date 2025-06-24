@@ -137,6 +137,20 @@ pub async fn summary_by_activity_types(
         .map_err(error_response)
 }
 
+pub async fn execute_range_summary(
+    State(db): State<Arc<Mutex<DBContext>>>,
+    Json(payload): Json<SummaryQueryInput>,
+) -> Result<Json<Vec<GroupedTimeSummary>>, (StatusCode, Json<String>)> {
+    let db = db.lock().await;
+
+    let builder: SummaryQueryBuilder = summary_query_from_input(payload);
+    builder
+        .execute_range_summary(&db)
+        .await
+        .map(Json)
+        .map_err(error_response)
+}
+
 pub async fn get_bucketed_summary(
     State(db): State<Arc<Mutex<DBContext>>>,
     Json(payload): Json<BucketedSummaryInput>,
@@ -210,5 +224,6 @@ pub fn summary_routes(db: Arc<Mutex<DBContext>>) -> Router {
         .route("/summary/branches", post(summary_by_branches))
         .route("/summary/activity-types", post(summary_by_activity_types))
         .route("/summary/buckets", post(get_bucketed_summary))
+        .route("/summary/range", post(execute_range_summary))
         .with_state(db)
 }

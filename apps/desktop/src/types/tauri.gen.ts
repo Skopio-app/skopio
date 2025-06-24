@@ -41,6 +41,11 @@ export const commands = {
   async fetchTotalTime(query: SummaryQueryInput): Promise<number> {
     return await TAURI_INVOKE("fetch_total_time", { query });
   },
+  async fetchRangeSummary(
+    query: SummaryQueryInput,
+  ): Promise<GroupedTimeSummary[]> {
+    return await TAURI_INVOKE("fetch_range_summary", { query });
+  },
 };
 
 /** user-defined events **/

@@ -1,5 +1,8 @@
+use std::time::Instant;
+
 use chrono::NaiveDateTime;
 use common::time::TimeBucket;
+use log::info;
 use serde::Serialize;
 
 use crate::DBContext;
@@ -159,6 +162,7 @@ impl SummaryQueryBuilder {
         &self,
         db: &DBContext,
     ) -> Result<Vec<GroupedTimeSummary>, sqlx::Error> {
+        let start_time = Instant::now();
         let group_key = match self.group_by.as_deref() {
             Some("app") => "apps.name",
             Some("project") => "projects.name",
@@ -273,11 +277,19 @@ impl SummaryQueryBuilder {
         let records = sqlx::query_as::<_, GroupedTimeSummary>(&final_query)
             .fetch_all(db.pool())
             .await?;
+        let elapsed = start_time.elapsed();
+        info!(
+            "Executed range summary SQL in {:.2?} - {} rows (group_by: {:?})",
+            elapsed,
+            records.len(),
+            self.group_by,
+        );
 
         Ok(records)
     }
 
     pub async fn execute_total_time(&self, db: &DBContext) -> Result<i64, sqlx::Error> {
+        let start_time = Instant::now();
         let mut query = String::from(
             "SELECT SUM(duration) as total_seconds FROM events \
             LEFT JOIN apps ON events.app_id = apps.id \
@@ -357,6 +369,12 @@ impl SummaryQueryBuilder {
             .fetch_one(db.pool())
             .await?;
 
+        let elapsed = start_time.elapsed();
+        info!(
+            "Executed total time query in {:.2?} - {:?} (group_by: {:?})",
+            elapsed, result, self.group_by,
+        );
+
         Ok(result.unwrap_or(0))
     }
 
@@ -364,6 +382,7 @@ impl SummaryQueryBuilder {
         &self,
         db: &DBContext,
     ) -> Result<Vec<BucketTimeSummary>, sqlx::Error> {
+        let start_time = Instant::now();
         let group_key = match self.group_by.as_deref() {
             Some("app") => "apps.name",
             Some("project") => "projects.name",
@@ -465,6 +484,14 @@ impl SummaryQueryBuilder {
         let records = sqlx::query_as::<_, BucketTimeSummary>(&base_query)
             .fetch_all(db.pool())
             .await?;
+
+        let elapsed = start_time.elapsed();
+        info!(
+            "Executed range summary with bucket query in {:.2?} - {} rows (group_key: {:?})",
+            elapsed,
+            records.len(),
+            self.group_by,
+        );
 
         Ok(records)
     }

@@ -128,6 +128,32 @@ pub async fn fetch_activity_types_summary(
 
 #[tauri::command]
 #[specta::specta]
+pub async fn fetch_range_summary(
+    query: SummaryQueryInput,
+) -> Result<Vec<GroupedTimeSummary>, String> {
+    let res = HTTP_CLIENT
+        .post(format!("{}/summary/range", SERVER_URL))
+        .json(&query)
+        .send()
+        .await
+        .map_err(|e| e.to_string())?;
+
+    if res.status().is_success() {
+        let data = res
+            .json::<Vec<GroupedTimeSummary>>()
+            .await
+            .map_err(|e| e.to_string())?;
+        Ok(data)
+    } else {
+        Err(res
+            .text()
+            .await
+            .unwrap_or_else(|_| "Unknown error".to_string()))
+    }
+}
+
+#[tauri::command]
+#[specta::specta]
 pub async fn fetch_bucketed_summary(
     query: BucketedSummaryInput,
 ) -> Result<Vec<BucketTimeSummary>, String> {

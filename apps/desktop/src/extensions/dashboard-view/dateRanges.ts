@@ -33,7 +33,7 @@ import { TimeBucket, TimeRangePreset } from "../../types/tauri.gen";
  * @param date - A valid JavaScript `Date` object
  * @returns A string in the format `"YYYY-MM-DDTHH:mm:ss"` representing the naive datetime
  */
-const toNaiveDateTime = (date: Date): string => {
+export const toNaiveDateTime = (date: Date): string => {
   return format(date, "yyyy-MM-dd'T'HH:mm:ss");
 };
 

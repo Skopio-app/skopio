@@ -194,6 +194,7 @@ fn make_specta_builder<R: Runtime>() -> tauri_specta::Builder<R> {
             crate::summaries::fetch_activity_types_summary,
             crate::summaries::fetch_bucketed_summary,
             crate::summaries::fetch_total_time,
+            crate::summaries::fetch_range_summary,
         ])
         .error_handling(tauri_specta::ErrorHandlingMode::Throw);
 

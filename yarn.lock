@@ -875,6 +875,28 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@nivo/calendar@npm:^0.99.0":
+  version: 0.99.0
+  resolution: "@nivo/calendar@npm:0.99.0"
+  dependencies:
+    "@nivo/core": "npm:0.99.0"
+    "@nivo/legends": "npm:0.99.0"
+    "@nivo/text": "npm:0.99.0"
+    "@nivo/theming": "npm:0.99.0"
+    "@nivo/tooltip": "npm:0.99.0"
+    "@types/d3-scale": "npm:^4.0.8"
+    "@types/d3-time": "npm:^1.0.10"
+    "@types/d3-time-format": "npm:^3.0.0"
+    d3-scale: "npm:^4.0.2"
+    d3-time: "npm:^1.0.10"
+    d3-time-format: "npm:^3.0.0"
+    lodash: "npm:^4.17.21"
+  peerDependencies:
+    react: ^16.14 || ^17.0 || ^18.0 || ^19.0
+  checksum: 10c0/b647566eb890e7fc839bc36de99c5426f62c11b35841fcb54afca167c45150ea159ef4a7a1706c3b1ca2ca12da99d6b8b26fe5499656d037deea92e35a4cfa9a
+  languageName: node
+  linkType: hard
+
 "@nivo/canvas@npm:0.99.0":
   version: 0.99.0
   resolution: "@nivo/canvas@npm:0.99.0"
@@ -1975,6 +1997,7 @@ __metadata:
   dependencies:
     "@eslint/js": "npm:^9.17.0"
     "@nivo/bar": "npm:^0.99.0"
+    "@nivo/calendar": "npm:^0.99.0"
     "@nivo/colors": "npm:^0.99.0"
     "@nivo/core": "npm:^0.99.0"
     "@nivo/pie": "npm:^0.99.0"
@@ -2622,7 +2645,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/d3-time@npm:^1.1.1":
+"@types/d3-time@npm:^1.0.10, @types/d3-time@npm:^1.1.1":
   version: 1.1.4
   resolution: "@types/d3-time@npm:1.1.4"
   checksum: 10c0/d1dafa4605c10739de216bdf3dfe9c3953e583e849dc5586216525897c96bbbae8972c50e9c11a4c54e700c089914cf7a9764e9806d316a84838ecf9e5c52722
@@ -3326,7 +3349,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"d3-time@npm:^1.0.11":
+"d3-time@npm:^1.0.10, d3-time@npm:^1.0.11":
   version: 1.1.0
   resolution: "d3-time@npm:1.1.0"
   checksum: 10c0/69ab137adff5b22d0fa148ea514a207bd9cd7d2c042ccf34a268f2ef73720b404f0be6e7b56c95650c53caf52080b5254e2a27f0a676f41d1dd22ef8872c8335
