@@ -3,7 +3,7 @@ import { useMemo } from "react";
 import { formatDuration } from "../dateRanges";
 import { useOrdinalColorScale } from "@nivo/colors";
 
-interface AppPieChartProps {
+interface CustomPieChartProps {
   data: {
     id: string;
     label: string;
@@ -11,7 +11,7 @@ interface AppPieChartProps {
   }[];
 }
 
-const AppPieChart: React.FC<AppPieChartProps> = ({ data }) => {
+const CustomPieChart: React.FC<CustomPieChartProps> = ({ data }) => {
   const chartData = useMemo(() => data, [data]);
   const getColor = useOrdinalColorScale({ scheme: "nivo" }, "id");
 
@@ -25,7 +25,7 @@ const AppPieChart: React.FC<AppPieChartProps> = ({ data }) => {
   }
 
   return (
-    <div className="h-[300px] w-full flex">
+    <div className="h-[200px] w-full flex">
       <div className="flex-1">
         <ResponsivePie
           data={chartData}
@@ -38,11 +38,12 @@ const AppPieChart: React.FC<AppPieChartProps> = ({ data }) => {
           arcLinkLabelsTextColor="#333333"
           arcLinkLabelsThickness={2}
           colors={{ scheme: "nivo" }}
+          arcLinkLabelsDiagonalLength={12}
           arcLinkLabelsColor={{ from: "color" }}
           arcLabelsSkipAngle={10}
           arcLabelsTextColor={{ from: "color", modifiers: [["darker", 2]] }}
           legends={[]}
-          arcLabel={""}
+          enableArcLabels={false}
           tooltip={({ datum }) => {
             const time = formatDuration(datum.value);
 
@@ -84,4 +85,4 @@ const AppPieChart: React.FC<AppPieChartProps> = ({ data }) => {
   );
 };
 
-export default AppPieChart;
+export default CustomPieChart;

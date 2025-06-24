@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import ProjectBarChart from "../charts/ProjectBarChart";
+import StackedBarChart from "../charts/StackedBarChart";
 import { useDashboardFilter } from "../stores/useDashboardFilter";
 import WidgetCard from "../WidgetCard";
 import {
@@ -59,7 +59,7 @@ const ProjectChartWidget = () => {
 
   return (
     <WidgetCard title="Projects" onRemove={() => {}}>
-      <ProjectBarChart data={data} keys={keys} />
+      <StackedBarChart data={data} keys={keys} />
     </WidgetCard>
   );
 };

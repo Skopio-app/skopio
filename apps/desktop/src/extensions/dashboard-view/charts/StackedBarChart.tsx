@@ -3,7 +3,7 @@ import { useMemo, useRef, useState } from "react";
 import ChartTooltipPortal from "../ChartTooltipPortal";
 import { formatDuration } from "../dateRanges";
 import { useOrdinalColorScale } from "@nivo/colors";
-interface ProjectBarChartProps {
+interface StackedBarChartProps {
   data: {
     label: string;
     [project: string]: string | number;
@@ -12,7 +12,7 @@ interface ProjectBarChartProps {
   bucketLabel?: string;
 }
 
-const ProjectBarChart: React.FC<ProjectBarChartProps> = ({
+const StackedBarChart: React.FC<StackedBarChartProps> = ({
   data,
   keys,
   bucketLabel = "Time",
@@ -47,7 +47,7 @@ const ProjectBarChart: React.FC<ProjectBarChartProps> = ({
   return (
     <div
       ref={containerRef}
-      className="h-[400px] w-full relative"
+      className="h-[200px] w-full relative"
       onMouseMove={(e) => {
         if (!containerRef.current) return;
         const rect = containerRef.current?.getBoundingClientRect();
@@ -133,4 +133,4 @@ const ProjectBarChart: React.FC<ProjectBarChartProps> = ({
   );
 };
 
-export default ProjectBarChart;
+export default StackedBarChart;

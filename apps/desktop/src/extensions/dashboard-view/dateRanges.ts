@@ -120,6 +120,11 @@ export const mapRangeToPreset = (
   }
 };
 
+/**
+ * Formats a duration given in seconds into a human-readable string.
+ * @param seconds - The duration in seconds
+ * @returns A string like "1h 45m 30s"
+ */
 export const formatDuration = (seconds: number): string => {
   const hrs = Math.floor(seconds / 3600);
   const mins = Math.floor((seconds % 3600) / 60);

@@ -17,6 +17,7 @@ import { Layouts, Responsive, WidthProvider } from "react-grid-layout";
 import ProjectChartWidget from "./widgets/ProjectChartWidget";
 import AppPieChartWidget from "./widgets/AppPieChartWidget";
 import { useDashboardFilter } from "./stores/useDashboardFilter";
+import LanguagePieChartWidget from "./widgets/LanguagePieChartWidget";
 
 const ResponsiveGridLayout = WidthProvider(
   Responsive,
@@ -79,6 +80,7 @@ const DashboardView = () => {
     lg: [
       { i: "weekly-project", x: 0, y: 0, w: 6, h: 4 },
       { i: "app-duration", x: 1, y: 0, w: 4, h: 6 },
+      { i: "languages", x: 1, y: 0, w: 4, h: 6 },
     ],
   };
 
@@ -221,6 +223,9 @@ const DashboardView = () => {
         </div>
         <div key="app-duration">
           <AppPieChartWidget />
+        </div>
+        <div key="languages">
+          <LanguagePieChartWidget />
         </div>
       </ResponsiveGridLayout>
     </main>

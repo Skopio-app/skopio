@@ -1,11 +1,11 @@
 import { useEffect, useState } from "react";
-import CustomPieChart from "../charts/CustomPieChart";
 import { useDashboardFilter } from "../stores/useDashboardFilter";
-import WidgetCard from "../WidgetCard";
-import { BucketedSummaryInput, commands } from "../../../types/tauri.gen";
 import { PieChartData } from "../types";
+import { BucketedSummaryInput, commands } from "../../../types/tauri.gen";
+import WidgetCard from "../WidgetCard";
+import CustomPieChart from "../charts/CustomPieChart";
 
-const AppPieChartWidget = () => {
+const LanguagePieChartWidget = () => {
   const { preset } = useDashboardFilter();
   const [data, setData] = useState<PieChartData[]>([]);
 
@@ -13,7 +13,7 @@ const AppPieChartWidget = () => {
     const run = async () => {
       const input: BucketedSummaryInput = {
         preset,
-        group_by: "app",
+        group_by: "language",
         include_afk: false,
       };
       const result = await commands.fetchBucketedSummary(input);
@@ -41,10 +41,10 @@ const AppPieChartWidget = () => {
   }, [preset]);
 
   return (
-    <WidgetCard title="Apps" onRemove={() => {}}>
+    <WidgetCard title="Languages" onRemove={() => {}}>
       <CustomPieChart data={data} />
     </WidgetCard>
   );
 };
 
-export default AppPieChartWidget;
+export default LanguagePieChartWidget;
