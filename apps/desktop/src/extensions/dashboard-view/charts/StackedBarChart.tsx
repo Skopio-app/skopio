@@ -1,5 +1,5 @@
 import { ResponsiveBar } from "@nivo/bar";
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import ChartTooltipPortal from "../ChartTooltipPortal";
 import { formatDuration } from "../dateRanges";
 import { useOrdinalColorScale } from "@nivo/colors";
@@ -20,6 +20,8 @@ const StackedBarChart: React.FC<StackedBarChartProps> = ({
   const [mousePos, setMousePos] = useState<{ x: number; y: number } | null>(
     null,
   );
+  const mousePosRef = useRef<{ x: number; y: number } | null>(null);
+  const rafId = useRef<number | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const getColor = useOrdinalColorScale({ scheme: "nivo" }, "id");
 
@@ -36,6 +38,56 @@ const StackedBarChart: React.FC<StackedBarChartProps> = ({
     return [...keys].sort((a, b) => totals[a] - totals[b]);
   }, [data, keys]);
 
+  const tooltipEntriesMap = useMemo(() => {
+    const map: Record<string, { key: string; value: number }[]> = {};
+
+    for (const bar of data) {
+      const entries = sortedkeys
+        .map((key) => {
+          const value = Number(bar[key] ?? 0);
+          return value > 0 ? { key, value } : null;
+        })
+        .filter(Boolean) as { key: string; value: number }[];
+      map[bar.label] = entries;
+    }
+
+    return map;
+  }, [data, sortedkeys]);
+
+  const colorCache = useMemo(() => {
+    const cache: Record<string, string> = {};
+    for (const key of keys) {
+      cache[key] = getColor({ id: key });
+    }
+    return cache;
+  }, [keys, getColor]);
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
+    const x = e.clientX + 5;
+    const y = e.clientY + 5;
+
+    mousePosRef.current = { x, y };
+
+    if (rafId.current === null) {
+      rafId.current = requestAnimationFrame(() => {
+        if (mousePosRef.current) {
+          setMousePos(mousePosRef.current);
+        }
+        rafId.current = null;
+      });
+    }
+  };
+
+  useEffect(() => {
+    return () => {
+      if (rafId.current !== null) {
+        cancelAnimationFrame(rafId.current);
+      }
+    };
+  });
+
+  const MAX_TOOLTIP_ENTRIES = 10;
+
   if (!data.length) {
     return (
       <div className="h-[220px] w-full flex items-center justify-center text-sm text-gray-500">
@@ -48,16 +100,7 @@ const StackedBarChart: React.FC<StackedBarChartProps> = ({
     <div
       ref={containerRef}
       className="h-[200px] w-full relative"
-      onMouseMove={(e) => {
-        if (!containerRef.current) return;
-        const x = e.clientX + 10;
-        const y = e.clientY + 10;
-
-        setMousePos({
-          x,
-          y,
-        });
-      }}
+      onMouseMove={handleMouseMove}
     >
       <ResponsiveBar
         data={data}
@@ -80,12 +123,9 @@ const StackedBarChart: React.FC<StackedBarChartProps> = ({
         }}
         axisLeft={null}
         tooltip={({ data }) => {
-          const entries = sortedkeys
-            .map((key) => {
-              const value = Number(data[key]);
-              return value > 0 ? { key, value } : null;
-            })
-            .filter(Boolean) as { key: string; value: number }[];
+          const entries = [...(tooltipEntriesMap[data.label] ?? [])]
+            .sort((a, b) => b.value - a.value)
+            .slice(0, MAX_TOOLTIP_ENTRIES);
 
           if (!mousePos) return null;
 
@@ -103,7 +143,7 @@ const StackedBarChart: React.FC<StackedBarChartProps> = ({
                   <div key={key} className="flex items-center gap-2 py-0.5">
                     <span
                       className="w-2.5 h-2.5 rounded-full inline-block shrink-0"
-                      style={{ backgroundColor: getColor({ id: key }) }}
+                      style={{ backgroundColor: colorCache[key] }}
                     />
                     <span className="truncate flex-1 text-xs">{key}</span>
                     <span className="text-gray-500 text-xs">
@@ -115,7 +155,7 @@ const StackedBarChart: React.FC<StackedBarChartProps> = ({
             </ChartTooltipPortal>
           );
         }}
-        label={""}
+        enableLabel={false}
         labelSkipWidth={12}
         labelSkipHeight={12}
         labelTextColor={{
