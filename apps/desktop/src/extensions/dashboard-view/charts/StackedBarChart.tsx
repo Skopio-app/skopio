@@ -50,10 +50,8 @@ const StackedBarChart: React.FC<StackedBarChartProps> = ({
       className="h-[200px] w-full relative"
       onMouseMove={(e) => {
         if (!containerRef.current) return;
-        const rect = containerRef.current?.getBoundingClientRect();
-
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
+        const x = e.clientX + 10;
+        const y = e.clientY + 10;
 
         setMousePos({
           x,
@@ -94,8 +92,8 @@ const StackedBarChart: React.FC<StackedBarChartProps> = ({
           return (
             <ChartTooltipPortal
               style={{
-                top: mousePos.y + 20,
-                left: mousePos.x + 20,
+                top: mousePos.y,
+                left: mousePos.x,
                 zIndex: 50,
               }}
             >

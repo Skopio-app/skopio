@@ -33,6 +33,7 @@ pub struct TimeRange {
     bucket: TimeBucket,
 }
 
+// TODO: Fix time conversion and retrieval issue.
 impl From<TimeRangePreset> for TimeRange {
     fn from(preset: TimeRangePreset) -> Self {
         let now = Local::now().naive_local().date();

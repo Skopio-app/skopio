@@ -72,8 +72,8 @@ const DashboardView = () => {
   const formattedRange = useMemo(() => {
     const sameDay = format(startDate, "PPP") === format(endDate, "PPP");
     return sameDay
-      ? format(startDate, "PPP")
-      : `${format(startDate, "PPP")} - ${format(endDate, "PPP")}`;
+      ? format(startDate, "EEEE, MMMM do yyyy")
+      : `${format(startDate, "EEE, MMM do yyyy")} - ${format(endDate, "EEE, MMM do yyyy")}`;
   }, [startDate, endDate]);
 
   useEffect(() => {
