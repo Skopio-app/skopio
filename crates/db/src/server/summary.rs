@@ -1,22 +1,18 @@
-use std::time::Instant;
+use std::{collections::HashMap, time::Instant};
 
 use chrono::NaiveDateTime;
 use common::time::TimeBucket;
 use log::info;
 use serde::Serialize;
 
-use crate::DBContext;
+use crate::{
+    models::{BucketTimeSummary, RawBucketRow},
+    DBContext,
+};
 
 #[derive(Debug, Serialize, sqlx::FromRow)]
 pub struct GroupedTimeSummary {
     pub group_key: String,
-    pub total_seconds: i64,
-}
-
-#[derive(Debug, Serialize, sqlx::FromRow)]
-pub struct BucketTimeSummary {
-    pub group_key: String,
-    pub bucket: String,
     pub total_seconds: i64,
 }
 
@@ -402,7 +398,8 @@ impl SummaryQueryBuilder {
         };
 
         let mut base_query = format!(
-            "SELECT {group_key} as group_key, {time_bucket_expr} as bucket, SUM(duration) as total_seconds FROM events \
+            "SELECT {time_bucket_expr} AS bucket, {group_key} AS group_key, SUM(duration) as total_seconds
+            FROM events
             LEFT JOIN apps ON events.app_id = apps.id \
             LEFT JOIN projects ON events.project_id = projects.id \
             LEFT JOIN entities ON events.entity_id = entities.id \
@@ -478,12 +475,28 @@ impl SummaryQueryBuilder {
             base_query.push_str(&format!(" AND languages.name IN ({})", list));
         }
 
-        base_query.push_str(" GROUP BY bucket, ");
-        base_query.push_str(group_key);
+        base_query.push_str(&format!(" GROUP BY {time_bucket_expr}, {group_key}"));
 
-        let records = sqlx::query_as::<_, BucketTimeSummary>(&base_query)
+        let rows = sqlx::query_as::<_, RawBucketRow>(&base_query)
             .fetch_all(db.pool())
             .await?;
+
+        let mut grouped_map: HashMap<String, HashMap<String, i64>> = HashMap::new();
+
+        for row in rows {
+            grouped_map
+                .entry(row.bucket)
+                .or_default()
+                .insert(row.group_key, row.total_seconds);
+        }
+
+        let records = grouped_map
+            .into_iter()
+            .map(|(bucket, grouped_values)| BucketTimeSummary {
+                bucket,
+                grouped_values,
+            })
+            .collect::<Vec<_>>();
 
         let elapsed = start_time.elapsed();
         info!(

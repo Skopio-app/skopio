@@ -146,6 +146,7 @@ const DashboardView = () => {
         rowHeight={100}
         isResizable
         isDraggable
+        useCSSTransforms
         draggableHandle="#widget-drag-handle"
       >
         <div key="projects">

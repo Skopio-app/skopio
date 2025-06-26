@@ -29,15 +29,14 @@ const CategoryChartWidget = () => {
       const grouped: Record<string, Record<string, number>> = {};
       const allKeys = new Set<string>();
 
-      for (const {
-        group_key,
-        bucket,
-        total_seconds,
-      } of result as BucketTimeSummary[]) {
+      for (const { bucket, grouped_values } of result as BucketTimeSummary[]) {
         const label = format(parseISO(bucket), "MMM d");
         if (!grouped[label]) grouped[label] = {};
-        grouped[label][group_key] = total_seconds;
-        allKeys.add(group_key);
+
+        for (const [key, value] of Object.entries(grouped_values)) {
+          grouped[label][key] = value ?? 0;
+          allKeys.add(key);
+        }
       }
 
       const chartData: BarChartData[] = Object.entries(grouped).map(

@@ -6,6 +6,7 @@
 compile_error!("You must enable either the 'desktop' or 'server' feature.");
 
 pub mod connection;
+pub mod models;
 mod utils;
 
 pub use connection::DBContext;

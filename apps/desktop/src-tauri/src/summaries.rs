@@ -1,6 +1,7 @@
 use std::{sync::LazyLock, time::Duration};
 
 use common::models::inputs::{BucketedSummaryInput, SummaryQueryInput};
+use db::models::BucketTimeSummary;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 
@@ -17,13 +18,6 @@ const SERVER_URL: &str = "http://localhost:8080";
 #[derive(Serialize, Deserialize, specta::Type)]
 pub struct GroupedTimeSummary {
     pub group_key: String,
-    pub total_seconds: i64,
-}
-
-#[derive(Serialize, Deserialize, specta::Type)]
-pub struct BucketTimeSummary {
-    pub group_key: String,
-    pub bucket: String,
     pub total_seconds: i64,
 }
 

@@ -6,7 +6,8 @@ use common::{
     time::TimeRange,
 };
 use db::{
-    server::summary::{BucketTimeSummary, GroupedTimeSummary, SummaryQueryBuilder},
+    models::BucketTimeSummary,
+    server::summary::{GroupedTimeSummary, SummaryQueryBuilder},
     DBContext,
 };
 use tokio::sync::Mutex;

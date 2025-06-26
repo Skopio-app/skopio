@@ -37,9 +37,9 @@ const ActivityChartWidget = () => {
       if (!Array.isArray(result)) return;
 
       const chartData: CalendarChartData[] = result.map(
-        ({ bucket, total_seconds }) => ({
+        ({ bucket, grouped_values }) => ({
           day: bucket,
-          value: total_seconds,
+          value: grouped_values["Total"] ?? 0,
         }),
       );
 

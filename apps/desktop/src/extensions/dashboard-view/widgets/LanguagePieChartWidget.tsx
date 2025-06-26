@@ -22,9 +22,11 @@ const LanguagePieChartWidget = () => {
 
       const totals: Record<string, number> = {};
 
-      for (const { group_key, total_seconds } of result) {
-        if (!totals[group_key]) totals[group_key] = 0;
-        totals[group_key] += total_seconds;
+      for (const { grouped_values } of result) {
+        for (const [key, value] of Object.entries(grouped_values)) {
+          if (!totals[key]) totals[key] = 0;
+          totals[key] += value ?? 0;
+        }
       }
 
       const chartData: PieChartData[] = Object.entries(totals).map(

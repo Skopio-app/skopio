@@ -1,8 +1,9 @@
-import { ResponsiveBar } from "@nivo/bar";
+import { ResponsiveBarCanvas } from "@nivo/bar";
 import { useEffect, useMemo, useRef, useState } from "react";
 import ChartTooltipPortal from "../ChartTooltipPortal";
 import { formatDuration } from "../dateRanges";
 import { useOrdinalColorScale } from "@nivo/colors";
+import { useColorCache } from "../stores/useColorCache";
 interface StackedBarChartProps {
   data: {
     label: string;
@@ -24,6 +25,19 @@ const StackedBarChart: React.FC<StackedBarChartProps> = ({
   const rafId = useRef<number | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const getColor = useOrdinalColorScale({ scheme: "nivo" }, "id");
+  // const { meta, getColor, updateMeta } = useBarMetaStore();
+
+  const getColorForKey = (
+    key: string,
+    getColorScale: (input: { id: string }) => string,
+  ): string => {
+    const cachedColor = useColorCache.getState().getColor(key);
+    if (cachedColor) return cachedColor;
+
+    const newColor = getColorScale({ id: key });
+    useColorCache.getState().setColor(key, newColor);
+    return newColor;
+  };
 
   const sortedkeys = useMemo(() => {
     const totals: Record<string, number> = {};
@@ -53,14 +67,6 @@ const StackedBarChart: React.FC<StackedBarChartProps> = ({
 
     return map;
   }, [data, sortedkeys]);
-
-  const colorCache = useMemo(() => {
-    const cache: Record<string, string> = {};
-    for (const key of keys) {
-      cache[key] = getColor({ id: key });
-    }
-    return cache;
-  }, [keys, getColor]);
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
     const x = e.clientX + 5;
@@ -102,14 +108,14 @@ const StackedBarChart: React.FC<StackedBarChartProps> = ({
       className="h-[200px] w-full relative"
       onMouseMove={handleMouseMove}
     >
-      <ResponsiveBar
+      <ResponsiveBarCanvas
         data={data}
         keys={sortedkeys}
         indexBy="label"
         margin={{ top: 20, right: 30, bottom: 50, left: 50 }}
         padding={0.3}
         groupMode="stacked"
-        colors={(bar) => getColor({ id: bar.id })}
+        colors={(bar) => getColorForKey(String(bar.id), getColor)}
         borderRadius={2}
         borderWidth={1}
         borderColor={{ from: "color", modifiers: [["darker", 1.6]] }}
@@ -143,7 +149,7 @@ const StackedBarChart: React.FC<StackedBarChartProps> = ({
                   <div key={key} className="flex items-center gap-2 py-0.5">
                     <span
                       className="w-2.5 h-2.5 rounded-full inline-block shrink-0"
-                      style={{ backgroundColor: colorCache[key] }}
+                      style={{ backgroundColor: getColorForKey(key, getColor) }}
                     />
                     <span className="truncate flex-1 text-xs">{key}</span>
                     <span className="text-gray-500 text-xs">
@@ -162,10 +168,10 @@ const StackedBarChart: React.FC<StackedBarChartProps> = ({
           from: "color",
           modifiers: [["darker", 1.6]],
         }}
-        animate
-        motionConfig="gentle"
+        // animate={data.length < 50}
+        // motionConfig={data.length < 50 ? "gentle" : "default"}
         role="application"
-        ariaLabel="Time bucket project summary chart"
+        // ariaLabel="Time bucket project summary chart"
       />
     </div>
   );

@@ -1191,6 +1191,8 @@ dependencies = [
  "common",
  "log",
  "serde",
+ "serde_json",
+ "specta",
  "sqlx",
 ]
 

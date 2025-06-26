@@ -1,4 +1,4 @@
-import { ResponsivePie } from "@nivo/pie";
+import { ResponsivePieCanvas } from "@nivo/pie";
 import { useMemo } from "react";
 import { formatDuration } from "../dateRanges";
 import { useOrdinalColorScale } from "@nivo/colors";
@@ -27,7 +27,7 @@ const CustomPieChart: React.FC<CustomPieChartProps> = ({ data }) => {
   return (
     <div className="h-[200px] w-full flex">
       <div className="flex-1">
-        <ResponsivePie
+        <ResponsivePieCanvas
           data={chartData}
           margin={{ top: 30, right: 10, left: 20, bottom: 30 }}
           innerRadius={0.5}

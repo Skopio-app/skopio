@@ -62,9 +62,8 @@ export type AppConfig = {
   sync_interval: number;
 };
 export type BucketTimeSummary = {
-  group_key: string;
   bucket: string;
-  total_seconds: number;
+  grouped_values: Partial<{ [key in string]: number }>;
 };
 export type BucketedSummaryInput = {
   preset: TimeRangePreset;
