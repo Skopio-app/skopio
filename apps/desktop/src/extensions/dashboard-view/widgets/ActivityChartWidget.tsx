@@ -1,56 +1,37 @@
-import { useEffect, useState } from "react";
+import { useMemo } from "react";
 import WidgetCard from "../components/WidgetCard";
 import CalendarChart from "../charts/CalendarChart";
-import {
-  BucketedSummaryInput,
-  commands,
-  TimeRangePreset,
-} from "../../../types/tauri.gen";
+import { TimeRangePreset } from "../../../types/tauri.gen";
 import { startOfYear } from "date-fns";
 import { toNaiveDateTime } from "../dateRanges";
-
-type CalendarChartData = {
-  value: number;
-  day: string;
-};
+import { useSummaryData } from "../hooks/useSummaryData";
+import { CalendarChartData } from "../types";
 
 const ActivityChartWidget = () => {
-  const [data, setData] = useState<CalendarChartData[]>([]);
-
-  useEffect(() => {
-    const run = async () => {
-      const start = startOfYear(new Date());
-      const end = new Date();
-      const preset: TimeRangePreset = {
-        Custom: {
-          start: toNaiveDateTime(start),
-          end: toNaiveDateTime(end),
-          bucket: "Day",
-        },
-      };
-      const input: BucketedSummaryInput = {
-        preset,
-        include_afk: false,
-      };
-      const result = await commands.fetchBucketedSummary(input);
-
-      if (!Array.isArray(result)) return;
-
-      const chartData: CalendarChartData[] = result.map(
-        ({ bucket, grouped_values }) => ({
-          day: bucket,
-          value: grouped_values["Total"] ?? 0,
-        }),
-      );
-
-      setData(chartData);
+  const preset = useMemo<TimeRangePreset>(() => {
+    return {
+      Custom: {
+        start: toNaiveDateTime(startOfYear(new Date())),
+        end: toNaiveDateTime(new Date()),
+        bucket: "Day",
+      },
     };
-    run();
   }, []);
 
+  const { getUngroupedData, loading } = useSummaryData(preset);
+
+  const chartData = useMemo<CalendarChartData[]>(() => {
+    return getUngroupedData().map(({ bucket, grouped_values }) => ({
+      day: bucket,
+      value: grouped_values["Total"] ?? 0,
+    }));
+  }, [getUngroupedData]);
+
+  console.log("The chart data: ", chartData);
+
   return (
-    <WidgetCard title="Daily Activity" onRemove={() => {}}>
-      <CalendarChart data={data} />
+    <WidgetCard title="Daily Activity" loading={loading}>
+      <CalendarChart data={chartData} />
     </WidgetCard>
   );
 };

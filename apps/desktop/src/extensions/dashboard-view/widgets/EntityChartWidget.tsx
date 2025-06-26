@@ -1,59 +1,41 @@
-import { useEffect, useState } from "react";
-import { useDashboardFilter } from "../stores/useDashboardFilter";
+import { useMemo } from "react";
 import { BarChartData } from "../types";
-import {
-  BucketedSummaryInput,
-  BucketTimeSummary,
-  commands,
-} from "../../../types/tauri.gen";
 import { format, parseISO } from "date-fns";
 import WidgetCard from "../components/WidgetCard";
 import StackedBarChart from "../charts/StackedBarChart";
+import { useSummaryData } from "../hooks/useSummaryData";
 
 const EntityChartWidget = () => {
-  const { preset } = useDashboardFilter();
-  const [data, setData] = useState<BarChartData[]>([]);
-  const [keys, setKeys] = useState<string[]>([]);
+  const { rawGrouped, loading } = useSummaryData();
 
-  useEffect(() => {
-    const run = async () => {
-      const input: BucketedSummaryInput = {
-        preset,
-        group_by: "entity",
-        include_afk: false,
-      };
-      const result = await commands.fetchBucketedSummary(input);
+  const [data, keys] = useMemo(() => {
+    const entityBuckets = rawGrouped.entity ?? [];
 
-      if (!Array.isArray(result)) return;
+    const grouped: Record<string, Record<string, number>> = {};
+    const allKeys = new Set<string>();
 
-      const grouped: Record<string, Record<string, number>> = {};
-      const allKeys = new Set<string>();
+    for (const { bucket, grouped_values } of entityBuckets) {
+      const label = format(parseISO(bucket), "MMM d");
+      if (!grouped[label]) grouped[label] = {};
 
-      for (const { bucket, grouped_values } of result as BucketTimeSummary[]) {
-        const label = format(parseISO(bucket), "MMM d");
-        if (!grouped[label]) grouped[label] = {};
-
-        for (const [key, value] of Object.entries(grouped_values)) {
-          grouped[label][key] = value ?? 0;
-          allKeys.add(key);
-        }
+      for (const [entity, seconds] of Object.entries(grouped_values)) {
+        grouped[label][entity] = seconds ?? 0;
+        allKeys.add(entity);
       }
+    }
 
-      const chartData: BarChartData[] = Object.entries(grouped).map(
-        ([label, groupTotals]) => ({
-          label,
-          ...groupTotals,
-        }),
-      );
-      setData(chartData);
-      setKeys(Array.from(allKeys));
-    };
+    const chartData: BarChartData[] = Object.entries(grouped).map(
+      ([label, groupTotals]) => ({
+        label,
+        ...groupTotals,
+      }),
+    );
 
-    run();
-  }, [preset]);
+    return [chartData, Array.from(allKeys)] as [BarChartData[], string[]];
+  }, [rawGrouped.entity]);
 
   return (
-    <WidgetCard title="Entities" onRemove={() => {}}>
+    <WidgetCard title="Entities" loading={loading}>
       <StackedBarChart data={data} keys={keys} />
     </WidgetCard>
   );

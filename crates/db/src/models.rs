@@ -8,9 +8,8 @@ pub struct BucketTimeSummary {
     pub grouped_values: HashMap<String, i64>,
 }
 
-#[derive(Debug, sqlx::FromRow)]
-pub struct RawBucketRow {
-    pub bucket: String,
+#[derive(Debug, Serialize, Deserialize, sqlx::FromRow, specta::Type)]
+pub struct GroupedTimeSummary {
     pub group_key: String,
     pub total_seconds: i64,
 }

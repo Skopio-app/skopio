@@ -41,6 +41,17 @@ pub struct AFKEventInput {
 }
 
 #[derive(Debug, Serialize, Deserialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub enum Group {
+    App,
+    Project,
+    Language,
+    Branch,
+    Category,
+    Entity,
+}
+
+#[derive(Debug, Serialize, Deserialize, specta::Type)]
 pub struct SummaryQueryInput {
     pub start: Option<DateTime<Utc>>,
     pub end: Option<DateTime<Utc>>,
@@ -75,6 +86,6 @@ pub struct BucketedSummaryInput {
     #[specta(optional)]
     pub language_names: Option<Vec<String>>,
     #[specta(optional)]
-    pub group_by: Option<String>,
+    pub group_by: Option<Group>,
     pub include_afk: bool,
 }

@@ -1,60 +1,41 @@
-import { useEffect, useState } from "react";
-import StackedBarChart from "../charts/StackedBarChart";
-import { useDashboardFilter } from "../stores/useDashboardFilter";
-import WidgetCard from "../components/WidgetCard";
-import {
-  BucketedSummaryInput,
-  BucketTimeSummary,
-  commands,
-} from "../../../types/tauri.gen";
-import { format, parseISO } from "date-fns";
+import { useMemo } from "react";
 import { BarChartData } from "../types";
+import WidgetCard from "../components/WidgetCard";
+import StackedBarChart from "../charts/StackedBarChart";
+import { useSummaryData } from "../hooks/useSummaryData";
+import { format, parseISO } from "date-fns";
 
 const ProjectChartWidget = () => {
-  const { preset } = useDashboardFilter();
-  const [data, setData] = useState<BarChartData[]>([]);
-  const [keys, setKeys] = useState<string[]>([]);
+  const { rawGrouped, loading } = useSummaryData();
 
-  useEffect(() => {
-    const run = async () => {
-      const input: BucketedSummaryInput = {
-        preset,
-        group_by: "project",
-        include_afk: false,
-      };
-      const result = await commands.fetchBucketedSummary(input);
+  const [data, keys] = useMemo(() => {
+    const projectBuckets = rawGrouped.project ?? [];
 
-      if (!Array.isArray(result)) return;
+    const grouped: Record<string, Record<string, number>> = {};
+    const allKeys = new Set<string>();
 
-      const grouped: Record<string, Record<string, number>> = {};
-      const allKeys = new Set<string>();
+    for (const { bucket, grouped_values } of projectBuckets) {
+      const label = format(parseISO(bucket), "MMM d");
+      if (!grouped[label]) grouped[label] = {};
 
-      for (const {
-        group_key,
-        bucket,
-        total_seconds,
-      } of result as BucketTimeSummary[]) {
-        const label = format(parseISO(bucket), "MMM d");
-        if (!grouped[label]) grouped[label] = {};
-        grouped[label][group_key] = total_seconds;
-        allKeys.add(group_key);
+      for (const [project, seconds] of Object.entries(grouped_values)) {
+        grouped[label][project] = seconds ?? 0;
+        allKeys.add(project);
       }
+    }
 
-      const chartData: BarChartData[] = Object.entries(grouped).map(
-        ([label, groupTotals]) => ({
-          label,
-          ...groupTotals,
-        }),
-      );
-      setData(chartData);
-      setKeys(Array.from(allKeys));
-    };
+    const chartData: BarChartData[] = Object.entries(grouped).map(
+      ([label, groupTotals]) => ({
+        label,
+        ...groupTotals,
+      }),
+    );
 
-    run();
-  }, [preset]);
+    return [chartData, Array.from(allKeys)] as [BarChartData[], string[]];
+  }, [rawGrouped.project]);
 
   return (
-    <WidgetCard title="Projects" onRemove={() => {}}>
+    <WidgetCard title="Projects" loading={loading}>
       <StackedBarChart data={data} keys={keys} />
     </WidgetCard>
   );

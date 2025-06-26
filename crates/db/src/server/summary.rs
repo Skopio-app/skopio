@@ -1,20 +1,13 @@
 use std::{collections::HashMap, time::Instant};
 
 use chrono::NaiveDateTime;
-use common::time::TimeBucket;
+use common::{models::inputs::Group, time::TimeBucket};
 use log::info;
-use serde::Serialize;
 
 use crate::{
-    models::{BucketTimeSummary, RawBucketRow},
+    models::{BucketTimeSummary, GroupedTimeSummary},
     DBContext,
 };
-
-#[derive(Debug, Serialize, sqlx::FromRow)]
-pub struct GroupedTimeSummary {
-    pub group_key: String,
-    pub total_seconds: i64,
-}
 
 pub struct SummaryQueryBuilder {
     start: Option<NaiveDateTime>,
@@ -25,9 +18,16 @@ pub struct SummaryQueryBuilder {
     entity_names: Option<Vec<String>>,
     branch_names: Option<Vec<String>>,
     language_names: Option<Vec<String>>,
-    group_by: Option<String>,
+    group_by: Option<Group>,
     include_afk: bool,
     time_bucket: Option<TimeBucket>,
+}
+
+#[derive(Debug, sqlx::FromRow)]
+struct RawBucketRow {
+    bucket: String,
+    group_key: String,
+    total_seconds: i64,
 }
 
 impl SummaryQueryBuilder {
@@ -87,8 +87,8 @@ impl SummaryQueryBuilder {
         self
     }
 
-    pub fn group_by(mut self, field: &str) -> Self {
-        self.group_by = Some(field.to_string());
+    pub fn group_by(mut self, field: Group) -> Self {
+        self.group_by = Some(field);
         self
     }
 
@@ -105,7 +105,7 @@ impl SummaryQueryBuilder {
     pub async fn execute_grouped_summary_by(
         self,
         db: &DBContext,
-        group_key_field: &str,
+        group_key_field: Group,
     ) -> Result<Vec<GroupedTimeSummary>, sqlx::Error> {
         self.group_by(group_key_field)
             .execute_range_summary(db)
@@ -116,42 +116,42 @@ impl SummaryQueryBuilder {
         self,
         db: &DBContext,
     ) -> Result<Vec<GroupedTimeSummary>, sqlx::Error> {
-        self.execute_grouped_summary_by(db, "app").await
+        self.execute_grouped_summary_by(db, Group::App).await
     }
 
     pub async fn execute_projects_summary(
         self,
         db: &DBContext,
     ) -> Result<Vec<GroupedTimeSummary>, sqlx::Error> {
-        self.execute_grouped_summary_by(db, "project").await
+        self.execute_grouped_summary_by(db, Group::Project).await
     }
 
     pub async fn execute_branches_summary(
         self,
         db: &DBContext,
     ) -> Result<Vec<GroupedTimeSummary>, sqlx::Error> {
-        self.execute_grouped_summary_by(db, "branch").await
+        self.execute_grouped_summary_by(db, Group::Branch).await
     }
 
     pub async fn execute_entities_summary(
         self,
         db: &DBContext,
     ) -> Result<Vec<GroupedTimeSummary>, sqlx::Error> {
-        self.execute_grouped_summary_by(db, "entity").await
+        self.execute_grouped_summary_by(db, Group::Entity).await
     }
 
     pub async fn execute_languages_summary(
         self,
         db: &DBContext,
     ) -> Result<Vec<GroupedTimeSummary>, sqlx::Error> {
-        self.execute_grouped_summary_by(db, "language").await
+        self.execute_grouped_summary_by(db, Group::Language).await
     }
 
     pub async fn execute_activity_type_summary(
         self,
         db: &DBContext,
     ) -> Result<Vec<GroupedTimeSummary>, sqlx::Error> {
-        self.execute_grouped_summary_by(db, "activity_type").await
+        self.execute_grouped_summary_by(db, Group::Category).await
     }
 
     pub async fn execute_range_summary(
@@ -159,13 +159,13 @@ impl SummaryQueryBuilder {
         db: &DBContext,
     ) -> Result<Vec<GroupedTimeSummary>, sqlx::Error> {
         let start_time = Instant::now();
-        let group_key = match self.group_by.as_deref() {
-            Some("app") => "apps.name",
-            Some("project") => "projects.name",
-            Some("language") => "languages.name",
-            Some("branch") => "branches.name",
-            Some("activity_type") => "events.activity_type",
-            Some("entity") => "entities.name",
+        let group_key = match self.group_by {
+            Some(Group::App) => "apps.name",
+            Some(Group::Project) => "projects.name",
+            Some(Group::Language) => "languages.name",
+            Some(Group::Branch) => "branches.name",
+            Some(Group::Category) => "events.activity_type",
+            Some(Group::Entity) => "entities.name",
             _ => "'Total'",
         };
 
@@ -379,13 +379,13 @@ impl SummaryQueryBuilder {
         db: &DBContext,
     ) -> Result<Vec<BucketTimeSummary>, sqlx::Error> {
         let start_time = Instant::now();
-        let group_key = match self.group_by.as_deref() {
-            Some("app") => "apps.name",
-            Some("project") => "projects.name",
-            Some("language") => "languages.name",
-            Some("branch") => "branches.name",
-            Some("activity_type") => "events.activity_type",
-            Some("entity") => "entities.name",
+        let group_key = match self.group_by {
+            Some(Group::App) => "apps.name",
+            Some(Group::Project) => "projects.name",
+            Some(Group::Language) => "languages.name",
+            Some(Group::Branch) => "branches.name",
+            Some(Group::Category) => "events.activity_type",
+            Some(Group::Entity) => "entities.name",
             _ => "'Total'",
         };
 

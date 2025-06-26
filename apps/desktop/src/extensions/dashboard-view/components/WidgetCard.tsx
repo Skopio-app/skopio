@@ -1,5 +1,6 @@
 import { Button, cn } from "@skopio/ui";
 import { GripVertical, X } from "lucide-react";
+import SkeletonChart from "./SkeletonChart";
 
 export interface WidgetCardProps {
   title?: string;
@@ -7,6 +8,7 @@ export interface WidgetCardProps {
   children: React.ReactNode;
   className?: string;
   draggableHandleId?: string;
+  loading: boolean;
 }
 
 const WidgetCard: React.FC<WidgetCardProps> = ({
@@ -15,6 +17,7 @@ const WidgetCard: React.FC<WidgetCardProps> = ({
   children,
   className,
   draggableHandleId = "widget-drag-handle",
+  loading,
 }) => {
   return (
     <div
@@ -50,7 +53,11 @@ const WidgetCard: React.FC<WidgetCardProps> = ({
         </div>
       </div>
 
-      <div className="flex-1 overflow-hidden">{children}</div>
+      {loading ? (
+        <SkeletonChart />
+      ) : (
+        <div className="flex-1 overflow-hidden">{children}</div>
+      )}
     </div>
   );
 };

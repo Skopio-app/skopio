@@ -6,8 +6,8 @@ use common::{
     time::TimeRange,
 };
 use db::{
-    models::BucketTimeSummary,
-    server::summary::{GroupedTimeSummary, SummaryQueryBuilder},
+    models::{BucketTimeSummary, GroupedTimeSummary},
+    server::summary::SummaryQueryBuilder,
     DBContext,
 };
 use tokio::sync::Mutex;
@@ -202,7 +202,7 @@ pub async fn get_bucketed_summary(
         builder
     };
 
-    let builder = if let Some(group_by) = &payload.group_by {
+    let builder = if let Some(group_by) = payload.group_by {
         builder.group_by(group_by)
     } else {
         builder

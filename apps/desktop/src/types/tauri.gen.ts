@@ -73,9 +73,16 @@ export type BucketedSummaryInput = {
   activity_types?: string[] | null;
   branch_names?: string[] | null;
   language_names?: string[] | null;
-  group_by?: string | null;
+  group_by?: Group | null;
   include_afk: boolean;
 };
+export type Group =
+  | "app"
+  | "project"
+  | "language"
+  | "branch"
+  | "category"
+  | "entity";
 export type GroupedTimeSummary = { group_key: string; total_seconds: number };
 export type SummaryQueryInput = {
   start: string | null;
