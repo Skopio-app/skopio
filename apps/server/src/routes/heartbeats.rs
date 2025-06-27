@@ -13,7 +13,7 @@ use db::server::projects::Project;
 use db::DBContext;
 use std::sync::Arc;
 use tokio::sync::Mutex;
-use tracing::info;
+use tracing::debug;
 
 // TODO: Investigate the need for optimizations in the for loop
 async fn handle_heartbeats(
@@ -22,7 +22,7 @@ async fn handle_heartbeats(
 ) -> Result<Json<String>, (StatusCode, Json<String>)> {
     let db = db.lock().await;
 
-    info!("Handling {} heartbeats", payload.len());
+    debug!("Handling {} heartbeats", payload.len());
 
     for hb in payload {
         let app_id = App::find_or_insert(&db, &hb.app_name)
@@ -63,8 +63,7 @@ async fn handle_heartbeats(
         heartbeat.create(&db).await.map_err(error_response)?;
     }
 
-    info!("Heartbeat details stored successfully");
-    Ok(Json("Heartbeats recorded".to_string()))
+    Ok(Json("Heartbeats saved".to_string()))
 }
 
 pub fn heartbeat_routes(db: Arc<Mutex<DBContext>>) -> Router {

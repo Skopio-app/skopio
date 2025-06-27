@@ -13,5 +13,5 @@
     "target": "esnext",
     "jsx": "react-jsx"
   },
-  "include": ["packages", "apps"]
+  "include": ["packages", "apps", ".vscode/timeline-view"]
 }

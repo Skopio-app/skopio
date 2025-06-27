@@ -871,6 +871,7 @@ dependencies = [
  "chrono",
  "serde",
  "serde_json",
+ "specta",
 ]
 
 [[package]]
@@ -1187,8 +1188,11 @@ name = "db"
 version = "0.1.0"
 dependencies = [
  "chrono",
+ "common",
  "log",
  "serde",
+ "serde_json",
+ "specta",
  "sqlx",
 ]
 

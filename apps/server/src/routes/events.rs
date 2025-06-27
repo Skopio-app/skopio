@@ -1,4 +1,4 @@
-use crate::models::ClientMessage;
+use crate::models::{ClientMessage, EventOutput};
 use crate::utils::error_response;
 use axum::extract::ws::{Message, WebSocket};
 use axum::extract::{State, WebSocketUpgrade};
@@ -19,7 +19,7 @@ use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::Mutex;
 use tokio::time::sleep;
-use tracing::{debug, error, info, warn};
+use tracing::{debug, error, warn};
 
 async fn handle_events(
     State(db): State<Arc<Mutex<DBContext>>>,
@@ -27,7 +27,7 @@ async fn handle_events(
 ) -> Result<Json<String>, (StatusCode, Json<String>)> {
     let db = db.lock().await;
 
-    info!("Handling {} events", payload.len());
+    debug!("Handling {} events", payload.len());
 
     for event in payload {
         let app_id = App::find_or_insert(&db, &event.app_name)
@@ -62,9 +62,7 @@ async fn handle_events(
 
         event.create(&db).await.map_err(error_response)?;
     }
-
-    info!("Event details stored successfully");
-    Ok(Json("Events recorded".to_string()))
+    Ok(Json("Events saved".to_string()))
 }
 
 pub async fn event_ws_handler(
@@ -162,8 +160,15 @@ async fn send_range_data(
     let db_guard = db.lock().await;
     match fetch_range(&db_guard, start, end).await {
         Ok(events) => {
-            let json = serde_json::to_string(&events).unwrap_or_else(|_| "[]".into());
-            socket.send(Message::Text(json.into())).await?;
+            let serialized = serde_json::to_string(
+                &events
+                    .into_iter()
+                    .map(EventOutput::from)
+                    .collect::<Vec<_>>(),
+            )
+            .unwrap();
+            // let json = serde_json::to_string(&events).unwrap_or_else(|_| "[]".into());
+            socket.send(Message::Text(serialized.into())).await?;
             Ok(())
         }
         Err(e) => {

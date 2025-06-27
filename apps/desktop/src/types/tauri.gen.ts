@@ -18,6 +18,34 @@ export const commands = {
   async setHeartbeatInterval(interval: number): Promise<null> {
     return await TAURI_INVOKE("set_heartbeat_interval", { interval });
   },
+  async fetchAppSummary(
+    query: SummaryQueryInput,
+  ): Promise<GroupedTimeSummary[]> {
+    return await TAURI_INVOKE("fetch_app_summary", { query });
+  },
+  async fetchProjectsSummary(
+    query: SummaryQueryInput,
+  ): Promise<GroupedTimeSummary[]> {
+    return await TAURI_INVOKE("fetch_projects_summary", { query });
+  },
+  async fetchActivityTypesSummary(
+    query: SummaryQueryInput,
+  ): Promise<GroupedTimeSummary[]> {
+    return await TAURI_INVOKE("fetch_activity_types_summary", { query });
+  },
+  async fetchBucketedSummary(
+    query: BucketedSummaryInput,
+  ): Promise<BucketTimeSummary[]> {
+    return await TAURI_INVOKE("fetch_bucketed_summary", { query });
+  },
+  async fetchTotalTime(query: SummaryQueryInput): Promise<number> {
+    return await TAURI_INVOKE("fetch_total_time", { query });
+  },
+  async fetchRangeSummary(
+    query: SummaryQueryInput,
+  ): Promise<GroupedTimeSummary[]> {
+    return await TAURI_INVOKE("fetch_range_summary", { query });
+  },
 };
 
 /** user-defined events **/
@@ -33,7 +61,52 @@ export type AppConfig = {
   flush_interval: number;
   sync_interval: number;
 };
+export type BucketTimeSummary = {
+  bucket: string;
+  grouped_values: Partial<{ [key in string]: number }>;
+};
+export type BucketedSummaryInput = {
+  preset: TimeRangePreset;
+  app_names?: string[] | null;
+  project_names?: string[] | null;
+  entity_names?: string[] | null;
+  activity_types?: string[] | null;
+  branch_names?: string[] | null;
+  language_names?: string[] | null;
+  group_by?: Group | null;
+  include_afk: boolean;
+};
+export type Group =
+  | "app"
+  | "project"
+  | "language"
+  | "branch"
+  | "category"
+  | "entity";
+export type GroupedTimeSummary = { group_key: string; total_seconds: number };
+export type SummaryQueryInput = {
+  start: string | null;
+  end: string | null;
+  app_names?: string[] | null;
+  project_names?: string[] | null;
+  activity_types?: string[] | null;
+  entity_names?: string[] | null;
+  branch_names?: string[] | null;
+  language_names?: string[] | null;
+  include_afk: boolean;
+};
 export type Theme = "Light" | "Dark" | "System";
+export type TimeBucket = "Day" | "Week" | "Month" | "Hour";
+export type TimeRangePreset =
+  | "Today"
+  | "Yesterday"
+  | "ThisWeek"
+  | "LastWeek"
+  | "ThisMonth"
+  | "LastMonth"
+  | { LastNDays: number }
+  | { LastNWeeks: number }
+  | { Custom: { start: string; end: string; bucket: TimeBucket } };
 
 /** tauri-specta globals **/
 

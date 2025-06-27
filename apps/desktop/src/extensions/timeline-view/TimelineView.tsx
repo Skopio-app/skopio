@@ -21,15 +21,35 @@ type Props = {
   // showQueriedInterval?: boolean;
 };
 
-// TODO: Check for other properties to add.
 interface TimelineDataItem {
-  id: string;
-  start: Date;
-  end: Date;
-  group: string;
+  id?: string | number;
+  start: Date | number | string;
+  end?: Date | number | string;
+  group?: any;
   content: string;
-  title: string;
-  style: string;
+  title?: string;
+  style?: string;
+  subgroup?: string | number;
+  type?: string;
+  limitSize?: boolean;
+  editable?: boolean | object;
+  className?: string;
+  align?: string;
+  selectable?: boolean;
+}
+
+interface TimelineGroup {
+  id: string | number;
+  title?: string;
+  className?: string;
+  content?: string | HTMLElement;
+  style?: string;
+  subgroupOrder?: string | ((a: any, b: any) => number);
+  subgroupStack?: Record<string, boolean> | boolean;
+  subgroupVisibility?: Record<string, boolean>;
+  visible?: boolean;
+  nestedGroups?: Array<string | number>;
+  showNested?: boolean;
 }
 
 export const TimelineView: React.FC<Props> = ({
@@ -49,7 +69,7 @@ export const TimelineView: React.FC<Props> = ({
   const PRUNE_BUFFER_MINUTES = 60; // Prune items 60 minutes outside the visible range
   const ANIMATION_INACTIVITY_DELAY_MS = 5000; // Animate to latest after 10 seconds
 
-  const groups = useMemo(
+  const groups: TimelineGroup[] = useMemo<TimelineGroup[]>(
     () => [
       { id: "AFK", content: "AFK" },
       { id: "VSCode", content: "skopio-vscode" },
@@ -150,7 +170,7 @@ export const TimelineView: React.FC<Props> = ({
         console.log(`Pruning ${itemsToRemove.length} items from DataSet`);
         dataSetRef.current.remove(itemsToRemove);
       }
-    }, 500); // debounce for 500ms
+    }, 500);
   }, [
     requestDataForRange,
     FETCH_BUFFER_MINUTES,
@@ -252,6 +272,7 @@ export const TimelineView: React.FC<Props> = ({
     // showQueriedInterval
   ]);
 
+  // TODO: Add a tooltip helper to display additional event data
   useEffect(() => {
     if (!dataSetRef.current || !timelineRef.current) {
       console.warn(
@@ -272,7 +293,7 @@ export const TimelineView: React.FC<Props> = ({
 
       const id = String(e.id);
       const group = getGroupId(e.app);
-      const color = getColorForActivity(e.activity_type);
+      const color = getColorForActivity(e.activityType);
 
       const item: TimelineDataItem = {
         id,
@@ -288,9 +309,9 @@ export const TimelineView: React.FC<Props> = ({
     }
 
     for (const e of afkEventStream.values()) {
-      const start = safeParseISO(e.afk_start);
-      const end = e.afk_end
-        ? safeParseISO(e.afk_end)
+      const start = safeParseISO(e.afkStart);
+      const end = e.afkEnd
+        ? safeParseISO(e.afkEnd)
         : addSeconds(start ?? 0, e.duration ?? 0);
       if (!start || !end || isNaN(start.getTime()) || isNaN(end.getTime()))
         continue;

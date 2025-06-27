@@ -7,5 +7,6 @@ pub mod goals;
 pub mod heartbeats;
 pub mod languages;
 pub mod projects;
+pub mod summary;
 pub mod tags;
 pub mod yearly_summaries;

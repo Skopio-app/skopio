@@ -2,6 +2,7 @@ use crate::routes::afk_events::afk_event_routes;
 use crate::routes::events::event_routes;
 use crate::routes::health::health_routes;
 use crate::routes::heartbeats::heartbeat_routes;
+use crate::routes::summary::summary_routes;
 use axum::Router;
 use db::DBContext;
 use std::sync::Arc;
@@ -14,5 +15,6 @@ pub async fn create_app(db: Arc<Mutex<DBContext>>) -> Router {
         .merge(event_routes(db.clone()))
         .merge(afk_event_routes(db.clone()))
         .merge(health_routes())
+        .merge(summary_routes(db.clone()))
         .layer(CorsLayer::permissive())
 }
