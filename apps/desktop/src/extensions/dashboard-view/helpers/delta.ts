@@ -1,8 +1,8 @@
 import { BucketTimeSummary } from "../../../types/tauri.gen";
-import { CachedActivity } from "../db/activityDB";
+import { CalendarChartData } from "../types";
 
 export const isDeltaOutdated = (
-  cached: CachedActivity | undefined,
+  cached: CalendarChartData | undefined,
   incoming: BucketTimeSummary,
   thresholdSeconds = 60,
 ): { outdated: boolean; delta: number } => {

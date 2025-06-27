@@ -1,13 +1,13 @@
 import { useEffect, useState } from "react";
 import { Layout } from "react-grid-layout";
-import { dashboardLayoutDB } from "../db/dashboardLayout";
+import { skopioDB } from "../db/skopioDB";
 
 export const usePersistentLayout = (key: string, defaultLayout: Layout[]) => {
   const [layout, setLayout] = useState<Layout[]>(defaultLayout);
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
-    dashboardLayoutDB.layouts.get(key).then((entry) => {
+    skopioDB.layouts.get(key).then((entry) => {
       if (entry?.layout) {
         setLayout(entry.layout);
       }
@@ -17,7 +17,7 @@ export const usePersistentLayout = (key: string, defaultLayout: Layout[]) => {
 
   const saveLayout = (newLayout: Layout[]) => {
     setLayout(newLayout);
-    dashboardLayoutDB.layouts.put({ id: key, layout: newLayout });
+    skopioDB.layouts.put({ id: key, layout: newLayout });
   };
 
   return { layout, saveLayout, loaded };

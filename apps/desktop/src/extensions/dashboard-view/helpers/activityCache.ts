@@ -1,23 +1,29 @@
 import { BucketTimeSummary } from "../../../types/tauri.gen";
-import { activityDB, CachedActivity } from "../db/activityDB";
+import { CachedActivity, skopioDB } from "../db/skopioDB";
 
 export const storeYearlyActivity = async (summary: BucketTimeSummary[]) => {
   const now = Date.now();
+  const year = new Date(summary[0].bucket).getFullYear();
 
-  const items: CachedActivity[] = summary.map(({ bucket, grouped_values }) => ({
+  const values = summary.map(({ bucket, grouped_values }) => ({
     day: bucket,
-    year: new Date(bucket).getFullYear(),
     value: grouped_values["Total"] ?? 0,
-    updated_at: now,
   }));
 
-  await activityDB.activity.bulkPut(items);
+  const group: CachedActivity = {
+    year,
+    values,
+    updated_at: now,
+  };
+
+  await skopioDB.activity.put(group);
 };
 
 export const getYearlyActivity = async (
   year: number,
-): Promise<CachedActivity[]> => {
-  return activityDB.activity.where("year").equals(year).toArray();
+): Promise<CachedActivity | null> => {
+  const result = await skopioDB.activity.get(year);
+  return result ?? null;
 };
 
 export const updateTodayActivity = async (
@@ -28,10 +34,19 @@ export const updateTodayActivity = async (
   const day = todayBucket.bucket;
   const year = new Date(day).getFullYear();
 
-  await activityDB.activity.put({
-    day,
-    value,
+  const existing = await skopioDB.activity.get(year);
+
+  const updated = {
     year,
     updated_at: Date.now(),
-  });
+    values: (existing?.values ?? [])
+      .filter((d) => d.day !== day)
+      .concat({ day, value }),
+  };
+
+  updated.values.sort(
+    (a, b) => new Date(a.day).getTime() - new Date(b.day).getTime(),
+  );
+
+  await skopioDB.activity.put(updated);
 };

@@ -48,9 +48,9 @@ const ActivityChartWidget = () => {
       let cached = await getYearlyActivity(currentYear);
       if (cancelled) return;
 
-      if (cached.length === 0) {
+      if (!cached || cached.values.length === 0) {
         const fresh = getYearData();
-        cached = fresh.map(({ bucket, grouped_values }) => ({
+        const values = fresh.map(({ bucket, grouped_values }) => ({
           day: bucket,
           value: grouped_values["Total"] ?? 0,
           year: new Date(bucket).getFullYear(),
@@ -58,27 +58,28 @@ const ActivityChartWidget = () => {
         }));
 
         await storeYearlyActivity(fresh);
+        cached = { year: currentYear, values, updated_at: Date.now() };
       }
-      if (cached.length > 0) {
-        setData(cached.map(({ day, value }) => ({ day, value })));
+      if (cached) {
+        setData(cached.values);
       }
 
       const [todayBucket] = getTodayData();
       if (!todayBucket) return;
 
-      const cachedToday = cached.find((c) => c.day === todayBucket.bucket);
+      const cachedToday = cached.values.find(
+        (c) => c.day === todayBucket.bucket,
+      );
       const { outdated } = isDeltaOutdated(cachedToday, todayBucket);
 
       if (outdated) {
         await updateTodayActivity(todayBucket);
 
-        const updated = cached
+        const updated = cached.values
           .filter((c) => c.day !== todayBucket.bucket)
           .concat({
             day: todayBucket.bucket,
             value: todayBucket.grouped_values["Total"] ?? 0,
-            year: currentYear,
-            updated_at: Date.now(),
           });
 
         updated.sort(
@@ -86,7 +87,7 @@ const ActivityChartWidget = () => {
         );
 
         if (!cancelled) {
-          setData(updated.map(({ day, value }) => ({ day, value })));
+          setData(updated);
         }
       }
     };
