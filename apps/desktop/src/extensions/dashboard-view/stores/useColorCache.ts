@@ -21,7 +21,7 @@ export const useColorCache = create<ColorCacheState>()(
       getColor: (key) => get().colorMap[key],
     }),
     {
-      name: "skopio-color-cache", // storage key in localStorage
+      name: "skopio-color-cache",
     },
   ),
 );

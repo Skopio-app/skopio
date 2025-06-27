@@ -2,9 +2,9 @@
 
 import { createBrowserRouter } from "react-router";
 import App from "./App";
-import DashboardPage from "./pages/DashboardPage";
 import TabExtensionPage from "./pages/TabExtensionPage";
 import DashboardLayout from "./components/Dashboard";
+import RedirectToTab from "./components/RedirectToTab";
 
 // export default [
 //     route("dashboard", "./App.tsx", [
@@ -22,7 +22,7 @@ const router = createBrowserRouter([
         children: [
           {
             index: true,
-            element: <DashboardPage />,
+            element: <RedirectToTab />,
           },
           {
             path: "tab/:id",

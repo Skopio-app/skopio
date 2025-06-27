@@ -1,6 +1,6 @@
 import { ResponsivePieCanvas } from "@nivo/pie";
 import { useMemo } from "react";
-import { formatDuration } from "../dateRanges";
+import { formatDuration } from "../helpers/dateRanges";
 import { useOrdinalColorScale } from "@nivo/colors";
 
 interface CustomPieChartProps {
@@ -15,7 +15,6 @@ const CustomPieChart: React.FC<CustomPieChartProps> = ({ data }) => {
   const chartData = useMemo(() => data, [data]);
   const getColor = useOrdinalColorScale({ scheme: "nivo" }, "id");
 
-  // TODO: Reuse the following placeholder text
   if (!chartData.length) {
     return (
       <div className="h-[220px] w-full flex items-center justify-center text-sm text-gray-500">
@@ -46,7 +45,6 @@ const CustomPieChart: React.FC<CustomPieChartProps> = ({ data }) => {
           enableArcLabels={false}
           tooltip={({ datum }) => {
             const time = formatDuration(datum.value);
-
             return (
               <div className="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm shadow-md text-gray-600 flex items-center gap-2">
                 <span

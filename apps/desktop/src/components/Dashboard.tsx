@@ -15,6 +15,7 @@ import {
 } from "@skopio/ui";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { builtinExtensionRegistry } from "../extensions/registry";
+import { LAST_ACTIVE_TAB } from "../utils/constants";
 
 const DashboardLayout = () => {
   const navigate = useNavigate();
@@ -48,7 +49,10 @@ const DashboardLayout = () => {
                   <SidebarMenuItem key={ext.manifest.id}>
                     <SidebarMenuButton
                       isActive={location.pathname === "/tab/" + ext.manifest.id}
-                      onClick={() => navigate("/tab/" + ext.manifest.id)}
+                      onClick={() => {
+                        localStorage.setItem(LAST_ACTIVE_TAB, ext.manifest.id);
+                        navigate("/tab/" + ext.manifest.id);
+                      }}
                     >
                       {ext.manifest.name}
                     </SidebarMenuButton>

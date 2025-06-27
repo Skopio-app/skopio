@@ -3,7 +3,7 @@ import WidgetCard from "../components/WidgetCard";
 import CalendarChart from "../charts/CalendarChart";
 import { TimeRangePreset } from "../../../types/tauri.gen";
 import { endOfDay, endOfYear, startOfDay, startOfYear } from "date-fns";
-import { toNaiveDateTime } from "../dateRanges";
+import { toNaiveDateTime } from "../helpers/dateRanges";
 import { useSummaryData } from "../hooks/useSummaryData";
 import { CalendarChartData } from "../types";
 import {

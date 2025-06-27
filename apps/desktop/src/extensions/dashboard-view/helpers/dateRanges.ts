@@ -11,7 +11,7 @@ import {
   subMonths,
   subWeeks,
 } from "date-fns";
-import { TimeBucket, TimeRangePreset } from "../../types/tauri.gen";
+import { TimeBucket, TimeRangePreset } from "../../../types/tauri.gen";
 
 /**
  * Converts a JavaScript `Date` object to a naive datetime string in the format
