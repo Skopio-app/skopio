@@ -164,6 +164,7 @@ pub async fn get_bucketed_summary(
         .start(range.start())
         .end(range.end())
         .time_bucket(range.bucket())
+        // .sort_by(db::server::summary::SortOrder::BucketAscInnerDesc)
         .include_afk(payload.include_afk);
 
     let builder = if let Some(names) = payload.app_names {

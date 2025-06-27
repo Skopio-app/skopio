@@ -6,7 +6,7 @@ export interface StoredLayout {
   layout: Layout[];
 }
 
-export class DashboardLayoutDB extends Dexie {
+class DashboardLayoutDB extends Dexie {
   layouts!: Table<StoredLayout>;
 
   constructor() {

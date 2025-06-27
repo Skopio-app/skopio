@@ -9,6 +9,14 @@ use crate::{
     DBContext,
 };
 
+// #[derive(Debug, Clone, Copy)]
+// pub enum SortOrder {
+//     BucketAscInnerAsc,
+//     BucketAscInnerDesc,
+//     BucketDescInnerAsc,
+//     BucketDescInnerDesc,
+// }
+
 pub struct SummaryQueryBuilder {
     start: Option<NaiveDateTime>,
     end: Option<NaiveDateTime>,
@@ -21,6 +29,7 @@ pub struct SummaryQueryBuilder {
     group_by: Option<Group>,
     include_afk: bool,
     time_bucket: Option<TimeBucket>,
+    // sort_order: SortOrder,
 }
 
 #[derive(Debug, sqlx::FromRow)]
@@ -44,6 +53,7 @@ impl SummaryQueryBuilder {
             group_by: None,
             include_afk: false,
             time_bucket: None,
+            // sort_order: SortOrder::BucketAscInnerDesc,
         }
     }
 
@@ -101,6 +111,11 @@ impl SummaryQueryBuilder {
         self.time_bucket = Some(bucket);
         self
     }
+
+    // pub fn sort_by(mut self, order: SortOrder) -> Self {
+    //     self.sort_order = order;
+    //     self
+    // }
 
     pub async fn execute_grouped_summary_by(
         self,
@@ -498,6 +513,7 @@ impl SummaryQueryBuilder {
             })
             .collect::<Vec<_>>();
 
+        //   let records = self.sort_bucket_records(grouped_map);
         let elapsed = start_time.elapsed();
         info!(
             "Executed range summary with bucket query in {:.2?} - {} rows (group_key: {:?})",
@@ -508,6 +524,45 @@ impl SummaryQueryBuilder {
 
         Ok(records)
     }
+
+    // fn sort_bucket_records(
+    //     &self,
+    //     grouped_map: HashMap<String, HashMap<String, i64>>,
+    // ) -> Vec<BucketTimeSummary> {
+    //     let mut buckets: Vec<_> = grouped_map.into_iter().collect();
+
+    //     let mut result: Vec<BucketTimeSummary> = buckets
+    //         .iter_mut()
+    //         .map(|(bucket, inner)| {
+    //             let mut items: Vec<_> = inner.drain().collect();
+    //             match self.sort_order {
+    //                 SortOrder::BucketAscInnerAsc | SortOrder::BucketDescInnerAsc => {
+    //                     items.sort_by_key(|(_, v)| *v);
+    //                 }
+    //                 SortOrder::BucketAscInnerDesc | SortOrder::BucketDescInnerDesc => {
+    //                     items.sort_by(|a, b| b.1.cmp(&a.1));
+    //                 }
+    //             }
+    //             let grouped_values = items.into_iter().collect();
+    //             BucketTimeSummary {
+    //                 bucket: bucket.clone(),
+    //                 grouped_values,
+    //             }
+    //         })
+    //         .collect();
+
+    //     match self.sort_order {
+    //         SortOrder::BucketDescInnerAsc | SortOrder::BucketDescInnerDesc => {
+    //             result.sort_by(|a, b| b.bucket.cmp(&a.bucket));
+    //         }
+    //         _ => {
+    //             result.sort_by(|a, b| a.bucket.cmp(&b.bucket));
+    //         }
+    //     }
+
+    //     info!("The results: {:?}", result);
+    //     result
+    // }
 }
 
 impl Default for SummaryQueryBuilder {
