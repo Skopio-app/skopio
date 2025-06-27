@@ -1,13 +1,14 @@
 import { ResponsiveBarCanvas } from "@nivo/bar";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import ChartTooltipPortal from "../ChartTooltipPortal";
 import { formatDuration } from "../dateRanges";
 import { useOrdinalColorScale } from "@nivo/colors";
 import { useColorCache } from "../stores/useColorCache";
+
 interface StackedBarChartProps {
   data: {
     label: string;
-    [project: string]: string | number;
+    [key: string]: string | number;
   }[];
   keys: string[];
   bucketLabel?: string;
@@ -24,8 +25,8 @@ const StackedBarChart: React.FC<StackedBarChartProps> = ({
   const mousePosRef = useRef<{ x: number; y: number } | null>(null);
   const rafId = useRef<number | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+
   const getColor = useOrdinalColorScale({ scheme: "nivo" }, "id");
-  // const { meta, getColor, updateMeta } = useBarMetaStore();
 
   const getColorForKey = (
     key: string,
@@ -33,47 +34,15 @@ const StackedBarChart: React.FC<StackedBarChartProps> = ({
   ): string => {
     const cachedColor = useColorCache.getState().getColor(key);
     if (cachedColor) return cachedColor;
-
     const newColor = getColorScale({ id: key });
     useColorCache.getState().setColor(key, newColor);
     return newColor;
   };
 
-  const sortedkeys = useMemo(() => {
-    const totals: Record<string, number> = {};
-
-    for (const entry of data) {
-      for (const key of keys) {
-        const val = Number(entry[key] ?? 0);
-        totals[key] = (totals[key] ?? 0) + val;
-      }
-    }
-
-    return [...keys].sort((a, b) => totals[a] - totals[b]);
-  }, [data, keys]);
-
-  const tooltipEntriesMap = useMemo(() => {
-    const map: Record<string, { key: string; value: number }[]> = {};
-
-    for (const bar of data) {
-      const entries = sortedkeys
-        .map((key) => {
-          const value = Number(bar[key] ?? 0);
-          return value > 0 ? { key, value } : null;
-        })
-        .filter(Boolean) as { key: string; value: number }[];
-      map[bar.label] = entries;
-    }
-
-    return map;
-  }, [data, sortedkeys]);
-
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
     const x = e.clientX + 5;
     const y = e.clientY + 5;
-
     mousePosRef.current = { x, y };
-
     if (rafId.current === null) {
       rafId.current = requestAnimationFrame(() => {
         if (mousePosRef.current) {
@@ -90,7 +59,7 @@ const StackedBarChart: React.FC<StackedBarChartProps> = ({
         cancelAnimationFrame(rafId.current);
       }
     };
-  });
+  }, []);
 
   const MAX_TOOLTIP_ENTRIES = 10;
 
@@ -110,7 +79,7 @@ const StackedBarChart: React.FC<StackedBarChartProps> = ({
     >
       <ResponsiveBarCanvas
         data={data}
-        keys={sortedkeys}
+        keys={keys}
         indexBy="label"
         margin={{ top: 20, right: 30, bottom: 50, left: 50 }}
         padding={0.3}
@@ -129,7 +98,13 @@ const StackedBarChart: React.FC<StackedBarChartProps> = ({
         }}
         axisLeft={null}
         tooltip={({ data }) => {
-          const entries = [...(tooltipEntriesMap[data.label] ?? [])]
+          const entries = Object.entries(data)
+            .filter(([key]) => key !== "label" && typeof data[key] === "number")
+            .map(([key, value]) => ({
+              key,
+              value: Number(value),
+            }))
+            .filter(({ value }) => value > 0)
             .sort((a, b) => b.value - a.value)
             .slice(0, MAX_TOOLTIP_ENTRIES);
 
@@ -143,7 +118,7 @@ const StackedBarChart: React.FC<StackedBarChartProps> = ({
                 zIndex: 50,
               }}
             >
-              <div className="max-h-96 scroll-hidden overflow-y-auto rounded-md border border-gray-300 bg-white px-4 py-3 text-sm shadow-lg text-gray-800 min-w-[200px] max-w-[320px]">
+              <div className="max-h-96 overflow-y-auto rounded-md border border-gray-300 bg-white px-4 py-3 text-sm shadow-lg text-gray-800 min-w-[200px] max-w-[320px]">
                 <div className="font-semibold mb-1">{data.label}</div>
                 {entries.map(({ key, value }) => (
                   <div key={key} className="flex items-center gap-2 py-0.5">
@@ -168,10 +143,7 @@ const StackedBarChart: React.FC<StackedBarChartProps> = ({
           from: "color",
           modifiers: [["darker", 1.6]],
         }}
-        // animate={data.length < 50}
-        // motionConfig={data.length < 50 ? "gentle" : "default"}
         role="application"
-        // ariaLabel="Time bucket project summary chart"
       />
     </div>
   );

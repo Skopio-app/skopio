@@ -6,7 +6,7 @@ import { useSummaryData } from "../hooks/useSummaryData";
 import { format, parseISO } from "date-fns";
 
 const ProjectChartWidget = () => {
-  const { rawGrouped, loading } = useSummaryData();
+  const { rawGrouped, loading } = useSummaryData(undefined, ["project"]);
 
   const [data, keys] = useMemo(() => {
     const projectBuckets = rawGrouped.project ?? [];

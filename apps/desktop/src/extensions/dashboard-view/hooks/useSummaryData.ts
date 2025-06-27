@@ -1,4 +1,4 @@
-import { startTransition, useEffect, useState } from "react";
+import { startTransition, useEffect, useMemo, useState } from "react";
 import {
   BucketedSummaryInput,
   BucketTimeSummary,
@@ -7,6 +7,7 @@ import {
   TimeRangePreset,
 } from "../../../types/tauri.gen";
 import { useDashboardFilter } from "../stores/useDashboardFilter";
+import pMap from "p-map";
 
 interface UseSummaryResult {
   getGroupData: (group: Group) => Record<string, number>;
@@ -19,6 +20,7 @@ interface UseSummaryResult {
 
 export const useSummaryData = (
   overridePreset?: TimeRangePreset,
+  groups: Group[] = [],
 ): UseSummaryResult => {
   const { preset: globalPreset } = useDashboardFilter();
   const preset = overridePreset ?? globalPreset;
@@ -31,25 +33,18 @@ export const useSummaryData = (
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const groupKeys = useMemo(() => JSON.stringify([...groups].sort()), [groups]);
+
   useEffect(() => {
     let cancelled = false;
-
-    const groupKeys: Group[] = [
-      "app",
-      "branch",
-      "category",
-      "entity",
-      "language",
-      "project",
-    ];
 
     const run = async () => {
       setLoading(true);
       setError(null);
 
-      if (overridePreset) {
+      if (overridePreset || groups.length === 0) {
         const input: BucketedSummaryInput = {
-          preset: overridePreset,
+          preset,
           include_afk: false,
         };
 
@@ -58,7 +53,7 @@ export const useSummaryData = (
           if (!Array.isArray(result) || cancelled) return;
 
           startTransition(() => {
-            setUngrouped(result as BucketTimeSummary[]);
+            setUngrouped(result);
             setRawGrouped({});
             setLoading(false);
           });
@@ -71,8 +66,14 @@ export const useSummaryData = (
       }
 
       try {
-        const results = await Promise.all(
-          groupKeys.map(async (group_by) => {
+        startTransition(() => {
+          setRawGrouped({});
+          setUngrouped(null);
+        });
+
+        await pMap(
+          groups,
+          async (group_by) => {
             const input: BucketedSummaryInput = {
               preset,
               group_by,
@@ -80,35 +81,34 @@ export const useSummaryData = (
             };
 
             const result = await commands.fetchBucketedSummary(input);
-            if (!Array.isArray(result)) return [group_by, []] as const;
-            return [group_by, result] as const;
-          }),
+            if (!Array.isArray(result) || cancelled) return;
+
+            startTransition(() => {
+              setRawGrouped((prev) => ({
+                ...prev,
+                [group_by]: result,
+              }));
+            });
+          },
+          { concurrency: 2 },
         );
 
-        if (cancelled) return;
-
-        const groupedData: Partial<Record<Group, BucketTimeSummary[]>> = {};
-        for (const [key, result] of results) {
-          groupedData[key] = result as BucketTimeSummary[];
+        if (!cancelled) {
+          startTransition(() => setLoading(false));
         }
-
-        startTransition(() => {
-          setRawGrouped(groupedData);
-          setUngrouped(null);
-          setLoading(false);
-        });
       } catch (err) {
-        setError((err as Error).message);
-        setLoading(false);
+        if (!cancelled) {
+          setError((err as Error).message);
+          setLoading(false);
+        }
       }
     };
 
     run();
-
     return () => {
       cancelled = true;
     };
-  }, [preset, overridePreset]);
+  }, [preset, overridePreset, groupKeys]);
 
   const getGroupData = (group: Group): Record<string, number> => {
     const data = rawGrouped[group];

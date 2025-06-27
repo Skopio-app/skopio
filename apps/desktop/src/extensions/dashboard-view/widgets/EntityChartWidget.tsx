@@ -1,42 +1,69 @@
-import { useMemo } from "react";
-import { BarChartData } from "../types";
+import { useEffect, useState, startTransition } from "react";
 import { format, parseISO } from "date-fns";
 import WidgetCard from "../components/WidgetCard";
 import StackedBarChart from "../charts/StackedBarChart";
 import { useSummaryData } from "../hooks/useSummaryData";
+import { BarChartData } from "../types";
+
+const MAX_KEYS = 20;
 
 const EntityChartWidget = () => {
-  const { rawGrouped, loading } = useSummaryData();
+  const { rawGrouped, loading } = useSummaryData(undefined, ["entity"]);
+  const [chartData, setChartData] = useState<BarChartData[]>([]);
+  const [topKeys, setTopKeys] = useState<string[]>([]);
 
-  const [data, keys] = useMemo(() => {
+  useEffect(() => {
     const entityBuckets = rawGrouped.entity ?? [];
-
+    const totals: Record<string, number> = {};
     const grouped: Record<string, Record<string, number>> = {};
-    const allKeys = new Set<string>();
+    const groupedBuckets: Record<string, string> = {};
 
     for (const { bucket, grouped_values } of entityBuckets) {
-      const label = format(parseISO(bucket), "MMM d");
+      const date = parseISO(bucket);
+      const label = format(date, "MMM d");
+      groupedBuckets[label] = bucket;
+
       if (!grouped[label]) grouped[label] = {};
 
       for (const [entity, seconds] of Object.entries(grouped_values)) {
         grouped[label][entity] = seconds ?? 0;
-        allKeys.add(entity);
+        totals[entity] = (totals[entity] ?? 0) + (seconds ?? 0);
       }
     }
 
-    const chartData: BarChartData[] = Object.entries(grouped).map(
-      ([label, groupTotals]) => ({
-        label,
-        ...groupTotals,
-      }),
+    const topEntities = Object.entries(totals)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, MAX_KEYS)
+      .map(([key]) => key);
+
+    const parsedGrouped = Object.entries(grouped).map(
+      ([label, groupTotals]) => {
+        const date = parseISO(groupedBuckets[label]);
+        return { date, label, groupTotals };
+      },
     );
 
-    return [chartData, Array.from(allKeys)] as [BarChartData[], string[]];
+    parsedGrouped.sort((a, b) => a.date.getTime() - b.date.getTime());
+
+    const finalData: BarChartData[] = parsedGrouped.map(
+      ({ label, groupTotals }) => {
+        const entry: BarChartData = { label };
+        for (const key of topEntities) {
+          entry[key] = groupTotals[key] ?? 0;
+        }
+        return entry;
+      },
+    );
+
+    startTransition(() => {
+      setChartData(finalData);
+      setTopKeys(topEntities);
+    });
   }, [rawGrouped.entity]);
 
   return (
     <WidgetCard title="Entities" loading={loading}>
-      <StackedBarChart data={data} keys={keys} />
+      <StackedBarChart data={chartData} keys={topKeys} />
     </WidgetCard>
   );
 };

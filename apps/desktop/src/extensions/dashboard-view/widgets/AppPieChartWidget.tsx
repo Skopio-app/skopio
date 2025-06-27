@@ -5,7 +5,7 @@ import CustomPieChart from "../charts/CustomPieChart";
 import { PieChartData } from "../types";
 
 const AppPieChartWidget = () => {
-  const { getGroupData, loading } = useSummaryData();
+  const { getGroupData, loading } = useSummaryData(undefined, ["app"]);
 
   const data = useMemo<PieChartData[]>(() => {
     const totals = getGroupData("app");

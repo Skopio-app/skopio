@@ -6,7 +6,7 @@ import StackedBarChart from "../charts/StackedBarChart";
 import { useSummaryData } from "../hooks/useSummaryData";
 
 const CategoryChartWidget = () => {
-  const { rawGrouped, loading } = useSummaryData();
+  const { rawGrouped, loading } = useSummaryData(undefined, ["category"]);
 
   const [data, keys] = useMemo(() => {
     const categoryBuckets = rawGrouped.category ?? [];

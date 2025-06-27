@@ -5,7 +5,7 @@ import CustomPieChart from "../charts/CustomPieChart";
 import { useSummaryData } from "../hooks/useSummaryData";
 
 const LanguagePieChartWidget = () => {
-  const { getGroupData, loading } = useSummaryData();
+  const { getGroupData, loading } = useSummaryData(undefined, ["language"]);
 
   const data = useMemo<PieChartData[]>(() => {
     const totals = getGroupData("language");

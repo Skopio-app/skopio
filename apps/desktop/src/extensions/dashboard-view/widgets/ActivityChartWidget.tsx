@@ -27,8 +27,6 @@ const ActivityChartWidget = () => {
     }));
   }, [getUngroupedData]);
 
-  console.log("The chart data: ", chartData);
-
   return (
     <WidgetCard title="Daily Activity" loading={loading}>
       <CalendarChart data={chartData} />

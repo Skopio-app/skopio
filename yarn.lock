@@ -2019,11 +2019,13 @@ __metadata:
     "@vitejs/plugin-react-swc": "npm:^3.5.0"
     color: "npm:^5.0.0"
     date-fns: "npm:^4.1.0"
+    dexie: "npm:^4.0.11"
     eslint: "npm:^9.17.0"
     eslint-plugin-react-hooks: "npm:^5.0.0"
     eslint-plugin-react-refresh: "npm:^0.4.16"
     globals: "npm:^15.14.0"
     lucide-react: "npm:^0.516.0"
+    p-map: "npm:^7.0.3"
     prettier: "npm:3.5.3"
     react-grid-layout: "npm:^1.5.1"
     react-router: "npm:^7.6.1"
@@ -3424,6 +3426,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"dexie@npm:^4.0.11":
+  version: 4.0.11
+  resolution: "dexie@npm:4.0.11"
+  checksum: 10c0/f8f18e17fe99fd3d4bd80a4ff76c0a543be128bb65a11b6b34297c6ab2d7426989567a8eac09b0de6b483bfb776cbbb32bebe3eedcd5c572ddda80224aac1fa1
+  languageName: node
+  linkType: hard
+
 "eastasianwidth@npm:^0.2.0":
   version: 0.2.0
   resolution: "eastasianwidth@npm:0.2.0"
@@ -4789,7 +4798,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"p-map@npm:^7.0.2":
+"p-map@npm:^7.0.2, p-map@npm:^7.0.3":
   version: 7.0.3
   resolution: "p-map@npm:7.0.3"
   checksum: 10c0/46091610da2b38ce47bcd1d8b4835a6fa4e832848a6682cf1652bc93915770f4617afc844c10a77d1b3e56d2472bb2d5622353fa3ead01a7f42b04fc8e744a5c

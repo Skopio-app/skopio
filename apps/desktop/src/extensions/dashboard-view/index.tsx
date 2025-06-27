@@ -10,7 +10,7 @@ import {
 } from "./dateRanges";
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
-import { Layouts, Responsive, WidthProvider } from "react-grid-layout";
+import { Layout, Responsive, WidthProvider } from "react-grid-layout";
 import ProjectChartWidget from "./widgets/ProjectChartWidget";
 import AppPieChartWidget from "./widgets/AppPieChartWidget";
 import { useDashboardFilter } from "./stores/useDashboardFilter";
@@ -18,8 +18,9 @@ import LanguagePieChartWidget from "./widgets/LanguagePieChartWidget";
 import CategoryChartWidget from "./widgets/CategoryChartWidget";
 import EntityChartWidget from "./widgets/EntityChartWidget";
 import RangeSelectionDialog from "./components/RangeSelectionDialog";
-import { commands, SummaryQueryInput } from "../../types/tauri.gen";
 import ActivityChartWidget from "./widgets/ActivityChartWidget";
+import { useTotalTime } from "./hooks/useTotalTime";
+import { usePersistentLayout } from "./hooks/usePersistentLayout";
 
 const ResponsiveGridLayout = WidthProvider(
   Responsive,
@@ -39,7 +40,6 @@ const DashboardView = () => {
       ? paramRange
       : DateRangeType.Today,
   );
-  const [timeLogged, setTimeLogged] = useState<number>(0);
 
   const isCustom = selectedRange === DateRangeType.Custom;
 
@@ -64,10 +64,9 @@ const DashboardView = () => {
   );
 
   useEffect(() => {
-    useDashboardFilter.setState({
-      preset: mapRangeToPreset(selectedRange, customStart, customEnd),
-    });
-  }, [startDate, endDate]);
+    const newPreset = mapRangeToPreset(selectedRange, startDate, endDate);
+    useDashboardFilter.setState({ preset: newPreset });
+  }, [selectedRange, startDate, endDate]);
 
   const formattedRange = useMemo(() => {
     const sameDay = format(startDate, "PPP") === format(endDate, "PPP");
@@ -76,40 +75,48 @@ const DashboardView = () => {
       : `${format(startDate, "EEE, MMM do yyyy")} - ${format(endDate, "EEE, MMM do yyyy")}`;
   }, [startDate, endDate]);
 
-  useEffect(() => {
-    const run = async () => {
-      if (!startDate || !endDate) {
-        return;
-      }
-      const input: SummaryQueryInput = {
-        start: startDate.toISOString(),
-        end: endDate.toISOString(),
-        include_afk: false,
-      };
+  const { total, loading } = useTotalTime(startDate, endDate);
 
-      try {
-        const time = await commands.fetchTotalTime(input);
-        setTimeLogged(time);
-      } catch (err) {
-        console.error("Error fetching total time: ", err);
-      }
-    };
+  const formattedDuration = formatDuration(total);
 
-    run();
-  }, [startDate, endDate]);
+  const defaultLayout: Layout[] = [
+    { i: "projects", x: 0, y: 0, w: 6, h: 3 },
+    { i: "apps", x: 6, y: 0, w: 6, h: 3 },
+    { i: "languages", x: 0, y: 0, w: 6, h: 3 },
+    { i: "categories", x: 6, y: 1, w: 6, h: 3 },
+    { i: "entities", x: 0, y: 2, w: 6, h: 3 },
+    { i: "activity", x: 6, y: 2, w: 6, h: 3 },
+  ];
 
-  const formattedDuration = formatDuration(timeLogged);
+  const { layout, saveLayout, loaded } = usePersistentLayout(
+    "default",
+    defaultLayout,
+  );
+  const layouts = useMemo(() => ({ lg: layout }), [layout]);
 
-  const layouts: Layouts = {
-    lg: [
-      { i: "projects", x: 0, y: 0, w: 6, h: 3 },
-      { i: "apps", x: 6, y: 0, w: 6, h: 3 },
-      { i: "languages", x: 0, y: 0, w: 6, h: 3 },
-      { i: "categories", x: 6, y: 1, w: 6, h: 3 },
-      { i: "entities", x: 0, y: 2, w: 6, h: 3 },
-      { i: "activity", x: 6, y: 2, w: 6, h: 3 },
+  const layoutChildren = useMemo(
+    () => [
+      <div key="projects">
+        <ProjectChartWidget />
+      </div>,
+      <div key="apps">
+        <AppPieChartWidget />
+      </div>,
+      <div key="languages">
+        <LanguagePieChartWidget />
+      </div>,
+      <div key="categories">
+        <CategoryChartWidget />
+      </div>,
+      <div key="entities">
+        <EntityChartWidget />
+      </div>,
+      <div key="activity">
+        <ActivityChartWidget />
+      </div>,
     ],
-  };
+    [],
+  );
 
   return (
     <main className="p-6 space-y-4">
@@ -136,38 +143,28 @@ const DashboardView = () => {
           />
           :
         </span>{" "}
-        <span className="text-gray-500">{formattedDuration}</span>
+        {loading ? (
+          <span className="text-gray-400 animate-pulse">Loading...</span>
+        ) : (
+          <span className="text-gray-500">{formattedDuration}</span>
+        )}
       </p>
-      <ResponsiveGridLayout
-        className="mt-4"
-        layouts={layouts}
-        breakpoints={{ lg: 1024, md: 768, sm: 480 }}
-        cols={{ lg: 12, md: 10, sm: 6 }}
-        rowHeight={100}
-        isResizable
-        isDraggable
-        useCSSTransforms
-        draggableHandle="#widget-drag-handle"
-      >
-        <div key="projects">
-          <ProjectChartWidget />
-        </div>
-        <div key="apps">
-          <AppPieChartWidget />
-        </div>
-        <div key="languages">
-          <LanguagePieChartWidget />
-        </div>
-        <div key="categories">
-          <CategoryChartWidget />
-        </div>
-        <div key="entities">
-          <EntityChartWidget />
-        </div>
-        <div key="activity">
-          <ActivityChartWidget />
-        </div>
-      </ResponsiveGridLayout>
+      {loaded && (
+        <ResponsiveGridLayout
+          className="mt-4"
+          layouts={layouts}
+          breakpoints={{ lg: 1024, md: 768, sm: 480 }}
+          cols={{ lg: 12, md: 10, sm: 6 }}
+          rowHeight={100}
+          isResizable
+          isDraggable
+          useCSSTransforms
+          draggableHandle="#widget-drag-handle"
+          onLayoutChange={(currLayout: Layout[]) => saveLayout(currLayout)}
+        >
+          {layoutChildren}
+        </ResponsiveGridLayout>
+      )}
     </main>
   );
 };
