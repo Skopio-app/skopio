@@ -14,7 +14,6 @@ server = []
 [dependencies]
 chrono = { workspace = true, features = ["serde"] }
 serde = { workspace = true, features = ["derive"] }
-serde_json = { workspace = true }
 sqlx = { workspace = true, features = [ "sqlite", "runtime-tokio", "tls-native-tls", "chrono", "macros", "migrate", "derive" ] }
 log = { workspace = true }
 specta = {workspace = true }

@@ -8,10 +8,15 @@
       "@skopio/ui": ["packages/ui"],
       "@skopio/sdk": ["packages/sdk"]
     },
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "module": "esnext",
     "target": "esnext",
     "jsx": "react-jsx"
   },
-  "include": ["packages", "apps", ".vscode/timeline-view"]
+  "include": [
+    "packages",
+    "apps",
+    ".vscode/timeline-view",
+    "apps/desktop/src/extensions/timeline-view"
+  ]
 }

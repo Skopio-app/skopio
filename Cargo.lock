@@ -870,7 +870,6 @@ version = "0.1.0"
 dependencies = [
  "chrono",
  "serde",
- "serde_json",
  "specta",
 ]
 
@@ -1191,7 +1190,6 @@ dependencies = [
  "common",
  "log",
  "serde",
- "serde_json",
  "specta",
  "sqlx",
 ]
@@ -1246,6 +1244,7 @@ dependencies = [
  "log",
  "moka",
  "objc2 0.6.1",
+ "objc2-app-kit",
  "objc2-foundation 0.3.1",
  "percent-encoding",
  "reqwest",
@@ -1262,7 +1261,6 @@ dependencies = [
  "tauri-specta",
  "tokei",
  "tokio",
- "tokio-tungstenite",
  "url",
 ]
 

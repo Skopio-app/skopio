@@ -36,7 +36,6 @@ url = "2.5.4"
 console-subscriber = "0.4.1"
 reqwest = { workspace = true, features = ["json", "rustls-tls"] }
 tauri-plugin-dialog = "2.0.0"
-tokio-tungstenite = { workspace = true }
 
 specta = { workspace = true , features = ["chrono"] }
 specta-typescript = { workspace = true }
@@ -49,4 +48,5 @@ common = { path = "../../../crates/common" }
 core-foundation = "0.10.0"
 objc2 = "0.6.0"
 core-graphics = "0.24.0"
-objc2-foundation = "0.3.1"
+objc2-foundation = { version = "0.3.1", features = ["NSGeometry", "objc2-core-foundation"] }
+objc2-app-kit = "0.3.1"

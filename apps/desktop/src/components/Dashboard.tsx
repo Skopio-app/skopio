@@ -33,7 +33,7 @@ const DashboardLayout = () => {
       >
         <div className="w-[64px] h-full" />
 
-        <div className="absolute left-[76px] top-[4px]">
+        <div className="absolute left-[90px] top-[6px]">
           <SidebarTrigger className="w-5 h-5 cursor-pointer" />
         </div>
       </div>

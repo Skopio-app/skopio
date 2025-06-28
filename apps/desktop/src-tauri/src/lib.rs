@@ -17,6 +17,7 @@ mod summaries;
 mod sync_service;
 mod trackers;
 mod tracking_service;
+mod ui;
 
 #[tokio::main]
 pub async fn run() {
@@ -60,6 +61,22 @@ pub async fn run() {
                         })
                         .build(),
                 )?;
+            }
+
+            #[cfg(target_os = "macos")]
+            {
+                let window = app_handle.get_webview_window("main").unwrap();
+                let ns_window = window.ns_window().unwrap();
+                unsafe {
+                    use crate::ui::toolbar::{adjust_traffic_light_position, customize_toolbar};
+                    use objc2::runtime::AnyObject;
+                    use objc2_app_kit::NSWindow;
+
+                    let window: *mut AnyObject = ns_window as *mut AnyObject;
+                    let ns_window: &NSWindow = &*(window as *const NSWindow);
+                    customize_toolbar(ns_window);
+                    adjust_traffic_light_position(ns_window);
+                }
             }
 
             let app_handle_clone = app_handle.clone();
