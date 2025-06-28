@@ -19,14 +19,14 @@ repos:
         pass_filenames: false
 
   # Rust linting (Clippy)
-  # - repo: local
-  #   hooks:
-  #     - id: clippy
-  #       name: Rust Linter (Clippy)
-  #       description: Check for warnings and best practices
-  #       entry: cargo clippy -- -D warnings
-  #       language: system
-  #       pass_filenames: false
+  - repo: local
+    hooks:
+      - id: clippy
+        name: Rust Linter (Clippy)
+        description: Check for warnings and best practices
+        entry: cargo clippy -- -D warnings -A clippy::nursery -A clippy::pedantic -A clippy::style
+        language: system
+        pass_filenames: false
 
   # Typescript & JavaScript Linting
   - repo: local
