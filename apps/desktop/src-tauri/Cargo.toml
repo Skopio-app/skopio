@@ -20,7 +20,7 @@ tauri-build = { version = "2.0.2", features = [] }
 serde_json = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 log = { workspace = true }
-tauri = { version = "2.1.0", features = ["objc-exception", "specta"] }
+tauri = { version = "2.1.0", features = ["tray-icon", "image-png"] }
 tauri-plugin-log = "2.0.0-rc"
 chrono = { workspace = true, features = ["serde"] }
 tokio = { workspace = true, features = ["full", "tracing"] }
@@ -37,9 +37,10 @@ console-subscriber = "0.4.1"
 reqwest = { workspace = true, features = ["json", "rustls-tls"] }
 tauri-plugin-dialog = "2.0.0"
 
-specta = { workspace = true , features = ["chrono"] }
+specta = { workspace = true, features = ["chrono"] }
 specta-typescript = { workspace = true }
 tauri-specta = { workspace = true, features = ["derive", "typescript"] }
+ril = { version = "0.10.3", features = ["png"] }
 
 db = { path = "../../../crates/db", features = ["desktop"] }
 common = { path = "../../../crates/common" }
@@ -48,5 +49,8 @@ common = { path = "../../../crates/common" }
 core-foundation = "0.10.0"
 objc2 = "0.6.0"
 core-graphics = "0.24.0"
-objc2-foundation = { version = "0.3.1", features = ["NSGeometry", "objc2-core-foundation"] }
+objc2-foundation = { version = "0.3.1", features = [
+    "NSGeometry",
+    "objc2-core-foundation",
+] }
 objc2-app-kit = "0.3.1"

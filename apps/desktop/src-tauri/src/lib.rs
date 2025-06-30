@@ -11,6 +11,8 @@ use trackers::{
 };
 use tracking_service::{DBService, TrackingService};
 
+use crate::ui::tray::init_tray;
+
 mod helpers;
 mod monitored_app;
 mod summaries;
@@ -85,6 +87,8 @@ pub async fn run() {
                     error!("Failed async setup: {}", e);
                 }
             });
+
+            init_tray(app)?;
 
             Ok(())
         })

@@ -6,7 +6,7 @@ use objc2_foundation::NSRect;
 #[cfg(target_os = "macos")]
 pub unsafe fn customize_toolbar(window: &NSWindow) {
     let _: () = msg_send![window, setTitlebarAppearsTransparent: Bool::YES];
-    let _: () = msg_send![window, setMovableByWindowBackground: Bool::YES];
+    let _: () = msg_send![window, setMovableByWindowBackground: Bool::NO];
 }
 
 #[cfg(target_os = "macos")]
