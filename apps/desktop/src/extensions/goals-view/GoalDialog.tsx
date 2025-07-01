@@ -1,6 +1,5 @@
-import { Button, Input, Label, Switch } from "@skopio/ui";
+import { Button, ChipSelector, Input, Label, Switch } from "@skopio/ui";
 import * as Dialog from "@radix-ui/react-dialog";
-import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 import { X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { z } from "zod";
@@ -80,8 +79,6 @@ const GoalDialog = ({
     "saturday",
     "sunday",
   ]);
-  const [ignoreNoActivityDays, setIgnoreNoActivityDays] =
-    useState<boolean>(false);
   const [rawValue, setRawValue] = useState(
     convertFromHours(goalValue, timeUnit),
   );
@@ -114,7 +111,6 @@ const GoalDialog = ({
   };
 
   const toggleValue = <T,>(
-    list: T[],
     setList: React.Dispatch<React.SetStateAction<T[]>>,
     value: T,
   ) => {
@@ -126,7 +122,9 @@ const GoalDialog = ({
   const subject = useApps ? apps.join(", ") : categories.join(", ");
 
   const summaryText =
-    `I want to achieve ${rawValue} ${timeUnit} in ${subject} per ${timeSpan}` +
+    `I want to achieve ${rawValue} ${timeUnit}` +
+    `${categories.length || apps.length ? ` in ${subject}` : ""}` +
+    ` per ${timeSpan}` +
     (timeSpan === TimeSpan.Day && excludedDays.length
       ? `, except for ${excludedDays.join(", ")}`
       : "");
@@ -151,25 +149,6 @@ const GoalDialog = ({
           </div>
 
           <div className="space-y-6 py-4 overflow-hidden">
-            <div className="flex items-center space-x-4">
-              <Label>Use Categories</Label>
-              <Switch
-                checked={useCategories}
-                onCheckedChange={(checked) => {
-                  setUseCategories(checked);
-                  if (checked) setUseApps(false);
-                }}
-              />
-              <Label>Use Apps</Label>
-              <Switch
-                checked={useApps}
-                onCheckedChange={(checked) => {
-                  setUseApps(checked);
-                  if (checked) setUseCategories(false);
-                }}
-              />
-            </div>
-
             <div className="text-lg font-medium flex flex-wrap gap-2 items-center">
               <span>I want to achieve</span>
               <Input
@@ -189,53 +168,22 @@ const GoalDialog = ({
                 {timeUnit}
               </Button>
               <span>in</span>
-
-              <DropdownMenu.Root modal={false}>
-                <DropdownMenu.Trigger asChild>
-                  <div className="flex flex-wrap items-center gap-1 px-3 py-1 border rounded cursor-pointer max-w-full">
-                    {(useApps ? apps : categories).map((item) => (
-                      <span
-                        key={item}
-                        className="flex items-center gap-1 px-2 py-1 bg-gray-200 rounded whitespace-nowrap"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          if (useApps) {
-                            setApps((prev) => prev.filter((a) => a !== item));
-                          } else {
-                            setCategories((prev) =>
-                              prev.filter((c) => c !== item),
-                            );
-                          }
-                        }}
-                      >
-                        {item} ×
-                      </span>
-                    ))}
-                  </div>
-                </DropdownMenu.Trigger>
-                <DropdownMenu.Content className="z-50 mt-1 w-48 max-h-60 overflow-y-auto bg-white border rounded shadow">
-                  {(useApps ? appsList : categoryOptions).map((opt) => (
-                    <DropdownMenu.Item
-                      key={opt}
-                      onSelect={() => {
-                        if (useApps) {
-                          toggleValue(apps, setApps, opt);
-                        } else {
-                          toggleValue(
-                            categories,
-                            setCategories,
-                            opt as Category,
-                          );
-                        }
-                      }}
-                      className="px-3 py-2 cursor-pointer hover:bg-gray-100"
-                    >
-                      {opt}
-                    </DropdownMenu.Item>
-                  ))}
-                </DropdownMenu.Content>
-              </DropdownMenu.Root>
-
+              <ChipSelector
+                values={useApps ? apps : categories}
+                options={useApps ? appsList : categoryOptions}
+                onToggle={(option) => {
+                  if (useApps) toggleValue(setApps, option);
+                  else toggleValue(setCategories, option as Category);
+                }}
+                onRemove={(item) => {
+                  if (useApps)
+                    setApps((prev) => prev.filter((a) => a !== item));
+                  else
+                    setCategories((prev) =>
+                      prev.filter((c) => c !== (item as Category)),
+                    );
+                }}
+              />
               <span>per</span>
               <Button
                 size="sm"
@@ -252,54 +200,48 @@ const GoalDialog = ({
 
             {timeSpan === TimeSpan.Day && (
               <div>
-                <p className="mb-2 font-medium">Except for</p>
-                <DropdownMenu.Root modal={false}>
-                  <DropdownMenu.Trigger asChild>
-                    <div className="flex flex-wrap items-center gap-1 px-3 py-1 border rounded cursor-pointer max-w-full">
-                      {excludedDays.map((day) => (
-                        <span
-                          key={day}
-                          className="flex items-center gap-1 px-2 py-1 bg-gray-200 rounded whitespace-nowrap"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setExcludedDays((prev) =>
-                              prev.filter((d) => d !== day),
-                            );
-                          }}
-                        >
-                          {day} ×
-                        </span>
-                      ))}
-                    </div>
-                  </DropdownMenu.Trigger>
-                  <DropdownMenu.Content className="z-50 mt-1 w-48 max-h-60 overflow-y-auto bg-white border rounded shadow">
-                    {dayOptions.map((day) => (
-                      <DropdownMenu.Item
-                        key={day}
-                        onSelect={() =>
-                          toggleValue(excludedDays, setExcludedDays, day)
-                        }
-                        className="px-3 py-2 cursor-pointer hover:bg-gray-100"
-                      >
-                        {day}
-                      </DropdownMenu.Item>
-                    ))}
-                  </DropdownMenu.Content>
-                </DropdownMenu.Root>
+                <p className="mb-2 font-medium">except for</p>
+                <ChipSelector
+                  options={dayOptions}
+                  values={excludedDays}
+                  onToggle={(value) =>
+                    setExcludedDays((prev) =>
+                      prev.includes(value)
+                        ? prev.filter((d) => d !== value)
+                        : [...prev, value],
+                    )
+                  }
+                  onRemove={(value) =>
+                    setExcludedDays((prev) => prev.filter((d) => d !== value))
+                  }
+                />
               </div>
             )}
 
-            <div className="flex items-center space-x-3">
+            <div className="flex flex-col items-start space-y-4">
+              <Label>Use Categories</Label>
               <Switch
-                checked={ignoreNoActivityDays}
-                onCheckedChange={setIgnoreNoActivityDays}
+                checked={useCategories}
+                onCheckedChange={(checked) => {
+                  setUseCategories(checked);
+                  if (checked) setUseApps(false);
+                }}
               />
-              <span>Ignore days with no activity</span>
+              <Label>Use Apps</Label>
+              <Switch
+                checked={useApps}
+                onCheckedChange={(checked) => {
+                  setUseApps(checked);
+                  if (checked) setUseCategories(false);
+                }}
+              />
             </div>
           </div>
 
-          <div className="mt-4 flex justify-end">
-            <Button onClick={handleSave}>Save</Button>
+          <div className="mt-4 flex justify-center">
+            <Button className="w-56" onClick={handleSave}>
+              Save
+            </Button>
           </div>
         </Dialog.Content>
       </Dialog.Portal>
