@@ -9,3 +9,5 @@ export * from "./components/skeleton";
 export * from "./components/tooltip";
 export * from "./components/dialog";
 export * from "./components/calendar";
+export * from "./components/switch";
+export * from "./components/label";

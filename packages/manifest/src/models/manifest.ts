@@ -4,6 +4,7 @@ import {
   OpenPermissionScopedSchema,
   SkopioManifestPermission,
 } from "../schema";
+import { FC } from "react";
 
 export const WidgetConfig = z.object({
   width: z.number().optional().nullable(),
@@ -30,7 +31,7 @@ export const BaseBuiltInExtensionManifestSchema = z.object({
   name: z.string(),
   description: z.string(),
   type: ExtensionType,
-  icon: z.string(),
+  icon: z.custom<FC>(),
   permissions: z.array(z.string()),
 });
 export type BaseBuiltInExtensionManifest = z.infer<

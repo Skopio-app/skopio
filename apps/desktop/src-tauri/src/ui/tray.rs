@@ -36,7 +36,7 @@ fn generate_text_icon(app_handle: AppHandle, time_string: String) -> Result<Vec<
 
     let font: &Font = &FONT;
 
-    let base_width = 88.0;
+    let base_width = 120.0;
     let base_height = 22.0;
     let base_font_size = 16.0;
     let base_padding = 4.0;
@@ -77,7 +77,10 @@ pub fn init_tray(app: &mut App) -> tauri::Result<()> {
     let initial_icon_bytes = generate_text_icon(app_handle.clone(), "00.00".into())
         .map_err(|e| Error::from(anyhow!(e)))?;
     let initial_icon = tauri::image::Image::from_bytes(&initial_icon_bytes)?;
-    let tray = TrayIconBuilder::new().icon(initial_icon).build(app)?;
+    let tray = TrayIconBuilder::new()
+        .icon(initial_icon)
+        .tooltip("Total active time for the day")
+        .build(app)?;
 
     // Store tray in shared state
     {

@@ -54,7 +54,8 @@ const DashboardLayout = () => {
                         navigate("/tab/" + ext.manifest.id);
                       }}
                     >
-                      {ext.manifest.name}
+                      <ext.manifest.icon />
+                      <span>{ext.manifest.name}</span>
                     </SidebarMenuButton>
                   </SidebarMenuItem>
                 ))}

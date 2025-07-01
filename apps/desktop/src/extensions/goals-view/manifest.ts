@@ -2,14 +2,14 @@ import {
   BaseBuiltInExtensionManifest,
   ExtensionTypeEnum,
 } from "@skopio/manifest";
-import { ChartNoAxesGantt } from "lucide-react";
+import { Flag } from "lucide-react";
 
 export const manifest: BaseBuiltInExtensionManifest = {
-  id: "builtin-2-timeline",
-  name: "Timeline",
+  id: "builtin-3-goals",
+  name: "Goals",
   description:
-    "A timeline view of the various captured events and their sources",
+    "A view of the various set goals, with the ability to set, edit, or delete goals",
   type: ExtensionTypeEnum.Tab,
-  icon: ChartNoAxesGantt,
+  icon: Flag,
   permissions: [],
 };
