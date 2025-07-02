@@ -219,22 +219,28 @@ const GoalDialog = ({
             )}
 
             <div className="flex flex-col items-start space-y-4">
-              <Label>Use Categories</Label>
-              <Switch
-                checked={useCategories}
-                onCheckedChange={(checked) => {
-                  setUseCategories(checked);
-                  if (checked) setUseApps(false);
-                }}
-              />
-              <Label>Use Apps</Label>
-              <Switch
-                checked={useApps}
-                onCheckedChange={(checked) => {
-                  setUseApps(checked);
-                  if (checked) setUseCategories(false);
-                }}
-              />
+              <div className="flex flex-row space-x-2">
+                <Switch
+                  id="categories"
+                  checked={useCategories}
+                  onCheckedChange={(checked) => {
+                    setUseCategories(checked);
+                    if (checked) setUseApps(false);
+                  }}
+                />
+                <Label id="categories">Filter Categories</Label>
+              </div>
+              <div className="flex flex-row space-x-2">
+                <Switch
+                  id="apps"
+                  checked={useApps}
+                  onCheckedChange={(checked) => {
+                    setUseApps(checked);
+                    if (checked) setUseCategories(false);
+                  }}
+                />
+                <Label id="apps">Filter Apps</Label>
+              </div>
             </div>
           </div>
 
