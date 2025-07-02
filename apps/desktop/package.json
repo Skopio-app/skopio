@@ -15,6 +15,7 @@
     "@nivo/calendar": "^0.99.0",
     "@nivo/colors": "^0.99.0",
     "@nivo/core": "^0.99.0",
+    "@nivo/line": "^0.99.0",
     "@nivo/pie": "^0.99.0",
     "@radix-ui/react-dialog": "^1.1.14",
     "@skopio/manifest": "workspace:*",
