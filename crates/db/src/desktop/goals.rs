@@ -1,0 +1,148 @@
+use std::collections::HashMap;
+
+use chrono::Utc;
+
+use crate::DBContext;
+
+#[derive(Debug, Clone)]
+pub struct Goal {
+    pub id: i64,
+    pub target_seconds: i64,
+    pub time_span: String,
+    pub use_apps: bool,
+    pub use_categories: bool,
+    pub ignore_no_activity_days: bool,
+    pub created_at: String,
+    pub updated_at: String,
+    pub apps: Vec<String>,
+    pub categories: Vec<String>,
+    pub excluded_days: Vec<String>,
+}
+
+pub struct GoalInput {
+    pub target_seconds: i64,
+    pub time_span: String,
+    pub use_apps: bool,
+    pub use_categories: bool,
+    pub ignore_no_activity_days: bool,
+    pub apps: Vec<String>,
+    pub categories: Vec<String>,
+    pub excluded_days: Vec<String>,
+}
+
+pub async fn fetch_all_goals(db: &DBContext) -> Result<Vec<Goal>, sqlx::Error> {
+    let rows = sqlx::query!(
+        r#"
+        SELECT
+          g.id,
+          g.target_seconds,
+          g.time_span,
+          g.use_apps,
+          g.use_categories,
+          g.ignore_no_activity_days,
+          g.created_at,
+          g.updated_at,
+          ga.app,
+          gc.category,
+          gd.day
+        FROM goals g
+        LEFT JOIN goal_apps ga ON g.id = ga.goal_id
+        LEFT JOIN goal_categories gc ON g.id = gc.goal_id
+        LEFT JOIN goal_excluded_days gd ON g.id = gd.goal_id
+        ORDER BY g.id
+        "#
+    )
+    .fetch_all(db.pool())
+    .await?;
+
+    let mut grouped: HashMap<i64, Goal> = HashMap::new();
+
+    for row in rows {
+        let entry = grouped.entry(row.id).or_insert_with(|| Goal {
+            id: row.id,
+            target_seconds: row.target_seconds,
+            time_span: row.time_span.clone(),
+            use_apps: row.use_apps,
+            use_categories: row.use_categories,
+            ignore_no_activity_days: row.ignore_no_activity_days,
+            created_at: row.created_at.clone(),
+            updated_at: row.updated_at.clone(),
+            apps: vec![],
+            categories: vec![],
+            excluded_days: vec![],
+        });
+
+        if let Some(app) = row.app {
+            if !entry.apps.contains(&app) {
+                entry.apps.push(app);
+            }
+        }
+
+        if let Some(cat) = row.category {
+            if !entry.categories.contains(&cat) {
+                entry.categories.push(cat);
+            }
+        }
+
+        if let Some(day) = row.day {
+            if !entry.excluded_days.contains(&day) {
+                entry.excluded_days.push(day);
+            }
+        }
+    }
+
+    Ok(grouped.into_values().collect())
+}
+
+pub async fn insert_goal(db: &DBContext, input: GoalInput) -> Result<i64, sqlx::Error> {
+    let now = Utc::now().to_rfc3339();
+
+    let id = sqlx::query_scalar!(
+        r#"
+        INSERT INTO goals (target_seconds, time_span, use_apps, use_categories, ignore_no_activity_days, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+        RETURNING id
+        "#,
+        input.target_seconds,
+        input.time_span,
+        input.use_apps,
+        input.use_categories,
+        input.ignore_no_activity_days,
+        now,
+        now
+    )
+    .fetch_one(db.pool())
+    .await?;
+
+    for app in input.apps {
+        sqlx::query!(
+            "INSERT INTO goal_apps (goal_id, app) VALUES (?, ?)",
+            id,
+            app
+        )
+        .execute(db.pool())
+        .await?;
+    }
+
+    for cat in input.categories {
+        sqlx::query!(
+            "INSERT INTO goal_categories (goal_id, category) VALUES (?, ?)",
+            id,
+            cat
+        )
+        .execute(db.pool())
+        .await?;
+    }
+
+    for day in input.excluded_days {
+        sqlx::query!(
+            "INSERT INTO goal_excluded_days (goal_id, day) VALUES (?, ?)",
+            id,
+            day
+        )
+        .execute(db.pool())
+        .await?;
+    }
+
+    Ok(id)
+}

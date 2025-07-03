@@ -1,0 +1,80 @@
+{
+  "db_name": "SQLite",
+  "query": "\n        SELECT\n          g.id,\n          g.target_seconds,\n          g.time_span,\n          g.use_apps,\n          g.use_categories,\n          g.ignore_no_activity_days,\n          g.created_at,\n          g.updated_at,\n          ga.app,\n          gc.category,\n          gd.day\n        FROM goals g\n        LEFT JOIN goal_apps ga ON g.id = ga.goal_id\n        LEFT JOIN goal_categories gc ON g.id = gc.goal_id\n        LEFT JOIN goal_excluded_days gd ON g.id = gd.goal_id\n        ORDER BY g.id\n        ",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Integer"
+      },
+      {
+        "name": "target_seconds",
+        "ordinal": 1,
+        "type_info": "Integer"
+      },
+      {
+        "name": "time_span",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "use_apps",
+        "ordinal": 3,
+        "type_info": "Bool"
+      },
+      {
+        "name": "use_categories",
+        "ordinal": 4,
+        "type_info": "Bool"
+      },
+      {
+        "name": "ignore_no_activity_days",
+        "ordinal": 5,
+        "type_info": "Bool"
+      },
+      {
+        "name": "created_at",
+        "ordinal": 6,
+        "type_info": "Text"
+      },
+      {
+        "name": "updated_at",
+        "ordinal": 7,
+        "type_info": "Text"
+      },
+      {
+        "name": "app",
+        "ordinal": 8,
+        "type_info": "Text"
+      },
+      {
+        "name": "category",
+        "ordinal": 9,
+        "type_info": "Text"
+      },
+      {
+        "name": "day",
+        "ordinal": 10,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      true,
+      true
+    ]
+  },
+  "hash": "c60032577fd49956b183850914df8d58038985ce05a0d2fc6da1c0f028a75d72"
+}

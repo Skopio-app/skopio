@@ -105,6 +105,26 @@ pub async fn run() {
                     buffered_service.shutdown().await;
                 });
             }
+
+            if matches!(
+                event,
+                tauri::WindowEvent::Resized(_) | tauri::WindowEvent::Moved(_)
+            ) {
+                #[cfg(target_os = "macos")]
+                {
+                    use crate::ui::toolbar::adjust_traffic_light_position;
+                    use objc2::runtime::AnyObject;
+                    use objc2_app_kit::NSWindow;
+
+                    unsafe {
+                        let ns_window = window.ns_window().unwrap();
+                        let window: *mut AnyObject = ns_window as *mut AnyObject;
+                        let ns_window: &NSWindow = &*(window as *const NSWindow);
+
+                        adjust_traffic_light_position(ns_window);
+                    }
+                }
+            }
         })
         .plugin(tauri_plugin_dialog::init())
         .run(tauri::generate_context!())

@@ -41,4 +41,42 @@ CREATE TABLE IF NOT EXISTS afk_events
     synced BOOL DEFAULT 0
 );
 
+CREATE TABLE IF NOT EXISTS goals
+(
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    target_seconds INTEGER NOT NULL,
+    time_span TEXT NOT NULL CHECK (time_span IN ('day', 'week', 'month', 'year')),
+    use_apps BOOLEAN NOT NULL DEFAULT 0,
+    use_categories BOOLEAN NOT NULL DEFAULT 0,
+    ignore_no_activity_days BOOLEAN NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL DEFAULT (datetime('now')),
+    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS goal_apps
+(
+    goal_id INTEGER NOT NULL,
+    app TEXT NOT NULL,
+    PRIMARY KEY (goal_id, app),
+    FOREIGN KEY (goal_id) REFERENCES goals(id) ON DELETE CASCADE
+);
+
+CREATE TABLE goal_categories
+(
+    goal_id INTEGER NOT NULL,
+    category TEXT NOT NULL,
+    PRIMARY KEY (goal_id, category),
+    FOREIGN KEY (goal_id) REFERENCES goals(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS goal_excluded_days
+(
+    goal_id INTEGER NOT NULL,
+    day TEXT NOT NULL CHECK (
+        day IN ('monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday')
+    ),
+    PRIMARY KEY (goal_id, day),
+    FOREIGN KEY (goal_id) REFERENCES goals(id) ON DELETE CASCADE
+);
 
