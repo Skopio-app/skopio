@@ -11,7 +11,7 @@
       {
         "name": "timestamp",
         "ordinal": 1,
-        "type_info": "Datetime"
+        "type_info": "Text"
       },
       {
         "name": "project_name",
@@ -69,7 +69,7 @@
     },
     "nullable": [
       false,
-      true,
+      false,
       true,
       true,
       false,

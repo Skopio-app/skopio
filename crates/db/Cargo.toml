@@ -18,3 +18,4 @@ sqlx = { workspace = true, features = [ "sqlite", "runtime-tokio", "tls-native-t
 log = { workspace = true }
 specta = {workspace = true }
 common = { path = "../common"}
+thiserror = { workspace = true }

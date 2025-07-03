@@ -1,26 +1,20 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT id, name FROM tags WHERE name = ?",
+  "query": "INSERT INTO categories (name) VALUES (?) RETURNING id",
   "describe": {
     "columns": [
       {
         "name": "id",
         "ordinal": 0,
         "type_info": "Integer"
-      },
-      {
-        "name": "name",
-        "ordinal": 1,
-        "type_info": "Text"
       }
     ],
     "parameters": {
       "Right": 1
     },
     "nullable": [
-      true,
       false
     ]
   },
-  "hash": "54ef77abe3bf5e3891a31552464f276b54fb50f643ae4bdc0cf63b1ef6394eae"
+  "hash": "6cc0e8b2f7f90e2a589a00189aa6f3fb23bb4948d165d5843205e50a341408ab"
 }

@@ -1,4 +1,3 @@
-use crate::helpers::db::to_naive_datetime;
 use crate::helpers::git::get_git_branch;
 use crate::monitored_app::{resolve_app_details, Entity, MonitoredApp, IGNORED_APPS};
 use crate::tracking_service::TrackingService;
@@ -156,7 +155,7 @@ impl HeartbeatTracker {
 
         let db_heartbeat = DBHeartbeat {
             id: None,
-            timestamp: to_naive_datetime(heartbeat.timestamp),
+            timestamp: heartbeat.timestamp,
             project_name: heartbeat.project_name.clone(),
             project_path: heartbeat.project_path.clone(),
             entity_name: heartbeat.entity_name.clone(),

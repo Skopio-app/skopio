@@ -237,7 +237,7 @@ async fn sync_with_server(db_context: &Arc<DBContext>) -> Result<(), anyhow::Err
             .map(|ev| EventInput {
                 timestamp: ev.timestamp,
                 duration: ev.duration,
-                activity_type: ev.activity_type.clone().unwrap_or_default(),
+                category: ev.category.clone().unwrap_or_default(),
                 app_name: ev.app_name.clone(),
                 entity_name: ev.entity_name.clone().unwrap_or_default(),
                 entity_type: ev.entity_type.clone().unwrap_or_default(),

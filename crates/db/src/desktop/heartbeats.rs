@@ -1,12 +1,15 @@
-use chrono::NaiveDateTime;
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
-use crate::{utils::update_synced_in, DBContext};
+use crate::{
+    utils::{update_synced_in, DBError},
+    DBContext,
+};
 
 #[derive(Serialize, Deserialize, Clone, Debug, sqlx::FromRow)]
 pub struct Heartbeat {
     pub id: Option<i64>,
-    pub timestamp: Option<NaiveDateTime>,
+    pub timestamp: Option<DateTime<Utc>>,
     pub project_name: Option<String>,
     pub project_path: Option<String>,
     pub entity_name: String,
@@ -43,10 +46,9 @@ impl Heartbeat {
         Ok(())
     }
 
-    pub async fn unsynced(db_context: &DBContext) -> Result<Vec<Self>, sqlx::Error> {
-        sqlx::query_as!(
-            Heartbeat,
-            "
+    pub async fn unsynced(db_context: &DBContext) -> Result<Vec<Self>, DBError> {
+        let rows = sqlx::query!(
+            r#"
             SELECT
              id,
              timestamp,
@@ -63,10 +65,34 @@ impl Heartbeat {
             FROM heartbeats
             WHERE synced = 0
             LIMIT 100
-            "
+            "#
         )
         .fetch_all(db_context.pool())
-        .await
+        .await?;
+
+        let events = rows
+            .into_iter()
+            .map(|row| {
+                let timestamp = row.timestamp.parse::<DateTime<Utc>>()?;
+
+                Ok(Heartbeat {
+                    id: Some(row.id),
+                    timestamp: Some(timestamp),
+                    project_name: row.project_name,
+                    project_path: row.project_path,
+                    entity_name: row.entity_name,
+                    entity_type: row.entity_type,
+                    branch_name: row.branch_name,
+                    language_name: row.language_name,
+                    app_name: row.app_name,
+                    is_write: row.is_write,
+                    lines: row.lines,
+                    cursorpos: row.cursorpos,
+                })
+            })
+            .collect::<Result<Vec<_>, DBError>>()?;
+
+        Ok(events)
     }
 
     pub async fn mark_as_synced(

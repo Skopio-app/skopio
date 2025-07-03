@@ -1,13 +1,13 @@
-use chrono::{DateTime, NaiveDateTime, Utc};
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 use crate::time::TimeRangePreset;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct EventInput {
-    pub timestamp: Option<NaiveDateTime>,
+    pub timestamp: Option<DateTime<Utc>>,
     pub duration: Option<i64>,
-    pub activity_type: String,
+    pub category: String,
     pub app_name: String,
     pub entity_name: String,
     pub entity_type: String,
@@ -15,12 +15,12 @@ pub struct EventInput {
     pub project_path: String,
     pub branch_name: String,
     pub language_name: String,
-    pub end_timestamp: Option<NaiveDateTime>,
+    pub end_timestamp: Option<DateTime<Utc>>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct HeartbeatInput {
-    pub timestamp: Option<NaiveDateTime>,
+    pub timestamp: Option<DateTime<Utc>>,
     pub project_name: String,
     pub project_path: String,
     pub entity_name: String,
@@ -35,8 +35,8 @@ pub struct HeartbeatInput {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct AFKEventInput {
-    pub afk_start: NaiveDateTime,
-    pub afk_end: Option<NaiveDateTime>,
+    pub afk_start: DateTime<Utc>,
+    pub afk_end: Option<DateTime<Utc>>,
     pub duration: Option<i64>,
 }
 

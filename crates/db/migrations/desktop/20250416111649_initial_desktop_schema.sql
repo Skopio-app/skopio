@@ -1,7 +1,7 @@
 CREATE TABLE IF NOT EXISTS heartbeats
 (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    timestamp DATETIME,
+    timestamp TEXT NOT NULL,
     project_name TEXT,
     project_path TEXT,
     entity_name TEXT NOT NULL,
@@ -18,9 +18,9 @@ CREATE TABLE IF NOT EXISTS heartbeats
 CREATE TABLE IF NOT EXISTS events
 (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    timestamp DATETIME,
+    timestamp TEXT NOT NULL,
     duration INTEGER DEFAULT 0,
-    activity_type TEXT,
+    category TEXT,
     app_name TEXT NOT NULL,
     entity_name TEXT,
     entity_type TEXT,
@@ -28,15 +28,15 @@ CREATE TABLE IF NOT EXISTS events
     project_path TEXT,
     branch_name TEXT,
     language_name TEXT,
-    end_timestamp DATETIME,
+    end_timestamp TEXT NOT NULL,
     synced BOOL DEFAULT 0
 );
 
 CREATE TABLE IF NOT EXISTS afk_events
 (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    afk_start DATETIME,
-    afk_end DATETIME,
+    afk_start TEXT NOT NULL,
+    afk_end TEXT,
     duration INTEGER DEFAULT 0,
     synced BOOL DEFAULT 0
 );
@@ -46,7 +46,7 @@ CREATE TABLE IF NOT EXISTS goals
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
     target_seconds INTEGER NOT NULL,
-    time_span TEXT NOT NULL CHECK (time_span IN ('day', 'week', 'month', 'year')),
+    time_span TEXT NOT NULL,
     use_apps BOOLEAN NOT NULL DEFAULT 0,
     use_categories BOOLEAN NOT NULL DEFAULT 0,
     ignore_no_activity_days BOOLEAN NOT NULL DEFAULT 0,
@@ -73,9 +73,7 @@ CREATE TABLE goal_categories
 CREATE TABLE IF NOT EXISTS goal_excluded_days
 (
     goal_id INTEGER NOT NULL,
-    day TEXT NOT NULL CHECK (
-        day IN ('monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday')
-    ),
+    day TEXT NOT NULL,
     PRIMARY KEY (goal_id, day),
     FOREIGN KEY (goal_id) REFERENCES goals(id) ON DELETE CASCADE
 );

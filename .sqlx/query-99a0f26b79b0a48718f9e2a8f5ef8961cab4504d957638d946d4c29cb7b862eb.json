@@ -36,7 +36,7 @@
       {
         "name": "timestamp",
         "ordinal": 6,
-        "type_info": "Datetime"
+        "type_info": "Text"
       },
       {
         "name": "is_write",

@@ -11,12 +11,12 @@
       {
         "name": "afk_start",
         "ordinal": 1,
-        "type_info": "Datetime"
+        "type_info": "Text"
       },
       {
         "name": "afk_end",
         "ordinal": 2,
-        "type_info": "Datetime"
+        "type_info": "Text"
       },
       {
         "name": "duration",

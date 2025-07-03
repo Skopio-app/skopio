@@ -1,5 +1,5 @@
 use crate::utils::extract_project_name;
-use chrono::{DateTime, NaiveDateTime, TimeZone, Utc};
+use chrono::{DateTime, TimeZone, Utc};
 use common::models::inputs::{EventInput, HeartbeatInput};
 use log::{debug, info};
 use reqwest::blocking::Client;
@@ -17,10 +17,10 @@ pub fn sync_data(conn: &Connection) -> Result<(), Box<dyn std::error::Error>> {
             let project_path: Option<String> = row.get(1)?;
 
             let timestamp_unix: i64 = row.get(0)?;
-            let timestamp_naive: NaiveDateTime = DateTime::from_timestamp(timestamp_unix, 0).unwrap_or_default().naive_utc();
+            let timestamp_utc: DateTime<Utc> = DateTime::from_timestamp(timestamp_unix, 0).unwrap_or_default().to_utc();
 
             let heartbeat = HeartbeatInput {
-                timestamp: Some(timestamp_naive),
+                timestamp: Some(timestamp_utc),
                 project_name: extract_project_name(Path::new(&project_path.unwrap_or_else(|| "unknown".to_string()))),
                 project_path: row.get(1)?,
                 branch_name: row.get(2)?,
@@ -38,20 +38,21 @@ pub fn sync_data(conn: &Connection) -> Result<(), Box<dyn std::error::Error>> {
         .flatten()
         .collect();
 
+    // TODO: Change to category from activity_type
     let events: Vec<EventInput> = conn
         .prepare("SELECT timestamp, activity_type, app, entity_name, entity_type, duration, project_path, branch, language, end_timestamp FROM events WHERE synced = 0")?
         .query_map([], |row| {
             let timestamp_unix: Option<i64> = row.get(0)?;
             let end_timestamp_unix: Option<i64> = row.get(9)?;
 
-            let timestamp_naive: Option<NaiveDateTime> = timestamp_unix.map(|ts| Utc.timestamp_opt(ts, 0).unwrap().naive_utc());
-            let end_timestamp_naive: Option<NaiveDateTime> = end_timestamp_unix.map(|ts| Utc.timestamp_opt(ts, 0).unwrap().naive_utc());
+            let timestamp_utc: Option<DateTime<Utc>> = timestamp_unix.map(|ts| Utc.timestamp_opt(ts, 0).unwrap().to_utc());
+            let end_timestamp_utc: Option<DateTime<Utc>> = end_timestamp_unix.map(|ts| Utc.timestamp_opt(ts, 0).unwrap().to_utc());
 
             let project_path: String = row.get(6).unwrap_or_else(|_| "unknown".to_string());
 
             let event = EventInput {
-                timestamp: timestamp_naive,
-                activity_type: row.get(1)?,
+                timestamp: timestamp_utc,
+                category: row.get(1)?,
                 app_name: row.get(2)?,
                 entity_name: row.get(3)?,
                 entity_type: row.get(4)?,
@@ -60,7 +61,7 @@ pub fn sync_data(conn: &Connection) -> Result<(), Box<dyn std::error::Error>> {
                 project_path: row.get(6)?,
                 branch_name: row.get(7)?,
                 language_name: row.get(8)?,
-                end_timestamp: end_timestamp_naive,
+                end_timestamp: end_timestamp_utc,
             };
 
             Ok(event)

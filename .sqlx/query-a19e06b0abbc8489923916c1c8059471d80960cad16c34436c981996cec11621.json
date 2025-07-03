@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "\n            SELECT\n             id,\n             timestamp,\n             duration,\n             activity_type,\n             app_name,\n             entity_name,\n             entity_type,\n             project_name,\n             project_path,\n             branch_name,\n             language_name,\n             end_timestamp\n            FROM events\n            WHERE synced = 0\n            LIMIT 100\n            ",
+  "query": "\n            SELECT\n             id,\n             timestamp,\n             duration,\n             category,\n             app_name,\n             entity_name,\n             entity_type,\n             project_name,\n             project_path,\n             branch_name,\n             language_name,\n             end_timestamp\n            FROM events\n            WHERE synced = 0\n            LIMIT 100\n            ",
   "describe": {
     "columns": [
       {
@@ -11,7 +11,7 @@
       {
         "name": "timestamp",
         "ordinal": 1,
-        "type_info": "Datetime"
+        "type_info": "Text"
       },
       {
         "name": "duration",
@@ -19,7 +19,7 @@
         "type_info": "Integer"
       },
       {
-        "name": "activity_type",
+        "name": "category",
         "ordinal": 3,
         "type_info": "Text"
       },
@@ -61,7 +61,7 @@
       {
         "name": "end_timestamp",
         "ordinal": 11,
-        "type_info": "Datetime"
+        "type_info": "Text"
       }
     ],
     "parameters": {
@@ -69,7 +69,7 @@
     },
     "nullable": [
       false,
-      true,
+      false,
       true,
       true,
       false,
@@ -79,8 +79,8 @@
       true,
       true,
       true,
-      true
+      false
     ]
   },
-  "hash": "eb27d5d2c9c7b892df367f27d96bc738677f0bd545b4446398fdbe2cfdd23688"
+  "hash": "a19e06b0abbc8489923916c1c8059471d80960cad16c34436c981996cec11621"
 }

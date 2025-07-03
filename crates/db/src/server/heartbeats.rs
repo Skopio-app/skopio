@@ -1,5 +1,5 @@
 use crate::DBContext;
-use chrono::NaiveDateTime;
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, sqlx::FromRow)]
@@ -10,7 +10,7 @@ pub struct Heartbeat {
     pub branch_id: Option<i64>,
     pub language_id: Option<i64>,
     pub app_id: Option<i64>,
-    pub timestamp: NaiveDateTime,
+    pub timestamp: DateTime<Utc>,
     pub is_write: Option<bool>,
     pub lines: Option<i64>,
     pub cursorpos: Option<i64>,
@@ -52,7 +52,7 @@ impl Heartbeat {
                 branch_id: row.branch_id,
                 language_id: row.language_id,
                 app_id: Some(row.app_id),
-                timestamp: row.timestamp,
+                timestamp: row.timestamp.parse::<DateTime<Utc>>().unwrap_or_default(),
                 is_write: row.is_write,
                 lines: row.lines,
                 cursorpos: row.cursorpos,

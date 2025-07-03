@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use chrono::Utc;
+use chrono::{DateTime, Utc};
 
 use crate::DBContext;
 
@@ -12,14 +12,16 @@ pub struct Goal {
     pub use_apps: bool,
     pub use_categories: bool,
     pub ignore_no_activity_days: bool,
-    pub created_at: String,
-    pub updated_at: String,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
     pub apps: Vec<String>,
     pub categories: Vec<String>,
     pub excluded_days: Vec<String>,
 }
 
 pub struct GoalInput {
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
     pub target_seconds: i64,
     pub time_span: String,
     pub use_apps: bool,
@@ -65,8 +67,8 @@ pub async fn fetch_all_goals(db: &DBContext) -> Result<Vec<Goal>, sqlx::Error> {
             use_apps: row.use_apps,
             use_categories: row.use_categories,
             ignore_no_activity_days: row.ignore_no_activity_days,
-            created_at: row.created_at.clone(),
-            updated_at: row.updated_at.clone(),
+            created_at: row.created_at.parse::<DateTime<Utc>>().unwrap_or_default(),
+            updated_at: row.updated_at.parse::<DateTime<Utc>>().unwrap_or_default(),
             apps: vec![],
             categories: vec![],
             excluded_days: vec![],
@@ -99,10 +101,12 @@ pub async fn insert_goal(db: &DBContext, input: GoalInput) -> Result<i64, sqlx::
 
     let id = sqlx::query_scalar!(
         r#"
-        INSERT INTO goals (target_seconds, time_span, use_apps, use_categories, ignore_no_activity_days, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO goals (created_at, updated_at, target_seconds, time_span, use_apps, use_categories, ignore_no_activity_days, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
         RETURNING id
         "#,
+        input.created_at,
+        input.updated_at,
         input.target_seconds,
         input.time_span,
         input.use_apps,

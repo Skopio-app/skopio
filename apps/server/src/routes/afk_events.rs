@@ -8,7 +8,7 @@ use axum::{
     routing::{get, post},
     Json, Router,
 };
-use chrono::{DateTime, NaiveDateTime, Utc};
+use chrono::{DateTime, Utc};
 use common::models::inputs::AFKEventInput;
 use db::{
     server::afk_events::{fetch_range, fetch_recent, AFKEvent},
@@ -54,9 +54,9 @@ pub async fn afk_ws_handler(
 
 async fn handle_afk_ws(mut socket: WebSocket, db: Arc<Mutex<DBContext>>) {
     let duration = chrono::Duration::minutes(15);
-    let mut current_start: NaiveDateTime = Utc::now().naive_utc() - duration;
-    let mut current_end: NaiveDateTime = Utc::now().naive_utc();
-    let mut last_event_timestamp: NaiveDateTime = current_start;
+    let mut current_start: DateTime<Utc> = Utc::now() - duration;
+    let mut current_end: DateTime<Utc> = Utc::now();
+    let mut last_event_timestamp: DateTime<Utc> = current_start;
 
     loop {
         tokio::select! {
@@ -79,7 +79,7 @@ async fn handle_afk_ws(mut socket: WebSocket, db: Arc<Mutex<DBContext>>) {
                                         let parse_date = |s: &str| {
                                             DateTime::parse_from_rfc3339(s)
                                                 .map_err(|e| format!("RFC3339 parse error: {}", e))
-                                                .map(|dt_utc| dt_utc.naive_utc())
+                                                .map(|dt_utc| dt_utc.to_utc())
                                         };
 
                                         if let (Ok(start_ts), Ok(end_ts)) = (parse_date(&req.start_timestamp), parse_date(&req.end_timestamp)) {
@@ -132,8 +132,8 @@ async fn handle_afk_ws(mut socket: WebSocket, db: Arc<Mutex<DBContext>>) {
 async fn send_range_data(
     socket: &mut WebSocket,
     db: &Arc<Mutex<DBContext>>,
-    start: NaiveDateTime,
-    end: NaiveDateTime,
+    start: DateTime<Utc>,
+    end: DateTime<Utc>,
 ) -> Result<(), axum::Error> {
     let db_guard = db.lock().await;
     match fetch_range(&db_guard, start, end).await {

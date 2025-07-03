@@ -18,11 +18,11 @@ pub fn summary_query_from_input(input: SummaryQueryInput) -> SummaryQueryBuilder
     let mut builder = SummaryQueryBuilder::default();
 
     if let Some(start) = input.start {
-        builder = builder.start(start.naive_utc());
+        builder = builder.start(start);
     }
 
     if let Some(end) = input.end {
-        builder = builder.end(end.naive_utc());
+        builder = builder.end(end);
     }
 
     if let Some(apps) = input.app_names {
@@ -161,8 +161,8 @@ pub async fn get_bucketed_summary(
     let range = TimeRange::from(payload.preset);
 
     let builder = SummaryQueryBuilder::default()
-        .start(range.start())
-        .end(range.end())
+        .start(range.start().and_utc())
+        .end(range.end().and_utc())
         .time_bucket(range.bucket())
         // .sort_by(db::server::summary::SortOrder::BucketAscInnerDesc)
         .include_afk(payload.include_afk);

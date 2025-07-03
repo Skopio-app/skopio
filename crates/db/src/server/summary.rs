@@ -1,6 +1,6 @@
 use std::{collections::HashMap, time::Instant};
 
-use chrono::NaiveDateTime;
+use chrono::{DateTime, Utc};
 use common::{models::inputs::Group, time::TimeBucket};
 use log::info;
 
@@ -17,9 +17,10 @@ use crate::{
 //     BucketDescInnerDesc,
 // }
 
+// TODO: Heavily refactor and document the following code
 pub struct SummaryQueryBuilder {
-    start: Option<NaiveDateTime>,
-    end: Option<NaiveDateTime>,
+    start: Option<DateTime<Utc>>,
+    end: Option<DateTime<Utc>>,
     app_names: Option<Vec<String>>,
     project_names: Option<Vec<String>>,
     activity_types: Option<Vec<String>>,
@@ -57,12 +58,12 @@ impl SummaryQueryBuilder {
         }
     }
 
-    pub fn start(mut self, start: NaiveDateTime) -> Self {
+    pub fn start(mut self, start: DateTime<Utc>) -> Self {
         self.start = Some(start);
         self
     }
 
-    pub fn end(mut self, end: NaiveDateTime) -> Self {
+    pub fn end(mut self, end: DateTime<Utc>) -> Self {
         self.end = Some(end);
         self
     }
