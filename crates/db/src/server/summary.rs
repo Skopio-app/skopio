@@ -9,28 +9,19 @@ use crate::{
     DBContext,
 };
 
-// #[derive(Debug, Clone, Copy)]
-// pub enum SortOrder {
-//     BucketAscInnerAsc,
-//     BucketAscInnerDesc,
-//     BucketDescInnerAsc,
-//     BucketDescInnerDesc,
-// }
-
 // TODO: Heavily refactor and document the following code
 pub struct SummaryQueryBuilder {
     start: Option<DateTime<Utc>>,
     end: Option<DateTime<Utc>>,
     app_names: Option<Vec<String>>,
     project_names: Option<Vec<String>>,
-    activity_types: Option<Vec<String>>,
+    categories: Option<Vec<String>>,
     entity_names: Option<Vec<String>>,
     branch_names: Option<Vec<String>>,
     language_names: Option<Vec<String>>,
     group_by: Option<Group>,
     include_afk: bool,
     time_bucket: Option<TimeBucket>,
-    // sort_order: SortOrder,
 }
 
 #[derive(Debug, sqlx::FromRow)]
@@ -47,14 +38,13 @@ impl SummaryQueryBuilder {
             end: None,
             app_names: None,
             project_names: None,
-            activity_types: None,
+            categories: None,
             entity_names: None,
             branch_names: None,
             language_names: None,
             group_by: None,
             include_afk: false,
             time_bucket: None,
-            // sort_order: SortOrder::BucketAscInnerDesc,
         }
     }
 
@@ -78,8 +68,8 @@ impl SummaryQueryBuilder {
         self
     }
 
-    pub fn activity_types(mut self, types: Vec<String>) -> Self {
-        self.activity_types = Some(types);
+    pub fn categories(mut self, types: Vec<String>) -> Self {
+        self.categories = Some(types);
         self
     }
 
@@ -113,11 +103,6 @@ impl SummaryQueryBuilder {
         self
     }
 
-    // pub fn sort_by(mut self, order: SortOrder) -> Self {
-    //     self.sort_order = order;
-    //     self
-    // }
-
     pub async fn execute_grouped_summary_by(
         self,
         db: &DBContext,
@@ -126,48 +111,6 @@ impl SummaryQueryBuilder {
         self.group_by(group_key_field)
             .execute_range_summary(db)
             .await
-    }
-
-    pub async fn execute_apps_summary(
-        self,
-        db: &DBContext,
-    ) -> Result<Vec<GroupedTimeSummary>, sqlx::Error> {
-        self.execute_grouped_summary_by(db, Group::App).await
-    }
-
-    pub async fn execute_projects_summary(
-        self,
-        db: &DBContext,
-    ) -> Result<Vec<GroupedTimeSummary>, sqlx::Error> {
-        self.execute_grouped_summary_by(db, Group::Project).await
-    }
-
-    pub async fn execute_branches_summary(
-        self,
-        db: &DBContext,
-    ) -> Result<Vec<GroupedTimeSummary>, sqlx::Error> {
-        self.execute_grouped_summary_by(db, Group::Branch).await
-    }
-
-    pub async fn execute_entities_summary(
-        self,
-        db: &DBContext,
-    ) -> Result<Vec<GroupedTimeSummary>, sqlx::Error> {
-        self.execute_grouped_summary_by(db, Group::Entity).await
-    }
-
-    pub async fn execute_languages_summary(
-        self,
-        db: &DBContext,
-    ) -> Result<Vec<GroupedTimeSummary>, sqlx::Error> {
-        self.execute_grouped_summary_by(db, Group::Language).await
-    }
-
-    pub async fn execute_activity_type_summary(
-        self,
-        db: &DBContext,
-    ) -> Result<Vec<GroupedTimeSummary>, sqlx::Error> {
-        self.execute_grouped_summary_by(db, Group::Category).await
     }
 
     pub async fn execute_range_summary(
@@ -180,7 +123,7 @@ impl SummaryQueryBuilder {
             Some(Group::Project) => "projects.name",
             Some(Group::Language) => "languages.name",
             Some(Group::Branch) => "branches.name",
-            Some(Group::Category) => "events.activity_type",
+            Some(Group::Category) => "categories.name",
             Some(Group::Entity) => "entities.name",
             _ => "'Total'",
         };
@@ -191,6 +134,7 @@ impl SummaryQueryBuilder {
             LEFT JOIN projects ON events.project_id = projects.id \
             LEFT JOIN entities ON events.entity_id = entities.id \
             LEFT JOIN branches ON events.branch_id = branches.id \
+            LEFT JOIN categories ON events.category_id = categories.id \
             LEFT JOIN languages ON events.language_id = languages.id WHERE 1=1",
             group_key = group_key
         );
@@ -225,13 +169,13 @@ impl SummaryQueryBuilder {
             base_query.push_str(&format!(" AND projects.name IN ({})", proj_list));
         }
 
-        if let Some(activity_types) = &self.activity_types {
+        if let Some(activity_types) = &self.categories {
             let list = activity_types
                 .iter()
                 .map(|v| format!("'{}'", v))
                 .collect::<Vec<_>>()
                 .join(", ");
-            base_query.push_str(&format!(" AND events.activity_type IN ({})", list));
+            base_query.push_str(&format!(" AND categories.name IN ({})", list));
         }
 
         if let Some(entities) = &self.entity_names {
@@ -308,6 +252,7 @@ impl SummaryQueryBuilder {
             LEFT JOIN projects ON events.project_id = projects.id \
             LEFT JOIN entities ON events.entity_id = entities.id \
             LEFT JOIN branches ON events.branch_id = branches.id \
+            LEFT JOIN categories ON events.category_id = categories.id \
             LEFT JOIN languages ON events.language_id = languages.id WHERE 1=1",
         );
 
@@ -341,13 +286,13 @@ impl SummaryQueryBuilder {
             query.push_str(&format!(" AND projects.name IN ({})", proj_list));
         }
 
-        if let Some(activity_types) = &self.activity_types {
+        if let Some(activity_types) = &self.categories {
             let list = activity_types
                 .iter()
                 .map(|v| format!("'{}'", v))
                 .collect::<Vec<_>>()
                 .join(", ");
-            query.push_str(&format!(" AND events.activity_type IN ({})", list));
+            query.push_str(&format!(" AND categories.name IN ({})", list));
         }
 
         if let Some(entities) = &self.entity_names {
@@ -400,7 +345,7 @@ impl SummaryQueryBuilder {
             Some(Group::Project) => "projects.name",
             Some(Group::Language) => "languages.name",
             Some(Group::Branch) => "branches.name",
-            Some(Group::Category) => "events.activity_type",
+            Some(Group::Category) => "categories.name",
             Some(Group::Entity) => "entities.name",
             _ => "'Total'",
         };
@@ -420,6 +365,7 @@ impl SummaryQueryBuilder {
             LEFT JOIN projects ON events.project_id = projects.id \
             LEFT JOIN entities ON events.entity_id = entities.id \
             LEFT JOIN branches ON events.branch_id = branches.id \
+            LEFT JOIN categories ON events.category_id = categories.id \
             LEFT JOIN languages ON events.language_id = languages.id WHERE 1=1",
             group_key = group_key,
             time_bucket_expr = time_bucket_expr
@@ -455,13 +401,13 @@ impl SummaryQueryBuilder {
             base_query.push_str(&format!(" AND projects.name IN ({})", list));
         }
 
-        if let Some(activity_types) = &self.activity_types {
+        if let Some(activity_types) = &self.categories {
             let list = activity_types
                 .iter()
                 .map(|v| format!("'{}'", v))
                 .collect::<Vec<_>>()
                 .join(", ");
-            base_query.push_str(&format!(" AND events.activity_type IN ({})", list));
+            base_query.push_str(&format!(" AND categories.name IN ({})", list));
         }
 
         if let Some(entities) = &self.entity_names {
@@ -525,45 +471,6 @@ impl SummaryQueryBuilder {
 
         Ok(records)
     }
-
-    // fn sort_bucket_records(
-    //     &self,
-    //     grouped_map: HashMap<String, HashMap<String, i64>>,
-    // ) -> Vec<BucketTimeSummary> {
-    //     let mut buckets: Vec<_> = grouped_map.into_iter().collect();
-
-    //     let mut result: Vec<BucketTimeSummary> = buckets
-    //         .iter_mut()
-    //         .map(|(bucket, inner)| {
-    //             let mut items: Vec<_> = inner.drain().collect();
-    //             match self.sort_order {
-    //                 SortOrder::BucketAscInnerAsc | SortOrder::BucketDescInnerAsc => {
-    //                     items.sort_by_key(|(_, v)| *v);
-    //                 }
-    //                 SortOrder::BucketAscInnerDesc | SortOrder::BucketDescInnerDesc => {
-    //                     items.sort_by(|a, b| b.1.cmp(&a.1));
-    //                 }
-    //             }
-    //             let grouped_values = items.into_iter().collect();
-    //             BucketTimeSummary {
-    //                 bucket: bucket.clone(),
-    //                 grouped_values,
-    //             }
-    //         })
-    //         .collect();
-
-    //     match self.sort_order {
-    //         SortOrder::BucketDescInnerAsc | SortOrder::BucketDescInnerDesc => {
-    //             result.sort_by(|a, b| b.bucket.cmp(&a.bucket));
-    //         }
-    //         _ => {
-    //             result.sort_by(|a, b| a.bucket.cmp(&b.bucket));
-    //         }
-    //     }
-
-    //     info!("The results: {:?}", result);
-    //     result
-    // }
 }
 
 impl Default for SummaryQueryBuilder {

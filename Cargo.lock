@@ -892,6 +892,7 @@ dependencies = [
  "chrono",
  "serde",
  "specta",
+ "thiserror 2.0.12",
 ]
 
 [[package]]
