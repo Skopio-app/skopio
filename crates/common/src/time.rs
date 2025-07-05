@@ -24,6 +24,7 @@ pub enum TimeRangePreset {
     LastWeek,
     ThisMonth,
     LastMonth,
+    // ThisYear,
     LastNDays(i64),
     LastNWeeks(i64),
     Custom {
@@ -35,9 +36,9 @@ pub enum TimeRangePreset {
 
 #[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
 pub struct TimeRange {
-    start: DateTime<Utc>,
-    end: DateTime<Utc>,
-    bucket: TimeBucket,
+    pub start: DateTime<Utc>,
+    pub end: DateTime<Utc>,
+    pub bucket: Option<TimeBucket>,
 }
 
 // TODO: Fix time conversion and retrieval issue.
@@ -54,7 +55,7 @@ impl From<TimeRangePreset> for TimeRange {
                 Self {
                     start,
                     end,
-                    bucket: TimeBucket::Hour,
+                    bucket: Some(TimeBucket::Hour),
                 }
             }
             TimeRangePreset::Yesterday => {
@@ -63,7 +64,7 @@ impl From<TimeRangePreset> for TimeRange {
                 Self {
                     start,
                     end,
-                    bucket: TimeBucket::Hour,
+                    bucket: Some(TimeBucket::Hour),
                 }
             }
             TimeRangePreset::ThisWeek => {
@@ -72,7 +73,7 @@ impl From<TimeRangePreset> for TimeRange {
                 Self {
                     start,
                     end,
-                    bucket: TimeBucket::Day,
+                    bucket: Some(TimeBucket::Day),
                 }
             }
             TimeRangePreset::LastWeek => {
@@ -82,7 +83,7 @@ impl From<TimeRangePreset> for TimeRange {
                 Self {
                     start,
                     end,
-                    bucket: TimeBucket::Day,
+                    bucket: Some(TimeBucket::Day),
                 }
             }
             TimeRangePreset::ThisMonth => {
@@ -96,7 +97,7 @@ impl From<TimeRangePreset> for TimeRange {
                 Self {
                     start,
                     end,
-                    bucket: TimeBucket::Day,
+                    bucket: Some(TimeBucket::Day),
                 }
             }
             TimeRangePreset::LastMonth => {
@@ -111,9 +112,12 @@ impl From<TimeRangePreset> for TimeRange {
                 Self {
                     start,
                     end,
-                    bucket: TimeBucket::Day,
+                    bucket: Some(TimeBucket::Day),
                 }
             }
+            // TimeRangePreset::ThisYear => {
+
+            // }
             TimeRangePreset::LastNDays(n) => {
                 let clamped = n.clamp(1, 31);
                 let start = today - Duration::days(clamped);
@@ -121,7 +125,7 @@ impl From<TimeRangePreset> for TimeRange {
                 Self {
                     start,
                     end,
-                    bucket: TimeBucket::Day,
+                    bucket: Some(TimeBucket::Day),
                 }
             }
             TimeRangePreset::LastNWeeks(n) => {
@@ -131,10 +135,14 @@ impl From<TimeRangePreset> for TimeRange {
                 Self {
                     start,
                     end,
-                    bucket: TimeBucket::Week,
+                    bucket: Some(TimeBucket::Week),
                 }
             }
-            TimeRangePreset::Custom { start, end, bucket } => Self { start, end, bucket },
+            TimeRangePreset::Custom { start, end, bucket } => Self {
+                start,
+                end,
+                bucket: Some(bucket),
+            },
         }
     }
 }
@@ -146,10 +154,10 @@ impl TimeRange {
     pub fn end(&self) -> DateTime<Utc> {
         self.end
     }
-    pub fn bucket(&self) -> TimeBucket {
+    pub fn bucket(&self) -> Option<TimeBucket> {
         self.bucket
     }
-    pub fn as_tuple(&self) -> (DateTime<Utc>, DateTime<Utc>, TimeBucket) {
+    pub fn as_tuple(&self) -> (DateTime<Utc>, DateTime<Utc>, Option<TimeBucket>) {
         (self.start, self.end, self.bucket)
     }
 }

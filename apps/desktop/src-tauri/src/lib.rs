@@ -11,8 +11,9 @@ use trackers::{
 };
 use tracking_service::{DBService, TrackingService};
 
-use crate::ui::tray::init_tray;
+use crate::{goals_service::GoalService, ui::tray::init_tray};
 
+mod goals_service;
 mod helpers;
 mod monitored_app;
 mod summaries;
@@ -97,8 +98,10 @@ pub async fn run() {
                 let cursor_tracker = window.state::<Arc<MouseTracker>>();
                 let keyboard_tracker = window.state::<Arc<KeyboardTracker>>();
                 let buffered_service = window.state::<Arc<BufferedTrackingService>>();
+                let goal_service = window.state::<Arc<GoalService>>();
                 cursor_tracker.stop_tracking();
                 keyboard_tracker.stop_tracking();
+                goal_service.shutdown();
 
                 let buffered_service = Arc::clone(&buffered_service);
                 tokio::spawn(async move {
@@ -150,6 +153,8 @@ async fn setup_trackers(app_handle: &AppHandle) -> Result<(), anyhow::Error> {
         }
     };
 
+    app_handle.manage(db.clone());
+
     let raw_service = Arc::new(DBService::new(Arc::clone(&db)));
     let sync_interval_rx = config_store.subscribe_sync_interval();
     let flush_interval_rx = config_store.subscribe_flush_interval();
@@ -160,6 +165,10 @@ async fn setup_trackers(app_handle: &AppHandle) -> Result<(), anyhow::Error> {
         sync_interval_rx,
     ));
     app_handle.manage(Arc::clone(&buffered_service));
+
+    let goal_service = Arc::new(GoalService::new(Arc::clone(&db)));
+    app_handle.manage(Arc::clone(&goal_service));
+    goal_service.start();
 
     let service_trait: Arc<dyn TrackingService> = buffered_service.clone();
 
@@ -230,12 +239,14 @@ fn make_specta_builder<R: Runtime>() -> tauri_specta::Builder<R> {
             crate::helpers::config::set_theme::<tauri::Wry>,
             crate::helpers::config::set_afk_timeout::<tauri::Wry>,
             crate::helpers::config::set_heartbeat_interval::<tauri::Wry>,
-            crate::summaries::fetch_app_summary,
-            crate::summaries::fetch_projects_summary,
-            crate::summaries::fetch_activity_types_summary,
+            // crate::summaries::fetch_app_summary,
+            // crate::summaries::fetch_projects_summary,
+            // crate::summaries::fetch_activity_types_summary,
             crate::summaries::fetch_bucketed_summary,
             crate::summaries::fetch_total_time,
             crate::summaries::fetch_range_summary,
+            crate::goals_service::add_goal,
+            crate::goals_service::get_goals,
         ])
         .error_handling(tauri_specta::ErrorHandlingMode::Throw);
 

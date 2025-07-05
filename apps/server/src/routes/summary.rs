@@ -25,27 +25,27 @@ pub fn summary_query_from_input(input: SummaryQueryInput) -> SummaryQueryBuilder
         builder = builder.end(end);
     }
 
-    if let Some(apps) = input.app_names {
+    if let Some(apps) = input.apps {
         builder = builder.apps(apps);
     }
 
-    if let Some(projects) = input.project_names {
+    if let Some(projects) = input.projects {
         builder = builder.projects(projects);
     }
 
-    if let Some(types) = input.activity_types {
+    if let Some(types) = input.categories {
         builder = builder.categories(types);
     }
 
-    if let Some(entities) = input.entity_names {
+    if let Some(entities) = input.entities {
         builder = builder.entities(entities);
     }
 
-    if let Some(branches) = input.branch_names {
+    if let Some(branches) = input.branches {
         builder = builder.branches(branches);
     }
 
-    if let Some(langs) = input.language_names {
+    if let Some(langs) = input.languages {
         builder = builder.languages(langs);
     }
 
@@ -93,7 +93,7 @@ pub async fn get_bucketed_summary(
     let builder = SummaryQueryBuilder::default()
         .start(range.start())
         .end(range.end())
-        .time_bucket(range.bucket())
+        .time_bucket(range.bucket().unwrap())
         .include_afk(payload.include_afk);
 
     let builder = if let Some(names) = payload.app_names {

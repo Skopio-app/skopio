@@ -1,5 +1,5 @@
 use anyhow::anyhow;
-use chrono::{DateTime, Datelike, Duration, Local, TimeZone, Utc};
+use chrono::{Datelike, Duration, TimeZone, Utc};
 use common::models::inputs::SummaryQueryInput;
 use ril::prelude::*;
 use ril::text::Font;
@@ -102,32 +102,23 @@ pub fn init_tray(app: &mut App) -> tauri::Result<()> {
             loop {
                 interval.tick().await;
 
-                let now_local = Local::now();
-                let local_start = Local
-                    .with_ymd_and_hms(
-                        now_local.year(),
-                        now_local.month(),
-                        now_local.day(),
-                        0,
-                        0,
-                        0,
-                    )
+                let now = Utc::now();
+                let utc_start = Utc
+                    .with_ymd_and_hms(now.year(), now.month(), now.day(), 0, 0, 0)
                     .single()
                     .unwrap();
 
-                let start_utc: DateTime<Utc> = local_start.with_timezone(&Utc);
-
-                let end_utc = start_utc + Duration::days(1) - Duration::nanoseconds(1);
+                let end_utc = utc_start + Duration::days(1) - Duration::nanoseconds(1);
 
                 let query = SummaryQueryInput {
-                    start: Some(start_utc),
+                    start: Some(utc_start),
                     end: Some(end_utc),
-                    app_names: None,
-                    project_names: None,
-                    activity_types: None,
-                    entity_names: None,
-                    branch_names: None,
-                    language_names: None,
+                    apps: None,
+                    projects: None,
+                    categories: None,
+                    entities: None,
+                    branches: None,
+                    languages: None,
                     include_afk: false,
                 };
 

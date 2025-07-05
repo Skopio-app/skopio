@@ -56,17 +56,17 @@ pub struct SummaryQueryInput {
     pub start: Option<DateTime<Utc>>,
     pub end: Option<DateTime<Utc>>,
     #[specta(optional)]
-    pub app_names: Option<Vec<String>>,
+    pub apps: Option<Vec<String>>,
     #[specta(optional)]
-    pub project_names: Option<Vec<String>>,
+    pub projects: Option<Vec<String>>,
     #[specta(optional)]
-    pub activity_types: Option<Vec<String>>,
+    pub categories: Option<Vec<String>>,
     #[specta(optional)]
-    pub entity_names: Option<Vec<String>>,
+    pub entities: Option<Vec<String>>,
     #[specta(optional)]
-    pub branch_names: Option<Vec<String>>,
+    pub branches: Option<Vec<String>>,
     #[specta(optional)]
-    pub language_names: Option<Vec<String>>,
+    pub languages: Option<Vec<String>>,
     pub include_afk: bool,
 }
 

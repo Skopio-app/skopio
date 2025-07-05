@@ -36,13 +36,13 @@ where
     }
 }
 
-#[tauri::command]
-#[specta::specta]
-pub async fn fetch_app_summary(
-    query: SummaryQueryInput,
-) -> Result<Vec<GroupedTimeSummary>, String> {
-    post_json("summary/apps", &query).await
-}
+// #[tauri::command]
+// #[specta::specta]
+// pub async fn fetch_app_summary(
+//     query: SummaryQueryInput,
+// ) -> Result<Vec<GroupedTimeSummary>, String> {
+//     post_json("summary/apps", &query).await
+// }
 
 #[tauri::command]
 #[specta::specta]
@@ -50,21 +50,21 @@ pub async fn fetch_total_time(query: SummaryQueryInput) -> Result<i64, String> {
     post_json("summary/total-time", &query).await
 }
 
-#[tauri::command]
-#[specta::specta]
-pub async fn fetch_projects_summary(
-    query: SummaryQueryInput,
-) -> Result<Vec<GroupedTimeSummary>, String> {
-    post_json("summary/projects", &query).await
-}
+// #[tauri::command]
+// #[specta::specta]
+// pub async fn fetch_projects_summary(
+//     query: SummaryQueryInput,
+// ) -> Result<Vec<GroupedTimeSummary>, String> {
+//     post_json("summary/projects", &query).await
+// }
 
-#[tauri::command]
-#[specta::specta]
-pub async fn fetch_activity_types_summary(
-    query: SummaryQueryInput,
-) -> Result<Vec<GroupedTimeSummary>, String> {
-    post_json("summary/activity-types", &query).await
-}
+// #[tauri::command]
+// #[specta::specta]
+// pub async fn fetch_activity_types_summary(
+//     query: SummaryQueryInput,
+// ) -> Result<Vec<GroupedTimeSummary>, String> {
+//     post_json("summary/activity-types", &query).await
+// }
 
 #[tauri::command]
 #[specta::specta]

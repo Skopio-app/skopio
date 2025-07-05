@@ -1,4 +1,4 @@
-use chrono::{DateTime, Utc};
+use chrono::{DateTime, Local, NaiveDateTime, Utc};
 use common::{models::inputs::Group, time::TimeBucket};
 
 use crate::server::utils::summary_filter::SummaryFilters;
@@ -56,8 +56,9 @@ pub fn append_all_filters(query: &mut String, filters: SummaryFilters) {
 
 /// Appends JOIN clauses for events to resolve all foreign keys
 pub fn append_standard_joins(query: &mut String) {
+    // Space at the beginning is intentional
     query.push_str(
-        "LEFT JOIN apps ON events.app_id = apps.id \
+        " LEFT JOIN apps ON events.app_id = apps.id \
                  LEFT JOIN projects ON events.project_id = projects.id \
                  LEFT JOIN entities ON events.entity_id = entities.id \
                  LEFT JOIN branches ON events.branch_id = branches.id \
@@ -94,4 +95,27 @@ pub fn get_time_bucket_expr(bucket: Option<TimeBucket>) -> &'static str {
         Some(TimeBucket::Month) => "strftime('%Y-%m', events.timestamp)",
         None => "'Unbucketed'",
     }
+}
+
+pub fn convert_utc_bucket_to_local(bucket: &str) -> String {
+    let formats = [
+        ("%Y-%m-%d %H:00:00", "hour"),
+        ("%Y-%m-%d", "day"),
+        ("%Y-%m", "month"),
+    ];
+
+    for (fmt, granularity) in formats.iter() {
+        if let Ok(naive_dt) = NaiveDateTime::parse_from_str(bucket, fmt) {
+            let utc_dt: DateTime<Utc> = DateTime::<Utc>::from_naive_utc_and_offset(naive_dt, Utc);
+            let local_dt = utc_dt.with_timezone(&Local);
+            return match *granularity {
+                "hour" => local_dt.format("%Y-%m-%d %H:00:00").to_string(),
+                "day" => local_dt.format("%Y-%m-%d").to_string(),
+                "month" => local_dt.format("%Y-%m").to_string(),
+                _ => local_dt.to_rfc3339(),
+            };
+        }
+    }
+
+    bucket.to_string()
 }

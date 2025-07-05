@@ -1,10 +1,11 @@
 use std::collections::HashMap;
 
 use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
 
 use crate::DBContext;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
 pub struct Goal {
     pub id: i64,
     pub target_seconds: i64,
@@ -19,6 +20,7 @@ pub struct Goal {
     pub excluded_days: Vec<String>,
 }
 
+#[derive(Serialize, Deserialize, specta::Type)]
 pub struct GoalInput {
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
@@ -96,7 +98,7 @@ pub async fn fetch_all_goals(db: &DBContext) -> Result<Vec<Goal>, sqlx::Error> {
     Ok(grouped.into_values().collect())
 }
 
-pub async fn insert_goal(db: &DBContext, input: GoalInput) -> Result<i64, sqlx::Error> {
+pub async fn insert_goal(db: &DBContext, input: GoalInput) -> Result<(), sqlx::Error> {
     let now = Utc::now().to_rfc3339();
 
     let id = sqlx::query_scalar!(
@@ -148,5 +150,5 @@ pub async fn insert_goal(db: &DBContext, input: GoalInput) -> Result<i64, sqlx::
         .await?;
     }
 
-    Ok(id)
+    Ok(())
 }
