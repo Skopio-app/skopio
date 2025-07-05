@@ -26,11 +26,11 @@ pub fn summary_query_from_input(input: SummaryQueryInput) -> SummaryQueryBuilder
     }
 
     if let Some(apps) = input.app_names {
-        builder = builder.app_names(apps);
+        builder = builder.apps(apps);
     }
 
     if let Some(projects) = input.project_names {
-        builder = builder.project_names(projects);
+        builder = builder.projects(projects);
     }
 
     if let Some(types) = input.activity_types {
@@ -38,15 +38,15 @@ pub fn summary_query_from_input(input: SummaryQueryInput) -> SummaryQueryBuilder
     }
 
     if let Some(entities) = input.entity_names {
-        builder = builder.entity_names(entities);
+        builder = builder.entities(entities);
     }
 
     if let Some(branches) = input.branch_names {
-        builder = builder.branch_names(branches);
+        builder = builder.branches(branches);
     }
 
     if let Some(langs) = input.language_names {
-        builder = builder.language_names(langs);
+        builder = builder.languages(langs);
     }
 
     builder = builder.include_afk(input.include_afk);
@@ -94,23 +94,22 @@ pub async fn get_bucketed_summary(
         .start(range.start())
         .end(range.end())
         .time_bucket(range.bucket())
-        // .sort_by(db::server::summary::SortOrder::BucketAscInnerDesc)
         .include_afk(payload.include_afk);
 
     let builder = if let Some(names) = payload.app_names {
-        builder.app_names(names)
+        builder.apps(names)
     } else {
         builder
     };
 
     let builder = if let Some(names) = payload.project_names {
-        builder.project_names(names)
+        builder.projects(names)
     } else {
         builder
     };
 
     let builder = if let Some(names) = payload.entity_names {
-        builder.entity_names(names)
+        builder.entities(names)
     } else {
         builder
     };
@@ -122,13 +121,13 @@ pub async fn get_bucketed_summary(
     };
 
     let builder = if let Some(names) = payload.branch_names {
-        builder.branch_names(names)
+        builder.branches(names)
     } else {
         builder
     };
 
     let builder = if let Some(names) = payload.language_names {
-        builder.language_names(names)
+        builder.languages(names)
     } else {
         builder
     };

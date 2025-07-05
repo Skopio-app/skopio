@@ -40,7 +40,7 @@ pub struct AFKEventInput {
     pub duration: Option<i64>,
 }
 
-#[derive(Debug, Serialize, Deserialize, specta::Type)]
+#[derive(Debug, Serialize, Deserialize, Clone, Copy, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub enum Group {
     App,
