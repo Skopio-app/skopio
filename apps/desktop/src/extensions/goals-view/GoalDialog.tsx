@@ -3,6 +3,7 @@ import * as Dialog from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { z } from "zod";
+import { commands, GoalInput } from "../../types/tauri.gen";
 
 enum TimeUnit {
   Hrs = "hrs",
@@ -99,15 +100,73 @@ const GoalDialog = ({
     if (!open) setError(null);
   }, [open]);
 
-  const handleSave = () => {
+  const handleSave = async () => {
     const parsed = goalSchema.safeParse(rawValue);
     if (!parsed.success) {
       setError(parsed.error.issues[0].message);
       return;
     }
-    setGoalValue(convertToHours(rawValue, timeUnit));
-    onOpenChange(false);
+
+    const hours = convertToHours(rawValue, timeUnit);
+
+    const maxBySpan = {
+      [TimeSpan.Day]: 24,
+      [TimeSpan.Week]: 24 * 7,
+      [TimeSpan.Month]: 24 * 30,
+      [TimeSpan.Year]: 24 * 365,
+    };
+
+    const maxAllowed = maxBySpan[timeSpan];
+    if (hours > maxAllowed) {
+      setError(
+        `Goal can't exceed ${maxAllowed} hours per ${timeSpan.toLowerCase()}`,
+      );
+      return;
+    }
+
+    if (hours < 0.2) {
+      setError("Goal can't be less than 15 mins");
+      return;
+    }
+
+    if (useCategories && categories.length === 0) {
+      setError("Please select at least one category");
+    }
+
+    if (useApps && apps.length === 0) {
+      setError("Please select at least one app.");
+      return;
+    }
+    if (timeSpan === TimeSpan.Day && excludedDays.length === 7) {
+      setError("You can't exclude all days of the week.");
+      return;
+    }
+
+    const input: GoalInput = {
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+      name: summaryText,
+      targetSeconds: Math.round(hours * 3600),
+      timeSpan,
+      useApps,
+      useCategories,
+      ignoreNoActivityDays: true,
+      apps,
+      categories,
+      excludedDays,
+    };
+
+    try {
+      await commands.addGoal(input);
+      setError(null);
+      onOpenChange(false);
+    } catch (err) {
+      setError(`Failed to save goal: ${err}`);
+    }
+
+    setGoalValue(hours);
     setError(null);
+    onOpenChange(false);
   };
 
   const toggleValue = <T,>(
@@ -225,7 +284,11 @@ const GoalDialog = ({
                   checked={useCategories}
                   onCheckedChange={(checked) => {
                     setUseCategories(checked);
-                    if (checked) setUseApps(false);
+                    if (checked) {
+                      setUseApps(false);
+                    } else {
+                      setCategories([]);
+                    }
                   }}
                 />
                 <Label id="categories">Filter Categories</Label>
@@ -236,7 +299,11 @@ const GoalDialog = ({
                   checked={useApps}
                   onCheckedChange={(checked) => {
                     setUseApps(checked);
-                    if (checked) setUseCategories(false);
+                    if (checked) {
+                      setUseCategories(false);
+                    } else {
+                      setApps([]);
+                    }
                   }}
                 />
                 <Label id="apps">Filter Apps</Label>

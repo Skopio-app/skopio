@@ -6,8 +6,10 @@ use serde::{Deserialize, Serialize};
 use crate::DBContext;
 
 #[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
 pub struct Goal {
     pub id: i64,
+    pub name: String,
     pub target_seconds: i64,
     pub time_span: String,
     pub use_apps: bool,
@@ -21,7 +23,9 @@ pub struct Goal {
 }
 
 #[derive(Serialize, Deserialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
 pub struct GoalInput {
+    pub name: String,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
     pub target_seconds: i64,
@@ -39,6 +43,7 @@ pub async fn fetch_all_goals(db: &DBContext) -> Result<Vec<Goal>, sqlx::Error> {
         r#"
         SELECT
           g.id,
+          g.name,
           g.target_seconds,
           g.time_span,
           g.use_apps,
@@ -64,6 +69,7 @@ pub async fn fetch_all_goals(db: &DBContext) -> Result<Vec<Goal>, sqlx::Error> {
     for row in rows {
         let entry = grouped.entry(row.id).or_insert_with(|| Goal {
             id: row.id,
+            name: row.name,
             target_seconds: row.target_seconds,
             time_span: row.time_span.clone(),
             use_apps: row.use_apps,
@@ -103,12 +109,13 @@ pub async fn insert_goal(db: &DBContext, input: GoalInput) -> Result<(), sqlx::E
 
     let id = sqlx::query_scalar!(
         r#"
-        INSERT INTO goals (created_at, updated_at, target_seconds, time_span, use_apps, use_categories, ignore_no_activity_days, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+        INSERT INTO goals (created_at, updated_at, name, target_seconds, time_span, use_apps, use_categories, ignore_no_activity_days, created_at, updated_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         RETURNING id
         "#,
         input.created_at,
         input.updated_at,
+        input.name,
         input.target_seconds,
         input.time_span,
         input.use_apps,

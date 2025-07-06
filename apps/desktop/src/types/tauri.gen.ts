@@ -18,21 +18,6 @@ export const commands = {
   async setHeartbeatInterval(interval: number): Promise<null> {
     return await TAURI_INVOKE("set_heartbeat_interval", { interval });
   },
-  async fetchAppSummary(
-    query: SummaryQueryInput,
-  ): Promise<GroupedTimeSummary[]> {
-    return await TAURI_INVOKE("fetch_app_summary", { query });
-  },
-  async fetchProjectsSummary(
-    query: SummaryQueryInput,
-  ): Promise<GroupedTimeSummary[]> {
-    return await TAURI_INVOKE("fetch_projects_summary", { query });
-  },
-  async fetchActivityTypesSummary(
-    query: SummaryQueryInput,
-  ): Promise<GroupedTimeSummary[]> {
-    return await TAURI_INVOKE("fetch_activity_types_summary", { query });
-  },
   async fetchBucketedSummary(
     query: BucketedSummaryInput,
   ): Promise<BucketTimeSummary[]> {
@@ -45,6 +30,12 @@ export const commands = {
     query: SummaryQueryInput,
   ): Promise<GroupedTimeSummary[]> {
     return await TAURI_INVOKE("fetch_range_summary", { query });
+  },
+  async addGoal(input: GoalInput): Promise<null> {
+    return await TAURI_INVOKE("add_goal", { input });
+  },
+  async getGoals(): Promise<Goal[]> {
+    return await TAURI_INVOKE("get_goals");
   },
 };
 
@@ -76,6 +67,33 @@ export type BucketedSummaryInput = {
   group_by?: Group | null;
   include_afk: boolean;
 };
+export type Goal = {
+  id: number;
+  name: string;
+  targetSeconds: number;
+  timeSpan: string;
+  useApps: boolean;
+  useCategories: boolean;
+  ignoreNoActivityDays: boolean;
+  createdAt: string;
+  updatedAt: string;
+  apps: string[];
+  categories: string[];
+  excludedDays: string[];
+};
+export type GoalInput = {
+  name: string;
+  createdAt: string;
+  updatedAt: string;
+  targetSeconds: number;
+  timeSpan: string;
+  useApps: boolean;
+  useCategories: boolean;
+  ignoreNoActivityDays: boolean;
+  apps: string[];
+  categories: string[];
+  excludedDays: string[];
+};
 export type Group =
   | "app"
   | "project"
@@ -87,12 +105,12 @@ export type GroupedTimeSummary = { group_key: string; total_seconds: number };
 export type SummaryQueryInput = {
   start: string | null;
   end: string | null;
-  app_names?: string[] | null;
-  project_names?: string[] | null;
-  activity_types?: string[] | null;
-  entity_names?: string[] | null;
-  branch_names?: string[] | null;
-  language_names?: string[] | null;
+  apps?: string[] | null;
+  projects?: string[] | null;
+  categories?: string[] | null;
+  entities?: string[] | null;
+  branches?: string[] | null;
+  languages?: string[] | null;
   include_afk: boolean;
 };
 export type Theme = "Light" | "Dark" | "System";
