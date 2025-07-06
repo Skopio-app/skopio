@@ -71,7 +71,7 @@ export type Goal = {
   id: number;
   name: string;
   targetSeconds: number;
-  timeSpan: string;
+  timeSpan: TimeSpan;
   useApps: boolean;
   useCategories: boolean;
   ignoreNoActivityDays: boolean;
@@ -114,7 +114,7 @@ export type SummaryQueryInput = {
   include_afk: boolean;
 };
 export type Theme = "Light" | "Dark" | "System";
-export type TimeBucket = "Day" | "Week" | "Month" | "Hour";
+export type TimeBucket = "Day" | "Week" | "Month" | "Hour" | "Year";
 export type TimeRangePreset =
   | "Today"
   | "Yesterday"
@@ -124,7 +124,10 @@ export type TimeRangePreset =
   | "LastMonth"
   | { LastNDays: number }
   | { LastNWeeks: number }
+  | { LastNMonths: number }
+  | { LastNYears: number }
   | { Custom: { start: string; end: string; bucket: TimeBucket } };
+export type TimeSpan = "day" | "week" | "month" | "year";
 
 /** tauri-specta globals **/
 

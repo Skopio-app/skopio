@@ -14,6 +14,7 @@ pub enum TimeBucket {
     Week,
     Month,
     Hour,
+    Year,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
@@ -27,6 +28,8 @@ pub enum TimeRangePreset {
     // ThisYear,
     LastNDays(i64),
     LastNWeeks(i64),
+    LastNMonths(i64),
+    LastNYears(i64),
     Custom {
         start: DateTime<Utc>,
         end: DateTime<Utc>,
@@ -41,7 +44,6 @@ pub struct TimeRange {
     pub bucket: Option<TimeBucket>,
 }
 
-// TODO: Fix time conversion and retrieval issue.
 impl From<TimeRangePreset> for TimeRange {
     fn from(preset: TimeRangePreset) -> Self {
         let now = Utc::now();
@@ -129,13 +131,45 @@ impl From<TimeRangePreset> for TimeRange {
                 }
             }
             TimeRangePreset::LastNWeeks(n) => {
-                let clamped = n.clamp(1, 4);
+                let clamped = n.clamp(1, 9);
                 let start = today - Duration::weeks(clamped);
                 let end = today;
                 Self {
                     start,
                     end,
                     bucket: Some(TimeBucket::Week),
+                }
+            }
+            TimeRangePreset::LastNMonths(n) => {
+                let clamped = n.clamp(1, 12);
+                let naive_today = now.date_naive();
+                let mut start_year = naive_today.year();
+                let mut start_month = naive_today.month() as i32 - clamped as i32;
+
+                while start_month <= 0 {
+                    start_month += 12;
+                    start_year -= 1;
+                }
+                let start = safe_utc_datetime(start_year, start_month as u32, 1, 0, 0, 0)
+                    .unwrap_or_default();
+                let end =
+                    safe_utc_datetime(now.year(), now.month(), 1, 0, 0, 0).unwrap_or_default();
+                Self {
+                    start,
+                    end,
+                    bucket: Some(TimeBucket::Month),
+                }
+            }
+            TimeRangePreset::LastNYears(n) => {
+                let clamped = n.clamp(1, 12);
+                let start = safe_utc_datetime(now.year() - clamped as i32, 1, 1, 0, 0, 0)
+                    .unwrap_or_default();
+                let end = safe_utc_datetime(now.year(), 1, 1, 0, 0, 0).unwrap_or_default();
+
+                Self {
+                    start,
+                    end,
+                    bucket: Some(TimeBucket::Year),
                 }
             }
             TimeRangePreset::Custom { start, end, bucket } => Self {

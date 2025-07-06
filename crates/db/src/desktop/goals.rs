@@ -1,9 +1,32 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, str::FromStr};
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 use crate::DBContext;
+
+#[derive(Serialize, Deserialize, Debug, Clone, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub enum TimeSpan {
+    Day,
+    Week,
+    Month,
+    Year,
+}
+
+impl FromStr for TimeSpan {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_lowercase().as_str() {
+            "day" => Ok(TimeSpan::Day),
+            "week" => Ok(TimeSpan::Week),
+            "month" => Ok(TimeSpan::Month),
+            "year" => Ok(TimeSpan::Year),
+            _ => Err(format!("Invalid time span: {}", s)),
+        }
+    }
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
@@ -11,7 +34,7 @@ pub struct Goal {
     pub id: i64,
     pub name: String,
     pub target_seconds: i64,
-    pub time_span: String,
+    pub time_span: TimeSpan,
     pub use_apps: bool,
     pub use_categories: bool,
     pub ignore_no_activity_days: bool,
@@ -71,7 +94,7 @@ pub async fn fetch_all_goals(db: &DBContext) -> Result<Vec<Goal>, sqlx::Error> {
             id: row.id,
             name: row.name,
             target_seconds: row.target_seconds,
-            time_span: row.time_span.clone(),
+            time_span: TimeSpan::from_str(&row.time_span).unwrap(),
             use_apps: row.use_apps,
             use_categories: row.use_categories,
             ignore_no_activity_days: row.ignore_no_activity_days,

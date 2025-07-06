@@ -6,7 +6,7 @@ use common::{
     time::{TimeRange, TimeRangePreset},
 };
 use db::{
-    desktop::goals::{fetch_all_goals, insert_goal, Goal, GoalInput},
+    desktop::goals::{fetch_all_goals, insert_goal, Goal, GoalInput, TimeSpan},
     DBContext,
 };
 use log::{debug, error, info};
@@ -69,7 +69,7 @@ impl GoalService {
 
     async fn evaluate_goal(&self, goal: &Goal) -> anyhow::Result<i64> {
         let range = resolve_time_range(&goal.time_span)
-            .ok_or_else(|| anyhow::anyhow!("Invalid time_span: {}", goal.time_span))?;
+            .ok_or_else(|| anyhow::anyhow!("Invalid time_span: {:?}", goal.time_span))?;
 
         let query = SummaryQueryInput {
             start: Some(range.start()),
@@ -121,12 +121,12 @@ pub async fn add_goal(
     Ok(())
 }
 
-fn resolve_time_range(time_span: &str) -> Option<TimeRange> {
+fn resolve_time_range(time_span: &TimeSpan) -> Option<TimeRange> {
     match time_span {
-        "day" => Some(TimeRange::from(TimeRangePreset::Today)),
-        "week" => Some(TimeRange::from(TimeRangePreset::ThisWeek)),
-        "month" => Some(TimeRange::from(TimeRangePreset::ThisMonth)),
-        "year" => {
+        TimeSpan::Day => Some(TimeRange::from(TimeRangePreset::Today)),
+        TimeSpan::Week => Some(TimeRange::from(TimeRangePreset::ThisWeek)),
+        TimeSpan::Month => Some(TimeRange::from(TimeRangePreset::ThisMonth)),
+        TimeSpan::Year => {
             let now = Utc::now();
             let start = Utc
                 .with_ymd_and_hms(now.year(), 1, 1, 0, 0, 0)
@@ -139,6 +139,5 @@ fn resolve_time_range(time_span: &str) -> Option<TimeRange> {
                 bucket: None,
             })
         }
-        _ => None,
     }
 }

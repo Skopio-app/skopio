@@ -93,6 +93,7 @@ pub fn get_time_bucket_expr(bucket: Option<TimeBucket>) -> &'static str {
         Some(TimeBucket::Day) => "strftime('%Y-%m-%d', events.timestamp)",
         Some(TimeBucket::Week) => "strftime('%Y-W%W', events.timestamp)",
         Some(TimeBucket::Month) => "strftime('%Y-%m', events.timestamp)",
+        Some(TimeBucket::Year) => "strftime('%Y', events.timestamp)",
         None => "'Unbucketed'",
     }
 }
