@@ -1,11 +1,4 @@
-use crate::DBContext;
-use serde::{Deserialize, Serialize};
-
-#[derive(Serialize, Deserialize, Debug, sqlx::FromRow)]
-pub struct App {
-    pub id: Option<i64>,
-    pub name: String,
-}
+use crate::{models::App, DBContext};
 
 impl App {
     /// Finds an existing app by name or inserts a new one, returning its ID.

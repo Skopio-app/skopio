@@ -16,7 +16,7 @@ use crate::{goals_service::GoalService, ui::tray::init_tray};
 mod goals_service;
 mod helpers;
 mod monitored_app;
-mod summaries;
+mod network;
 mod sync_service;
 mod trackers;
 mod tracking_service;
@@ -239,14 +239,13 @@ fn make_specta_builder<R: Runtime>() -> tauri_specta::Builder<R> {
             crate::helpers::config::set_theme::<tauri::Wry>,
             crate::helpers::config::set_afk_timeout::<tauri::Wry>,
             crate::helpers::config::set_heartbeat_interval::<tauri::Wry>,
-            // crate::summaries::fetch_app_summary,
-            // crate::summaries::fetch_projects_summary,
-            // crate::summaries::fetch_activity_types_summary,
-            crate::summaries::fetch_bucketed_summary,
-            crate::summaries::fetch_total_time,
-            crate::summaries::fetch_range_summary,
+            crate::network::summaries::fetch_bucketed_summary,
+            crate::network::summaries::fetch_total_time,
+            crate::network::summaries::fetch_range_summary,
             crate::goals_service::add_goal,
             crate::goals_service::get_goals,
+            crate::network::tables::fetch_apps,
+            crate::network::tables::fetch_categories,
         ])
         .error_handling(tauri_specta::ErrorHandlingMode::Throw);
 

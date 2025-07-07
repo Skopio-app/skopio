@@ -6,13 +6,15 @@ interface ChipSelectorProps<T> {
   options: T[];
   onToggle: (val: T) => void;
   onRemove: (val: T) => void;
+  getLabel: (val: T) => string;
 }
 
-export function ChipSelector<T extends string>({
+export function ChipSelector<T>({
   values,
   options,
   onToggle,
   onRemove,
+  getLabel,
 }: ChipSelectorProps<T>) {
   return (
     <DropDownMenu.Root modal={false}>
@@ -20,14 +22,14 @@ export function ChipSelector<T extends string>({
         <div className="flex flex-wrap items-center gap-1 px-3 py-1 border rounded cursor-pointer max-w-full">
           {values.map((item) => (
             <span
-              key={item}
-              className="flex items-center gap-1 px-2 py-1 bg-gray-200 rounded whitespace-nowrap"
+              key={getLabel(item)}
+              className="flex getLas-center gap-1 px-2 py-1 bg-gray-200 rounded whitespace-nowrap"
               onClick={(e) => {
                 e.stopPropagation();
                 onRemove(item);
               }}
             >
-              {item} <X className="w-3 h-3" />
+              {getLabel(item)} <X className="w-3 h-3" />
             </span>
           ))}
         </div>
@@ -35,11 +37,11 @@ export function ChipSelector<T extends string>({
       <DropDownMenu.Content className="z-50 mt-1 w-48 max-h-60 overflow-y-auto bg-white border rounded shadow">
         {options.map((option) => (
           <DropDownMenu.Item
-            key={option}
+            key={getLabel(option)}
             onSelect={() => onToggle(option)}
             className="px-3 py-2 cursor-pointer hover:bg-gray-100"
           >
-            {option}
+            {getLabel(option)}
           </DropDownMenu.Item>
         ))}
       </DropDownMenu.Content>

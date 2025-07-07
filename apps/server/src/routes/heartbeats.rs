@@ -4,7 +4,7 @@ use axum::http::StatusCode;
 use axum::routing::post;
 use axum::{Json, Router};
 use common::models::inputs::HeartbeatInput;
-use db::server::apps::App;
+use db::models::App;
 use db::server::branches::Branch;
 use db::server::entities::Entity;
 use db::server::heartbeats::Heartbeat;

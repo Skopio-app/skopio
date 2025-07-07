@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
 use axum::{extract::State, http::StatusCode, routing::get, Json, Router};
-use db::{server::categories::Category, DBContext};
+use db::{models::Category, DBContext};
 use tokio::sync::Mutex;
 
 use crate::utils::error_response;

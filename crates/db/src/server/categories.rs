@@ -1,12 +1,4 @@
-use serde::{Deserialize, Serialize};
-
-use crate::DBContext;
-
-#[derive(Serialize, Deserialize, Debug, sqlx::FromRow)]
-pub struct Category {
-    pub id: Option<i64>,
-    pub name: String,
-}
+use crate::{models::Category, DBContext};
 
 impl Category {
     /// Inserts a new category if it doesn't exist, or returns the existing ID

@@ -37,6 +37,12 @@ export const commands = {
   async getGoals(): Promise<Goal[]> {
     return await TAURI_INVOKE("get_goals");
   },
+  async fetchApps(): Promise<App[]> {
+    return await TAURI_INVOKE("fetch_apps");
+  },
+  async fetchCategories(): Promise<Category[]> {
+    return await TAURI_INVOKE("fetch_categories");
+  },
 };
 
 /** user-defined events **/
@@ -45,6 +51,7 @@ export const commands = {
 
 /** user-defined types **/
 
+export type App = { id: number | null; name: string };
 export type AppConfig = {
   theme: Theme;
   heartbeat_interval: number;
@@ -67,6 +74,7 @@ export type BucketedSummaryInput = {
   group_by?: Group | null;
   include_afk: boolean;
 };
+export type Category = { id: number | null; name: string };
 export type Goal = {
   id: number;
   name: string;

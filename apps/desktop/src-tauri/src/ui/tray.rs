@@ -16,7 +16,7 @@ use tauri::{
 use tokio::sync::Mutex;
 
 use crate::helpers::time::format_duration;
-use crate::summaries::fetch_total_time;
+use crate::network::summaries::fetch_total_time;
 
 static FONT: LazyLock<Font> = LazyLock::new(|| {
     let font_data = include_bytes!("../../fonts/RobotoMono-Regular.ttf");

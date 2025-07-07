@@ -12,7 +12,7 @@ use db::{
 use log::{debug, error, info};
 use tokio::{sync::broadcast, task::JoinHandle};
 
-use crate::summaries::fetch_total_time;
+use crate::network::summaries::fetch_total_time;
 
 #[derive(Clone)]
 pub struct GoalService {

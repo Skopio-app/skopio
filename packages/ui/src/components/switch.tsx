@@ -16,7 +16,7 @@ function Switch({
         className,
       )}
       {...props}
-      style={{ ["-webkit-tap-highlight-color"]: "rgba(0, 0, 0, 0)" } as any}
+      style={{ WebkitTapHighlightColor: "rgba(0, 0, 0, 0)" } as any}
     >
       <SwitchPrimitive.Thumb className="block size-[21px] translate-x-0.5 rounded-full bg-white transition-transform duration-100 will-change-transform data-[state=checked]:translate-x-[19px]" />
     </SwitchPrimitive.Root>

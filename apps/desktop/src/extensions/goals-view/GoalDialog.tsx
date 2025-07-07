@@ -3,21 +3,19 @@ import * as Dialog from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { z } from "zod";
-import { commands, GoalInput, TimeSpan } from "../../types/tauri.gen";
+import {
+  App,
+  Category,
+  commands,
+  GoalInput,
+  TimeSpan,
+} from "../../types/tauri.gen";
 
 enum TimeUnit {
   Hrs = "hrs",
   Mins = "mins",
   Secs = "secs",
 }
-
-enum Category {
-  Coding = "coding",
-  Designing = "designing",
-  Debugging = "debugging",
-}
-
-const appsList = ["VSCode", "Figma", "Xcode", "Notion"];
 
 const goalSchema = z
   .number()
@@ -78,13 +76,36 @@ const GoalDialog = ({
   const [rawValue, setRawValue] = useState(
     convertFromHours(goalValue, timeUnit),
   );
+  const [categoryValues, setCategoryValues] = useState<Category[]>([]);
+  const [appValues, setAppValues] = useState<App[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [categories, setCategories] = useState<Category[]>([Category.Coding]);
-  const [apps, setApps] = useState<string[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [apps, setApps] = useState<App[]>([]);
   const [useCategories, setUseCategories] = useState(true);
   const [useApps, setUseApps] = useState(false);
 
-  const categoryOptions = Object.values(Category);
+  useEffect(() => {
+    const fetch = async () => {
+      try {
+        const apps = await commands.fetchApps();
+        if (apps.length > 0) {
+          setAppValues(apps);
+        }
+
+        const categories = await commands.fetchCategories();
+        if (categories.length > 0) {
+          setCategoryValues(categories);
+        }
+      } catch (err) {
+        console.error("Failed to fetch apps or categories:", err);
+      }
+    };
+
+    fetch();
+  }, []);
+
+  const categoryOptions = Object.values(categoryValues);
+  const appOptions = Object.values(appValues);
   const dayOptions = daySchema.options;
 
   useEffect(() => {
@@ -146,8 +167,8 @@ const GoalDialog = ({
       useApps,
       useCategories,
       ignoreNoActivityDays: true,
-      apps,
-      categories,
+      apps: apps.map((a) => a.name),
+      categories: categories.map((c) => c.name),
       excludedDays,
     };
 
@@ -222,22 +243,32 @@ const GoalDialog = ({
                 {timeUnit}
               </Button>
               <span>in</span>
-              <ChipSelector
-                values={useApps ? apps : categories}
-                options={useApps ? appsList : categoryOptions}
-                onToggle={(option) => {
-                  if (useApps) toggleValue(setApps, option);
-                  else toggleValue(setCategories, option as Category);
-                }}
-                onRemove={(item) => {
-                  if (useApps)
-                    setApps((prev) => prev.filter((a) => a !== item));
-                  else
-                    setCategories((prev) =>
-                      prev.filter((c) => c !== (item as Category)),
-                    );
-                }}
-              />
+              {(useApps || useCategories) && (
+                <ChipSelector
+                  values={useApps ? apps : categories}
+                  options={useApps ? appOptions : categoryOptions}
+                  getLabel={(item) => item.name}
+                  onToggle={(option) => {
+                    if (useApps) toggleValue(setApps, option as unknown as App);
+                    else
+                      toggleValue(setCategories, option as unknown as Category);
+                  }}
+                  onRemove={(item) => {
+                    if (useApps)
+                      setApps((prev) =>
+                        prev.filter(
+                          (a) => a.id !== (item as unknown as App).id,
+                        ),
+                      );
+                    else
+                      setCategories((prev) =>
+                        prev.filter(
+                          (c) => c.id !== (item as unknown as Category).id,
+                        ),
+                      );
+                  }}
+                />
+              )}
               <span>per</span>
               <Button
                 size="sm"
@@ -258,6 +289,7 @@ const GoalDialog = ({
                 <ChipSelector
                   options={dayOptions}
                   values={excludedDays}
+                  getLabel={(item) => item}
                   onToggle={(value) =>
                     setExcludedDays((prev) =>
                       prev.includes(value)
