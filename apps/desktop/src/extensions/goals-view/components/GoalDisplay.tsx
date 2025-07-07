@@ -5,6 +5,7 @@ import {
   commands,
   Goal,
   TimeRangePreset,
+  TimeSpan,
 } from "../../../types/tauri.gen";
 import BarLineChart from "./BarLineChart";
 import GoalChartCard from "./GoalChartCard";
@@ -13,8 +14,8 @@ const GoalDisplay = ({ goal }: { goal: Goal }) => {
   const [data, setData] = useState<BucketTimeSummary[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const timeRangeToPreset = (range: string): TimeRangePreset => {
-    switch (range) {
+  const timeRangeToPreset = (span: TimeSpan): TimeRangePreset => {
+    switch (span) {
       case "day":
         return { LastNDays: 7 };
       case "week":

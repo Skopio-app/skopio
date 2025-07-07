@@ -3,19 +3,12 @@ import * as Dialog from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { z } from "zod";
-import { commands, GoalInput } from "../../types/tauri.gen";
+import { commands, GoalInput, TimeSpan } from "../../types/tauri.gen";
 
 enum TimeUnit {
   Hrs = "hrs",
   Mins = "mins",
   Secs = "secs",
-}
-
-enum TimeSpan {
-  Day = "day",
-  Week = "week",
-  Month = "month",
-  Year = "year",
 }
 
 enum Category {
@@ -38,6 +31,8 @@ const daySchema = z.enum([
   "saturday",
   "sunday",
 ]);
+
+const TIME_SPANS: TimeSpan[] = ["day", "week", "month", "year"];
 
 const convertToHours = (value: number, unit: TimeUnit): number => {
   switch (unit) {
@@ -75,7 +70,7 @@ const GoalDialog = ({
 }) => {
   const [goalValue, setGoalValue] = useState<number>(2);
   const [timeUnit, setTimeUnit] = useState<TimeUnit>(TimeUnit.Hrs);
-  const [timeSpan, setTimeSpan] = useState<TimeSpan>(TimeSpan.Day);
+  const [timeSpan, setTimeSpan] = useState<TimeSpan>("day");
   const [excludedDays, setExcludedDays] = useState<string[]>([
     "saturday",
     "sunday",
@@ -110,10 +105,10 @@ const GoalDialog = ({
     const hours = convertToHours(rawValue, timeUnit);
 
     const maxBySpan = {
-      [TimeSpan.Day]: 24,
-      [TimeSpan.Week]: 24 * 7,
-      [TimeSpan.Month]: 24 * 30,
-      [TimeSpan.Year]: 24 * 365,
+      ["day"]: 24,
+      ["week"]: 24 * 7,
+      ["month"]: 24 * 30,
+      ["year"]: 24 * 365,
     };
 
     const maxAllowed = maxBySpan[timeSpan];
@@ -137,7 +132,7 @@ const GoalDialog = ({
       setError("Please select at least one app.");
       return;
     }
-    if (timeSpan === TimeSpan.Day && excludedDays.length === 7) {
+    if (timeSpan === "day" && excludedDays.length === 7) {
       setError("You can't exclude all days of the week.");
       return;
     }
@@ -184,7 +179,7 @@ const GoalDialog = ({
     `I want to achieve ${rawValue} ${timeUnit}` +
     `${categories.length || apps.length ? ` in ${subject}` : ""}` +
     ` per ${timeSpan}` +
-    (timeSpan === TimeSpan.Day && excludedDays.length
+    (timeSpan === "day" && excludedDays.length
       ? `, except for ${excludedDays.join(", ")}`
       : "");
 
@@ -248,7 +243,7 @@ const GoalDialog = ({
                 size="sm"
                 variant="secondary"
                 onClick={() =>
-                  setTimeSpan(cycleEnum(Object.values(TimeSpan), timeSpan))
+                  setTimeSpan(cycleEnum(Object.values(TIME_SPANS), timeSpan))
                 }
               >
                 {timeSpan}
@@ -257,7 +252,7 @@ const GoalDialog = ({
 
             {error && <p className="text-red-500 text-sm">{error}</p>}
 
-            {timeSpan === TimeSpan.Day && (
+            {timeSpan === "day" && (
               <div>
                 <p className="mb-2 font-medium">except for</p>
                 <ChipSelector

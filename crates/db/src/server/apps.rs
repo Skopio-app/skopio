@@ -26,7 +26,7 @@ impl App {
     }
 
     /// Retrieves all apps
-    pub async fn all(db_context: &DBContext) -> Result<Vec<Self>, sqlx::Error> {
+    pub async fn get_all(db_context: &DBContext) -> Result<Vec<Self>, sqlx::Error> {
         sqlx::query_as!(Self, "SELECT id, name FROM apps")
             .fetch_all(db_context.pool())
             .await

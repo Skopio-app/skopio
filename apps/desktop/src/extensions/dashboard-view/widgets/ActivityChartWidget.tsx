@@ -2,8 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import WidgetCard from "../components/WidgetCard";
 import CalendarChart from "../charts/CalendarChart";
 import { TimeRangePreset } from "../../../types/tauri.gen";
-import { endOfDay, endOfYear, startOfDay, startOfYear } from "date-fns";
-import { toNaiveDateTime } from "../helpers/dateRanges";
+import { endOfYear, startOfYear } from "date-fns";
 import { useSummaryData } from "../hooks/useSummaryData";
 import { CalendarChartData } from "../types";
 import {
@@ -13,18 +12,12 @@ import {
 } from "../helpers/activityCache";
 import { isDeltaOutdated } from "../helpers/delta";
 
-const getTodayPreset = (): TimeRangePreset => ({
-  Custom: {
-    start: toNaiveDateTime(startOfDay(new Date())),
-    end: toNaiveDateTime(endOfDay(new Date())),
-    bucket: "Day",
-  },
-});
+const getTodayPreset = (): TimeRangePreset => "Today";
 
 const getYearPreset = (): TimeRangePreset => ({
   Custom: {
-    start: toNaiveDateTime(startOfYear(new Date())),
-    end: toNaiveDateTime(endOfYear(new Date())),
+    start: startOfYear(new Date()).toISOString(),
+    end: endOfYear(new Date()).toISOString(),
     bucket: "Day",
   },
 });
@@ -50,6 +43,7 @@ const ActivityChartWidget = () => {
 
       if (!cached || cached.values.length === 0) {
         const fresh = getYearData();
+        console.log("The fresh data: ", fresh);
         const values = fresh.map(({ bucket, grouped_values }) => ({
           day: bucket,
           value: grouped_values["Total"] ?? 0,

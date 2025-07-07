@@ -30,7 +30,7 @@ const GoalsView = () => {
         </Button>
       </div>
 
-      <div className="flex flex-col space-y-4">
+      <div className="flex flex-col space-y-4 pl-3">
         {goals.map((goal) => (
           <GoalDisplay key={goal.id} goal={goal} />
         ))}

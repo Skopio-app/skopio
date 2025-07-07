@@ -19,7 +19,7 @@ const GoalChartCard: React.FC<GoalChartCardProps> = ({
   return (
     <div
       className={cn(
-        "relative flex flex-col rounded-2xl border border-muted bg-white shadow-sm w-4xl",
+        "relative flex flex-col rounded-2xl border border-muted bg-white shadow-sm w-full max-w-6xl",
         "transition-shadow hover:shadow-md p-4",
         className,
       )}

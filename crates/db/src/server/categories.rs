@@ -5,7 +5,7 @@ use crate::DBContext;
 #[derive(Serialize, Deserialize, Debug, sqlx::FromRow)]
 pub struct Category {
     pub id: Option<i64>,
-    pub category: String,
+    pub name: String,
 }
 
 impl Category {
@@ -27,5 +27,12 @@ impl Category {
         .await?;
 
         Ok(result.id)
+    }
+
+    /// Retrieves all categories
+    pub async fn get_all(db_context: &DBContext) -> Result<Vec<Self>, sqlx::Error> {
+        sqlx::query_as!(Self, "SELECT id, name FROM categories")
+            .fetch_all(db_context.pool())
+            .await
     }
 }

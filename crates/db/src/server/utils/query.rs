@@ -1,5 +1,6 @@
 use chrono::{DateTime, Local, NaiveDateTime, Utc};
 use common::{models::inputs::Group, time::TimeBucket};
+use log::info;
 
 use crate::server::utils::summary_filter::SummaryFilters;
 
@@ -11,11 +12,19 @@ pub fn append_date_range(
     start_field: &str,
     end_field: &str,
 ) {
-    if let Some(s) = start {
-        query.push_str(&format!(" AND {start_field} >= '{}'", s));
-    }
-    if let Some(e) = end {
-        query.push_str(&format!(" AND {end_field} <= '{}'", e));
+    info!("UTC range: {:?} to {:?}", start, end);
+    if let (Some(s), Some(e)) = (start, end) {
+        query.push_str(&format!(
+            " AND {start_field} < '{}' AND {end_field} > '{}'",
+            e, s
+        ));
+    } else {
+        if let Some(s) = start {
+            query.push_str(&format!(" AND {end_field} > '{}'", s));
+        }
+        if let Some(e) = end {
+            query.push_str(&format!(" AND {start_field} < '{}'", e));
+        }
     }
 }
 

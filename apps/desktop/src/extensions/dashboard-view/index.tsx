@@ -47,7 +47,6 @@ const DashboardView = () => {
     const params = new URLSearchParams(searchParams);
     params.set("range", selectedRange);
     setSearchParams(params, { replace: true });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedRange]);
 
   useEffect(() => {

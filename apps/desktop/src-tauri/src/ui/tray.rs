@@ -1,5 +1,5 @@
 use anyhow::anyhow;
-use chrono::{Datelike, Duration, TimeZone, Utc};
+use chrono::{Datelike, Duration, Local, TimeZone, Utc};
 use common::models::inputs::SummaryQueryInput;
 use ril::prelude::*;
 use ril::text::Font;
@@ -102,17 +102,29 @@ pub fn init_tray(app: &mut App) -> tauri::Result<()> {
             loop {
                 interval.tick().await;
 
-                let now = Utc::now();
-                let utc_start = Utc
-                    .with_ymd_and_hms(now.year(), now.month(), now.day(), 0, 0, 0)
+                let local_now = Local::now();
+                let local_date = local_now.date_naive();
+
+                let local_start = Local
+                    .with_ymd_and_hms(
+                        local_date.year(),
+                        local_date.month(),
+                        local_date.day(),
+                        0,
+                        0,
+                        0,
+                    )
                     .single()
                     .unwrap();
 
-                let end_utc = utc_start + Duration::days(1) - Duration::nanoseconds(1);
+                let local_end = local_start + Duration::days(1) - Duration::nanoseconds(1);
+
+                let utc_start = local_start.with_timezone(&Utc);
+                let utc_end = local_end.with_timezone(&Utc);
 
                 let query = SummaryQueryInput {
                     start: Some(utc_start),
-                    end: Some(end_utc),
+                    end: Some(utc_end),
                     apps: None,
                     projects: None,
                     categories: None,
@@ -122,7 +134,8 @@ pub fn init_tray(app: &mut App) -> tauri::Result<()> {
                     include_afk: false,
                 };
 
-                let time_secs = fetch_total_time(query).await.unwrap_or(0);
+                let time_secs = fetch_total_time(query).await.unwrap();
+
                 let time = format_duration(time_secs as u64);
 
                 if let Ok(icon_bytes) = generate_text_icon(app_handle.clone(), time) {
