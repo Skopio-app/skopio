@@ -26,7 +26,7 @@ const SettingsButton = React.forwardRef<
     <button
       ref={ref}
       className={cn(
-        "inline-flex items-center justify-center rounded-md px-3 py-1.5 text-sm font-medium transition-colors",
+        "inline-flex items-center justify-center rounded-md px-3 py-1.5 text-sm font-medium transition-colors cursor-pointer",
         variant === "ghost" && "bg-transparent hover:bg-gray-100",
         size === "icon" && "p-2",
         className,

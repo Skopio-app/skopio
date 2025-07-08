@@ -34,7 +34,7 @@
     "react-grid-layout": "^1.5.1",
     "react-router": "^7.6.1",
     "react-router-dom": "^7.6.1",
-    "sonner": "^2.0.5",
+    "sonner": "^2.0.6",
     "tailwindcss": "^4.1.8",
     "vis-timeline": "^7.7.4",
     "zod": "^3.25.56",

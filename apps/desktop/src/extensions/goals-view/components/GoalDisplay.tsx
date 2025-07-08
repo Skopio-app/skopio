@@ -9,10 +9,12 @@ import {
 } from "../../../types/tauri.gen";
 import BarLineChart from "./BarLineChart";
 import GoalChartCard from "./GoalChartCard";
+import GoalTitleDialog from "./GoalTitleDialog";
 
 const GoalDisplay = ({ goal }: { goal: Goal }) => {
   const [data, setData] = useState<BucketTimeSummary[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showEditNameDialog, setShowEditNameDialog] = useState<boolean>(false);
 
   const timeRangeToPreset = (span: TimeSpan): TimeRangePreset => {
     switch (span) {
@@ -50,16 +52,27 @@ const GoalDisplay = ({ goal }: { goal: Goal }) => {
     };
 
     fetchData();
-  }, [goal.id]);
+  }, [goal]);
 
   const chartData = data.map((item) => ({
     label: item.bucket,
     value: item.grouped_values["Total"] ?? 0,
   }));
 
+  // TODO: Make changes appear immediately after renaming/editing a goal
   return (
-    <GoalChartCard title={goal.name} loading={loading}>
+    <GoalChartCard
+      title={goal.name}
+      loading={loading}
+      onRename={() => setShowEditNameDialog(true)}
+    >
       <BarLineChart data={chartData} goalDuration={goal.targetSeconds} />
+      <GoalTitleDialog
+        open={showEditNameDialog}
+        onOpenChange={setShowEditNameDialog}
+        goalId={goal.id}
+        title={goal.name}
+      />
     </GoalChartCard>
   );
 };

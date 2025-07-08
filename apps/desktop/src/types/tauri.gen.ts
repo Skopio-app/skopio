@@ -37,6 +37,9 @@ export const commands = {
   async getGoals(): Promise<Goal[]> {
     return await TAURI_INVOKE("get_goals");
   },
+  async updateGoal(goalId: number, input: GoalUpdateInput): Promise<null> {
+    return await TAURI_INVOKE("update_goal", { goalId, input });
+  },
   async fetchApps(): Promise<App[]> {
     return await TAURI_INVOKE("fetch_apps");
   },
@@ -94,13 +97,24 @@ export type GoalInput = {
   createdAt: string;
   updatedAt: string;
   targetSeconds: number;
-  timeSpan: string;
+  timeSpan: TimeSpan;
   useApps: boolean;
   useCategories: boolean;
   ignoreNoActivityDays: boolean;
   apps: string[];
   categories: string[];
   excludedDays: string[];
+};
+export type GoalUpdateInput = {
+  name?: string | null;
+  targetSeconds?: number | null;
+  timeSpan?: TimeSpan | null;
+  useApps?: boolean | null;
+  useCategories?: boolean | null;
+  ignoreNoActivityDays?: boolean | null;
+  apps?: string[] | null;
+  categories?: string[] | null;
+  excludedDays?: string[] | null;
 };
 export type Group =
   | "app"
