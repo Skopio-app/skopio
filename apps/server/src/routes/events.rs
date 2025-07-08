@@ -19,7 +19,7 @@ use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::Mutex;
 use tokio::time::sleep;
-use tracing::{debug, error, warn};
+use tracing::{debug, error, info, warn};
 
 async fn handle_events(
     State(db): State<Arc<Mutex<DBContext>>>,
@@ -36,14 +36,15 @@ async fn handle_events(
         let project_id = Project::find_or_insert(&db, &event.project_name, &event.project_path)
             .await
             .map_err(error_response)?;
-        let branch_id = Branch::find_or_insert(&db, project_id, &event.branch_name)
-            .await
-            .map_err(error_response)?;
+        let branch_id =
+            Branch::find_or_insert(&db, project_id, &event.branch_name.unwrap_or_default())
+                .await
+                .map_err(error_response)?;
         let entity_id =
             Entity::find_or_insert(&db, project_id, &event.entity_name, &event.entity_type)
                 .await
                 .map_err(error_response)?;
-        let language_id = Language::find_or_insert(&db, &event.language_name)
+        let language_id = Language::find_or_insert(&db, &event.language_name.unwrap_or_default())
             .await
             .map_err(error_response)?;
         let category_id = Category::find_or_insert(&db, &event.category)
@@ -62,6 +63,8 @@ async fn handle_events(
             language_id: Some(language_id),
             end_timestamp: event.end_timestamp,
         };
+
+        info!("The event created: {:?}", event);
 
         event.create(&db).await.map_err(error_response)?;
     }

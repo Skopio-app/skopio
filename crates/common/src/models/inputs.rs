@@ -13,8 +13,8 @@ pub struct EventInput {
     pub entity_type: String,
     pub project_name: String,
     pub project_path: String,
-    pub branch_name: String,
-    pub language_name: String,
+    pub branch_name: Option<String>,
+    pub language_name: Option<String>,
     pub end_timestamp: Option<DateTime<Utc>>,
 }
 
@@ -25,7 +25,7 @@ pub struct HeartbeatInput {
     pub project_path: String,
     pub entity_name: String,
     pub entity_type: String,
-    pub branch_name: String,
+    pub branch_name: Option<String>,
     pub language_name: Option<String>,
     pub app_name: String,
     pub is_write: bool,

@@ -21,6 +21,14 @@ const GoalsView = () => {
     fetchGoals();
   }, [showGoalDialog]);
 
+  if (goals.length === 0) {
+    return (
+      <div className="h-[220px] w-full flex items-center justify-center text-sm text-gray-500">
+        No goals found
+      </div>
+    );
+  }
+
   return (
     <div className="w-full px-4 py-6 space-y-6">
       <div className="flex justify-between items-center">

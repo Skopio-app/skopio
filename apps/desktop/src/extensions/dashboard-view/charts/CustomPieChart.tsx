@@ -12,7 +12,10 @@ interface CustomPieChartProps {
 }
 
 const CustomPieChart: React.FC<CustomPieChartProps> = ({ data }) => {
-  const chartData = useMemo(() => data, [data]);
+  const chartData = useMemo(
+    () => data.sort((a, b) => b.value - a.value),
+    [data],
+  );
   const getColor = useOrdinalColorScale({ scheme: "nivo" }, "id");
 
   if (!chartData.length) {
