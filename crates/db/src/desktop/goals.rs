@@ -28,6 +28,18 @@ impl FromStr for TimeSpan {
     }
 }
 
+impl ToString for TimeSpan {
+    fn to_string(&self) -> String {
+        match self {
+            TimeSpan::Day => "day",
+            TimeSpan::Week => "week",
+            TimeSpan::Month => "month",
+            TimeSpan::Year => "year",
+        }
+        .to_string()
+    }
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct Goal {
@@ -52,13 +64,36 @@ pub struct GoalInput {
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
     pub target_seconds: i64,
-    pub time_span: String,
+    pub time_span: TimeSpan,
     pub use_apps: bool,
     pub use_categories: bool,
     pub ignore_no_activity_days: bool,
     pub apps: Vec<String>,
     pub categories: Vec<String>,
     pub excluded_days: Vec<String>,
+}
+
+#[derive(Serialize, Deserialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub struct GoalUpdateInput {
+    #[specta(optional)]
+    pub name: Option<String>,
+    #[specta(optional)]
+    pub target_seconds: Option<i64>,
+    #[specta(optional)]
+    pub time_span: Option<TimeSpan>,
+    #[specta(optional)]
+    pub use_apps: Option<bool>,
+    #[specta(optional)]
+    pub use_categories: Option<bool>,
+    #[specta(optional)]
+    pub ignore_no_activity_days: Option<bool>,
+    #[specta(optional)]
+    pub apps: Option<Vec<String>>,
+    #[specta(optional)]
+    pub categories: Option<Vec<String>>,
+    #[specta(optional)]
+    pub excluded_days: Option<Vec<String>>,
 }
 
 pub async fn fetch_all_goals(db: &DBContext) -> Result<Vec<Goal>, sqlx::Error> {
@@ -129,6 +164,7 @@ pub async fn fetch_all_goals(db: &DBContext) -> Result<Vec<Goal>, sqlx::Error> {
 
 pub async fn insert_goal(db: &DBContext, input: GoalInput) -> Result<(), sqlx::Error> {
     let now = Utc::now().to_rfc3339();
+    let time_span = input.time_span.to_string();
 
     let id = sqlx::query_scalar!(
         r#"
@@ -140,7 +176,7 @@ pub async fn insert_goal(db: &DBContext, input: GoalInput) -> Result<(), sqlx::E
         input.updated_at,
         input.name,
         input.target_seconds,
-        input.time_span,
+        time_span,
         input.use_apps,
         input.use_categories,
         input.ignore_no_activity_days,
@@ -180,5 +216,116 @@ pub async fn insert_goal(db: &DBContext, input: GoalInput) -> Result<(), sqlx::E
         .await?;
     }
 
+    Ok(())
+}
+
+pub async fn modify_goal(
+    db: &DBContext,
+    goal_id: i64,
+    update: GoalUpdateInput,
+) -> Result<(), sqlx::Error> {
+    let now = Utc::now().to_rfc3339();
+
+    let mut tx = db.pool().begin().await?;
+
+    sqlx::query("UPDATE goals set updated_at = ? WHERE id = ?")
+        .bind(&now)
+        .bind(&goal_id)
+        .execute(&mut *tx)
+        .await?;
+
+    if let Some(name) = update.name {
+        sqlx::query("UPDATE goals set name = ? WHERE id = ?")
+            .bind(name)
+            .bind(goal_id)
+            .execute(&mut *tx)
+            .await?;
+    }
+
+    if let Some(seconds) = update.target_seconds {
+        sqlx::query("UPDATE goals set target_seconds = ? WHERE id = ?")
+            .bind(seconds)
+            .bind(goal_id)
+            .execute(&mut *tx)
+            .await?;
+    }
+
+    if let Some(span) = update.time_span {
+        sqlx::query("UPDATE goals set time_span = ? WHERE id = ?")
+            .bind(span.to_string())
+            .bind(goal_id)
+            .execute(&mut *tx)
+            .await?;
+    }
+
+    if let Some(val) = update.use_apps {
+        sqlx::query("UPDATE goals set use_apps = ? WHERE id = ?")
+            .bind(val)
+            .bind(goal_id)
+            .execute(&mut *tx)
+            .await?;
+    }
+
+    if let Some(val) = update.use_categories {
+        sqlx::query("UPDATE goals set use_categories = ? WHERE id = ?")
+            .bind(val)
+            .bind(goal_id)
+            .execute(&mut *tx)
+            .await?;
+    }
+
+    if let Some(val) = update.ignore_no_activity_days {
+        sqlx::query("UPDATE goals set ignore_no_activity_days = ? WHERE id = ?")
+            .bind(val)
+            .bind(goal_id)
+            .execute(&mut *tx)
+            .await?;
+    }
+
+    if let Some(apps) = update.apps {
+        sqlx::query("DELETE FROM goal_apps WHERE goal_id = ?")
+            .bind(goal_id)
+            .execute(&mut *tx)
+            .await?;
+        for app in apps {
+            sqlx::query("INSERT INTO goal_apps (goal_id, app) VALUES (?, ?)")
+                .bind(goal_id)
+                .bind(app)
+                .execute(&mut *tx)
+                .await?;
+        }
+    }
+
+    if let Some(cats) = update.categories {
+        sqlx::query("DELETE FROM goal_categories WHERE goal_id = ?")
+            .bind(goal_id)
+            .execute(&mut *tx)
+            .await?;
+
+        for cat in cats {
+            sqlx::query("INSERT INTO goal_categories (goal_id, category) VALUES (?, ?)")
+                .bind(goal_id)
+                .bind(cat)
+                .execute(&mut *tx)
+                .await?;
+        }
+    }
+
+    if let Some(days) = update.excluded_days {
+        sqlx::query("DELETE FROM goal_excluded_days WHERE goal_id = ?")
+            .bind(goal_id)
+            .execute(&mut *tx)
+            .await?;
+
+        for day in days {
+            sqlx::query("INSERT INTO goal_excluded_days (goal_id, day) VALUES (?, ?)")
+                .bind(goal_id)
+                .bind(day)
+                .execute(&mut *tx)
+                .await?;
+        }
+    }
+
+    tx.commit().await?;
     Ok(())
 }

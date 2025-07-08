@@ -6,7 +6,9 @@ use common::{
     time::{TimeRange, TimeRangePreset},
 };
 use db::{
-    desktop::goals::{fetch_all_goals, insert_goal, Goal, GoalInput, TimeSpan},
+    desktop::goals::{
+        fetch_all_goals, insert_goal, modify_goal, Goal, GoalInput, GoalUpdateInput, TimeSpan,
+    },
     DBContext,
 };
 use log::{debug, error, info};
@@ -117,6 +119,20 @@ pub async fn add_goal(
     insert_goal(&db, input)
         .await
         .map_err(|e| format!("DB insert failed: {}", e))?;
+
+    Ok(())
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn update_goal(
+    db: tauri::State<'_, Arc<DBContext>>,
+    goal_id: i64,
+    input: GoalUpdateInput,
+) -> Result<(), String> {
+    modify_goal(&db, goal_id, input)
+        .await
+        .map_err(|e| format!("Goal DB updated failed: {}", e))?;
 
     Ok(())
 }

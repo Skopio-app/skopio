@@ -193,6 +193,7 @@ async fn flush(
     info!("Flushed {} items in {:?}", batch_size, start.elapsed())
 }
 
+// TODO: Fix up issue with empty branch names being stored
 async fn sync_with_server(db_context: &Arc<DBContext>) -> Result<(), anyhow::Error> {
     let client = Client::new();
     let heartbeats = Heartbeat::unsynced(db_context).await?;
