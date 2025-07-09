@@ -7,7 +7,8 @@ use common::{
 };
 use db::{
     desktop::goals::{
-        fetch_all_goals, insert_goal, modify_goal, Goal, GoalInput, GoalUpdateInput, TimeSpan,
+        delete_goal, fetch_all_goals, insert_goal, modify_goal, Goal, GoalInput, GoalUpdateInput,
+        TimeSpan,
     },
     DBContext,
 };
@@ -133,6 +134,16 @@ pub async fn update_goal(
     modify_goal(&db, goal_id, input)
         .await
         .map_err(|e| format!("Goal DB updated failed: {}", e))?;
+
+    Ok(())
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn remove_goal(db: tauri::State<'_, Arc<DBContext>>, goal_id: i64) -> Result<(), String> {
+    delete_goal(&db, goal_id)
+        .await
+        .map_err(|e| format!("Goal DB delete failed: {}", e))?;
 
     Ok(())
 }

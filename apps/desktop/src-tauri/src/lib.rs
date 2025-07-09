@@ -245,6 +245,7 @@ fn make_specta_builder<R: Runtime>() -> tauri_specta::Builder<R> {
             crate::goals_service::add_goal,
             crate::goals_service::get_goals,
             crate::goals_service::update_goal,
+            crate::goals_service::remove_goal,
             crate::network::tables::fetch_apps,
             crate::network::tables::fetch_categories,
         ])

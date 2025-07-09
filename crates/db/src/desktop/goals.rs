@@ -329,3 +329,26 @@ pub async fn modify_goal(
     tx.commit().await?;
     Ok(())
 }
+
+pub async fn delete_goal(db: &DBContext, goal_id: i64) -> Result<(), sqlx::Error> {
+    let mut tx = db.pool().begin().await?;
+
+    sqlx::query!("DELETE FROM goal_apps WHERE goal_id = ?", goal_id)
+        .execute(&mut *tx)
+        .await?;
+
+    sqlx::query!("DELETE FROM goal_categories WHERE goal_id = ?", goal_id)
+        .execute(&mut *tx)
+        .await?;
+
+    sqlx::query!("DELETE FROM goal_excluded_days WHERE goal_id = ?", goal_id)
+        .execute(&mut *tx)
+        .await?;
+
+    sqlx::query!("DELETE FROM goals WHERE id = ?", goal_id)
+        .execute(&mut *tx)
+        .await?;
+
+    tx.commit().await?;
+    Ok(())
+}
