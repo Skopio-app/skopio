@@ -1,27 +1,18 @@
 import { Button } from "@skopio/ui";
 import { useEffect, useState } from "react";
 import GoalDialog from "./GoalDialog";
-import { commands, Goal } from "../../types/tauri.gen";
 import GoalDisplay from "./components/GoalDisplay";
+import { useGoalStore } from "./stores/useGoalStore";
 
 const GoalsView = () => {
   const [showGoalDialog, setShowGoalDialog] = useState<boolean>(false);
-  const [goals, setGoals] = useState<Goal[]>([]);
-
-  const fetchGoals = async () => {
-    try {
-      const data = await commands.getGoals();
-      setGoals(data);
-    } catch (err) {
-      console.error("Failed to fetch goals: ", err);
-    }
-  };
+  const { goals, loading, fetchGoals } = useGoalStore();
 
   useEffect(() => {
     fetchGoals();
-  }, [showGoalDialog]);
+  }, []);
 
-  if (goals.length === 0) {
+  if (!loading && goals.length === 0) {
     return (
       <div className="h-[220px] w-full flex items-center justify-center text-sm text-gray-500">
         No goals found

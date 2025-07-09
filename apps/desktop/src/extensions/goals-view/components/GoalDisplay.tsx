@@ -10,11 +10,14 @@ import {
 import BarLineChart from "./BarLineChart";
 import GoalChartCard from "./GoalChartCard";
 import GoalTitleDialog from "./GoalTitleDialog";
+import GoalDeleteConfirmDialog from "./Dialogs/GoalDeleteConfirmDialog";
 
 const GoalDisplay = ({ goal }: { goal: Goal }) => {
   const [data, setData] = useState<BucketTimeSummary[]>([]);
   const [loading, setLoading] = useState(true);
   const [showEditNameDialog, setShowEditNameDialog] = useState<boolean>(false);
+  const [showGoalDeleteDialog, setShowGoalDeleteDialog] =
+    useState<boolean>(false);
 
   const timeRangeToPreset = (span: TimeSpan): TimeRangePreset => {
     switch (span) {
@@ -52,19 +55,19 @@ const GoalDisplay = ({ goal }: { goal: Goal }) => {
     };
 
     fetchData();
-  }, [goal]);
+  }, [goal.id]);
 
   const chartData = data.map((item) => ({
     label: item.bucket,
     value: item.grouped_values["Total"] ?? 0,
   }));
 
-  // TODO: Make changes appear immediately after renaming/editing a goal
   return (
     <GoalChartCard
       title={goal.name}
       loading={loading}
       onRename={() => setShowEditNameDialog(true)}
+      onDelete={() => setShowGoalDeleteDialog(true)}
     >
       <BarLineChart data={chartData} goalDuration={goal.targetSeconds} />
       <GoalTitleDialog
@@ -72,6 +75,12 @@ const GoalDisplay = ({ goal }: { goal: Goal }) => {
         onOpenChange={setShowEditNameDialog}
         goalId={goal.id}
         title={goal.name}
+      />
+      <GoalDeleteConfirmDialog
+        open={showGoalDeleteDialog}
+        onOpenChange={setShowGoalDeleteDialog}
+        goalName={goal.name}
+        goalId={goal.id}
       />
     </GoalChartCard>
   );

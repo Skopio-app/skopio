@@ -4,14 +4,14 @@ import { X } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 import { z } from "zod";
-import { commands, Goal, GoalUpdateInput } from "../../../types/tauri.gen";
+import { GoalUpdateInput } from "../../../types/tauri.gen";
+import { useGoalStore } from "../stores/useGoalStore";
 
 interface GoalTitleDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   title: string;
   goalId: number;
-  onSubmit?: (updatedGoal: Goal) => void;
 }
 
 const titleSchema = z
@@ -27,6 +27,7 @@ const GoalTitleDialog: React.FC<GoalTitleDialogProps> = ({
   title,
 }) => {
   const [value, setValue] = useState<string>(title);
+  const { updateGoal } = useGoalStore();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,10 +41,7 @@ const GoalTitleDialog: React.FC<GoalTitleDialogProps> = ({
         name: result.data,
       };
 
-      await commands
-        .updateGoal(goalId, input)
-        .catch((e) => toast.error(`Error updating goal: ${e}`))
-        .finally(() => toast.success("Goal updated successfully!"));
+      await updateGoal(goalId, input);
     }
 
     onOpenChange(false);

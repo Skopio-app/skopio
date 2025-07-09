@@ -1,0 +1,63 @@
+import * as Dialog from "@radix-ui/react-dialog";
+import { Button } from "@skopio/ui";
+import { X } from "lucide-react";
+import { useGoalStore } from "../../stores/useGoalStore";
+
+interface GoalDeleteConfirmDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  goalName: string;
+  goalId: number;
+}
+
+const GoalDeleteConfirmDialog: React.FC<GoalDeleteConfirmDialogProps> = ({
+  open,
+  onOpenChange,
+  goalName,
+  goalId,
+}) => {
+  const { deleteGoal } = useGoalStore();
+
+  const handleConfirm = async () => {
+    await deleteGoal(goalId);
+  };
+
+  return (
+    <Dialog.Root open={open} onOpenChange={onOpenChange}>
+      <Dialog.Portal>
+        <Dialog.Overlay className="fixed inset-0 bg-black/50 backdrop-blur-sm" />
+        <Dialog.Content className="fixed left-1/2 top-1/2 max-w-md w-[90vw] -translate-x-1/2 -translate-y-1/2 bg-white rounded-md p-6 shadow-xl focus:outline-none">
+          <div className="flex justify-between items-center mb-4">
+            <Dialog.Title className="text-lg font-medium">
+              Confirm Deletion
+            </Dialog.Title>
+            <Dialog.Close asChild>
+              <Button
+                className="text-gray-400 hover:text-gray-600"
+                aria-label="Close"
+              >
+                <X className="w-5 h-5" />
+              </Button>
+            </Dialog.Close>
+          </div>
+
+          <p className="text-sm text-gray-700 mb-6">
+            Are you sure you want to delete the goal <strong>{goalName}</strong>
+            ? This action cannot be undone.
+          </p>
+
+          <div className="flex justify-end gap-3">
+            <Dialog.Close asChild>
+              <Button variant="outline">Cancel</Button>
+            </Dialog.Close>
+            <Button variant="default" onClick={handleConfirm}>
+              Delete
+            </Button>
+          </div>
+        </Dialog.Content>
+      </Dialog.Portal>
+    </Dialog.Root>
+  );
+};
+
+export default GoalDeleteConfirmDialog;

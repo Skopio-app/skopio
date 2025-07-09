@@ -40,6 +40,9 @@ export const commands = {
   async updateGoal(goalId: number, input: GoalUpdateInput): Promise<null> {
     return await TAURI_INVOKE("update_goal", { goalId, input });
   },
+  async removeGoal(goalId: number): Promise<null> {
+    return await TAURI_INVOKE("remove_goal", { goalId });
+  },
   async fetchApps(): Promise<App[]> {
     return await TAURI_INVOKE("fetch_apps");
   },
