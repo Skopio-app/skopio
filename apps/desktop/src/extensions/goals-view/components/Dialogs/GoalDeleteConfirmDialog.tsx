@@ -33,6 +33,7 @@ const GoalDeleteConfirmDialog: React.FC<GoalDeleteConfirmDialogProps> = ({
             </Dialog.Title>
             <Dialog.Close asChild>
               <Button
+                variant="ghost"
                 className="text-gray-400 hover:text-gray-600"
                 aria-label="Close"
               >

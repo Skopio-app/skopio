@@ -11,6 +11,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@hookform/resolvers": "^5.1.1",
     "@nivo/bar": "^0.99.0",
     "@nivo/calendar": "^0.99.0",
     "@nivo/colors": "^0.99.0",
@@ -32,6 +33,7 @@
     "lucide-react": "^0.516.0",
     "p-map": "^7.0.3",
     "react-grid-layout": "^1.5.1",
+    "react-hook-form": "^7.60.0",
     "react-router": "^7.6.1",
     "react-router-dom": "^7.6.1",
     "sonner": "^2.0.6",

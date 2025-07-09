@@ -1,5 +1,10 @@
 import { create } from "zustand";
-import { commands, Goal, GoalUpdateInput } from "../../../types/tauri.gen";
+import {
+  commands,
+  Goal,
+  GoalInput,
+  GoalUpdateInput,
+} from "../../../types/tauri.gen";
 import { toast } from "sonner";
 
 interface GoalStore {
@@ -8,6 +13,7 @@ interface GoalStore {
   fetchGoals: () => Promise<void>;
   updateGoal: (id: number, updates: GoalUpdateInput) => Promise<void>;
   deleteGoal: (id: number) => Promise<void>;
+  addGoal: (input: GoalInput) => Promise<boolean>;
 }
 
 export const useGoalStore = create<GoalStore>((set) => ({
@@ -46,6 +52,19 @@ export const useGoalStore = create<GoalStore>((set) => ({
       toast.error(`Failed to delete goal: ${err}`);
     } finally {
       toast.success("Goal deleted successfully");
+    }
+  },
+
+  addGoal: async (input): Promise<boolean> => {
+    try {
+      await commands.addGoal(input);
+      await useGoalStore.getState().fetchGoals();
+      return true;
+    } catch (err) {
+      toast.error(`Failed to add goal: ${err}`);
+      return false;
+    } finally {
+      toast.success("Goal added successfully!");
     }
   },
 }));

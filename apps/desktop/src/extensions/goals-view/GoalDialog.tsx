@@ -3,6 +3,8 @@ import * as Dialog from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { z } from "zod";
+import { FieldErrors, useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
 import {
   App,
   Category,
@@ -10,6 +12,8 @@ import {
   GoalInput,
   TimeSpan,
 } from "../../types/tauri.gen";
+import { useGoalStore } from "./stores/useGoalStore";
+import { toast } from "sonner";
 
 enum TimeUnit {
   Hrs = "hrs",
@@ -17,9 +21,6 @@ enum TimeUnit {
   Secs = "secs",
 }
 
-const goalSchema = z
-  .number()
-  .positive({ message: "Goal must be greater than 0" });
 const daySchema = z.enum([
   "monday",
   "tuesday",
@@ -29,6 +30,68 @@ const daySchema = z.enum([
   "saturday",
   "sunday",
 ]);
+
+const goalFormSchema = z
+  .object({
+    // name: z.string().min(1, "Name is required"),
+    hours: z
+      .number({ invalid_type_error: "Enter a valid number" })
+      .positive("Time must be greater than 0"),
+    timeSpan: z.custom<TimeSpan>((val) =>
+      ["day", "week", "month", "year"].includes(val as string),
+    ),
+    timeUnit: z.nativeEnum(TimeUnit),
+    useApps: z.boolean(),
+    useCategories: z.boolean(),
+    apps: z.array(z.string().optional()),
+    categories: z.array(z.string().optional()),
+    excludedDays: z.array(daySchema).optional(),
+  })
+  .superRefine((data, ctx) => {
+    const maxBySpan = {
+      day: 24,
+      week: 168,
+      month: 720,
+      year: 8760,
+    };
+
+    const hoursAsHrs = convertToHours(data.hours, data.timeUnit);
+
+    if (hoursAsHrs > maxBySpan[data.timeSpan]) {
+      ctx.addIssue({
+        path: ["hours"],
+        code: z.ZodIssueCode.too_big,
+        maximum: maxBySpan[data.timeSpan],
+        type: "number",
+        inclusive: true,
+        message: `Goal can't exceed ${maxBySpan[data.timeSpan]} hours per ${data.timeSpan}`,
+      });
+    }
+    if (data.useApps && (!data.apps || data.apps.length === 0)) {
+      ctx.addIssue({
+        path: ["apps"],
+        code: z.ZodIssueCode.custom,
+        message: "Select at least one app",
+      });
+    }
+    if (
+      data.useCategories &&
+      (!data.categories || data.categories.length === 0)
+    ) {
+      ctx.addIssue({
+        path: ["categories"],
+        code: z.ZodIssueCode.custom,
+        message: "Select at least one category",
+      });
+    }
+    if (data.timeSpan === "day" && data.excludedDays?.length === 7) {
+      ctx.addIssue({
+        path: ["excludedDays"],
+        code: z.ZodIssueCode.custom,
+        message: "You can't exclude all days",
+      });
+    }
+  });
 
 const TIME_SPANS: TimeSpan[] = ["day", "week", "month", "year"];
 
@@ -40,17 +103,6 @@ const convertToHours = (value: number, unit: TimeUnit): number => {
       return value / 60;
     case TimeUnit.Secs:
       return value / 3600;
-  }
-};
-
-const convertFromHours = (hours: number, unit: TimeUnit): number => {
-  switch (unit) {
-    case TimeUnit.Hrs:
-      return hours;
-    case TimeUnit.Mins:
-      return hours * 60;
-    case TimeUnit.Secs:
-      return hours * 3600;
   }
 };
 
@@ -66,36 +118,36 @@ const GoalDialog = ({
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }) => {
-  const [goalValue, setGoalValue] = useState<number>(2);
-  const [timeUnit, setTimeUnit] = useState<TimeUnit>(TimeUnit.Hrs);
-  const [timeSpan, setTimeSpan] = useState<TimeSpan>("day");
-  const [excludedDays, setExcludedDays] = useState<string[]>([
-    "saturday",
-    "sunday",
-  ]);
-  const [rawValue, setRawValue] = useState(
-    convertFromHours(goalValue, timeUnit),
-  );
-  const [categoryValues, setCategoryValues] = useState<Category[]>([]);
-  const [appValues, setAppValues] = useState<App[]>([]);
-  const [error, setError] = useState<string | null>(null);
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [apps, setApps] = useState<App[]>([]);
-  const [useCategories, setUseCategories] = useState(true);
-  const [useApps, setUseApps] = useState(false);
+  const { addGoal } = useGoalStore();
+  const [allCategories, setAllCategories] = useState<Category[]>([]);
+  const [allApps, setAllApps] = useState<App[]>([]);
+  const [formError, setFormError] = useState<string | null>(null);
+
+  const form = useForm({
+    resolver: zodResolver(goalFormSchema),
+    defaultValues: {
+      // name: "",
+      hours: 2,
+      timeSpan: "day" as TimeSpan,
+      timeUnit: TimeUnit.Hrs,
+      useApps: false,
+      useCategories: true,
+      apps: [],
+      categories: [],
+      excludedDays: ["saturday", "sunday"],
+    },
+  });
+
+  const { register, handleSubmit, watch, setValue } = form;
 
   useEffect(() => {
     const fetch = async () => {
       try {
         const apps = await commands.fetchApps();
-        if (apps.length > 0) {
-          setAppValues(apps);
-        }
-
         const categories = await commands.fetchCategories();
-        if (categories.length > 0) {
-          setCategoryValues(categories);
-        }
+
+        setAllApps(apps);
+        setAllCategories(categories);
       } catch (err) {
         console.error("Failed to fetch apps or categories:", err);
       }
@@ -104,102 +156,66 @@ const GoalDialog = ({
     fetch();
   }, []);
 
-  const categoryOptions = Object.values(categoryValues);
-  const appOptions = Object.values(appValues);
-  const dayOptions = daySchema.options;
-
-  useEffect(() => {
-    setRawValue(convertFromHours(goalValue, timeUnit));
-  }, [timeUnit]);
-
-  useEffect(() => {
-    if (!open) setError(null);
-  }, [open]);
-
-  const handleSave = async () => {
-    const parsed = goalSchema.safeParse(rawValue);
-    if (!parsed.success) {
-      setError(parsed.error.issues[0].message);
-      return;
-    }
-
-    const hours = convertToHours(rawValue, timeUnit);
-
-    const maxBySpan = {
-      ["day"]: 24,
-      ["week"]: 24 * 7,
-      ["month"]: 24 * 30,
-      ["year"]: 24 * 365,
-    };
-
-    const maxAllowed = maxBySpan[timeSpan];
-    if (hours > maxAllowed) {
-      setError(
-        `Goal can't exceed ${maxAllowed} hours per ${timeSpan.toLowerCase()}`,
-      );
-      return;
-    }
-
-    if (hours < 0.2) {
-      setError("Goal can't be less than 15 mins");
-      return;
-    }
-
-    if (useCategories && categories.length === 0) {
-      setError("Please select at least one category");
-    }
-
-    if (useApps && apps.length === 0) {
-      setError("Please select at least one app.");
-      return;
-    }
-    if (timeSpan === "day" && excludedDays.length === 7) {
-      setError("You can't exclude all days of the week.");
-      return;
-    }
+  const onSubmit = async (data: z.infer<typeof goalFormSchema>) => {
+    const targetSeconds = convertToHours(data.hours, data.timeUnit) * 3600;
 
     const input: GoalInput = {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       name: summaryText,
-      targetSeconds: Math.round(hours * 3600),
-      timeSpan,
-      useApps,
-      useCategories,
+      targetSeconds: targetSeconds,
+      timeSpan: data.timeSpan,
+      useApps: data.useApps,
+      useCategories: data.useCategories,
       ignoreNoActivityDays: true,
-      apps: apps.map((a) => a.name),
-      categories: categories.map((c) => c.name),
-      excludedDays,
+      apps: (data.apps || []).filter((a): a is string => typeof a === "string"),
+      categories: (data.categories || []).filter(
+        (c): c is string => typeof c === "string",
+      ),
+      excludedDays: data.excludedDays || [],
     };
 
-    try {
-      await commands.addGoal(input);
-      setError(null);
+    const success = await addGoal(input);
+    if (success) {
       onOpenChange(false);
-    } catch (err) {
-      setError(`Failed to save goal: ${err}`);
     }
-
-    setGoalValue(hours);
-    setError(null);
-    onOpenChange(false);
   };
 
-  const toggleValue = <T,>(
-    setList: React.Dispatch<React.SetStateAction<T[]>>,
-    value: T,
-  ) => {
-    setList((prev) =>
-      prev.includes(value) ? prev.filter((v) => v !== value) : [...prev, value],
-    );
+  const onInvalid = (errors: FieldErrors<typeof goalFormSchema>) => {
+    const firstError = Object.values(errors)[0];
+    if (firstError && "message" in firstError) {
+      toast.error(firstError.message as string);
+    } else {
+      toast.error("Please fix the highlighted errors.");
+    }
   };
 
-  const subject = useApps ? apps.join(", ") : categories.join(", ");
+  useEffect(() => {
+    const subscription = watch(() => {
+      if (formError) setFormError(null);
+    });
+    return () => subscription.unsubscribe();
+  }, [watch, formError]);
+
+  const selectedApps = watch("apps");
+  const selectedCategories = watch("categories");
+  const useApps = watch("useApps");
+  const useCategories = watch("useCategories");
+  const timeSpan = watch("timeSpan");
+  const excludedDays = watch("excludedDays") || [];
+  const hours = watch("hours");
+  const timeUnit = watch("timeUnit");
+
+  const dayOptions = daySchema.options;
+
+  const subject = useApps
+    ? selectedApps.join(", ")
+    : selectedCategories.join(", ");
 
   const summaryText =
-    `I want to achieve ${rawValue} ${timeUnit}` +
-    `${categories.length || apps.length ? ` in ${subject}` : ""}` +
-    ` per ${timeSpan}` +
+    `I want to achieve ${hours} ${timeUnit}${
+      subject ? ` in ${subject}` : ""
+    } per ${timeSpan}` +
     (timeSpan === "day" && excludedDays.length
       ? `, except for ${excludedDays.join(", ")}`
       : "");
@@ -208,80 +224,107 @@ const GoalDialog = ({
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 bg-black/50" />
-        <Dialog.Content className="fixed left-1/2 top-1/2 max-w-xl w-[90vw] max-h-[90vh] h-[600px] overflow-y-auto -translate-x-1/2 -translate-y-1/2 bg-white p-4 rounded-md shadow-lg focus:outline-none">
-          <div className="flex justify-between items-start mb-2">
+        <Dialog.Content className="fixed left-1/2 top-1/2 max-w-xl w-[90vw] max-h-[90vh] h-[600px] overflow-y-auto -translate-x-1/2 -translate-y-1/2 bg-white p-4 rounded-md shadow-lg focus:outline-none z-60">
+          <div
+            data-slot="dialog-header"
+            className="flex justify-between items-start mb-2"
+          >
             <Dialog.Title className="text-xl font-semibold break-words">
               {summaryText}
             </Dialog.Title>
+            <Dialog.Description className="sr-only">
+              Set a goal for daily weekly, monthly or yearly usage of specific
+              apps or categories.
+            </Dialog.Description>
             <Dialog.Close asChild>
-              <button
+              <Button
+                variant="ghost"
+                type="button"
                 className="text-gray-500 hover:text-black"
                 aria-label="Close"
               >
                 <X className="w-5 h-5" />
-              </button>
+              </Button>
             </Dialog.Close>
           </div>
 
-          <div className="space-y-6 py-4 overflow-hidden">
+          <form
+            onSubmit={handleSubmit(onSubmit, onInvalid)}
+            className="space-y-6 py-4 overflow-hidden"
+          >
             <div className="text-lg font-medium flex flex-wrap gap-2 items-center">
               <span>I want to achieve</span>
               <Input
                 type="number"
-                step="0.1"
-                value={rawValue}
-                onChange={(e) => setRawValue(parseFloat(e.target.value))}
+                {...register("hours", {
+                  valueAsNumber: true,
+                  onChange: (e) => {
+                    setValue("hours", Number(e.target.value), {
+                      shouldValidate: true,
+                      shouldDirty: true,
+                    });
+                  },
+                })}
                 className="w-24 text-lg text-center"
               />
               <Button
                 size="sm"
+                type="button"
                 variant="secondary"
-                onClick={() =>
-                  setTimeUnit(cycleEnum(Object.values(TimeUnit), timeUnit))
-                }
+                onClick={() => {
+                  const current = watch("timeUnit");
+                  const next = cycleEnum(Object.values(TimeUnit), current);
+                  setValue("timeUnit", next, { shouldValidate: true });
+                }}
               >
-                {timeUnit}
+                {watch("timeUnit")}
               </Button>
               <span>in</span>
               {(useApps || useCategories) && (
                 <ChipSelector
-                  values={useApps ? apps : categories}
-                  options={useApps ? appOptions : categoryOptions}
+                  values={
+                    useApps
+                      ? allApps.filter((app) => selectedApps.includes(app.name))
+                      : allCategories.filter((cat) =>
+                          selectedCategories.includes(cat.name),
+                        )
+                  }
+                  options={useApps ? allApps : allCategories}
                   getLabel={(item) => item.name}
                   onToggle={(option) => {
-                    if (useApps) toggleValue(setApps, option as unknown as App);
-                    else
-                      toggleValue(setCategories, option as unknown as Category);
+                    const field = useApps ? "apps" : "categories";
+                    const selected = useApps
+                      ? selectedApps
+                      : selectedCategories;
+                    if (!selected.includes(option.name)) {
+                      setValue(field, [...selected, option.name]);
+                    }
                   }}
                   onRemove={(item) => {
-                    if (useApps)
-                      setApps((prev) =>
-                        prev.filter(
-                          (a) => a.id !== (item as unknown as App).id,
-                        ),
-                      );
-                    else
-                      setCategories((prev) =>
-                        prev.filter(
-                          (c) => c.id !== (item as unknown as Category).id,
-                        ),
-                      );
+                    const field = useApps ? "apps" : "categories";
+                    const selected = useApps
+                      ? selectedApps
+                      : selectedCategories;
+                    setValue(
+                      field,
+                      selected.filter((name) => name !== item.name),
+                    );
                   }}
                 />
               )}
               <span>per</span>
               <Button
                 size="sm"
+                type="button"
                 variant="secondary"
-                onClick={() =>
-                  setTimeSpan(cycleEnum(Object.values(TIME_SPANS), timeSpan))
-                }
+                onClick={() => {
+                  const next = cycleEnum(TIME_SPANS, timeSpan);
+                  setValue("timeSpan", next, { shouldValidate: true });
+                }}
               >
                 {timeSpan}
               </Button>
             </div>
-
-            {error && <p className="text-red-500 text-sm">{error}</p>}
 
             {timeSpan === "day" && (
               <div>
@@ -291,14 +334,18 @@ const GoalDialog = ({
                   values={excludedDays}
                   getLabel={(item) => item}
                   onToggle={(value) =>
-                    setExcludedDays((prev) =>
-                      prev.includes(value)
-                        ? prev.filter((d) => d !== value)
-                        : [...prev, value],
+                    setValue(
+                      "excludedDays",
+                      excludedDays.includes(value)
+                        ? excludedDays.filter((day) => day !== value)
+                        : [...excludedDays, value],
                     )
                   }
                   onRemove={(value) =>
-                    setExcludedDays((prev) => prev.filter((d) => d !== value))
+                    setValue(
+                      "excludedDays",
+                      excludedDays.filter((day) => day !== value),
+                    )
                   }
                 />
               </div>
@@ -310,11 +357,11 @@ const GoalDialog = ({
                   id="categories"
                   checked={useCategories}
                   onCheckedChange={(checked) => {
-                    setUseCategories(checked);
+                    setValue("useCategories", checked);
                     if (checked) {
-                      setUseApps(false);
+                      setValue("useApps", false);
                     } else {
-                      setCategories([]);
+                      setValue("categories", [], { shouldValidate: true });
                     }
                   }}
                 />
@@ -325,24 +372,23 @@ const GoalDialog = ({
                   id="apps"
                   checked={useApps}
                   onCheckedChange={(checked) => {
-                    setUseApps(checked);
+                    setValue("useApps", checked);
                     if (checked) {
-                      setUseCategories(false);
+                      setValue("useCategories", false);
                     } else {
-                      setApps([]);
+                      setValue("apps", [], { shouldValidate: true });
                     }
                   }}
                 />
                 <Label id="apps">Filter Apps</Label>
               </div>
             </div>
-          </div>
-
-          <div className="mt-4 flex justify-center">
-            <Button className="w-56" onClick={handleSave}>
-              Save
-            </Button>
-          </div>
+            <div className="mt-4 flex justify-center">
+              <Button className="w-56" type="submit">
+                Save
+              </Button>
+            </div>
+          </form>
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>

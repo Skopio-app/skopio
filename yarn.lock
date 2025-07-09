@@ -676,6 +676,17 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@hookform/resolvers@npm:^5.1.1":
+  version: 5.1.1
+  resolution: "@hookform/resolvers@npm:5.1.1"
+  dependencies:
+    "@standard-schema/utils": "npm:^0.3.0"
+  peerDependencies:
+    react-hook-form: ^7.55.0
+  checksum: 10c0/74601ba4abb3159bbaa25175af9459a2c0337a28d8c0a5be95c7ae7b0a76ddafcf63c03eea8561fd099fe80b226194ad09e3824c53b9beda38393ff9fd264a03
+  languageName: node
+  linkType: hard
+
 "@humanfs/core@npm:^0.19.1":
   version: 0.19.1
   resolution: "@humanfs/core@npm:0.19.1"
@@ -2215,6 +2226,7 @@ __metadata:
   resolution: "@skopio/desktop@workspace:apps/desktop"
   dependencies:
     "@eslint/js": "npm:^9.17.0"
+    "@hookform/resolvers": "npm:^5.1.1"
     "@nivo/bar": "npm:^0.99.0"
     "@nivo/calendar": "npm:^0.99.0"
     "@nivo/colors": "npm:^0.99.0"
@@ -2249,6 +2261,7 @@ __metadata:
     p-map: "npm:^7.0.3"
     prettier: "npm:3.5.3"
     react-grid-layout: "npm:^1.5.1"
+    react-hook-form: "npm:^7.60.0"
     react-router: "npm:^7.6.1"
     react-router-dom: "npm:^7.6.1"
     sonner: "npm:^2.0.6"
@@ -2314,6 +2327,13 @@ __metadata:
     tailwindcss: ^4.1.8
   languageName: unknown
   linkType: soft
+
+"@standard-schema/utils@npm:^0.3.0":
+  version: 0.3.0
+  resolution: "@standard-schema/utils@npm:0.3.0"
+  checksum: 10c0/6eb74cd13e52d5fc74054df51e37d947ef53f3ab9e02c085665dcca3c38c60ece8d735cebbdf18fbb13c775fbcb9becb3f53109b0e092a63f0f7389ce0993fd0
+  languageName: node
+  linkType: hard
 
 "@swc/core-darwin-arm64@npm:1.12.1":
   version: 1.12.1
@@ -5273,6 +5293,15 @@ __metadata:
     react: ">= 16.3.0"
     react-dom: ">= 16.3.0"
   checksum: 10c0/32df5e44bc7485f12be0994722b76d74bd672bfa85ffd69a47bccefd6a03114a01781a9c5cbb93e65d4146573e30bcad738d711581667d934336196215d2d736
+  languageName: node
+  linkType: hard
+
+"react-hook-form@npm:^7.60.0":
+  version: 7.60.0
+  resolution: "react-hook-form@npm:7.60.0"
+  peerDependencies:
+    react: ^16.8.0 || ^17 || ^18 || ^19
+  checksum: 10c0/eb8518d42a074d9e115d4b414bac18ae72708b2d047a9453dcc7588b00df300b32cebf6ecb7f2c8aa534808b3dc54bde4124af95c1e432b6691f9aba07c93b11
   languageName: node
   linkType: hard
 
