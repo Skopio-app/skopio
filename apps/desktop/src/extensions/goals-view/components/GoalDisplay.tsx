@@ -11,6 +11,7 @@ import BarLineChart from "./BarLineChart";
 import GoalChartCard from "./GoalChartCard";
 import GoalTitleDialog from "./GoalTitleDialog";
 import GoalDeleteConfirmDialog from "./Dialogs/GoalDeleteConfirmDialog";
+import GoalDialog from "../GoalDialog";
 
 const GoalDisplay = ({ goal }: { goal: Goal }) => {
   const [data, setData] = useState<BucketTimeSummary[]>([]);
@@ -18,6 +19,7 @@ const GoalDisplay = ({ goal }: { goal: Goal }) => {
   const [showEditNameDialog, setShowEditNameDialog] = useState<boolean>(false);
   const [showGoalDeleteDialog, setShowGoalDeleteDialog] =
     useState<boolean>(false);
+  const [showGoalDialog, setShowGoalDialog] = useState<boolean>(false);
 
   const timeRangeToPreset = (span: TimeSpan): TimeRangePreset => {
     switch (span) {
@@ -68,6 +70,7 @@ const GoalDisplay = ({ goal }: { goal: Goal }) => {
       loading={loading}
       onRename={() => setShowEditNameDialog(true)}
       onDelete={() => setShowGoalDeleteDialog(true)}
+      onEdit={() => setShowGoalDialog(true)}
     >
       <BarLineChart data={chartData} goalDuration={goal.targetSeconds} />
       <GoalTitleDialog
@@ -81,6 +84,11 @@ const GoalDisplay = ({ goal }: { goal: Goal }) => {
         onOpenChange={setShowGoalDeleteDialog}
         goalName={goal.name}
         goalId={goal.id}
+      />
+      <GoalDialog
+        open={showGoalDialog}
+        onOpenChange={setShowGoalDialog}
+        goal={goal}
       />
     </GoalChartCard>
   );

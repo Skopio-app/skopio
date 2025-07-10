@@ -9,7 +9,9 @@ import {
   App,
   Category,
   commands,
+  Goal,
   GoalInput,
+  GoalUpdateInput,
   TimeSpan,
 } from "../../types/tauri.gen";
 import { useGoalStore } from "./stores/useGoalStore";
@@ -33,7 +35,6 @@ const daySchema = z.enum([
 
 const goalFormSchema = z
   .object({
-    // name: z.string().min(1, "Name is required"),
     hours: z
       .number({ error: "Enter a valid number" })
       .positive("Time must be greater than 0"),
@@ -115,30 +116,36 @@ const cycleEnum = <T,>(values: T[], current: T): T => {
   return values[(index + 1) % values.length];
 };
 
-const GoalDialog = ({
-  open,
-  onOpenChange,
-}: {
+interface GoalDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  goal?: Goal;
+}
+
+const GoalDialog: React.FC<GoalDialogProps> = ({
+  open,
+  onOpenChange,
+  goal,
 }) => {
-  const { addGoal } = useGoalStore();
+  const { addGoal, updateGoal } = useGoalStore();
   const [allCategories, setAllCategories] = useState<Category[]>([]);
   const [allApps, setAllApps] = useState<App[]>([]);
   const [formError, setFormError] = useState<string | null>(null);
 
-  const form = useForm<z.infer<typeof goalFormSchema>>({
+  const form = useForm({
     resolver: zodResolver(goalFormSchema),
     defaultValues: {
-      // name: "",
-      hours: 2,
-      timeSpan: "day" as TimeSpan,
+      hours: goal ? goal?.targetSeconds / 3600 : 2,
+      timeSpan: goal?.timeSpan ?? "day",
       timeUnit: TimeUnit.Hrs,
-      useApps: false,
-      useCategories: true,
-      apps: [],
-      categories: [],
-      excludedDays: ["saturday", "sunday"],
+      useApps: goal?.useApps ?? false,
+      useCategories: goal?.useCategories ?? true,
+      apps: goal?.apps ?? [],
+      categories: goal?.categories ?? [],
+      excludedDays: (goal?.excludedDays ?? [
+        "saturday",
+        "sunday",
+      ]) as (typeof dayOptions)[number][],
     },
   });
 
@@ -179,10 +186,25 @@ const GoalDialog = ({
       excludedDays: data.excludedDays || [],
     };
 
-    const success = await addGoal(input);
-    if (success) {
-      onOpenChange(false);
+    const updatedInput: GoalUpdateInput = {
+      targetSeconds: targetSeconds,
+      timeSpan: data.timeSpan,
+      useApps: data.useApps,
+      useCategories: data.useCategories,
+      apps: (data.apps || []).filter((a): a is string => typeof a === "string"),
+      categories: (data.categories || []).filter(
+        (c): c is string => typeof c === "string",
+      ),
+      excludedDays: data.excludedDays || [],
+    };
+
+    let success = false;
+    if (goal) {
+      success = await updateGoal(goal.id, updatedInput);
+    } else {
+      success = await addGoal(input);
     }
+    if (success) onOpenChange(false);
   };
 
   const onInvalid = (errors: FieldErrors<typeof goalFormSchema>) => {
@@ -234,7 +256,14 @@ const GoalDialog = ({
             className="flex justify-between items-start mb-2"
           >
             <Dialog.Title className="text-xl font-semibold break-words">
-              {summaryText}
+              {goal ? (
+                <div className="space-y-1">
+                  <p className="text-gray-600 text-base">{goal.name}</p>
+                  <p className="text-black font-light">{summaryText}</p>
+                </div>
+              ) : (
+                summaryText
+              )}
             </Dialog.Title>
             <Dialog.Description className="sr-only">
               Set a goal for daily weekly, monthly or yearly usage of specific

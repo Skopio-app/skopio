@@ -11,7 +11,7 @@ interface GoalStore {
   goals: Goal[];
   loading: boolean;
   fetchGoals: () => Promise<void>;
-  updateGoal: (id: number, updates: GoalUpdateInput) => Promise<void>;
+  updateGoal: (id: number, updates: GoalUpdateInput) => Promise<boolean>;
   deleteGoal: (id: number) => Promise<void>;
   addGoal: (input: GoalInput) => Promise<boolean>;
 }
@@ -37,8 +37,10 @@ export const useGoalStore = create<GoalStore>((set) => ({
     try {
       await commands.updateGoal(id, updates);
       await useGoalStore.getState().fetchGoals();
+      return true;
     } catch (err) {
       toast.error(`Error updating goal: ${err}`);
+      return false;
     } finally {
       toast.success("Goal updated successfully!");
     }

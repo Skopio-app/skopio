@@ -34,24 +34,24 @@ const GoalTitleDialog: React.FC<GoalTitleDialogProps> = ({
 
     const result = titleSchema.safeParse(value);
     if (!result.success) {
-      toast.error(result.error.errors[0].message);
+      toast.error(result.error.message);
       return;
-    } else {
-      const input: GoalUpdateInput = {
-        name: result.data,
-      };
-
-      await updateGoal(goalId, input);
     }
+    const input: GoalUpdateInput = {
+      name: result.data,
+    };
 
-    onOpenChange(false);
+    const success = await updateGoal(goalId, input);
+    if (success) {
+      onOpenChange(false);
+    }
   };
 
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 bg-black/50" />
-        <Dialog.Content className="fixed left-1/2 top-1/2 max-w-xl w-[90vw] max-h-[90vh] h-[200px] overflow-y-auto -translate-x-1/2 -translate-y-1/2 bg-white p-4 rounded-md shadow-lg focus:outline-none">
+        <Dialog.Content className="fixed left-1/2 top-1/2 max-w-xl w-[90vw] max-h-[90vh] h-[200px] overflow-y-auto -translate-x-1/2 -translate-y-1/2 bg-white p-4 rounded-md shadow-lg focus:outline-none z-60">
           <div className="flex justify-between items-start mb-2">
             <Dialog.Title className="text-xl font-semibold">
               Edit Goal Title

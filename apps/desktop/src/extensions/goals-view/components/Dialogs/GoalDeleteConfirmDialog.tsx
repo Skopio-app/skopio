@@ -26,7 +26,7 @@ const GoalDeleteConfirmDialog: React.FC<GoalDeleteConfirmDialogProps> = ({
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 bg-black/50 backdrop-blur-sm" />
-        <Dialog.Content className="fixed left-1/2 top-1/2 max-w-md w-[90vw] -translate-x-1/2 -translate-y-1/2 bg-white rounded-md p-6 shadow-xl focus:outline-none">
+        <Dialog.Content className="fixed left-1/2 top-1/2 max-w-md w-[90vw] -translate-x-1/2 -translate-y-1/2 bg-white rounded-md p-6 shadow-xl focus:outline-none z-60">
           <div className="flex justify-between items-center mb-4">
             <Dialog.Title className="text-lg font-medium">
               Confirm Deletion
