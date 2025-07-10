@@ -2,7 +2,7 @@ import { Button, ChipSelector, Input, Label, Switch } from "@skopio/ui";
 import * as Dialog from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
 import { useEffect, useState } from "react";
-import { z } from "zod";
+import { z } from "zod/v4";
 import { FieldErrors, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import {
@@ -35,19 +35,19 @@ const goalFormSchema = z
   .object({
     // name: z.string().min(1, "Name is required"),
     hours: z
-      .number({ invalid_type_error: "Enter a valid number" })
+      .number({ error: "Enter a valid number" })
       .positive("Time must be greater than 0"),
     timeSpan: z.custom<TimeSpan>((val) =>
       ["day", "week", "month", "year"].includes(val as string),
     ),
-    timeUnit: z.nativeEnum(TimeUnit),
+    timeUnit: z.enum(TimeUnit),
     useApps: z.boolean(),
     useCategories: z.boolean(),
     apps: z.array(z.string().optional()),
     categories: z.array(z.string().optional()),
     excludedDays: z.array(daySchema).optional(),
   })
-  .superRefine((data, ctx) => {
+  .check((ctx) => {
     const maxBySpan = {
       day: 24,
       week: 168,
@@ -55,40 +55,44 @@ const goalFormSchema = z
       year: 8760,
     };
 
-    const hoursAsHrs = convertToHours(data.hours, data.timeUnit);
+    const hoursAsHrs = convertToHours(ctx.value.hours, ctx.value.timeUnit);
 
-    if (hoursAsHrs > maxBySpan[data.timeSpan]) {
-      ctx.addIssue({
+    if (hoursAsHrs > maxBySpan[ctx.value.timeSpan]) {
+      ctx.issues.push({
         path: ["hours"],
-        code: z.ZodIssueCode.too_big,
-        maximum: maxBySpan[data.timeSpan],
-        type: "number",
+        code: "too_big",
+        maximum: maxBySpan[ctx.value.timeSpan],
+        origin: "number",
         inclusive: true,
-        message: `Goal can't exceed ${maxBySpan[data.timeSpan]} hours per ${data.timeSpan}`,
+        message: `Goal can't exceed ${maxBySpan[ctx.value.timeSpan]} hours per ${ctx.value.timeSpan}`,
+        input: ctx.value.hours,
       });
     }
-    if (data.useApps && (!data.apps || data.apps.length === 0)) {
-      ctx.addIssue({
+    if (ctx.value.useApps && (!ctx.value.apps || ctx.value.apps.length === 0)) {
+      ctx.issues.push({
         path: ["apps"],
-        code: z.ZodIssueCode.custom,
+        code: "custom",
         message: "Select at least one app",
+        input: ctx.value.useApps,
       });
     }
     if (
-      data.useCategories &&
-      (!data.categories || data.categories.length === 0)
+      ctx.value.useCategories &&
+      (!ctx.value.categories || ctx.value.categories.length === 0)
     ) {
-      ctx.addIssue({
+      ctx.issues.push({
         path: ["categories"],
-        code: z.ZodIssueCode.custom,
+        code: "custom",
         message: "Select at least one category",
+        input: ctx.value.useCategories,
       });
     }
-    if (data.timeSpan === "day" && data.excludedDays?.length === 7) {
-      ctx.addIssue({
+    if (ctx.value.timeSpan === "day" && ctx.value.excludedDays?.length === 7) {
+      ctx.issues.push({
         path: ["excludedDays"],
-        code: z.ZodIssueCode.custom,
+        code: "custom",
         message: "You can't exclude all days",
+        input: ctx.value.timeSpan,
       });
     }
   });
@@ -123,7 +127,7 @@ const GoalDialog = ({
   const [allApps, setAllApps] = useState<App[]>([]);
   const [formError, setFormError] = useState<string | null>(null);
 
-  const form = useForm({
+  const form = useForm<z.infer<typeof goalFormSchema>>({
     resolver: zodResolver(goalFormSchema),
     defaultValues: {
       // name: "",
