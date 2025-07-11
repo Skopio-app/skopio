@@ -31,6 +31,9 @@ const GoalDeleteConfirmDialog: React.FC<GoalDeleteConfirmDialogProps> = ({
             <Dialog.Title className="text-lg font-medium">
               Confirm Deletion
             </Dialog.Title>
+            <Dialog.Description className="sr-only">
+              Confirmation dialog for whether to proceed with goal deletion.
+            </Dialog.Description>
             <Dialog.Close asChild>
               <Button
                 variant="ghost"

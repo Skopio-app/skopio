@@ -9,9 +9,9 @@ import {
 } from "../../../types/tauri.gen";
 import BarLineChart from "./BarLineChart";
 import GoalChartCard from "./GoalChartCard";
-import GoalTitleDialog from "./GoalTitleDialog";
+import GoalTitleDialog from "./Dialogs/GoalTitleDialog";
 import GoalDeleteConfirmDialog from "./Dialogs/GoalDeleteConfirmDialog";
-import GoalDialog from "../GoalDialog";
+import GoalDialog from "./Dialogs/GoalDialog";
 
 const GoalDisplay = ({ goal }: { goal: Goal }) => {
   const [data, setData] = useState<BucketTimeSummary[]>([]);

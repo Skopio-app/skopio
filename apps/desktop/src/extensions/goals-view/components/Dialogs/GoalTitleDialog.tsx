@@ -1,11 +1,13 @@
 import * as Dialog from "@radix-ui/react-dialog";
 import { Button, Input } from "@skopio/ui";
 import { X } from "lucide-react";
-import { useState } from "react";
-import { toast } from "sonner";
 import { z } from "zod";
-import { GoalUpdateInput } from "../../../types/tauri.gen";
-import { useGoalStore } from "../stores/useGoalStore";
+import { GoalUpdateInput } from "../../../../types/tauri.gen";
+import { useGoalStore } from "../../stores/useGoalStore";
+import { FieldErrors, useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
 
 interface GoalTitleDialogProps {
   open: boolean;
@@ -14,11 +16,13 @@ interface GoalTitleDialogProps {
   goalId: number;
 }
 
-const titleSchema = z
-  .string()
-  .trim()
-  .min(1, { message: "Title is required" })
-  .max(200, { message: "Title must be under 100 characters" });
+const titleFormSchema = z.object({
+  name: z
+    .string()
+    .trim()
+    .min(1, { message: "Title is required" })
+    .max(200, { message: "Title must be under 200 characters" }),
+});
 
 const GoalTitleDialog: React.FC<GoalTitleDialogProps> = ({
   open,
@@ -26,26 +30,42 @@ const GoalTitleDialog: React.FC<GoalTitleDialogProps> = ({
   goalId,
   title,
 }) => {
-  const [value, setValue] = useState<string>(title);
   const { updateGoal } = useGoalStore();
+  const [formError, setFormError] = useState<string | null>(null);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const form = useForm({
+    resolver: zodResolver(titleFormSchema),
+    defaultValues: {
+      name: title,
+    },
+  });
 
-    const result = titleSchema.safeParse(value);
-    if (!result.success) {
-      toast.error(result.error.message);
-      return;
-    }
+  const { register, handleSubmit, watch, setValue } = form;
+
+  const onSubmit = async (data: z.infer<typeof titleFormSchema>) => {
     const input: GoalUpdateInput = {
-      name: result.data,
+      name: data.name,
     };
 
     const success = await updateGoal(goalId, input);
-    if (success) {
-      onOpenChange(false);
+    if (success) onOpenChange(false);
+  };
+
+  const onInvalid = (errors: FieldErrors<typeof titleFormSchema>) => {
+    const firstError = Object.values(errors)[0];
+    if (firstError && "message" in firstError) {
+      toast.error(firstError.message as string);
+    } else {
+      toast.error("Please fix the highlighted errors.");
     }
   };
+
+  useEffect(() => {
+    const subscription = watch(() => {
+      if (formError) setFormError(null);
+    });
+    return () => subscription.unsubscribe();
+  }, [watch, formError]);
 
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
@@ -56,6 +76,9 @@ const GoalTitleDialog: React.FC<GoalTitleDialogProps> = ({
             <Dialog.Title className="text-xl font-semibold">
               Edit Goal Title
             </Dialog.Title>
+            <Dialog.Description className="sr-only">
+              Edit goal name
+            </Dialog.Description>
             <Dialog.Close asChild>
               <Button
                 variant="ghost"
@@ -66,11 +89,18 @@ const GoalTitleDialog: React.FC<GoalTitleDialogProps> = ({
               </Button>
             </Dialog.Close>
           </div>
-          <form onSubmit={handleSubmit}>
+          <form onSubmit={handleSubmit(onSubmit, onInvalid)}>
             <div className="mb-4">
               <Input
-                value={value}
-                onChange={(e) => setValue(e.target.value)}
+                type="text"
+                {...register("name", {
+                  onChange: (e) => {
+                    setValue("name", e.target.value, {
+                      shouldValidate: true,
+                      shouldDirty: true,
+                    });
+                  },
+                })}
                 className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-primary focus:ring-primary text-sm"
                 autoFocus
                 required

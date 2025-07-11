@@ -1,6 +1,6 @@
 import { Button } from "@skopio/ui";
 import { useEffect, useState } from "react";
-import GoalDialog from "./GoalDialog";
+import GoalDialog from "./components/Dialogs/GoalDialog";
 import GoalDisplay from "./components/GoalDisplay";
 import { useGoalStore } from "./stores/useGoalStore";
 

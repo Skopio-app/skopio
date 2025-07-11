@@ -13,8 +13,8 @@ import {
   GoalInput,
   GoalUpdateInput,
   TimeSpan,
-} from "../../types/tauri.gen";
-import { useGoalStore } from "./stores/useGoalStore";
+} from "../../../../types/tauri.gen";
+import { useGoalStore } from "../../stores/useGoalStore";
 import { toast } from "sonner";
 
 enum TimeUnit {
