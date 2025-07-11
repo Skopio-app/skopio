@@ -13,9 +13,10 @@ use db::{
     DBContext,
 };
 use log::{debug, error, info};
+use tauri::AppHandle;
 use tokio::{sync::broadcast, task::JoinHandle};
 
-use crate::network::summaries::fetch_total_time;
+use crate::{network::summaries::fetch_total_time, notification::show_notification};
 
 #[derive(Clone)]
 pub struct GoalService {
@@ -29,7 +30,8 @@ impl GoalService {
         Self { db, stop_tx }
     }
 
-    pub fn start(self: Arc<Self>) -> JoinHandle<()> {
+    pub fn start(self: Arc<Self>, app: &AppHandle) -> JoinHandle<()> {
+        let app_handle = app.clone();
         tokio::spawn(async move {
             let mut interval = tokio::time::interval(StdDuration::from_secs(30));
             let mut stop_rx = self.stop_tx.subscribe();
@@ -37,7 +39,7 @@ impl GoalService {
             loop {
                 tokio::select! {
                     _ = interval.tick() => {
-                        if let Err(e) = self.check_goals().await {
+                        if let Err(e) = self.check_goals(&app_handle).await {
                             error!("Goal check failed: {e:?}");
                         }
                     },
@@ -50,7 +52,7 @@ impl GoalService {
         })
     }
 
-    pub async fn check_goals(&self) -> anyhow::Result<()> {
+    pub async fn check_goals(&self, app: &AppHandle) -> anyhow::Result<()> {
         let goals = fetch_all_goals(&self.db).await?;
         for goal in goals {
             debug!("Evaluating goal: {:?}", goal);
@@ -64,6 +66,8 @@ impl GoalService {
                 debug!("Goal {} met", goal.id);
             } else {
                 debug!("Goal {} in progress", goal.id);
+                let _ = show_notification(app, "Goal in progress", Some(5000))
+                    .map_err(|e| format!("Error showing notification: {}", e));
             }
         }
 

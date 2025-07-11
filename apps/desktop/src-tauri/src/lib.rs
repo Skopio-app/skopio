@@ -17,6 +17,7 @@ mod goals_service;
 mod helpers;
 mod monitored_app;
 mod network;
+mod notification;
 mod sync_service;
 mod trackers;
 mod tracking_service;
@@ -168,7 +169,7 @@ async fn setup_trackers(app_handle: &AppHandle) -> Result<(), anyhow::Error> {
 
     let goal_service = Arc::new(GoalService::new(Arc::clone(&db)));
     app_handle.manage(Arc::clone(&goal_service));
-    goal_service.start();
+    goal_service.start(app_handle);
 
     let service_trait: Arc<dyn TrackingService> = buffered_service.clone();
 
