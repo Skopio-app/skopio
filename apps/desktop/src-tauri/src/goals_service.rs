@@ -16,7 +16,7 @@ use log::{debug, error, info};
 use tauri::AppHandle;
 use tokio::{sync::broadcast, task::JoinHandle};
 
-use crate::{network::summaries::fetch_total_time, notification::show_notification};
+use crate::{network::summaries::fetch_total_time, notification::create_notification_window};
 
 #[derive(Clone)]
 pub struct GoalService {
@@ -66,8 +66,11 @@ impl GoalService {
                 debug!("Goal {} met", goal.id);
             } else {
                 debug!("Goal {} in progress", goal.id);
-                let _ = show_notification(app, "Goal in progress", Some(5000))
-                    .map_err(|e| format!("Error showing notification: {}", e));
+                let _ = create_notification_window(
+                    app,
+                    Some(format!("Goal in progress: {}", goal.target_seconds)),
+                )
+                .map_err(|e| format!("Error showing notification: {}", e));
             }
         }
 

@@ -3,5 +3,5 @@
   "identifier": "default",
   "description": "enables the default permissions",
   "windows": ["main", "notification"],
-  "permissions": ["core:default"]
+  "permissions": ["core:default", "core:webview:allow-create-webview-window"]
 }
