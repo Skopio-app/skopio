@@ -11,7 +11,7 @@ use trackers::{
 };
 use tracking_service::{DBService, TrackingService};
 
-use crate::{goals_service::GoalService, ui::tray::init_tray};
+use crate::{goals_service::GoalService, notification::NotificationPayload, ui::tray::init_tray};
 
 mod goals_service;
 mod helpers;
@@ -96,18 +96,20 @@ pub async fn run() {
         })
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::CloseRequested { .. } = event {
-                let cursor_tracker = window.state::<Arc<MouseTracker>>();
-                let keyboard_tracker = window.state::<Arc<KeyboardTracker>>();
-                let buffered_service = window.state::<Arc<BufferedTrackingService>>();
-                let goal_service = window.state::<Arc<GoalService>>();
-                cursor_tracker.stop_tracking();
-                keyboard_tracker.stop_tracking();
-                goal_service.shutdown();
+                if window.label() == "main" {
+                    let cursor_tracker = window.state::<Arc<MouseTracker>>();
+                    let keyboard_tracker = window.state::<Arc<KeyboardTracker>>();
+                    let buffered_service = window.state::<Arc<BufferedTrackingService>>();
+                    let goal_service = window.state::<Arc<GoalService>>();
+                    cursor_tracker.stop_tracking();
+                    keyboard_tracker.stop_tracking();
+                    goal_service.shutdown();
 
-                let buffered_service = Arc::clone(&buffered_service);
-                tokio::spawn(async move {
-                    buffered_service.shutdown().await;
-                });
+                    let buffered_service = Arc::clone(&buffered_service);
+                    tokio::spawn(async move {
+                        buffered_service.shutdown().await;
+                    });
+                }
             }
 
             if matches!(
@@ -249,8 +251,10 @@ fn make_specta_builder<R: Runtime>() -> tauri_specta::Builder<R> {
             crate::goals_service::remove_goal,
             crate::network::tables::fetch_apps,
             crate::network::tables::fetch_categories,
+            crate::notification::dismiss_notification_window::<tauri::Wry>,
         ])
-        .error_handling(tauri_specta::ErrorHandlingMode::Throw);
+        .error_handling(tauri_specta::ErrorHandlingMode::Throw)
+        .typ::<NotificationPayload>();
 
     #[cfg(debug_assertions)]
     builder

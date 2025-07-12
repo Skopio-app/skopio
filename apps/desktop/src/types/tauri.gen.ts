@@ -49,6 +49,9 @@ export const commands = {
   async fetchCategories(): Promise<Category[]> {
     return await TAURI_INVOKE("fetch_categories");
   },
+  async dismissNotificationWindow(): Promise<null> {
+    return await TAURI_INVOKE("dismiss_notification_window");
+  },
 };
 
 /** user-defined events **/
@@ -127,6 +130,11 @@ export type Group =
   | "category"
   | "entity";
 export type GroupedTimeSummary = { group_key: string; total_seconds: number };
+export type NotificationPayload = {
+  title: string;
+  durationMs: number;
+  message: string | null;
+};
 export type SummaryQueryInput = {
   start: string | null;
   end: string | null;

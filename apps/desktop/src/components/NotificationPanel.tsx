@@ -1,17 +1,59 @@
 import { Card, cn, Hotkey, Input } from "@skopio/ui";
 import { PartyPopper } from "lucide-react";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { commands, NotificationPayload } from "../types/tauri.gen";
 
 export const NotificationPanel = () => {
   const invisibleInputRef = useRef<HTMLInputElement | null>(null);
+  const [payload, setPayload] = useState<NotificationPayload | null>(null);
   const [isExiting, setIsExiting] = useState(false);
 
-  const handleExit = () => {
-    setIsExiting(false);
+  useEffect(() => {
+    try {
+      const urlParams = new URLSearchParams(window.location.search);
+      const raw = urlParams.get("payload");
+
+      if (raw) {
+        const decoded = decodeURIComponent(raw);
+        const parsed: NotificationPayload = JSON.parse(decoded);
+        console.log("The parsed payload: ", parsed);
+        setPayload(parsed);
+      } else {
+        console.warn("No payload found in query string");
+      }
+    } catch (err) {
+      console.error("Failed to decode payload: ", err);
+    }
+  }, []);
+
+  const dismiss = () => {
+    setIsExiting(true);
+    setTimeout(() => {
+      commands.dismissNotificationWindow().catch(console.error);
+    }, 500);
   };
 
+  useEffect(() => {
+    if (!payload) return;
+
+    invisibleInputRef.current?.focus();
+
+    const timeout = setTimeout(dismiss, payload?.durationMs);
+    const handleKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") dismiss();
+    };
+
+    window.addEventListener("keydown", handleKey);
+    return () => {
+      clearTimeout(timeout);
+      window.removeEventListener("keydown", handleKey);
+    };
+  }, [payload]);
+
+  if (!payload) return null;
+
   return (
-    <div className="min-h-screen font-sans p-2">
+    <div className="min-h-screen font-sans">
       <Input
         ref={invisibleInputRef}
         className="absolute opacity-0 pointer-events-none w-0 h-0 border-0 outline-none"
@@ -31,16 +73,14 @@ export const NotificationPanel = () => {
 
         <div className="flex-1">
           <h3 className="text-card-foreground font-semibold text-base">
-            Goal achieved!
+            {payload.title}
           </h3>
-          <p className="text-card-foreground text-sm">
-            You have achieved your goal
-          </p>
+          <p className="text-card-foreground text-sm">{payload.message}</p>
         </div>
 
         <div
           className="absolute -top-2 -left-2 transition-opacity cursor-pointer opacity-0 group-hover:opacity-100"
-          onClick={handleExit}
+          onClick={dismiss}
         >
           <Hotkey size="sm" color="default">
             ESC
@@ -51,7 +91,7 @@ export const NotificationPanel = () => {
           <div
             className="h-full rounded-full origin-left bg-green-500"
             style={{
-              animation: "progress-shrink 5000ms linear forwards",
+              animation: `progress-shrink ${payload.durationMs}ms linear forwards`,
             }}
           />
         </div>

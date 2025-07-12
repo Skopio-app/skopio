@@ -1,4 +1,6 @@
 use log::{debug, error};
+use percent_encoding::{utf8_percent_encode, NON_ALPHANUMERIC};
+use serde::{Deserialize, Serialize};
 use tauri::{
     AppHandle, Manager, PhysicalPosition, PhysicalSize, Runtime, WebviewWindow,
     WebviewWindowBuilder,
@@ -7,7 +9,24 @@ use url::{ParseError, Url};
 
 const NOTIFICATION_WINDOW_LABEL: &str = "notification";
 
-fn get_notification_url(payload: Option<String>) -> Result<Url, ParseError> {
+#[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub struct NotificationPayload {
+    pub title: String,
+    pub duration_ms: u64,
+    pub message: Option<String>,
+}
+
+fn encode_payload(payload: &NotificationPayload) -> Result<String, tauri::Error> {
+    let json = serde_json::to_string(payload).map_err(|e| {
+        error!("Failed to serialize payload: {}", e);
+        tauri::Error::Json(e)
+    })?;
+
+    Ok(utf8_percent_encode(&json, NON_ALPHANUMERIC).to_string())
+}
+
+fn get_notification_url(payload: NotificationPayload) -> Result<Url, ParseError> {
     let base_url = if cfg!(dev) {
         "http://localhost:5173/notification.html"
     } else {
@@ -15,7 +34,7 @@ fn get_notification_url(payload: Option<String>) -> Result<Url, ParseError> {
     };
 
     let mut url = Url::parse(base_url)?;
-    if let Some(payload_data) = payload {
+    if let Ok(payload_data) = encode_payload(&payload) {
         url.query_pairs_mut().append_pair("payload", &payload_data);
     }
 
@@ -42,7 +61,7 @@ fn get_main_screen_safe_frame<R: Runtime>(
 
 fn show_notification_window<R: Runtime>(
     notification_window: WebviewWindow<R>,
-    payload: Option<String>,
+    payload: NotificationPayload,
 ) -> tauri::Result<()> {
     let Ok(notification_url) = get_notification_url(payload) else {
         error!("Failed to get notification URl");
@@ -70,7 +89,7 @@ fn get_notification_window<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<Webv
 
 pub fn create_notification_window<R: Runtime>(
     app: &AppHandle<R>,
-    payload: Option<String>,
+    payload: NotificationPayload,
 ) -> tauri::Result<()> {
     let app_handle = app.app_handle();
 
@@ -81,13 +100,8 @@ pub fn create_notification_window<R: Runtime>(
     }
 
     let mut params = String::new();
-    if let Some(ref payload_data) = payload {
-        let encoded_payload = payload_data
-            .replace("&", "%26")
-            .replace("=", "%3D")
-            .replace(" ", "%20");
-        params.push_str(&format!("&payload={}", encoded_payload));
-    }
+    let encoded_payload = encode_payload(&payload)?;
+    params.push_str(&format!("&payload={}", encoded_payload));
 
     let notification_url = if cfg!(dev) {
         tauri::WebviewUrl::External(
@@ -131,6 +145,8 @@ pub fn create_notification_window<R: Runtime>(
                 .resizable(false)
                 .visible(false)
                 .always_on_top(true)
+                .skip_taskbar(true)
+                .focused(false)
                 .build();
 
         match notification_window {
@@ -153,15 +169,18 @@ pub fn create_notification_window<R: Runtime>(
         show_notification_window(notification_window, payload)?;
     }
 
-    #[allow(dead_code)]
-    pub fn dismiss_notification_window<R: Runtime>(app: &AppHandle<R>) -> tauri::Result<()> {
-        let Ok(window) = get_notification_window(app) else {
-            error!("Failed to get notification window");
-            return Err(tauri::Error::WindowNotFound);
-        };
+    Ok(())
+}
 
-        window.close()
-    }
+#[tauri::command]
+#[specta::specta]
+pub fn dismiss_notification_window<R: Runtime>(app: AppHandle<R>) -> Result<(), String> {
+    let window = get_notification_window(&app)
+        .map_err(|e| format!("Failed to get notification window: {e}"))?;
+
+    window
+        .close()
+        .map_err(|e| format!("Failed to close notification window: {e}"))?;
 
     Ok(())
 }
