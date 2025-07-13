@@ -289,6 +289,8 @@ const GoalDialog: React.FC<GoalDialogProps> = ({
               <span>I want to achieve</span>
               <Input
                 type="number"
+                step={0.01}
+                inputMode="decimal"
                 {...register("hours", {
                   valueAsNumber: true,
                   onChange: (e) => {
