@@ -15,6 +15,7 @@ pub struct NotificationPayload {
     pub title: String,
     pub duration_ms: u64,
     pub message: Option<String>,
+    pub sound_file: Option<String>,
 }
 
 fn encode_payload(payload: &NotificationPayload) -> Result<String, tauri::Error> {

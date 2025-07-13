@@ -134,6 +134,7 @@ export type NotificationPayload = {
   title: string;
   durationMs: number;
   message: string | null;
+  soundFile: string | null;
 };
 export type SummaryQueryInput = {
   start: string | null;

@@ -73,6 +73,7 @@ impl GoalService {
                     title: "Goal in progress".to_string(),
                     duration_ms: 7000,
                     message: Some(goal.name),
+                    sound_file: Some(String::from("goal_success.mp3")),
                 };
                 let _ = create_notification_window(app, payload)
                     .map_err(|e| format!("Error showing notification: {}", e));

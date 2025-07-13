@@ -2,11 +2,15 @@ import { Card, cn, Hotkey, Input } from "@skopio/ui";
 import { PartyPopper } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { commands, NotificationPayload } from "../types/tauri.gen";
+import { isDev } from "../utils/environment";
+import { resolveResource } from "@tauri-apps/api/path";
+import { convertFileSrc } from "@tauri-apps/api/core";
 
 export const NotificationPanel = () => {
   const invisibleInputRef = useRef<HTMLInputElement | null>(null);
   const [payload, setPayload] = useState<NotificationPayload | null>(null);
   const [isExiting, setIsExiting] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
     try {
@@ -33,6 +37,27 @@ export const NotificationPanel = () => {
     }, 500);
   };
 
+  const getSoundPath = async (soundFile: string) => {
+    if (isDev()) {
+      return `/src-tauri/sounds/${soundFile}`;
+    }
+    const resourcePath = await resolveResource(`sounds/${soundFile}`);
+    return convertFileSrc(resourcePath);
+  };
+
+  const playSound = async () => {
+    if (!payload?.soundFile) return;
+    const soundPath = await getSoundPath(payload.soundFile);
+    const audio = new Audio(soundPath);
+    audioRef.current = audio;
+
+    const handleCanPlay = () => {
+      audio.play().catch((err) => console.error("Error playing sound: ", err));
+    };
+
+    audio.addEventListener("canplaythrough", handleCanPlay, { once: true });
+  };
+
   useEffect(() => {
     if (!payload) return;
 
@@ -44,9 +69,15 @@ export const NotificationPanel = () => {
     };
 
     window.addEventListener("keydown", handleKey);
+    playSound();
+
     return () => {
       clearTimeout(timeout);
       window.removeEventListener("keydown", handleKey);
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
     };
   }, [payload]);
 
