@@ -1,14 +1,17 @@
 use std::{sync::Arc, time::Duration as StdDuration};
 
-use chrono::{Datelike, Duration, TimeZone, Utc};
+use chrono::{Datelike, Duration, Local, TimeZone, Utc, Weekday};
 use common::{
     models::inputs::SummaryQueryInput,
     time::{TimeRange, TimeRangePreset},
 };
 use db::{
-    desktop::goals::{
-        delete_goal, fetch_all_goals, insert_goal, modify_goal, Goal, GoalInput, GoalUpdateInput,
-        TimeSpan,
+    desktop::{
+        goal_notifications::{has_shown_goal_notification, insert_shown_goal_notification},
+        goals::{
+            delete_goal, fetch_all_goals, insert_goal, modify_goal, Goal, GoalInput,
+            GoalUpdateInput, TimeSpan,
+        },
     },
     DBContext,
 };
@@ -18,7 +21,7 @@ use tokio::{sync::broadcast, task::JoinHandle};
 
 use crate::{
     network::summaries::fetch_total_time,
-    notification::{create_notification_window, NotificationPayload},
+    ui::notification::{create_notification_window, NotificationPayload},
 };
 
 #[derive(Clone)]
@@ -58,26 +61,42 @@ impl GoalService {
     pub async fn check_goals(&self, app: &AppHandle) -> anyhow::Result<()> {
         let goals = fetch_all_goals(&self.db).await?;
         for goal in goals {
-            debug!("Evaluating goal: {:?}", goal);
+            debug!("Evaluating goal: {:?}", goal.name);
+
+            if is_today_excluded(&goal.excluded_days) {
+                debug!("Goal {} is excluded today", goal.id);
+                continue;
+            }
+
             let total_tracked = self.evaluate_goal(&goal).await?;
             debug!(
                 "Goal {} | Target: {}s | Tracked: {}s",
                 goal.id, goal.target_seconds, total_tracked,
             );
 
-            if total_tracked >= goal.target_seconds {
-                debug!("Goal {} met", goal.id);
-            } else {
-                debug!("Goal {} in progress", goal.id);
-                let payload = NotificationPayload {
-                    title: "Goal in progress".to_string(),
-                    duration_ms: 7000,
-                    message: Some(goal.name),
-                    sound_file: Some(String::from("goal_success.mp3")),
-                };
-                let _ = create_notification_window(app, payload)
-                    .map_err(|e| format!("Error showing notification: {}", e));
+            if total_tracked < goal.target_seconds {
+                continue;
             }
+
+            let period_key = current_period_key(&goal.time_span);
+            let already_shown =
+                has_shown_goal_notification(&self.db, goal.id, &goal.time_span, &period_key)
+                    .await?;
+
+            if already_shown {
+                continue;
+            }
+
+            let payload = NotificationPayload {
+                title: "Goal completed!".to_string(),
+                duration_ms: 7000,
+                message: Some(goal.name.clone()),
+                sound_file: Some("goal_success.mp3".to_string()),
+            };
+
+            let _ = create_notification_window(app, payload);
+
+            insert_shown_goal_notification(&self.db, goal.id, &goal.time_span, &period_key).await?;
         }
 
         Ok(())
@@ -180,4 +199,32 @@ fn resolve_time_range(time_span: &TimeSpan) -> Option<TimeRange> {
             })
         }
     }
+}
+
+fn current_period_key(span: &TimeSpan) -> String {
+    let now = Utc::now();
+    match span {
+        TimeSpan::Day => now.format("%Y-%m-%d").to_string(),
+        TimeSpan::Week => format!("{}-W{}", now.iso_week().year(), now.iso_week().week()),
+        TimeSpan::Month => now.format("%Y-%m").to_string(),
+        TimeSpan::Year => now.format("%Y").to_string(),
+    }
+}
+
+fn weekday_to_str(day: Weekday) -> &'static str {
+    match day {
+        Weekday::Mon => "monday",
+        Weekday::Tue => "tuesday",
+        Weekday::Wed => "wednesday",
+        Weekday::Thu => "thursday",
+        Weekday::Fri => "friday",
+        Weekday::Sat => "saturday",
+        Weekday::Sun => "sunday",
+    }
+}
+
+fn is_today_excluded(excluded_days: &[String]) -> bool {
+    let today = weekday_to_str(Local::now().weekday());
+
+    excluded_days.iter().any(|day| day.to_lowercase() == today)
 }

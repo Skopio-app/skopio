@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n        INSERT INTO shown_goal_notifications (goal_id, time_span, period_key)\n        VALUES (?, ?, ?)\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": []
+  },
+  "hash": "3cf7b3e3d3e49df3f42a6317b36393fa015719c0fdce3a4c708f0c148d089f34"
+}

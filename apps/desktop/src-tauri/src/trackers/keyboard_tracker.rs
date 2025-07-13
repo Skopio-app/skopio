@@ -4,7 +4,7 @@ use core_foundation::runloop::{kCFRunLoopCommonModes, CFRunLoop};
 use core_graphics::event::{
     CGEventTap, CGEventTapLocation, CGEventTapOptions, CGEventTapPlacement, CGEventType,
 };
-use log::error;
+use log::{error, info};
 use objc2_foundation::NSAutoreleasePool;
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
@@ -96,6 +96,7 @@ impl KeyboardTracker {
     pub fn stop_tracking(&self) {
         if let Some(ref rl) = *self.runloop.lock().unwrap() {
             CFRunLoop::stop(rl);
+            info!("Window tracker stopped");
         }
     }
 }

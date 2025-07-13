@@ -12,10 +12,10 @@ const GoalsView = () => {
     fetchGoals();
   }, []);
 
-  if (!loading && goals.length === 0) {
+  if (loading) {
     return (
       <div className="h-[220px] w-full flex items-center justify-center text-sm text-gray-500">
-        No goals found
+        Loading...
       </div>
     );
   }
@@ -30,9 +30,13 @@ const GoalsView = () => {
       </div>
 
       <div className="flex flex-col space-y-4 pl-3">
-        {goals.map((goal) => (
-          <GoalDisplay key={goal.id} goal={goal} />
-        ))}
+        {goals.length > 0 ? (
+          goals.map((goal) => <GoalDisplay key={goal.id} goal={goal} />)
+        ) : (
+          <p className="h-64 w-full flex items-center justify-center text-sm text-gray-500">
+            No goals found
+          </p>
+        )}
       </div>
 
       <GoalDialog open={showGoalDialog} onOpenChange={setShowGoalDialog} />

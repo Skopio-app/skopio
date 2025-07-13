@@ -78,3 +78,12 @@ CREATE TABLE IF NOT EXISTS goal_excluded_days
     FOREIGN KEY (goal_id) REFERENCES goals(id) ON DELETE CASCADE
 );
 
+CREATE TABLE IF NOT EXISTS shown_goal_notifications
+(
+    goal_id INTEGER NOT NULL,
+    time_span TEXT NOT NULL,
+    period_key TEXT NOT NULL,
+    shown_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (goal_id, time_span, period_key)
+);
+

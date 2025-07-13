@@ -11,13 +11,15 @@ use trackers::{
 };
 use tracking_service::{DBService, TrackingService};
 
-use crate::{goals_service::GoalService, notification::NotificationPayload, ui::tray::init_tray};
+use crate::{
+    goals_service::GoalService,
+    ui::{notification::NotificationPayload, tray::init_tray},
+};
 
 mod goals_service;
 mod helpers;
 mod monitored_app;
 mod network;
-mod notification;
 mod sync_service;
 mod trackers;
 mod tracking_service;
@@ -251,7 +253,7 @@ fn make_specta_builder<R: Runtime>() -> tauri_specta::Builder<R> {
             crate::goals_service::remove_goal,
             crate::network::tables::fetch_apps,
             crate::network::tables::fetch_categories,
-            crate::notification::dismiss_notification_window::<tauri::Wry>,
+            crate::ui::notification::dismiss_notification_window::<tauri::Wry>,
         ])
         .error_handling(tauri_specta::ErrorHandlingMode::Throw)
         .typ::<NotificationPayload>();

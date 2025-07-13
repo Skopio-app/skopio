@@ -40,6 +40,7 @@ impl ToString for TimeSpan {
     }
 }
 
+// TODO: Store excluded days as numbers instead of strings
 #[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct Goal {
