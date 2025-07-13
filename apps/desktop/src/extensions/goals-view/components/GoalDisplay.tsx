@@ -47,7 +47,6 @@ const GoalDisplay = ({ goal }: { goal: Goal }) => {
     const fetchData = async () => {
       try {
         const summary = await commands.fetchBucketedSummary(query);
-        console.log("The data: ", summary);
         setData(summary);
       } catch (e) {
         console.error("Error fetching summary for goal: ", goal.id, e);

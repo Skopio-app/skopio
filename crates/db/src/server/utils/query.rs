@@ -1,10 +1,10 @@
 use chrono::{DateTime, Local, NaiveDateTime, Utc};
 use common::{models::inputs::Group, time::TimeBucket};
-use log::info;
 
 use crate::server::utils::summary_filter::SummaryFilters;
 
 /// Appends a date range filter to the query using the specified start and end field names.
+/// Dates are formatted as RFC3339 (ISO 8601) to ensure proper string comparison.
 pub fn append_date_range(
     query: &mut String,
     start: Option<DateTime<Utc>>,
@@ -12,19 +12,12 @@ pub fn append_date_range(
     start_field: &str,
     end_field: &str,
 ) {
-    info!("UTC range: {:?} to {:?}", start, end);
-    if let (Some(s), Some(e)) = (start, end) {
-        query.push_str(&format!(
-            " AND {start_field} < '{}' AND {end_field} > '{}'",
-            e, s
-        ));
-    } else {
-        if let Some(s) = start {
-            query.push_str(&format!(" AND {end_field} > '{}'", s));
-        }
-        if let Some(e) = end {
-            query.push_str(&format!(" AND {start_field} < '{}'", e));
-        }
+    if let Some(s) = start {
+        query.push_str(&format!(" AND {end_field} > '{}'", s.to_rfc3339()));
+    }
+
+    if let Some(e) = end {
+        query.push_str(&format!(" AND {start_field} < '{}'", e.to_rfc3339()));
     }
 }
 
@@ -109,19 +102,23 @@ pub fn get_time_bucket_expr(bucket: Option<TimeBucket>) -> &'static str {
 
 pub fn convert_utc_bucket_to_local(bucket: &str) -> String {
     let formats = [
-        ("%Y-%m-%d %H:00:00", "hour"),
+        ("%Y-%m-%d %H:%M:%S", "hour"),
         ("%Y-%m-%d", "day"),
         ("%Y-%m", "month"),
+        ("%Y", "year"),
     ];
 
+    let trimmed = bucket.trim();
+
     for (fmt, granularity) in formats.iter() {
-        if let Ok(naive_dt) = NaiveDateTime::parse_from_str(bucket, fmt) {
+        if let Ok(naive_dt) = NaiveDateTime::parse_from_str(trimmed, fmt) {
             let utc_dt: DateTime<Utc> = DateTime::<Utc>::from_naive_utc_and_offset(naive_dt, Utc);
             let local_dt = utc_dt.with_timezone(&Local);
             return match *granularity {
-                "hour" => local_dt.format("%Y-%m-%d %H:00:00").to_string(),
+                "hour" => local_dt.format("%Y-%m-%d %H:%M:%S").to_string(),
                 "day" => local_dt.format("%Y-%m-%d").to_string(),
                 "month" => local_dt.format("%Y-%m").to_string(),
+                "year" => local_dt.format("%Y").to_string(),
                 _ => local_dt.to_rfc3339(),
             };
         }

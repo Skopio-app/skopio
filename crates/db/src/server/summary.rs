@@ -210,10 +210,6 @@ impl SummaryQueryBuilder {
         let group_key = group_key_column(self.group_by);
 
         let time_bucket_expr = get_time_bucket_expr(self.time_bucket);
-        info!(
-            "SummaryQueryInput: start={:?} end={:?} bucket={:?}",
-            self.filters.start, self.filters.end, self.time_bucket
-        );
 
         let mut base_query = format!(
             "SELECT {time_bucket_expr} AS bucket, {group_key} AS group_key, SUM(duration) as total_seconds
@@ -232,8 +228,6 @@ impl SummaryQueryBuilder {
         append_all_filters(&mut base_query, self.filters.clone());
 
         base_query.push_str(&format!(" GROUP BY {time_bucket_expr}, {group_key}"));
-
-        // info!("Final SQL: {}", base_query);
 
         let rows = sqlx::query_as::<_, RawBucketRow>(&base_query)
             .fetch_all(db.pool())
