@@ -24,15 +24,15 @@ const GoalDisplay = ({ goal }: { goal: Goal }) => {
   const timeRangeToPreset = (span: TimeSpan): TimeRangePreset => {
     switch (span) {
       case "day":
-        return { LastNDays: 7 };
+        return { lastNDays: [7, true] };
       case "week":
-        return { LastNWeeks: 7 };
+        return { lastNWeeks: [7, true] };
       case "month":
-        return { LastNMonths: 7 };
+        return { lastNMonths: [7, true] };
       case "year":
-        return { LastNYears: 7 };
+        return { lastNYears: [7, true] };
       default:
-        return { LastNDays: 7 };
+        return { lastNDays: [7, true] };
     }
   };
 
@@ -47,6 +47,7 @@ const GoalDisplay = ({ goal }: { goal: Goal }) => {
     const fetchData = async () => {
       try {
         const summary = await commands.fetchBucketedSummary(query);
+        console.log("The goal chart data: ", summary);
         setData(summary);
       } catch (e) {
         console.error("Error fetching summary for goal: ", goal.id, e);

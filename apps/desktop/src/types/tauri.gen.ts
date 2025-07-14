@@ -148,19 +148,99 @@ export type SummaryQueryInput = {
   include_afk: boolean;
 };
 export type Theme = "Light" | "Dark" | "System";
-export type TimeBucket = "Day" | "Week" | "Month" | "Hour" | "Year";
+/**
+ * A time granularity used for bucketing data in reports
+ *
+ * - `Hour` groups events by each hour
+ * - `Day` groups events by each day
+ * - `Week` groups events by each week
+ * - `Month` groups events by each month
+ * - `Year` groups events by each year.
+ */
+export type TimeBucket =
+  /**
+   * Bucket data by day
+   */
+  | "day"
+  /**
+   * Bucket day by week
+   */
+  | "week"
+  /**
+   * Bucket data by month
+   */
+  | "month"
+  /**
+   * Bucket data by hour
+   */
+  | "hour"
+  /**
+   * Bucket data by year
+   */
+  | "year";
+/**
+ * A predefined range of time used to filter or summarize data.
+ */
 export type TimeRangePreset =
-  | "Today"
-  | "Yesterday"
-  | "ThisWeek"
-  | "LastWeek"
-  | "ThisMonth"
-  | "LastMonth"
-  | { LastNDays: number }
-  | { LastNWeeks: number }
-  | { LastNMonths: number }
-  | { LastNYears: number }
-  | { Custom: { start: string; end: string; bucket: TimeBucket } };
+  /**
+   * Represents today (from midnight to now).
+   */
+  | "today"
+  /**
+   * Represents yesterday (midnight to midnight)
+   */
+  | "yesterday"
+  /**
+   * The current calendar week starting from Monday.
+   */
+  | "thisWeek"
+  /**
+   * The current calendar week before this one.
+   */
+  | "lastWeek"
+  /**
+   * The current calendar month
+   */
+  | "thisMonth"
+  /**
+   * The previous calendar month
+   */
+  | "lastMonth"
+  /**
+   * The last N full days (excludes today by default).
+   */
+  | { lastNDays: [number, boolean] }
+  /**
+   * The last N full weeks (excludes this week by default).
+   */
+  | { lastNWeeks: [number, boolean] }
+  /**
+   * The last N full months (excludes this month by default).
+   */
+  | { lastNMonths: [number, boolean] }
+  /**
+   * The last N full years (excludes this year by default).
+   */
+  | { lastNYears: [number, boolean] }
+  /**
+   * A custom range of time with a specific bucket size.
+   */
+  | {
+      custom: {
+        /**
+         * The start date (inclusive).
+         */
+        start: string;
+        /**
+         * The end date (exclusive).
+         */
+        end: string;
+        /**
+         * The desired bucket granularity.
+         */
+        bucket: TimeBucket;
+      };
+    };
 export type TimeSpan = "day" | "week" | "month" | "year";
 
 /** tauri-specta globals **/

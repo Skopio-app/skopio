@@ -91,11 +91,11 @@ pub fn group_key_column(group: Option<Group>) -> &'static str {
 /// Formats a SQLite-compatible time bucket expression based on the bucket type.
 pub fn get_time_bucket_expr(bucket: Option<TimeBucket>) -> &'static str {
     match bucket {
-        Some(TimeBucket::Hour) => "strftime('%Y-%m-%d %H:00:00', events.timestamp)",
-        Some(TimeBucket::Day) => "strftime('%Y-%m-%d', events.timestamp)",
-        Some(TimeBucket::Week) => "strftime('%Y-W%W', events.timestamp)",
-        Some(TimeBucket::Month) => "strftime('%Y-%m', events.timestamp)",
-        Some(TimeBucket::Year) => "strftime('%Y', events.timestamp)",
+        Some(TimeBucket::Hour) => "strftime('%Y-%m-%d %H:%M:%S', events.timestamp, 'localtime')",
+        Some(TimeBucket::Day) => "strftime('%Y-%m-%d', events.timestamp, 'localtime')",
+        Some(TimeBucket::Week) => "strftime('%Y-W%W', events.timestamp, 'localtime')",
+        Some(TimeBucket::Month) => "strftime('%Y-%m', events.timestamp, 'localtime')",
+        Some(TimeBucket::Year) => "strftime('%Y', events.timestamp, 'localtime')",
         None => "'Unbucketed'",
     }
 }

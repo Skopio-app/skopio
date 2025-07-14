@@ -7,6 +7,6 @@ interface DashboardFilterState {
 }
 
 export const useDashboardFilter = create<DashboardFilterState>((set) => ({
-  preset: "Today",
+  preset: "today",
   setPreset: (preset) => set({ preset }),
 }));

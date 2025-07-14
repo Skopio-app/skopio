@@ -1,7 +1,7 @@
 import { ResponsivePieCanvas } from "@nivo/pie";
 import { useMemo } from "react";
-import { formatDuration } from "../helpers/dateRanges";
 import { useOrdinalColorScale } from "@nivo/colors";
+import { formatDuration } from "../../../utils/time";
 
 interface CustomPieChartProps {
   data: {

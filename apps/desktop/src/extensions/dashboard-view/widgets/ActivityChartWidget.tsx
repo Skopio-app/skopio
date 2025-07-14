@@ -12,13 +12,13 @@ import {
 } from "../helpers/activityCache";
 import { isDeltaOutdated } from "../helpers/delta";
 
-const getTodayPreset = (): TimeRangePreset => "Today";
+const getTodayPreset = (): TimeRangePreset => "today";
 
 const getYearPreset = (): TimeRangePreset => ({
-  Custom: {
+  custom: {
     start: startOfYear(new Date()).toISOString(),
     end: endOfYear(new Date()).toISOString(),
-    bucket: "Day",
+    bucket: "day",
   },
 });
 
@@ -43,7 +43,6 @@ const ActivityChartWidget = () => {
 
       if (!cached || cached.values.length === 0) {
         const fresh = getYearData();
-        console.log("The fresh data: ", fresh);
         const values = fresh.map(({ bucket, grouped_values }) => ({
           day: bucket,
           value: grouped_values["Total"] ?? 0,

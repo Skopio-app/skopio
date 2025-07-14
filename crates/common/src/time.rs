@@ -8,31 +8,60 @@ pub enum TimeError {
     InvalidDate,
 }
 
+/// A time granularity used for bucketing data in reports
+///
+/// - `Hour` groups events by each hour
+/// - `Day` groups events by each day
+/// - `Week` groups events by each week
+/// - `Month` groups events by each month
+/// - `Year` groups events by each year.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
 pub enum TimeBucket {
+    /// Bucket data by day
     Day,
+    /// Bucket day by week
     Week,
+    /// Bucket data by month
     Month,
+    /// Bucket data by hour
     Hour,
+    /// Bucket data by year
     Year,
 }
 
+/// A predefined range of time used to filter or summarize data.
 #[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
 pub enum TimeRangePreset {
+    /// Represents today (from midnight to now).
     Today,
+    /// Represents yesterday (midnight to midnight)
     Yesterday,
+    /// The current calendar week starting from Monday.
     ThisWeek,
+    /// The current calendar week before this one.
     LastWeek,
+    /// The current calendar month
     ThisMonth,
+    /// The previous calendar month
     LastMonth,
     // ThisYear,
-    LastNDays(i64),
-    LastNWeeks(i64),
-    LastNMonths(i64),
-    LastNYears(i64),
+    /// The last N full days (excludes today by default).
+    LastNDays(i64, bool),
+    /// The last N full weeks (excludes this week by default).
+    LastNWeeks(i64, bool),
+    /// The last N full months (excludes this month by default).
+    LastNMonths(i64, bool),
+    /// The last N full years (excludes this year by default).
+    LastNYears(i64, bool),
+    /// A custom range of time with a specific bucket size.
     Custom {
+        /// The start date (inclusive).
         start: DateTime<Utc>,
+        /// The end date (exclusive).
         end: DateTime<Utc>,
+        /// The desired bucket granularity.
         bucket: TimeBucket,
     },
 }
@@ -145,30 +174,54 @@ impl From<TimeRangePreset> for TimeRange {
                     bucket: Some(TimeBucket::Day),
                 }
             }
-            TimeRangePreset::LastNDays(n) => {
+            TimeRangePreset::LastNDays(n, include_this) => {
                 let clamped = n.clamp(1, 31);
-                let start = today_start_utc - Duration::days(clamped);
-                let end = today_start_utc;
+                let start =
+                    today_start_utc - Duration::days(clamped - if include_this { 0 } else { 1 });
+                let end = today_start_utc
+                    + if include_this {
+                        Duration::days(1)
+                    } else {
+                        Duration::zero()
+                    };
                 Self {
                     start,
                     end,
                     bucket: Some(TimeBucket::Day),
                 }
             }
-            TimeRangePreset::LastNWeeks(n) => {
+            TimeRangePreset::LastNWeeks(n, include_this) => {
                 let clamped = n.clamp(1, 9);
-                let start = today_start_utc - Duration::weeks(clamped);
-                let end = today_start_utc;
+                let weekday = local_today.weekday().num_days_from_monday() as i64;
+                let this_week_start_local = today_start_local - Duration::days(weekday);
+                let end = this_week_start_local.with_timezone(&Utc)
+                    + if include_this {
+                        Duration::days(7)
+                    } else {
+                        Duration::zero()
+                    };
+                let start = end - Duration::weeks(clamped);
                 Self {
                     start,
                     end,
                     bucket: Some(TimeBucket::Week),
                 }
             }
-            TimeRangePreset::LastNMonths(n) => {
+            TimeRangePreset::LastNMonths(n, include_this) => {
                 let clamped = n.clamp(1, 12);
-                let mut start_year = local_today.year();
-                let mut start_month = local_today.month() as i32 - clamped as i32;
+                let mut year = local_today.year();
+                let mut month = local_today.month() as i32;
+
+                if !include_this {
+                    month -= 1;
+                    if month <= 0 {
+                        month += 12;
+                        year -= 1;
+                    }
+                }
+
+                let mut start_month = month - clamped as i32 + 1;
+                let mut start_year = year;
                 while start_month <= 0 {
                     start_month += 12;
                     start_year -= 1;
@@ -179,9 +232,14 @@ impl From<TimeRangePreset> for TimeRange {
                     .single()
                     .unwrap();
                 let end_local = Local
-                    .with_ymd_and_hms(local_today.year(), local_today.month(), 1, 0, 0, 0)
+                    .with_ymd_and_hms(year, month as u32 + 1, 1, 0, 0, 0)
                     .single()
-                    .unwrap();
+                    .unwrap_or_else(|| {
+                        Local
+                            .with_ymd_and_hms(year + 1, 1, 1, 0, 0, 0)
+                            .single()
+                            .unwrap()
+                    });
 
                 Self {
                     start: start_local.with_timezone(&Utc),
@@ -189,14 +247,16 @@ impl From<TimeRangePreset> for TimeRange {
                     bucket: Some(TimeBucket::Month),
                 }
             }
-            TimeRangePreset::LastNYears(n) => {
+            TimeRangePreset::LastNYears(n, include_this) => {
                 let clamped = n.clamp(1, 12);
+                let end_year = local_today.year() + if include_this { 1 } else { 0 };
+                let start_year = end_year - clamped as i32;
                 let start_local = Local
-                    .with_ymd_and_hms(local_today.year() - clamped as i32, 1, 1, 0, 0, 0)
+                    .with_ymd_and_hms(start_year, 1, 1, 0, 0, 0)
                     .single()
                     .unwrap();
                 let end_local = Local
-                    .with_ymd_and_hms(local_today.year(), 1, 1, 0, 0, 0)
+                    .with_ymd_and_hms(end_year, 1, 1, 0, 0, 0)
                     .single()
                     .unwrap();
 
