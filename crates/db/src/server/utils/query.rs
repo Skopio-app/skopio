@@ -1,4 +1,4 @@
-use chrono::{DateTime, Local, NaiveDateTime, Utc};
+use chrono::{DateTime, Utc};
 use common::{models::inputs::Group, time::TimeBucket};
 
 use crate::server::utils::summary_filter::SummaryFilters;
@@ -100,29 +100,29 @@ pub fn get_time_bucket_expr(bucket: Option<TimeBucket>) -> &'static str {
     }
 }
 
-pub fn convert_utc_bucket_to_local(bucket: &str) -> String {
-    let formats = [
-        ("%Y-%m-%d %H:%M:%S", "hour"),
-        ("%Y-%m-%d", "day"),
-        ("%Y-%m", "month"),
-        ("%Y", "year"),
-    ];
+// pub fn convert_utc_bucket_to_local(bucket: &str) -> String {
+//     let formats = [
+//         ("%Y-%m-%d %H:%M:%S", "hour"),
+//         ("%Y-%m-%d", "day"),
+//         ("%Y-%m", "month"),
+//         ("%Y", "year"),
+//     ];
 
-    let trimmed = bucket.trim();
+//     let trimmed = bucket.trim();
 
-    for (fmt, granularity) in formats.iter() {
-        if let Ok(naive_dt) = NaiveDateTime::parse_from_str(trimmed, fmt) {
-            let utc_dt: DateTime<Utc> = DateTime::<Utc>::from_naive_utc_and_offset(naive_dt, Utc);
-            let local_dt = utc_dt.with_timezone(&Local);
-            return match *granularity {
-                "hour" => local_dt.format("%Y-%m-%d %H:%M:%S").to_string(),
-                "day" => local_dt.format("%Y-%m-%d").to_string(),
-                "month" => local_dt.format("%Y-%m").to_string(),
-                "year" => local_dt.format("%Y").to_string(),
-                _ => local_dt.to_rfc3339(),
-            };
-        }
-    }
+//     for (fmt, granularity) in formats.iter() {
+//         if let Ok(naive_dt) = NaiveDateTime::parse_from_str(trimmed, fmt) {
+//             let utc_dt: DateTime<Utc> = DateTime::<Utc>::from_naive_utc_and_offset(naive_dt, Utc);
+//             let local_dt = utc_dt.with_timezone(&Local);
+//             return match *granularity {
+//                 "hour" => local_dt.format("%Y-%m-%d %H:%M:%S").to_string(),
+//                 "day" => local_dt.format("%Y-%m-%d").to_string(),
+//                 "month" => local_dt.format("%Y-%m").to_string(),
+//                 "year" => local_dt.format("%Y").to_string(),
+//                 _ => local_dt.to_rfc3339(),
+//             };
+//         }
+//     }
 
-    bucket.to_string()
-}
+//     bucket.to_string()
+// }

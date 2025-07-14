@@ -1,5 +1,5 @@
 import { cn } from "@skopio/ui";
-import { Clock, Pencil, Settings, Trash2, Type } from "lucide-react";
+import { Pencil, Settings, Trash2, Type } from "lucide-react";
 import React from "react";
 import SkeletonChart from "../../../components/SkeletonChart";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
@@ -12,7 +12,7 @@ interface GoalChartCardProps {
   onRename?: () => void;
   onEdit?: () => void;
   onDelete?: () => void;
-  onSnooze?: () => void;
+  // onSnooze?: () => void;
 }
 
 const SettingsButton = React.forwardRef<
@@ -48,7 +48,7 @@ const GoalChartCard: React.FC<GoalChartCardProps> = ({
   onRename,
   onEdit,
   onDelete,
-  onSnooze,
+  // onSnooze,
 }) => {
   return (
     <div
@@ -89,13 +89,13 @@ const GoalChartCard: React.FC<GoalChartCardProps> = ({
                   <Pencil className="w-4 h-4 text-gray-500" />
                   Edit
                 </DropdownMenu.Item>
-                <DropdownMenu.Item
+                {/* <DropdownMenu.Item
                   onSelect={onSnooze}
                   className="cursor-pointer flex items-center gap-2 rounded px-3 py-2 hover:bg-gray-100"
                 >
                   <Clock className="w-4 h-4 text-gray-500" />
                   Snooze
-                </DropdownMenu.Item>
+                </DropdownMenu.Item> */}
                 <DropdownMenu.Separator className="m-2 h-px bg-neutral-400" />
                 <DropdownMenu.Item
                   onSelect={onDelete}

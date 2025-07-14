@@ -9,7 +9,7 @@ use crate::{
     server::utils::{
         query::{
             append_all_filters, append_date_range, append_group_by, append_standard_joins,
-            convert_utc_bucket_to_local, get_time_bucket_expr, group_key_column,
+            get_time_bucket_expr, group_key_column,
         },
         summary_filter::SummaryFilters,
     },
@@ -245,7 +245,7 @@ impl SummaryQueryBuilder {
         let records = grouped_map
             .into_iter()
             .map(|(bucket, grouped_values)| BucketTimeSummary {
-                bucket: convert_utc_bucket_to_local(&bucket),
+                bucket,
                 grouped_values,
             })
             .collect::<Vec<_>>();

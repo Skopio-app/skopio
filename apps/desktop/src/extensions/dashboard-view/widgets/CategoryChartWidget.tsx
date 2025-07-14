@@ -11,27 +11,41 @@ const CategoryChartWidget = () => {
   const [data, keys] = useMemo(() => {
     const categoryBuckets = rawGrouped.category ?? [];
 
-    const grouped: Record<string, Record<string, number>> = {};
+    const grouped: {
+      date: Date;
+      label: string;
+      values: Record<string, number>;
+    }[] = [];
     const allKeys = new Set<string>();
+    const totalPerKey: Record<string, number> = {};
 
     for (const { bucket, grouped_values } of categoryBuckets) {
-      const label = format(parseISO(bucket), "MMM d");
-      if (!grouped[label]) grouped[label] = {};
+      const date = parseISO(bucket);
+      const label = format(date, "MMM d");
+      const values: Record<string, number> = {};
 
       for (const [category, seconds] of Object.entries(grouped_values)) {
-        grouped[label][category] = seconds ?? 0;
+        const value = seconds ?? 0;
+        values[category] = seconds ?? 0;
+        totalPerKey[category] = (totalPerKey[category] || 0) + value;
         allKeys.add(category);
       }
+
+      grouped.push({ date, label, values });
     }
 
-    const chartData: BarChartData[] = Object.entries(grouped).map(
-      ([label, groupTotals]) => ({
-        label,
-        ...groupTotals,
-      }),
+    grouped.sort((a, b) => a.date.getTime() - b.date.getTime());
+
+    const sortedKeys = Array.from(allKeys).sort(
+      (a, b) => (totalPerKey[b] ?? 0) - (totalPerKey[a] ?? 0),
     );
 
-    return [chartData, Array.from(allKeys)] as [BarChartData[], string[]];
+    const chartData: BarChartData[] = grouped.map(({ label, values }) => ({
+      label,
+      ...values,
+    }));
+
+    return [chartData, sortedKeys] as [BarChartData[], string[]];
   }, [rawGrouped.category]);
 
   return (

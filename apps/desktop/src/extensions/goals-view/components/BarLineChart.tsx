@@ -2,6 +2,7 @@ import React from "react";
 import { ResponsiveBar } from "@nivo/bar";
 import { ResponsiveLine } from "@nivo/line";
 import { formatDuration } from "../../../utils/time";
+import { TimeSpan } from "../../../types/tauri.gen";
 
 interface BasicBarChartProps {
   data: {
@@ -9,9 +10,14 @@ interface BasicBarChartProps {
     value: number;
   }[];
   goalDuration: number;
+  timeSpan: TimeSpan;
 }
 
-const BarLineChart: React.FC<BasicBarChartProps> = ({ data, goalDuration }) => {
+const BarLineChart: React.FC<BasicBarChartProps> = ({
+  data,
+  goalDuration,
+  timeSpan,
+}) => {
   if (!data.length) {
     return (
       <div className="h-[220px] w-full flex items-center justify-center text-sm text-gray-500">
@@ -57,7 +63,7 @@ const BarLineChart: React.FC<BasicBarChartProps> = ({ data, goalDuration }) => {
             let formattedLabel = indexValue;
             const date = new Date(indexValue);
 
-            if (!Number.isNaN(date.getTime())) {
+            if (!Number.isNaN(date.getTime()) && timeSpan === "day") {
               const dayName = date.toLocaleDateString(undefined, {
                 weekday: "short",
               });

@@ -11,7 +11,6 @@ use db::{
     DBContext,
 };
 use tokio::sync::Mutex;
-use tracing::info;
 
 use crate::utils::error_response;
 
@@ -90,8 +89,6 @@ pub async fn get_bucketed_summary(
     let db = db.lock().await;
 
     let range = TimeRange::from(payload.preset);
-    info!("Range start: {}", range.start());
-    info!("Range end: {}", range.end());
 
     let builder = SummaryQueryBuilder::default()
         .start(range.start())

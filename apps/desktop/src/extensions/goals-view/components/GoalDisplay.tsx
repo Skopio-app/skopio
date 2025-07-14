@@ -47,7 +47,6 @@ const GoalDisplay = ({ goal }: { goal: Goal }) => {
     const fetchData = async () => {
       try {
         const summary = await commands.fetchBucketedSummary(query);
-        console.log("The goal chart data: ", summary);
         setData(summary);
       } catch (e) {
         console.error("Error fetching summary for goal: ", goal.id, e);
@@ -72,7 +71,11 @@ const GoalDisplay = ({ goal }: { goal: Goal }) => {
       onDelete={() => setShowGoalDeleteDialog(true)}
       onEdit={() => setShowGoalDialog(true)}
     >
-      <BarLineChart data={chartData} goalDuration={goal.targetSeconds} />
+      <BarLineChart
+        data={chartData}
+        goalDuration={goal.targetSeconds}
+        timeSpan={goal.timeSpan}
+      />
       <GoalTitleDialog
         open={showEditNameDialog}
         onOpenChange={setShowEditNameDialog}
