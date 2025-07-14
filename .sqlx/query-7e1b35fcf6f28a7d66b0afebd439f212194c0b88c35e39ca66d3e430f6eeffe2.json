@@ -11,12 +11,12 @@
       {
         "name": "afk_start",
         "ordinal": 1,
-        "type_info": "Datetime"
+        "type_info": "Text"
       },
       {
         "name": "afk_end",
         "ordinal": 2,
-        "type_info": "Datetime"
+        "type_info": "Text"
       },
       {
         "name": "duration",
@@ -27,7 +27,12 @@
     "parameters": {
       "Right": 1
     },
-    "nullable": [false, false, true, true]
+    "nullable": [
+      false,
+      false,
+      true,
+      true
+    ]
   },
   "hash": "7e1b35fcf6f28a7d66b0afebd439f212194c0b88c35e39ca66d3e430f6eeffe2"
 }

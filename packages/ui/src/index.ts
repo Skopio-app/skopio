@@ -9,3 +9,8 @@ export * from "./components/skeleton";
 export * from "./components/tooltip";
 export * from "./components/dialog";
 export * from "./components/calendar";
+export * from "./components/switch";
+export * from "./components/label";
+export * from "./components/ChipSelector";
+export * from "./components/card";
+export * from "./components/hotkey";

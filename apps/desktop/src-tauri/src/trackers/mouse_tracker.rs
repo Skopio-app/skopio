@@ -5,7 +5,7 @@ use core_graphics::event::{
     CGEventTap, CGEventTapLocation, CGEventTapOptions, CGEventTapPlacement, CGEventType,
 };
 use core_graphics::geometry::CGPoint;
-use log::{error, warn};
+use log::{error, info, warn};
 use objc2_foundation::NSAutoreleasePool;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
@@ -160,6 +160,7 @@ impl MouseTracker {
     pub fn stop_tracking(&self) {
         if let Some(ref rl) = *self.runloop.lock().unwrap() {
             CFRunLoop::stop(rl);
+            info!("Mouse tracker stopped");
         }
     }
 }

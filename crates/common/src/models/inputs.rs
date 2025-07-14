@@ -1,31 +1,31 @@
-use chrono::{DateTime, NaiveDateTime, Utc};
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
 use crate::time::TimeRangePreset;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct EventInput {
-    pub timestamp: Option<NaiveDateTime>,
+    pub timestamp: Option<DateTime<Utc>>,
     pub duration: Option<i64>,
-    pub activity_type: String,
+    pub category: String,
     pub app_name: String,
     pub entity_name: String,
     pub entity_type: String,
     pub project_name: String,
     pub project_path: String,
-    pub branch_name: String,
-    pub language_name: String,
-    pub end_timestamp: Option<NaiveDateTime>,
+    pub branch_name: Option<String>,
+    pub language_name: Option<String>,
+    pub end_timestamp: Option<DateTime<Utc>>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct HeartbeatInput {
-    pub timestamp: Option<NaiveDateTime>,
+    pub timestamp: Option<DateTime<Utc>>,
     pub project_name: String,
     pub project_path: String,
     pub entity_name: String,
     pub entity_type: String,
-    pub branch_name: String,
+    pub branch_name: Option<String>,
     pub language_name: Option<String>,
     pub app_name: String,
     pub is_write: bool,
@@ -35,12 +35,12 @@ pub struct HeartbeatInput {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct AFKEventInput {
-    pub afk_start: NaiveDateTime,
-    pub afk_end: Option<NaiveDateTime>,
+    pub afk_start: DateTime<Utc>,
+    pub afk_end: Option<DateTime<Utc>>,
     pub duration: Option<i64>,
 }
 
-#[derive(Debug, Serialize, Deserialize, specta::Type)]
+#[derive(Debug, Serialize, Deserialize, Clone, Copy, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub enum Group {
     App,
@@ -56,17 +56,17 @@ pub struct SummaryQueryInput {
     pub start: Option<DateTime<Utc>>,
     pub end: Option<DateTime<Utc>>,
     #[specta(optional)]
-    pub app_names: Option<Vec<String>>,
+    pub apps: Option<Vec<String>>,
     #[specta(optional)]
-    pub project_names: Option<Vec<String>>,
+    pub projects: Option<Vec<String>>,
     #[specta(optional)]
-    pub activity_types: Option<Vec<String>>,
+    pub categories: Option<Vec<String>>,
     #[specta(optional)]
-    pub entity_names: Option<Vec<String>>,
+    pub entities: Option<Vec<String>>,
     #[specta(optional)]
-    pub branch_names: Option<Vec<String>>,
+    pub branches: Option<Vec<String>>,
     #[specta(optional)]
-    pub language_names: Option<Vec<String>>,
+    pub languages: Option<Vec<String>>,
     pub include_afk: bool,
 }
 

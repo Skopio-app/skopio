@@ -1,6 +1,6 @@
 import { Button, cn } from "@skopio/ui";
 import { GripVertical, X } from "lucide-react";
-import SkeletonChart from "./SkeletonChart";
+import SkeletonChart from "../../../components/SkeletonChart";
 import React from "react";
 
 export interface WidgetCardProps {

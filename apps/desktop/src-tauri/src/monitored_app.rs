@@ -44,8 +44,7 @@ static LEARNING_URLS: LazyLock<HashSet<&'static str>> = LazyLock::new(|| {
     ])
 });
 
-pub static IGNORED_APPS: LazyLock<HashSet<MonitoredApp>> =
-    LazyLock::new(|| HashSet::from([MonitoredApp::Code]));
+pub static IGNORED_APPS: LazyLock<HashSet<MonitoredApp>> = LazyLock::new(|| HashSet::from([]));
 
 static CODING_URLS: LazyLock<HashSet<&'static str>> = LazyLock::new(|| {
     HashSet::from([

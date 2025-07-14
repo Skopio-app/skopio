@@ -1,5 +1,7 @@
 use std::path::Path;
 
+use thiserror::Error;
+
 use crate::DBContext;
 
 pub fn extract_db_file_path(database_url: &str) -> std::path::PathBuf {
@@ -8,7 +10,7 @@ pub fn extract_db_file_path(database_url: &str) -> std::path::PathBuf {
 }
 
 #[allow(dead_code)]
-pub(crate) async fn update_synced_in(
+pub async fn update_synced_in(
     db_context: &DBContext,
     table: &str,
     ids: &[i64],
@@ -36,4 +38,13 @@ pub(crate) async fn update_synced_in(
     query_builder.execute(db_context.pool()).await?;
 
     Ok(())
+}
+
+#[derive(Error, Debug)]
+pub enum DBError {
+    #[error("SQLx error: {0}")]
+    Sqlx(#[from] sqlx::Error),
+
+    #[error("Timestamp parse error: {0}")]
+    Parse(#[from] chrono::ParseError),
 }

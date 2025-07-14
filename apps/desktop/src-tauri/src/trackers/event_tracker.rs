@@ -1,4 +1,3 @@
-use crate::helpers::db::to_naive_datetime;
 use crate::helpers::git::get_git_branch;
 use crate::monitored_app::{resolve_app_details, Category, Entity, MonitoredApp, IGNORED_APPS};
 use crate::tracking_service::TrackingService;
@@ -19,7 +18,7 @@ pub struct Event {
     #[serde(with = "chrono::serde::ts_seconds_option")]
     pub timestamp: Option<DateTime<Utc>>,
     pub duration: Option<i64>,
-    pub activity_type: Category,
+    pub category: Category,
     pub app_name: String,
     pub entity_name: Option<String>,
     pub entity_type: Option<Entity>,
@@ -94,9 +93,9 @@ impl EventTracker {
 
                     let db_event = DBEvent {
                         id: None,
-                        timestamp: to_naive_datetime(ended_event.timestamp),
+                        timestamp: ended_event.timestamp,
                         duration: ended_event.duration,
-                        activity_type: Some(ended_event.activity_type.to_string()),
+                        category: Some(ended_event.category.to_string()),
                         app_name: ended_event.app_name,
                         entity_name: ended_event.entity_name,
                         entity_type: Some(ended_event.entity_type.unwrap().to_string()),
@@ -104,7 +103,7 @@ impl EventTracker {
                         project_path: ended_event.project_path,
                         branch_name: ended_event.branch_name,
                         language_name: ended_event.language_name,
-                        end_timestamp: to_naive_datetime(ended_event.end_timestamp),
+                        end_timestamp: ended_event.end_timestamp,
                     };
 
                     self.tracker
@@ -114,10 +113,7 @@ impl EventTracker {
 
                     info!(
                         "Event Ended: App={}, Entity={:?}, Activity={}, Duration={}s",
-                        prev_event.app_name,
-                        prev_event.entity_name,
-                        prev_event.activity_type,
-                        duration
+                        prev_event.app_name, prev_event.entity_name, prev_event.category, duration
                     );
                     should_reset_event = true;
                 }
@@ -130,7 +126,7 @@ impl EventTracker {
             *active = Some(Event {
                 timestamp: Some(now),
                 duration: None,
-                activity_type: category,
+                category: category,
                 app_name: app_name.to_string(),
                 entity_name: Some(entity_name.clone()),
                 entity_type: Some(entity_type),
@@ -222,9 +218,9 @@ impl EventTracker {
 
             let db_event = DBEvent {
                 id: None,
-                timestamp: to_naive_datetime(ended_event.timestamp),
+                timestamp: ended_event.timestamp,
                 duration: ended_event.duration,
-                activity_type: Some(ended_event.activity_type.to_string()),
+                category: Some(ended_event.category.to_string()),
                 app_name: ended_event.app_name,
                 entity_name: ended_event.entity_name,
                 entity_type: Some(ended_event.entity_type.unwrap().to_string()),
@@ -232,7 +228,7 @@ impl EventTracker {
                 project_path: ended_event.project_path,
                 branch_name: ended_event.branch_name,
                 language_name: ended_event.language_name,
-                end_timestamp: to_naive_datetime(ended_event.end_timestamp),
+                end_timestamp: ended_event.end_timestamp,
             };
 
             self.tracker
@@ -242,10 +238,7 @@ impl EventTracker {
 
             info!(
                 "Auto-ending inactive event: App: {}, Entity: {:?}, Activity: {}, Duration: {}s",
-                prev_event.app_name,
-                prev_event.entity_name,
-                prev_event.activity_type,
-                event_duration
+                prev_event.app_name, prev_event.entity_name, prev_event.category, event_duration
             );
         }
     }

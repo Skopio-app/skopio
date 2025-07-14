@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "\n        SELECT EXISTS (\n            SELECT 1 FROM shown_goal_notifications\n            WHERE goal_id = ? AND TIME_SPAN = ? AND period_key = ?\n        )\n        ",
+  "describe": {
+    "columns": [
+      {
+        "name": "EXISTS (\n            SELECT 1 FROM shown_goal_notifications\n            WHERE goal_id = ? AND TIME_SPAN = ? AND period_key = ?\n        )",
+        "ordinal": 0,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 3
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "b60c9f2751597b278a4fbc9e39f48d81948c16c02ef2ba49b5c909c834495737"
+}

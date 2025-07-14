@@ -6,9 +6,9 @@ use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum::routing::{get, post};
 use axum::{Json, Router};
-use chrono::{DateTime, NaiveDateTime, Utc};
+use chrono::{DateTime, Utc};
 use common::models::inputs::EventInput;
-use db::server::apps::App;
+use db::models::{App, Category};
 use db::server::branches::Branch;
 use db::server::entities::Entity;
 use db::server::events::{fetch_range, fetch_recent, Event};
@@ -19,7 +19,7 @@ use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::Mutex;
 use tokio::time::sleep;
-use tracing::{debug, error, warn};
+use tracing::{debug, error, info, warn};
 
 async fn handle_events(
     State(db): State<Arc<Mutex<DBContext>>>,
@@ -36,14 +36,18 @@ async fn handle_events(
         let project_id = Project::find_or_insert(&db, &event.project_name, &event.project_path)
             .await
             .map_err(error_response)?;
-        let branch_id = Branch::find_or_insert(&db, project_id, &event.branch_name)
-            .await
-            .map_err(error_response)?;
+        let branch_id =
+            Branch::find_or_insert(&db, project_id, &event.branch_name.unwrap_or_default())
+                .await
+                .map_err(error_response)?;
         let entity_id =
             Entity::find_or_insert(&db, project_id, &event.entity_name, &event.entity_type)
                 .await
                 .map_err(error_response)?;
-        let language_id = Language::find_or_insert(&db, &event.language_name)
+        let language_id = Language::find_or_insert(&db, &event.language_name.unwrap_or_default())
+            .await
+            .map_err(error_response)?;
+        let category_id = Category::find_or_insert(&db, &event.category)
             .await
             .map_err(error_response)?;
 
@@ -51,7 +55,7 @@ async fn handle_events(
             id: None,
             timestamp: event.timestamp.unwrap_or_default(),
             duration: event.duration,
-            activity_type: event.activity_type,
+            category_id,
             app_id,
             entity_id: Some(entity_id),
             project_id: Some(project_id),
@@ -59,6 +63,8 @@ async fn handle_events(
             language_id: Some(language_id),
             end_timestamp: event.end_timestamp,
         };
+
+        info!("The event created: {:?}", event);
 
         event.create(&db).await.map_err(error_response)?;
     }
@@ -74,9 +80,9 @@ pub async fn event_ws_handler(
 
 async fn handle_event_ws(mut socket: WebSocket, db: Arc<Mutex<DBContext>>) {
     let duration = chrono::Duration::minutes(15);
-    let mut current_start: NaiveDateTime = Utc::now().naive_utc() - duration;
-    let mut current_end: NaiveDateTime = Utc::now().naive_utc();
-    let mut last_event_timestamp: NaiveDateTime = current_start;
+    let mut current_start: DateTime<Utc> = Utc::now() - duration;
+    let mut current_end: DateTime<Utc> = Utc::now();
+    let mut last_event_timestamp: DateTime<Utc> = current_start;
 
     loop {
         tokio::select! {
@@ -100,7 +106,7 @@ async fn handle_event_ws(mut socket: WebSocket, db: Arc<Mutex<DBContext>>) {
                                     let parse_utc_time = |s: &str| {
                                         DateTime::parse_from_rfc3339(s)
                                             .map_err(|e| format!("RFC3339 parse error: {}", e))
-                                            .map(|dt_utc| dt_utc.naive_utc())
+                                            .map(|dt_utc| dt_utc.to_utc())
                                     };
 
                                     if let (Ok(start_ts), Ok(end_ts)) = (parse_utc_time(&req.start_timestamp), parse_utc_time(&req.end_timestamp)) {
@@ -154,8 +160,8 @@ async fn handle_event_ws(mut socket: WebSocket, db: Arc<Mutex<DBContext>>) {
 async fn send_range_data(
     socket: &mut WebSocket,
     db: &Arc<Mutex<DBContext>>,
-    start: NaiveDateTime,
-    end: NaiveDateTime,
+    start: DateTime<Utc>,
+    end: DateTime<Utc>,
 ) -> Result<(), axum::Error> {
     let db_guard = db.lock().await;
     match fetch_range(&db_guard, start, end).await {

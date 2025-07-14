@@ -193,6 +193,7 @@ async fn flush(
     info!("Flushed {} items in {:?}", batch_size, start.elapsed())
 }
 
+// TODO: Fix up issue with empty branch names being stored
 async fn sync_with_server(db_context: &Arc<DBContext>) -> Result<(), anyhow::Error> {
     let client = Client::new();
     let heartbeats = Heartbeat::unsynced(db_context).await?;
@@ -205,7 +206,7 @@ async fn sync_with_server(db_context: &Arc<DBContext>) -> Result<(), anyhow::Err
                 project_path: hb.project_path.clone().unwrap_or_default(),
                 entity_name: hb.entity_name.clone(),
                 entity_type: hb.entity_type.clone(),
-                branch_name: hb.entity_name.clone(),
+                branch_name: hb.branch_name.clone(),
                 language_name: hb.language_name.clone(),
                 app_name: hb.app_name.clone(),
                 is_write: hb.is_write.unwrap_or_default(),
@@ -237,14 +238,14 @@ async fn sync_with_server(db_context: &Arc<DBContext>) -> Result<(), anyhow::Err
             .map(|ev| EventInput {
                 timestamp: ev.timestamp,
                 duration: ev.duration,
-                activity_type: ev.activity_type.clone().unwrap_or_default(),
+                category: ev.category.clone().unwrap_or_default(),
                 app_name: ev.app_name.clone(),
                 entity_name: ev.entity_name.clone().unwrap_or_default(),
                 entity_type: ev.entity_type.clone().unwrap_or_default(),
                 project_name: ev.project_name.clone().unwrap_or_default(),
                 project_path: ev.project_path.clone().unwrap_or_default(),
-                branch_name: ev.branch_name.clone().unwrap_or_default(),
-                language_name: ev.language_name.clone().unwrap_or_default(),
+                branch_name: Some(ev.branch_name.clone().unwrap_or_default()),
+                language_name: Some(ev.language_name.clone().unwrap_or_default()),
                 end_timestamp: ev.end_timestamp,
             })
             .collect();

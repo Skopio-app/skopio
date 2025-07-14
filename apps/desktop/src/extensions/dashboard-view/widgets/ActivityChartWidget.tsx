@@ -2,8 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import WidgetCard from "../components/WidgetCard";
 import CalendarChart from "../charts/CalendarChart";
 import { TimeRangePreset } from "../../../types/tauri.gen";
-import { endOfDay, endOfYear, startOfDay, startOfYear } from "date-fns";
-import { toNaiveDateTime } from "../dateRanges";
+import { endOfYear, startOfYear } from "date-fns";
 import { useSummaryData } from "../hooks/useSummaryData";
 import { CalendarChartData } from "../types";
 import {
@@ -13,19 +12,13 @@ import {
 } from "../helpers/activityCache";
 import { isDeltaOutdated } from "../helpers/delta";
 
-const getTodayPreset = (): TimeRangePreset => ({
-  Custom: {
-    start: toNaiveDateTime(startOfDay(new Date())),
-    end: toNaiveDateTime(endOfDay(new Date())),
-    bucket: "Day",
-  },
-});
+const getTodayPreset = (): TimeRangePreset => "today";
 
 const getYearPreset = (): TimeRangePreset => ({
-  Custom: {
-    start: toNaiveDateTime(startOfYear(new Date())),
-    end: toNaiveDateTime(endOfYear(new Date())),
-    bucket: "Day",
+  custom: {
+    start: startOfYear(new Date()).toISOString(),
+    end: endOfYear(new Date()).toISOString(),
+    bucket: "day",
   },
 });
 

@@ -18,21 +18,6 @@ export const commands = {
   async setHeartbeatInterval(interval: number): Promise<null> {
     return await TAURI_INVOKE("set_heartbeat_interval", { interval });
   },
-  async fetchAppSummary(
-    query: SummaryQueryInput,
-  ): Promise<GroupedTimeSummary[]> {
-    return await TAURI_INVOKE("fetch_app_summary", { query });
-  },
-  async fetchProjectsSummary(
-    query: SummaryQueryInput,
-  ): Promise<GroupedTimeSummary[]> {
-    return await TAURI_INVOKE("fetch_projects_summary", { query });
-  },
-  async fetchActivityTypesSummary(
-    query: SummaryQueryInput,
-  ): Promise<GroupedTimeSummary[]> {
-    return await TAURI_INVOKE("fetch_activity_types_summary", { query });
-  },
   async fetchBucketedSummary(
     query: BucketedSummaryInput,
   ): Promise<BucketTimeSummary[]> {
@@ -46,6 +31,27 @@ export const commands = {
   ): Promise<GroupedTimeSummary[]> {
     return await TAURI_INVOKE("fetch_range_summary", { query });
   },
+  async addGoal(input: GoalInput): Promise<null> {
+    return await TAURI_INVOKE("add_goal", { input });
+  },
+  async getGoals(): Promise<Goal[]> {
+    return await TAURI_INVOKE("get_goals");
+  },
+  async updateGoal(goalId: number, input: GoalUpdateInput): Promise<null> {
+    return await TAURI_INVOKE("update_goal", { goalId, input });
+  },
+  async removeGoal(goalId: number): Promise<null> {
+    return await TAURI_INVOKE("remove_goal", { goalId });
+  },
+  async fetchApps(): Promise<App[]> {
+    return await TAURI_INVOKE("fetch_apps");
+  },
+  async fetchCategories(): Promise<Category[]> {
+    return await TAURI_INVOKE("fetch_categories");
+  },
+  async dismissNotificationWindow(): Promise<null> {
+    return await TAURI_INVOKE("dismiss_notification_window");
+  },
 };
 
 /** user-defined events **/
@@ -54,6 +60,7 @@ export const commands = {
 
 /** user-defined types **/
 
+export type App = { id: number | null; name: string };
 export type AppConfig = {
   theme: Theme;
   heartbeat_interval: number;
@@ -76,6 +83,45 @@ export type BucketedSummaryInput = {
   group_by?: Group | null;
   include_afk: boolean;
 };
+export type Category = { id: number | null; name: string };
+export type Goal = {
+  id: number;
+  name: string;
+  targetSeconds: number;
+  timeSpan: TimeSpan;
+  useApps: boolean;
+  useCategories: boolean;
+  ignoreNoActivityDays: boolean;
+  createdAt: string;
+  updatedAt: string;
+  apps: string[];
+  categories: string[];
+  excludedDays: string[];
+};
+export type GoalInput = {
+  name: string;
+  createdAt: string;
+  updatedAt: string;
+  targetSeconds: number;
+  timeSpan: TimeSpan;
+  useApps: boolean;
+  useCategories: boolean;
+  ignoreNoActivityDays: boolean;
+  apps: string[];
+  categories: string[];
+  excludedDays: string[];
+};
+export type GoalUpdateInput = {
+  name?: string | null;
+  targetSeconds?: number | null;
+  timeSpan?: TimeSpan | null;
+  useApps?: boolean | null;
+  useCategories?: boolean | null;
+  ignoreNoActivityDays?: boolean | null;
+  apps?: string[] | null;
+  categories?: string[] | null;
+  excludedDays?: string[] | null;
+};
 export type Group =
   | "app"
   | "project"
@@ -84,29 +130,118 @@ export type Group =
   | "category"
   | "entity";
 export type GroupedTimeSummary = { group_key: string; total_seconds: number };
+export type NotificationPayload = {
+  title: string;
+  durationMs: number;
+  message: string | null;
+  soundFile: string | null;
+};
 export type SummaryQueryInput = {
   start: string | null;
   end: string | null;
-  app_names?: string[] | null;
-  project_names?: string[] | null;
-  activity_types?: string[] | null;
-  entity_names?: string[] | null;
-  branch_names?: string[] | null;
-  language_names?: string[] | null;
+  apps?: string[] | null;
+  projects?: string[] | null;
+  categories?: string[] | null;
+  entities?: string[] | null;
+  branches?: string[] | null;
+  languages?: string[] | null;
   include_afk: boolean;
 };
 export type Theme = "Light" | "Dark" | "System";
-export type TimeBucket = "Day" | "Week" | "Month" | "Hour";
+/**
+ * A time granularity used for bucketing data in reports
+ *
+ * - `Hour` groups events by each hour
+ * - `Day` groups events by each day
+ * - `Week` groups events by each week
+ * - `Month` groups events by each month
+ * - `Year` groups events by each year.
+ */
+export type TimeBucket =
+  /**
+   * Bucket data by day
+   */
+  | "day"
+  /**
+   * Bucket day by week
+   */
+  | "week"
+  /**
+   * Bucket data by month
+   */
+  | "month"
+  /**
+   * Bucket data by hour
+   */
+  | "hour"
+  /**
+   * Bucket data by year
+   */
+  | "year";
+/**
+ * A predefined range of time used to filter or summarize data.
+ */
 export type TimeRangePreset =
-  | "Today"
-  | "Yesterday"
-  | "ThisWeek"
-  | "LastWeek"
-  | "ThisMonth"
-  | "LastMonth"
-  | { LastNDays: number }
-  | { LastNWeeks: number }
-  | { Custom: { start: string; end: string; bucket: TimeBucket } };
+  /**
+   * Represents today (from midnight to now).
+   */
+  | "today"
+  /**
+   * Represents yesterday (midnight to midnight)
+   */
+  | "yesterday"
+  /**
+   * The current calendar week starting from Monday.
+   */
+  | "thisWeek"
+  /**
+   * The current calendar week before this one.
+   */
+  | "lastWeek"
+  /**
+   * The current calendar month
+   */
+  | "thisMonth"
+  /**
+   * The previous calendar month
+   */
+  | "lastMonth"
+  /**
+   * The last N full days (excludes today by default).
+   */
+  | { lastNDays: [number, boolean] }
+  /**
+   * The last N full weeks (excludes this week by default).
+   */
+  | { lastNWeeks: [number, boolean] }
+  /**
+   * The last N full months (excludes this month by default).
+   */
+  | { lastNMonths: [number, boolean] }
+  /**
+   * The last N full years (excludes this year by default).
+   */
+  | { lastNYears: [number, boolean] }
+  /**
+   * A custom range of time with a specific bucket size.
+   */
+  | {
+      custom: {
+        /**
+         * The start date (inclusive).
+         */
+        start: string;
+        /**
+         * The end date (exclusive).
+         */
+        end: string;
+        /**
+         * The desired bucket granularity.
+         */
+        bucket: TimeBucket;
+      };
+    };
+export type TimeSpan = "day" | "week" | "month" | "year";
 
 /** tauri-specta globals **/
 

@@ -1,0 +1,86 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            SELECT\n             id,\n             timestamp,\n             duration,\n             category,\n             app_name,\n             entity_name,\n             entity_type,\n             project_name,\n             project_path,\n             branch_name,\n             language_name,\n             end_timestamp\n            FROM events\n            WHERE synced = 0\n            LIMIT 100\n            ",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Integer"
+      },
+      {
+        "name": "timestamp",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "duration",
+        "ordinal": 2,
+        "type_info": "Integer"
+      },
+      {
+        "name": "category",
+        "ordinal": 3,
+        "type_info": "Text"
+      },
+      {
+        "name": "app_name",
+        "ordinal": 4,
+        "type_info": "Text"
+      },
+      {
+        "name": "entity_name",
+        "ordinal": 5,
+        "type_info": "Text"
+      },
+      {
+        "name": "entity_type",
+        "ordinal": 6,
+        "type_info": "Text"
+      },
+      {
+        "name": "project_name",
+        "ordinal": 7,
+        "type_info": "Text"
+      },
+      {
+        "name": "project_path",
+        "ordinal": 8,
+        "type_info": "Text"
+      },
+      {
+        "name": "branch_name",
+        "ordinal": 9,
+        "type_info": "Text"
+      },
+      {
+        "name": "language_name",
+        "ordinal": 10,
+        "type_info": "Text"
+      },
+      {
+        "name": "end_timestamp",
+        "ordinal": 11,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      true,
+      false,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      false
+    ]
+  },
+  "hash": "a19e06b0abbc8489923916c1c8059471d80960cad16c34436c981996cec11621"
+}

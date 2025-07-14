@@ -4,10 +4,9 @@ import { useSearchParams } from "react-router-dom";
 import {
   DATE_RANGE_LABELS,
   DateRangeType,
-  formatDuration,
   getRangeDates,
   mapRangeToPreset,
-} from "./dateRanges";
+} from "./helpers/dateRanges";
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
 import { Layout, Responsive, WidthProvider } from "react-grid-layout";
@@ -21,6 +20,7 @@ import RangeSelectionDialog from "./components/RangeSelectionDialog";
 import ActivityChartWidget from "./widgets/ActivityChartWidget";
 import { useTotalTime } from "./hooks/useTotalTime";
 import { usePersistentLayout } from "./hooks/usePersistentLayout";
+import { formatDuration } from "../../utils/time";
 
 const ResponsiveGridLayout = WidthProvider(
   Responsive,
@@ -47,7 +47,6 @@ const DashboardView = () => {
     const params = new URLSearchParams(searchParams);
     params.set("range", selectedRange);
     setSearchParams(params, { replace: true });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedRange]);
 
   useEffect(() => {

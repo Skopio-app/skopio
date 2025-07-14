@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "DELETE FROM goal_apps WHERE goal_id = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": []
+  },
+  "hash": "dfa5bd817a6edfc9db9582af82a3f8867fbd78a48afb16088f133feef45ee1be"
+}

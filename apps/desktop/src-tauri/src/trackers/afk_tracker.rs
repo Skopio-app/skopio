@@ -5,7 +5,6 @@ use std::sync::Arc;
 use tokio::sync::{watch, Mutex, RwLock};
 use tokio::time::{interval, Duration};
 
-use crate::helpers::db::to_naive_datetime;
 use crate::tracking_service::TrackingService;
 
 use super::keyboard_tracker::KeyboardTracker;
@@ -78,8 +77,8 @@ impl AFKTracker {
 
                         let afk_event = AFKEvent {
                             id: None,
-                            afk_start: to_naive_datetime(Some(afk_start_time)),
-                            afk_end: to_naive_datetime(Some(now)),
+                            afk_start: Some(afk_start_time),
+                            afk_end: Some(now),
                             duration: Some(afk_duration),
                         };
 

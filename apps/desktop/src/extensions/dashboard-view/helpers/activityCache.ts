@@ -2,6 +2,8 @@ import { BucketTimeSummary } from "../../../types/tauri.gen";
 import { CachedActivity, skopioDB } from "../db/skopioDB";
 
 export const storeYearlyActivity = async (summary: BucketTimeSummary[]) => {
+  if (!summary.length) return;
+
   const now = Date.now();
   const year = new Date(summary[0].bucket).getFullYear();
 

@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "DELETE FROM goal_excluded_days WHERE goal_id = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": []
+  },
+  "hash": "f08a809c3b9b5280e2f58685b8c55593cfc5b7435fc04bb6710ff715c45e44a1"
+}

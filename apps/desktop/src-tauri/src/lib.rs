@@ -11,12 +11,19 @@ use trackers::{
 };
 use tracking_service::{DBService, TrackingService};
 
+use crate::{
+    goals_service::GoalService,
+    ui::{notification::NotificationPayload, tray::init_tray},
+};
+
+mod goals_service;
 mod helpers;
 mod monitored_app;
-mod summaries;
+mod network;
 mod sync_service;
 mod trackers;
 mod tracking_service;
+mod ui;
 
 #[tokio::main]
 pub async fn run() {
@@ -62,6 +69,22 @@ pub async fn run() {
                 )?;
             }
 
+            #[cfg(target_os = "macos")]
+            {
+                let window = app_handle.get_webview_window("main").unwrap();
+                let ns_window = window.ns_window().unwrap();
+                unsafe {
+                    use crate::ui::toolbar::{adjust_traffic_light_position, customize_toolbar};
+                    use objc2::runtime::AnyObject;
+                    use objc2_app_kit::NSWindow;
+
+                    let window: *mut AnyObject = ns_window as *mut AnyObject;
+                    let ns_window: &NSWindow = &*(window as *const NSWindow);
+                    customize_toolbar(ns_window);
+                    adjust_traffic_light_position(ns_window);
+                }
+            }
+
             let app_handle_clone = app_handle.clone();
             tauri::async_runtime::spawn(async move {
                 if let Err(e) = setup_trackers(&app_handle_clone).await {
@@ -69,20 +92,46 @@ pub async fn run() {
                 }
             });
 
+            init_tray(app)?;
+
             Ok(())
         })
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::CloseRequested { .. } = event {
-                let cursor_tracker = window.state::<Arc<MouseTracker>>();
-                let keyboard_tracker = window.state::<Arc<KeyboardTracker>>();
-                let buffered_service = window.state::<Arc<BufferedTrackingService>>();
-                cursor_tracker.stop_tracking();
-                keyboard_tracker.stop_tracking();
+                if window.label() == "main" {
+                    let cursor_tracker = window.state::<Arc<MouseTracker>>();
+                    let keyboard_tracker = window.state::<Arc<KeyboardTracker>>();
+                    let buffered_service = window.state::<Arc<BufferedTrackingService>>();
+                    let goal_service = window.state::<Arc<GoalService>>();
+                    cursor_tracker.stop_tracking();
+                    keyboard_tracker.stop_tracking();
+                    goal_service.shutdown();
 
-                let buffered_service = Arc::clone(&buffered_service);
-                tokio::spawn(async move {
-                    buffered_service.shutdown().await;
-                });
+                    let buffered_service = Arc::clone(&buffered_service);
+                    tokio::spawn(async move {
+                        buffered_service.shutdown().await;
+                    });
+                }
+            }
+
+            if matches!(
+                event,
+                tauri::WindowEvent::Resized(_) | tauri::WindowEvent::Moved(_)
+            ) {
+                #[cfg(target_os = "macos")]
+                {
+                    use crate::ui::toolbar::adjust_traffic_light_position;
+                    use objc2::runtime::AnyObject;
+                    use objc2_app_kit::NSWindow;
+
+                    unsafe {
+                        let ns_window = window.ns_window().unwrap();
+                        let window: *mut AnyObject = ns_window as *mut AnyObject;
+                        let ns_window: &NSWindow = &*(window as *const NSWindow);
+
+                        adjust_traffic_light_position(ns_window);
+                    }
+                }
             }
         })
         .plugin(tauri_plugin_dialog::init())
@@ -109,6 +158,8 @@ async fn setup_trackers(app_handle: &AppHandle) -> Result<(), anyhow::Error> {
         }
     };
 
+    app_handle.manage(db.clone());
+
     let raw_service = Arc::new(DBService::new(Arc::clone(&db)));
     let sync_interval_rx = config_store.subscribe_sync_interval();
     let flush_interval_rx = config_store.subscribe_flush_interval();
@@ -119,6 +170,10 @@ async fn setup_trackers(app_handle: &AppHandle) -> Result<(), anyhow::Error> {
         sync_interval_rx,
     ));
     app_handle.manage(Arc::clone(&buffered_service));
+
+    let goal_service = Arc::new(GoalService::new(Arc::clone(&db)));
+    app_handle.manage(Arc::clone(&goal_service));
+    goal_service.start(app_handle);
 
     let service_trait: Arc<dyn TrackingService> = buffered_service.clone();
 
@@ -189,14 +244,19 @@ fn make_specta_builder<R: Runtime>() -> tauri_specta::Builder<R> {
             crate::helpers::config::set_theme::<tauri::Wry>,
             crate::helpers::config::set_afk_timeout::<tauri::Wry>,
             crate::helpers::config::set_heartbeat_interval::<tauri::Wry>,
-            crate::summaries::fetch_app_summary,
-            crate::summaries::fetch_projects_summary,
-            crate::summaries::fetch_activity_types_summary,
-            crate::summaries::fetch_bucketed_summary,
-            crate::summaries::fetch_total_time,
-            crate::summaries::fetch_range_summary,
+            crate::network::summaries::fetch_bucketed_summary,
+            crate::network::summaries::fetch_total_time,
+            crate::network::summaries::fetch_range_summary,
+            crate::goals_service::add_goal,
+            crate::goals_service::get_goals,
+            crate::goals_service::update_goal,
+            crate::goals_service::remove_goal,
+            crate::network::tables::fetch_apps,
+            crate::network::tables::fetch_categories,
+            crate::ui::notification::dismiss_notification_window::<tauri::Wry>,
         ])
-        .error_handling(tauri_specta::ErrorHandlingMode::Throw);
+        .error_handling(tauri_specta::ErrorHandlingMode::Throw)
+        .typ::<NotificationPayload>();
 
     #[cfg(debug_assertions)]
     builder

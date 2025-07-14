@@ -13,3 +13,15 @@ pub struct GroupedTimeSummary {
     pub group_key: String,
     pub total_seconds: i64,
 }
+
+#[derive(Serialize, Deserialize, Debug, specta::Type, sqlx::FromRow)]
+pub struct App {
+    pub id: Option<i64>,
+    pub name: String,
+}
+
+#[derive(Serialize, Deserialize, Debug, specta::Type, sqlx::FromRow)]
+pub struct Category {
+    pub id: Option<i64>,
+    pub name: String,
+}

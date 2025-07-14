@@ -1,14 +1,17 @@
-use chrono::NaiveDateTime;
+use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
-use crate::{utils::update_synced_in, DBContext};
+use crate::{
+    utils::{update_synced_in, DBError},
+    DBContext,
+};
 
 #[derive(Serialize, Deserialize, Clone, Debug, sqlx::FromRow)]
 pub struct Event {
     pub id: Option<i64>,
-    pub timestamp: Option<NaiveDateTime>,
+    pub timestamp: Option<DateTime<Utc>>,
     pub duration: Option<i64>,
-    pub activity_type: Option<String>,
+    pub category: Option<String>,
     pub app_name: String,
     pub entity_name: Option<String>,
     pub entity_type: Option<String>,
@@ -16,19 +19,19 @@ pub struct Event {
     pub project_path: Option<String>,
     pub branch_name: Option<String>,
     pub language_name: Option<String>,
-    pub end_timestamp: Option<NaiveDateTime>,
+    pub end_timestamp: Option<DateTime<Utc>>,
 }
 
 impl Event {
     pub async fn insert(self, db_context: &DBContext) -> Result<(), sqlx::Error> {
         sqlx::query!(
             "
-            INSERT INTO events (timestamp, duration, activity_type, app_name, entity_name, entity_type, project_name, project_path, branch_name, language_name, end_timestamp)
+            INSERT INTO events (timestamp, duration, category, app_name, entity_name, entity_type, project_name, project_path, branch_name, language_name, end_timestamp)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ",
             self.timestamp,
             self.duration,
-            self.activity_type,
+            self.category,
             self.app_name,
             self.entity_name,
             self.entity_type,
@@ -44,15 +47,14 @@ impl Event {
         Ok(())
     }
 
-    pub async fn unsynced(db_context: &DBContext) -> Result<Vec<Self>, sqlx::Error> {
-        sqlx::query_as!(
-            Event,
-            "
+    pub async fn unsynced(db_context: &DBContext) -> Result<Vec<Self>, DBError> {
+        let rows = sqlx::query!(
+            r#"
             SELECT
              id,
              timestamp,
              duration,
-             activity_type,
+             category,
              app_name,
              entity_name,
              entity_type,
@@ -64,10 +66,35 @@ impl Event {
             FROM events
             WHERE synced = 0
             LIMIT 100
-            "
+            "#
         )
         .fetch_all(db_context.pool())
-        .await
+        .await?;
+
+        let events = rows
+            .into_iter()
+            .map(|row| {
+                let timestamp = row.timestamp.parse::<DateTime<Utc>>()?;
+                let end_timestamp = row.end_timestamp.parse::<DateTime<Utc>>()?;
+
+                Ok(Event {
+                    id: Some(row.id),
+                    timestamp: Some(timestamp),
+                    duration: row.duration,
+                    category: row.category,
+                    app_name: row.app_name,
+                    entity_name: row.entity_name,
+                    entity_type: row.entity_type,
+                    project_name: row.project_name,
+                    project_path: row.project_path,
+                    branch_name: row.branch_name,
+                    language_name: row.language_name,
+                    end_timestamp: Some(end_timestamp),
+                })
+            })
+            .collect::<Result<Vec<_>, DBError>>()?;
+
+        Ok(events)
     }
 
     pub async fn mark_as_synced(
