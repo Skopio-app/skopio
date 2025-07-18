@@ -49,8 +49,8 @@ export const commands = {
   async fetchCategories(): Promise<Category[]> {
     return await TAURI_INVOKE("fetch_categories");
   },
-  async fetchProjects(): Promise<PaginatedProjects[]> {
-    return await TAURI_INVOKE("fetch_projects");
+  async fetchProjects(query: PaginationQuery): Promise<PaginatedProjects> {
+    return await TAURI_INVOKE("fetch_projects", { query });
   },
   async dismissNotificationWindow(): Promise<null> {
     return await TAURI_INVOKE("dismiss_notification_window");
@@ -139,7 +139,13 @@ export type NotificationPayload = {
   message: string | null;
   soundFile: string | null;
 };
-export type PaginatedProjects = { data: Project[]; nextCursor: number | null };
+export type PaginatedProjects = {
+  data: Project[];
+  nextCursor: number | null;
+  totalPages: number | null;
+  cursors: (number | null)[];
+};
+export type PaginationQuery = { after: number | null; limit: number | null };
 export type Project = {
   id: number | null;
   name: string;

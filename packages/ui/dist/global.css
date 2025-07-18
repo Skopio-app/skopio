@@ -262,10 +262,6 @@
   }
 }
 @layer utilities {
-  .\@container\/card-header {
-    container-type: inline-size;
-    container-name: card-header;
-  }
   .pointer-events-none {
     pointer-events: none;
   }
@@ -346,20 +342,14 @@
   .z-50 {
     z-index: 50;
   }
-  .col-start-2 {
-    grid-column-start: 2;
-  }
-  .row-span-2 {
-    grid-row: span 2 / span 2;
-  }
-  .row-start-1 {
-    grid-row-start: 1;
-  }
   .mx-2 {
     margin-inline: calc(var(--spacing) * 2);
   }
   .mx-3\.5 {
     margin-inline: calc(var(--spacing) * 3.5);
+  }
+  .mx-auto {
+    margin-inline: auto;
   }
   .mt-1 {
     margin-top: calc(var(--spacing) * 1);
@@ -582,26 +572,20 @@
   .resize {
     resize: both;
   }
-  .auto-rows-min {
-    grid-auto-rows: min-content;
-  }
-  .grid-rows-\[auto_auto\] {
-    grid-template-rows: auto auto;
-  }
   .flex-col {
     flex-direction: column;
   }
   .flex-col-reverse {
     flex-direction: column-reverse;
   }
+  .flex-row {
+    flex-direction: row;
+  }
   .flex-wrap {
     flex-wrap: wrap;
   }
   .items-center {
     align-items: center;
-  }
-  .items-start {
-    align-items: flex-start;
   }
   .justify-between {
     justify-content: space-between;
@@ -621,9 +605,6 @@
   .gap-4 {
     gap: calc(var(--spacing) * 4);
   }
-  .gap-6 {
-    gap: calc(var(--spacing) * 6);
-  }
   .space-y-1\.5 {
     :where(& > :not(:last-child)) {
       --tw-space-y-reverse: 0;
@@ -634,12 +615,6 @@
         calc(var(--spacing) * 1.5) * calc(1 - var(--tw-space-y-reverse))
       );
     }
-  }
-  .self-start {
-    align-self: flex-start;
-  }
-  .justify-self-end {
-    justify-self: flex-end;
   }
   .overflow-auto {
     overflow: auto;
@@ -822,9 +797,6 @@
   }
   .py-2 {
     padding-block: calc(var(--spacing) * 2);
-  }
-  .py-6 {
-    padding-block: calc(var(--spacing) * 6);
   }
   .pt-0 {
     padding-top: calc(var(--spacing) * 0);
@@ -1511,11 +1483,6 @@
         var(--tw-ring-offset-shadow), var(--tw-ring-shadow), var(--tw-shadow);
     }
   }
-  .has-data-\[slot\=card-action\]\:grid-cols-\[1fr_auto\] {
-    &:has(*[data-slot="card-action"]) {
-      grid-template-columns: 1fr auto;
-    }
-  }
   .has-\[\>svg\]\:px-2\.5 {
     &:has(> svg) {
       padding-inline: calc(var(--spacing) * 2.5);
@@ -1615,6 +1582,11 @@
       transition-duration: 500ms;
     }
   }
+  .sm\:block {
+    @media (width >= 40rem) {
+      display: block;
+    }
+  }
   .sm\:flex {
     @media (width >= 40rem) {
       display: flex;
@@ -1638,6 +1610,16 @@
   .sm\:justify-end {
     @media (width >= 40rem) {
       justify-content: flex-end;
+    }
+  }
+  .sm\:pr-2\.5 {
+    @media (width >= 40rem) {
+      padding-right: calc(var(--spacing) * 2.5);
+    }
+  }
+  .sm\:pl-2\.5 {
+    @media (width >= 40rem) {
+      padding-left: calc(var(--spacing) * 2.5);
     }
   }
   .sm\:text-left {
@@ -1746,16 +1728,6 @@
     &:first-child[data-selected="true"] button {
       border-top-left-radius: var(--radius-md);
       border-bottom-left-radius: var(--radius-md);
-    }
-  }
-  .\[\.border-b\]\:pb-6 {
-    &:is(.border-b) {
-      padding-bottom: calc(var(--spacing) * 6);
-    }
-  }
-  .\[\.border-t\]\:pt-6 {
-    &:is(.border-t) {
-      padding-top: calc(var(--spacing) * 6);
     }
   }
   .rtl\:\*\*\:\[\.rdp-button\\_next\>svg\]\:rotate-180 {

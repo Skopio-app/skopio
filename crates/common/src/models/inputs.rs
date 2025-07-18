@@ -90,7 +90,7 @@ pub struct BucketedSummaryInput {
     pub include_afk: bool,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, specta::Type)]
 pub struct PaginationQuery {
     pub after: Option<i64>,
     pub limit: Option<u32>,
