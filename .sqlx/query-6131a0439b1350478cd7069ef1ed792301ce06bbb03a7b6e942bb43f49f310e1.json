@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "SELECT id FROM (\n                SELECT id, ROW_NUMBER() OVER (ORDER BY id) as row_num\n                FROM projects\n             )\n             WHERE (row_num - 1) % ? = 0\n            ",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "6131a0439b1350478cd7069ef1ed792301ce06bbb03a7b6e942bb43f49f310e1"
+}

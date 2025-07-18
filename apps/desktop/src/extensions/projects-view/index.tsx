@@ -16,7 +16,7 @@ const ProjectsView = () => {
   const [currentPage, setCurrentPage] = useState<number>(1);
   const [cursors, setCursors] = useState<(number | null)[]>([]);
   const [totalPages, setTotalPages] = useState<number>(0);
-  const limit = 10;
+  const limit = 15;
 
   const fetchData = async (page: number) => {
     setIsLoading(true);
@@ -30,8 +30,6 @@ const ProjectsView = () => {
       setProjects(res.data);
       setCursors(res.cursors ?? null);
       setTotalPages(res.totalPages ?? 0);
-      console.log("The total pages: ", totalPages);
-      console.log("The cursors: ", res.cursors);
     } catch (err) {
       console.error("Failed to fetch projects", err);
     } finally {
@@ -43,7 +41,7 @@ const ProjectsView = () => {
     fetchData(currentPage);
   }, [currentPage]);
 
-  const pageWindowSize = 5;
+  const pageWindowSize = 7;
   const total = totalPages;
   const start = Math.max(0, currentPage - Math.floor(pageWindowSize / 2));
   const end = Math.min(total, start + pageWindowSize);
@@ -55,8 +53,7 @@ const ProjectsView = () => {
           {isLoading
             ? Array.from({ length: limit }).map((_, i) => (
                 <li key={i} className="p-4">
-                  <Skeleton className="h-6 w-1/2 mb-2" />
-                  <Skeleton className="h-4 w-1/3" />
+                  <Skeleton className="h-6 w-1/2" />
                 </li>
               ))
             : projects.map((project) => (
@@ -64,14 +61,9 @@ const ProjectsView = () => {
                   key={project.id}
                   className="p-4 hover:bg-muted/40 transition-colors"
                 >
-                  <div className="flex flex-col">
-                    <h3 className="text-base font-medium break-words">
-                      {project.name}
-                    </h3>
-                    <p className="text-sm text-muted-foreground break-all line-clamp-2">
-                      {project.root_path || "No root path specified"}
-                    </p>
-                  </div>
+                  <h3 className="text-base font-medium break-words">
+                    {project.name}
+                  </h3>
                 </li>
               ))}
         </ul>

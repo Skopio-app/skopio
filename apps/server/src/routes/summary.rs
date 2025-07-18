@@ -114,7 +114,7 @@ pub async fn get_bucketed_summary(
         builder
     };
 
-    let builder = if let Some(names) = payload.activity_types {
+    let builder = if let Some(names) = payload.category_names {
         builder.categories(names)
     } else {
         builder

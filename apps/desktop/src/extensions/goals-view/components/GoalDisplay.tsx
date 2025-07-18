@@ -39,7 +39,7 @@ const GoalDisplay = ({ goal }: { goal: Goal }) => {
   const query: BucketedSummaryInput = {
     preset: timeRangeToPreset(goal.timeSpan),
     app_names: goal.useApps ? goal.apps : null,
-    activity_types: goal.useCategories ? goal.categories : null,
+    category_names: goal.useCategories ? goal.categories : null,
     include_afk: false,
   };
 

@@ -73,12 +73,8 @@ impl ServerProject {
         db_context: &DBContext,
         after_id: Option<i64>,
         limit: u32,
-    ) -> Result<(Vec<Project>, u32), sqlx::Error> {
+    ) -> Result<Vec<Project>, sqlx::Error> {
         let limit = limit.min(100) as i64;
-
-        let total_count: i64 = sqlx::query_scalar!("SELECT COUNT(*) FROM projects")
-            .fetch_one(db_context.pool())
-            .await?;
 
         let rows: Vec<ServerProject> = if let Some(cursor) = after_id {
             sqlx::query_as!(
@@ -110,25 +106,30 @@ impl ServerProject {
             .await?
         };
 
-        let total_pages = ((total_count + limit - 1) / limit) as u32;
         let projects = rows.into_iter().map(Into::into).collect();
 
-        Ok((projects, total_pages))
+        Ok(projects)
     }
 
     pub async fn get_all_cursors(
         db_context: &DBContext,
         limit: u32,
     ) -> Result<Vec<Option<i64>>, sqlx::Error> {
-        let limit = limit.min(100);
-        let ids = sqlx::query_scalar!("SELECT id FROM projects ORDER BY id")
-            .fetch_all(db_context.pool())
-            .await?;
+        let limit_param = limit.min(100) as i64;
 
-        let cursors: Vec<Option<i64>> = ids
-            .chunks(limit as usize)
-            .map(|chunk| chunk.first().copied())
-            .collect();
+        let cursors: Vec<i64> = sqlx::query_scalar!(
+            "SELECT id FROM (
+                SELECT id, ROW_NUMBER() OVER (ORDER BY id) as row_num
+                FROM projects
+             )
+             WHERE (row_num - 1) % ? = 0
+            ",
+            limit_param
+        )
+        .fetch_all(db_context.pool())
+        .await?;
+
+        let cursors = cursors.into_iter().map(Some).collect();
 
         Ok(cursors)
     }

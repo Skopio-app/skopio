@@ -80,7 +80,7 @@ export type BucketedSummaryInput = {
   app_names?: string[] | null;
   project_names?: string[] | null;
   entity_names?: string[] | null;
-  activity_types?: string[] | null;
+  category_names?: string[] | null;
   branch_names?: string[] | null;
   language_names?: string[] | null;
   group_by?: Group | null;
@@ -141,7 +141,6 @@ export type NotificationPayload = {
 };
 export type PaginatedProjects = {
   data: Project[];
-  nextCursor: number | null;
   totalPages: number | null;
   cursors: (number | null)[];
 };

@@ -20,7 +20,7 @@ pub async fn get_projects(
 
     let limit = query.limit.unwrap_or(20).min(100);
 
-    let (projects, total_pages) = ServerProject::fetch_paginated(&db, query.after, limit)
+    let projects = ServerProject::fetch_paginated(&db, query.after, limit)
         .await
         .map_err(error_response)?;
 
@@ -28,12 +28,9 @@ pub async fn get_projects(
         .await
         .map_err(error_response)?;
 
-    let next_cursor = projects.last().and_then(|p| p.id);
-
     Ok(Json(PaginatedProjects {
         data: projects,
-        next_cursor,
-        total_pages: Some(total_pages),
+        total_pages: Some(cursors.len() as u32),
         cursors,
     }))
 }

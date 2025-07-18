@@ -80,7 +80,7 @@ pub struct BucketedSummaryInput {
     #[specta(optional)]
     pub entity_names: Option<Vec<String>>,
     #[specta(optional)]
-    pub activity_types: Option<Vec<String>>,
+    pub category_names: Option<Vec<String>>,
     #[specta(optional)]
     pub branch_names: Option<Vec<String>>,
     #[specta(optional)]
