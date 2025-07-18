@@ -89,3 +89,9 @@ pub struct BucketedSummaryInput {
     pub group_by: Option<Group>,
     pub include_afk: bool,
 }
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct PaginationQuery {
+    pub after: Option<i64>,
+    pub limit: Option<u32>,
+}

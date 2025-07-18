@@ -13,7 +13,7 @@ use db::server::branches::Branch;
 use db::server::entities::Entity;
 use db::server::events::{fetch_range, fetch_recent, Event};
 use db::server::languages::Language;
-use db::server::projects::Project;
+use db::server::projects::ServerProject;
 use db::DBContext;
 use std::sync::Arc;
 use std::time::Duration;
@@ -33,9 +33,10 @@ async fn handle_events(
         let app_id = App::find_or_insert(&db, &event.app_name)
             .await
             .map_err(error_response)?;
-        let project_id = Project::find_or_insert(&db, &event.project_name, &event.project_path)
-            .await
-            .map_err(error_response)?;
+        let project_id =
+            ServerProject::find_or_insert(&db, &event.project_name, &event.project_path)
+                .await
+                .map_err(error_response)?;
         let branch_id =
             Branch::find_or_insert(&db, project_id, &event.branch_name.unwrap_or_default())
                 .await

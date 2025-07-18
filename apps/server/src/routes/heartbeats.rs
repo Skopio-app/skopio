@@ -9,7 +9,7 @@ use db::server::branches::Branch;
 use db::server::entities::Entity;
 use db::server::heartbeats::Heartbeat;
 use db::server::languages::Language;
-use db::server::projects::Project;
+use db::server::projects::ServerProject;
 use db::DBContext;
 use std::sync::Arc;
 use tokio::sync::Mutex;
@@ -28,7 +28,7 @@ async fn handle_heartbeats(
         let app_id = App::find_or_insert(&db, &hb.app_name)
             .await
             .map_err(error_response)?;
-        let project_id = Project::find_or_insert(&db, &hb.project_name, &hb.project_path)
+        let project_id = ServerProject::find_or_insert(&db, &hb.project_name, &hb.project_path)
             .await
             .map_err(error_response)?;
         let branch_id =

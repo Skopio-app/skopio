@@ -1,14 +1,24 @@
 use crate::DBContext;
-use serde::{Deserialize, Serialize};
+use types::Project;
 
-#[derive(Serialize, Deserialize, Debug, sqlx::FromRow)]
-pub struct Project {
+#[derive(Debug, sqlx::FromRow)]
+pub struct ServerProject {
     pub id: Option<i64>,
     pub name: String,
     pub root_path: Option<String>,
 }
 
-impl Project {
+impl From<ServerProject> for Project {
+    fn from(value: ServerProject) -> Self {
+        Self {
+            id: value.id,
+            name: value.name,
+            root_path: value.root_path,
+        }
+    }
+}
+
+impl ServerProject {
     pub async fn find_or_insert(
         db_context: &DBContext,
         name: &str,
@@ -37,24 +47,65 @@ impl Project {
     pub async fn find_by_name(
         db_context: &DBContext,
         name: &str,
-    ) -> Result<Option<Self>, sqlx::Error> {
-        sqlx::query_as!(
-            Project,
-            "SELECT id, name, root_path FROM projects WHERE NAME = ?",
+    ) -> Result<Option<Project>, sqlx::Error> {
+        let result = sqlx::query_as!(
+            ServerProject,
+            "SELECT id, name, root_path FROM projects WHERE name = ?",
             name
         )
         .fetch_optional(db_context.pool())
-        .await
+        .await?;
+
+        Ok(result.map(Into::into))
     }
 
-    /// Deletes a project
-    pub async fn delete(self, db_context: &DBContext) -> Result<(), sqlx::Error> {
-        if let Some(id) = self.id {
-            sqlx::query!("DELETE FROM projects WHERE id = ?", id)
-                .execute(db_context.pool())
-                .await?;
-        }
+    // pub async fn delete(self, db_context: &DBContext) -> Result<(), sqlx::Error> {
+    //     if let Some(id) = self.id {
+    //         sqlx::query!("DELETE FROM projects WHERE id = ?", id)
+    //             .execute(db_context.pool())
+    //             .await?;
+    //     }
 
-        Ok(())
+    //     Ok(())
+    // }
+
+    pub async fn fetch_paginated(
+        db_context: &DBContext,
+        after_id: Option<i64>,
+        limit: u32,
+    ) -> Result<Vec<Project>, sqlx::Error> {
+        let limit = limit.min(100) as i64;
+
+        let rows: Vec<ServerProject> = if let Some(cursor) = after_id {
+            sqlx::query_as!(
+                ServerProject,
+                "
+                SELECT id, name, root_path
+                FROM projects
+                WHERE id > ?
+                ORDER BY id
+                LIMIT ?
+                ",
+                cursor,
+                limit
+            )
+            .fetch_all(db_context.pool())
+            .await?
+        } else {
+            sqlx::query_as!(
+                ServerProject,
+                "
+                SELECT id, name, root_path
+                FROM projects
+                ORDER BY id
+                LIMIT ?
+                ",
+                limit
+            )
+            .fetch_all(db_context.pool())
+            .await?
+        };
+
+        Ok(rows.into_iter().map(Into::into).collect())
     }
 }

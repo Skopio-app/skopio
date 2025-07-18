@@ -19,3 +19,4 @@ log = { workspace = true }
 specta = {workspace = true }
 common = { path = "../common"}
 thiserror = { workspace = true }
+types = { path = "../types" }

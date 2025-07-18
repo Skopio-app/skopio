@@ -1,5 +1,6 @@
 use std::{sync::LazyLock, time::Duration};
 
+use common::models::outputs::PaginatedProjects;
 use db::models::{App, Category};
 use reqwest::Client;
 use serde::Deserialize;
@@ -44,4 +45,10 @@ pub async fn fetch_apps() -> Result<Vec<App>, String> {
 #[specta::specta]
 pub async fn fetch_categories() -> Result<Vec<Category>, String> {
     req_json("categories").await
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn fetch_projects() -> Result<Vec<PaginatedProjects>, String> {
+    req_json("projects").await
 }
