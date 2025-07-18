@@ -71,7 +71,7 @@ const BarLineChart: React.FC<BasicBarChartProps> = ({
             }
 
             return (
-              <div className="min-w-60 rounded-md border border-gray-200 bg-white px-3 py-2 text-sm shadow-md text-gray-700">
+              <div className="min-w-48 rounded-md border border-gray-200 bg-white px-3 py-2 text-sm shadow-md text-gray-700">
                 <div className="flex items-center gap-2 mb-1">
                   <span
                     className="w-2.5 h-2.5 rounded-full inline-block"
