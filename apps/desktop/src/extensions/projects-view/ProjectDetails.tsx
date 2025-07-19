@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { useParams } from "react-router";
+import { useEffect, useMemo, useState } from "react";
+import { useParams, useSearchParams } from "react-router";
 import { commands, Project, ProjectQuery } from "../../types/tauri.gen";
 import {
   Breadcrumb,
@@ -9,17 +9,83 @@ import {
   BreadcrumbSeparator,
   Skeleton,
 } from "@skopio/ui";
+import {
+  DATE_RANGE_LABELS,
+  DateRangeType,
+  getRangeDates,
+  mapRangeToPreset,
+} from "../../utils/dateRanges";
+import { addDays, startOfDay } from "date-fns";
+import { formatDuration } from "../../utils/time";
+import RangeSelectionDialog from "../../components/RangeSelectionDialog";
+import { usePresetFilter } from "./stores/usePresetFilter";
+import BranchSelectionDialog from "./components/BranchSelectionDialog";
+import { useTotalBucketedTime } from "./hooks/useTotalBucketedTime";
 
 const ProjectDetails = () => {
   const { projectId } = useParams();
   const [project, setProject] = useState<Project | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const [customStart, setCustomStart] = useState<Date>(new Date());
+  const [customEnd, setCustomEnd] = useState<Date>(new Date());
+
+  const [pendingStart, setPendingStart] = useState<Date>(customStart);
+  const [pendingEnd, setPendingEnd] = useState<Date>(customEnd);
+
+  const [selectedBranches, setSelectedBranches] = useState<string[] | null>(
+    null,
+  );
+
+  const [searchParams, setSearchParams] = useSearchParams();
+  const paramRange = searchParams.get("range") as DateRangeType;
+  const [selectedRange, setSelectedRange] = useState<DateRangeType>(
+    paramRange && DATE_RANGE_LABELS.includes(paramRange)
+      ? paramRange
+      : DateRangeType.Today,
+  );
+
+  const isCustom = selectedRange === DateRangeType.Custom;
+
+  useEffect(() => {
+    const params = new URLSearchParams(searchParams);
+    params.set("range", selectedRange);
+    setSearchParams(params, { replace: true });
+  }, [selectedRange]);
+
+  useEffect(() => {
+    if (!isCustom) return;
+    const maxEnd = addDays(startOfDay(customStart ?? 0), 30);
+    if (customEnd) {
+      if (customEnd > maxEnd) setCustomEnd(maxEnd);
+    }
+  }, [customStart, customEnd, isCustom]);
+
+  const [startDate, endDate] = useMemo(
+    () => getRangeDates(selectedRange, customStart, customEnd),
+    [selectedRange, customStart, customEnd],
+  );
+
+  useEffect(() => {
+    const newPreset = mapRangeToPreset(selectedRange, startDate, endDate);
+    usePresetFilter.setState({ preset: newPreset });
+  }, [selectedRange, startDate, endDate]);
+
+  const { preset } = usePresetFilter();
+
+  const {
+    total,
+    loading: timeLoading,
+    hasBranchData,
+    branches,
+  } = useTotalBucketedTime(preset, project?.name ?? "", selectedBranches);
+
+  const formattedDuration = formatDuration(total);
+
   useEffect(() => {
     const fetchProject = async () => {
       try {
-        if (!projectId) return;
-        console.log("The project id: ", projectId);
+        if (!projectId || Number.isNaN(projectId)) return;
         const query: ProjectQuery = {
           id: Number(projectId),
         };
@@ -44,28 +110,52 @@ const ProjectDetails = () => {
     return <p className="p-4 text-red-500">Project not found.</p>;
   }
   return (
-    <div className="p-4 space-y-6">
+    <div className="p-4 space-y-6 mt-2">
       <Breadcrumb>
-        <BreadcrumbList className="text-lg">
-          <BreadcrumbItem>
-            <BreadcrumbLink asChild>
-              <BreadcrumbLink href="/">Projects</BreadcrumbLink>
-            </BreadcrumbLink>
+        <BreadcrumbList className="text-lg font-regular text-neutral-600">
+          <BreadcrumbItem className="hover:text-neutral-950">
+            <BreadcrumbLink href="/">Projects</BreadcrumbLink>
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
-            <BreadcrumbLink asChild>
-              <BreadcrumbLink>{project.name}</BreadcrumbLink>
-            </BreadcrumbLink>
+            <BreadcrumbLink>{project.name}</BreadcrumbLink>
           </BreadcrumbItem>
         </BreadcrumbList>
       </Breadcrumb>
 
-      <h1 className="text-2xl font-semibold">{project.name}</h1>
-
-      <p className="text-muted-foreground">
-        Root path: {project.root_path ?? "N/A"}
-      </p>
+      {!timeLoading ? (
+        <p className="text-muted-foreground">
+          <span className="font-medium text-gray-800">{formattedDuration}</span>{" "}
+          for{" "}
+          <RangeSelectionDialog
+            selectedRange={selectedRange}
+            setSelectedRange={setSelectedRange}
+            pendingStart={pendingStart}
+            setPendingStart={setPendingStart}
+            setPendingEnd={setPendingEnd}
+            pendingEnd={pendingEnd}
+            setCustomStart={setCustomStart}
+            setCustomEnd={setCustomEnd}
+            isCustom={isCustom}
+            searchParams={searchParams}
+            setSearchParams={setSearchParams}
+          />{" "}
+          in <span className="text-gray-900 font-semibold">{project.name}</span>{" "}
+          {hasBranchData && (
+            <>
+              under{" "}
+              <BranchSelectionDialog
+                branches={branches}
+                selectedBranch={selectedBranches}
+                onSelect={setSelectedBranches}
+              />{" "}
+              branches
+            </>
+          )}
+        </p>
+      ) : (
+        <Skeleton className="h-4 max-w-76" />
+      )}
     </div>
   );
 };
