@@ -1,9 +1,13 @@
 use std::{collections::HashMap, sync::LazyLock, time::Duration};
 
-use common::models::{inputs::PaginationQuery, outputs::PaginatedProjects};
+use common::models::{
+    inputs::{PaginationQuery, ProjectQuery},
+    outputs::PaginatedProjects,
+};
 use db::models::{App, Category};
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
+use types::Project;
 use url::Url;
 
 static HTTP_CLIENT: LazyLock<Client> = LazyLock::new(|| {
@@ -73,4 +77,10 @@ pub async fn fetch_categories() -> Result<Vec<Category>, String> {
 #[specta::specta]
 pub async fn fetch_projects(query: PaginationQuery) -> Result<PaginatedProjects, String> {
     req_json("projects", Some(&query)).await
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn fetch_project(query: ProjectQuery) -> Result<Option<Project>, String> {
+    req_json("project", Some(&query)).await
 }

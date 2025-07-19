@@ -1293,6 +1293,7 @@ dependencies = [
  "tauri-specta",
  "tokei",
  "tokio",
+ "types",
  "url",
 ]
 
@@ -5191,6 +5192,7 @@ dependencies = [
  "tower-http",
  "tracing",
  "tracing-subscriber",
+ "types",
 ]
 
 [[package]]

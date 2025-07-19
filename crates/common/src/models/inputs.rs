@@ -95,3 +95,8 @@ pub struct PaginationQuery {
     pub after: Option<i64>,
     pub limit: Option<u32>,
 }
+
+#[derive(Serialize, Deserialize, Debug, specta::Type)]
+pub struct ProjectQuery {
+    pub id: i64,
+}

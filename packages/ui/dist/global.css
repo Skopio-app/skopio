@@ -22,8 +22,6 @@
     --color-gray-200: oklch(92.8% 0.006 264.531);
     --color-gray-300: oklch(87.2% 0.01 258.338);
     --color-gray-400: oklch(70.7% 0.022 261.325);
-    --color-gray-500: oklch(55.1% 0.027 264.364);
-    --color-gray-700: oklch(37.3% 0.034 259.733);
     --color-black: #000;
     --color-white: #fff;
     --spacing: 0.25rem;
@@ -302,8 +300,14 @@
   .top-0 {
     top: calc(var(--spacing) * 0);
   }
+  .top-1 {
+    top: calc(var(--spacing) * 1);
+  }
   .top-1\.5 {
     top: calc(var(--spacing) * 1.5);
+  }
+  .top-3 {
+    top: calc(var(--spacing) * 3);
   }
   .top-3\.5 {
     top: calc(var(--spacing) * 3.5);
@@ -344,8 +348,14 @@
   .z-50 {
     z-index: 50;
   }
+  .mx-1 {
+    margin-inline: calc(var(--spacing) * 1);
+  }
   .mx-2 {
     margin-inline: calc(var(--spacing) * 2);
+  }
+  .mx-3 {
+    margin-inline: calc(var(--spacing) * 3);
   }
   .mx-3\.5 {
     margin-inline: calc(var(--spacing) * 3.5);
@@ -382,6 +392,10 @@
   }
   .aspect-square {
     aspect-ratio: 1 / 1;
+  }
+  .size-2 {
+    width: calc(var(--spacing) * 2);
+    height: calc(var(--spacing) * 2);
   }
   .size-2\.5 {
     width: calc(var(--spacing) * 2.5);
@@ -473,6 +487,9 @@
   .w-5 {
     width: calc(var(--spacing) * 5);
   }
+  .w-9 {
+    width: calc(var(--spacing) * 9);
+  }
   .w-48 {
     width: calc(var(--spacing) * 48);
   }
@@ -512,6 +529,9 @@
   .flex-1 {
     flex: 1;
   }
+  .flex-shrink {
+    flex-shrink: 1;
+  }
   .shrink-0 {
     flex-shrink: 0;
   }
@@ -521,12 +541,20 @@
   .origin-\(--radix-tooltip-content-transform-origin\) {
     transform-origin: var(--radix-tooltip-content-transform-origin);
   }
+  .-translate-x-1 {
+    --tw-translate-x: calc(var(--spacing) * -1);
+    translate: var(--tw-translate-x) var(--tw-translate-y);
+  }
   .-translate-x-1\/2 {
     --tw-translate-x: calc(calc(1 / 2 * 100%) * -1);
     translate: var(--tw-translate-x) var(--tw-translate-y);
   }
   .-translate-x-px {
     --tw-translate-x: -1px;
+    translate: var(--tw-translate-x) var(--tw-translate-y);
+  }
+  .translate-x-0 {
+    --tw-translate-x: calc(var(--spacing) * 0);
     translate: var(--tw-translate-x) var(--tw-translate-y);
   }
   .translate-x-0\.5 {
@@ -607,6 +635,17 @@
   .gap-4 {
     gap: calc(var(--spacing) * 4);
   }
+  .space-y-1 {
+    :where(& > :not(:last-child)) {
+      --tw-space-y-reverse: 0;
+      margin-block-start: calc(
+        calc(var(--spacing) * 1) * var(--tw-space-y-reverse)
+      );
+      margin-block-end: calc(
+        calc(var(--spacing) * 1) * calc(1 - var(--tw-space-y-reverse))
+      );
+    }
+  }
   .space-y-1\.5 {
     :where(& > :not(:last-child)) {
       --tw-space-y-reverse: 0;
@@ -615,6 +654,17 @@
       );
       margin-block-end: calc(
         calc(var(--spacing) * 1.5) * calc(1 - var(--tw-space-y-reverse))
+      );
+    }
+  }
+  .space-x-1 {
+    :where(& > :not(:last-child)) {
+      --tw-space-x-reverse: 0;
+      margin-inline-start: calc(
+        calc(var(--spacing) * 1) * var(--tw-space-x-reverse)
+      );
+      margin-inline-end: calc(
+        calc(var(--spacing) * 1) * calc(1 - var(--tw-space-x-reverse))
       );
     }
   }
@@ -709,6 +759,9 @@
   .bg-amber-600 {
     background-color: var(--color-amber-600);
   }
+  .bg-black {
+    background-color: var(--color-black);
+  }
   .bg-black\/50 {
     background-color: color-mix(in srgb, #000 50%, transparent);
     @supports (color: color-mix(in lab, red, red)) {
@@ -791,6 +844,9 @@
   .px-\[--cell-size\] {
     padding-inline: --cell-size;
   }
+  .py-0 {
+    padding-block: calc(var(--spacing) * 0);
+  }
   .py-0\.5 {
     padding-block: calc(var(--spacing) * 0.5);
   }
@@ -867,6 +923,12 @@
   .text-balance {
     text-wrap: balance;
   }
+  .text-wrap {
+    text-wrap: wrap;
+  }
+  .break-words {
+    overflow-wrap: break-word;
+  }
   .whitespace-nowrap {
     white-space: nowrap;
   }
@@ -878,6 +940,9 @@
     font-variant-numeric: var(--tw-ordinal,) var(--tw-slashed-zero,)
       var(--tw-numeric-figure,) var(--tw-numeric-spacing,)
       var(--tw-numeric-fraction,);
+  }
+  .underline {
+    text-decoration-line: underline;
   }
   .underline-offset-4 {
     text-underline-offset: 4px;
@@ -1041,6 +1106,17 @@
   }
   .transition-all {
     transition-property: all;
+    transition-timing-function: var(
+      --tw-ease,
+      var(--default-transition-timing-function)
+    );
+    transition-duration: var(--tw-duration, var(--default-transition-duration));
+  }
+  .transition-colors {
+    transition-property:
+      color, background-color, border-color, outline-color,
+      text-decoration-color, fill, stroke, --tw-gradient-from,
+      --tw-gradient-via, --tw-gradient-to;
     transition-timing-function: var(
       --tw-ease,
       var(--default-transition-timing-function)
@@ -1617,6 +1693,24 @@
       justify-content: flex-end;
     }
   }
+  .sm\:gap-2\.5 {
+    @media (width >= 40rem) {
+      gap: calc(var(--spacing) * 2.5);
+    }
+  }
+  .sm\:space-x-2 {
+    @media (width >= 40rem) {
+      :where(& > :not(:last-child)) {
+        --tw-space-x-reverse: 0;
+        margin-inline-start: calc(
+          calc(var(--spacing) * 2) * var(--tw-space-x-reverse)
+        );
+        margin-inline-end: calc(
+          calc(var(--spacing) * 2) * calc(1 - var(--tw-space-x-reverse))
+        );
+      }
+    }
+  }
   .sm\:pr-2\.5 {
     @media (width >= 40rem) {
       padding-right: calc(var(--spacing) * 2.5);
@@ -1713,26 +1807,6 @@
       background-color: var(--color-gray-200);
     }
   }
-  .dark\:bg-gray-300 {
-    @media (prefers-color-scheme: dark) {
-      background-color: var(--color-gray-300);
-    }
-  }
-  .dark\:bg-gray-400 {
-    @media (prefers-color-scheme: dark) {
-      background-color: var(--color-gray-400);
-    }
-  }
-  .dark\:bg-gray-500 {
-    @media (prefers-color-scheme: dark) {
-      background-color: var(--color-gray-500);
-    }
-  }
-  .dark\:bg-gray-700 {
-    @media (prefers-color-scheme: dark) {
-      background-color: var(--color-gray-700);
-    }
-  }
   .dark\:bg-transparent {
     @media (prefers-color-scheme: dark) {
       background-color: transparent;
@@ -1817,6 +1891,16 @@
     & > svg {
       width: calc(var(--spacing) * 4);
       height: calc(var(--spacing) * 4);
+    }
+  }
+  .\[\&\>svg\]\:h-3\.5 {
+    & > svg {
+      height: calc(var(--spacing) * 3.5);
+    }
+  }
+  .\[\&\>svg\]\:w-3\.5 {
+    & > svg {
+      width: calc(var(--spacing) * 3.5);
     }
   }
   .\[\&\>svg\]\:shrink-0 {
@@ -1928,6 +2012,11 @@
   inherits: false;
 }
 @property --tw-space-y-reverse {
+  syntax: "*";
+  inherits: false;
+  initial-value: 0;
+}
+@property --tw-space-x-reverse {
   syntax: "*";
   inherits: false;
   initial-value: 0;
@@ -2076,6 +2165,7 @@
       --tw-skew-x: initial;
       --tw-skew-y: initial;
       --tw-space-y-reverse: 0;
+      --tw-space-x-reverse: 0;
       --tw-border-style: solid;
       --tw-leading: initial;
       --tw-font-weight: initial;

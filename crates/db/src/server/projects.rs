@@ -43,15 +43,15 @@ impl ServerProject {
         Ok(result.id)
     }
 
-    /// Fetches a project by name
-    pub async fn find_by_name(
+    /// Fetches a project by id
+    pub async fn find_by_id(
         db_context: &DBContext,
-        name: &str,
+        id: i64,
     ) -> Result<Option<Project>, sqlx::Error> {
         let result = sqlx::query_as!(
             ServerProject,
-            "SELECT id, name, root_path FROM projects WHERE name = ?",
-            name
+            "SELECT id, name, root_path FROM projects WHERE id = ?",
+            id
         )
         .fetch_optional(db_context.pool())
         .await?;

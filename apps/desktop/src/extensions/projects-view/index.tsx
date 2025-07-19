@@ -9,6 +9,7 @@ import {
 } from "@skopio/ui";
 import { useEffect, useState } from "react";
 import { commands, PaginatedProjects, Project } from "../../types/tauri.gen";
+import { useNavigate, useParams } from "react-router";
 
 const ProjectsView = () => {
   const [projects, setProjects] = useState<Project[]>([]);
@@ -17,6 +18,9 @@ const ProjectsView = () => {
   const [cursors, setCursors] = useState<(number | null)[]>([]);
   const [totalPages, setTotalPages] = useState<number>(0);
   const limit = 15;
+
+  const { id: tabId } = useParams();
+  const navigate = useNavigate();
 
   const fetchData = async (page: number) => {
     setIsLoading(true);
@@ -60,6 +64,9 @@ const ProjectsView = () => {
                 <li
                   key={project.id}
                   className="p-4 hover:bg-muted/40 transition-colors"
+                  onClick={() =>
+                    navigate(`/tab/${tabId}/projects/${project.id}`)
+                  }
                 >
                   <h3 className="text-base font-medium break-words">
                     {project.name}

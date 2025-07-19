@@ -254,6 +254,7 @@ fn make_specta_builder<R: Runtime>() -> tauri_specta::Builder<R> {
             crate::network::tables::fetch_apps,
             crate::network::tables::fetch_categories,
             crate::network::tables::fetch_projects,
+            crate::network::tables::fetch_project,
             crate::ui::notification::dismiss_notification_window::<tauri::Wry>,
         ])
         .error_handling(tauri_specta::ErrorHandlingMode::Throw)
