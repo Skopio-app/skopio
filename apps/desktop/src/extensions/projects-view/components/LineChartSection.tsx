@@ -19,7 +19,7 @@ const LineChartSection: React.FC<LineChartSectionProps> = ({ projectName }) => {
   const { preset } = usePresetFilter();
 
   const query: BucketedSummaryInput = {
-    preset: preset,
+    preset,
     project_names: [projectName],
     include_afk: false,
   };

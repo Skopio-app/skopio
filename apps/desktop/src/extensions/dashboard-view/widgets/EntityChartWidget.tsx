@@ -1,9 +1,9 @@
 import { useEffect, useState, startTransition } from "react";
 import { format, parseISO } from "date-fns";
 import WidgetCard from "../components/WidgetCard";
-import StackedBarChart from "../charts/StackedBarChart";
 import { useSummaryData } from "../hooks/useSummaryData";
-import { BarChartData } from "../types";
+import { BarChartData } from "../../../types/types";
+import StackedBarChart from "../../../components/StackedBarChart";
 
 const MAX_KEYS = 15;
 

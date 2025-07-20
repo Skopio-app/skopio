@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { PieChartData } from "../types";
+import { PieChartData } from "../../../types/types";
 import WidgetCard from "../components/WidgetCard";
 import CustomPieChart from "../charts/CustomPieChart";
 import { useSummaryData } from "../hooks/useSummaryData";

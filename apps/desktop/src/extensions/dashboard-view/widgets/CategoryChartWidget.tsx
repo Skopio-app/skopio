@@ -1,9 +1,9 @@
 import { useMemo } from "react";
-import { BarChartData } from "../types";
+import { BarChartData } from "../../../types/types";
 import { format, parseISO } from "date-fns";
 import WidgetCard from "../components/WidgetCard";
-import StackedBarChart from "../charts/StackedBarChart";
 import { useSummaryData } from "../hooks/useSummaryData";
+import StackedBarChart from "../../../components/StackedBarChart";
 
 const CategoryChartWidget = () => {
   const { rawGrouped, loading } = useSummaryData(undefined, ["category"]);

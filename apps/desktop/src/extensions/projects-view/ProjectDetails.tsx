@@ -22,6 +22,7 @@ import { usePresetFilter } from "./stores/usePresetFilter";
 import BranchSelectionDialog from "./components/BranchSelectionDialog";
 import { useTotalBucketedTime } from "./hooks/useTotalBucketedTime";
 import LineChartSection from "./components/LineChartSection";
+import CategoryChartSection from "./components/CategoryChartSection";
 
 const ProjectDetails = () => {
   const { projectId } = useParams();
@@ -157,6 +158,7 @@ const ProjectDetails = () => {
       )}
 
       <LineChartSection projectName={project.name} />
+      <CategoryChartSection projectName={project.name} />
     </div>
   );
 };

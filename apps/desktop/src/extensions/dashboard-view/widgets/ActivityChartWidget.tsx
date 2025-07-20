@@ -4,7 +4,7 @@ import CalendarChart from "../charts/CalendarChart";
 import { TimeRangePreset } from "../../../types/tauri.gen";
 import { endOfYear, startOfYear } from "date-fns";
 import { useSummaryData } from "../hooks/useSummaryData";
-import { CalendarChartData } from "../types";
+import { CalendarChartData } from "../../../types/types";
 import {
   getYearlyActivity,
   storeYearlyActivity,

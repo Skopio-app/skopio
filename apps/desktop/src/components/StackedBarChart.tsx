@@ -1,9 +1,9 @@
 import { ResponsiveBarCanvas } from "@nivo/bar";
 import { useRef, useState, useEffect } from "react";
-import ChartTooltipPortal from "../components/ChartTooltipPortal";
 import { useOrdinalColorScale } from "@nivo/colors";
 import { useColorCache } from "../stores/useColorCache";
-import { formatDuration } from "../../../utils/time";
+import ChartTooltipPortal from "./ChartTooltipPortal";
+import { formatDuration } from "../utils/time";
 
 interface StackedBarChartProps {
   data: {
@@ -13,7 +13,7 @@ interface StackedBarChartProps {
   keys: string[];
   bucketLabel?: string;
 }
-
+// TODO: Make chart config modifiable.
 const StackedBarChart: React.FC<StackedBarChartProps> = ({
   data,
   keys,
