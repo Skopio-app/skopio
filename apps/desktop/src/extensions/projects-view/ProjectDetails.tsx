@@ -21,6 +21,7 @@ import RangeSelectionDialog from "../../components/RangeSelectionDialog";
 import { usePresetFilter } from "./stores/usePresetFilter";
 import BranchSelectionDialog from "./components/BranchSelectionDialog";
 import { useTotalBucketedTime } from "./hooks/useTotalBucketedTime";
+import LineChartSection from "./components/LineChartSection";
 
 const ProjectDetails = () => {
   const { projectId } = useParams();
@@ -71,14 +72,12 @@ const ProjectDetails = () => {
     usePresetFilter.setState({ preset: newPreset });
   }, [selectedRange, startDate, endDate]);
 
-  const { preset } = usePresetFilter();
-
   const {
     total,
     loading: timeLoading,
     hasBranchData,
     branches,
-  } = useTotalBucketedTime(preset, project?.name ?? "", selectedBranches);
+  } = useTotalBucketedTime(project?.name ?? "", selectedBranches);
 
   const formattedDuration = formatDuration(total);
 
@@ -156,6 +155,8 @@ const ProjectDetails = () => {
       ) : (
         <Skeleton className="h-4 max-w-76" />
       )}
+
+      <LineChartSection projectName={project.name} />
     </div>
   );
 };

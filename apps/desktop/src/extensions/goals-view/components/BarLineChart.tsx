@@ -80,8 +80,8 @@ const BarLineChart: React.FC<BasicBarChartProps> = ({
                   <span className="font-semibold">{formattedLabel}</span>
                 </div>
                 <div className="text-xs space-y-1">
-                  <div>Actual: {actualTime}</div>
-                  <div>Goal: {goalTime}</div>
+                  <p>Actual: {actualTime}</p>
+                  <p>Goal: {goalTime}</p>
                 </div>
               </div>
             );
@@ -89,6 +89,7 @@ const BarLineChart: React.FC<BasicBarChartProps> = ({
           axisBottom={{
             tickSize: 4,
             tickPadding: 6,
+            tickValues: 5,
             tickRotation: 0,
             legendPosition: "middle",
             legendOffset: 36,

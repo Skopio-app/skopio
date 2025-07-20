@@ -1,12 +1,8 @@
 import { startTransition, useEffect, useState } from "react";
-import {
-  BucketedSummaryInput,
-  commands,
-  TimeRangePreset,
-} from "../../../types/tauri.gen";
+import { BucketedSummaryInput, commands } from "../../../types/tauri.gen";
+import { usePresetFilter } from "../stores/usePresetFilter";
 
 export const useTotalBucketedTime = (
-  preset: TimeRangePreset,
   projectName: string,
   selectedBranches: string[] | null,
 ): {
@@ -19,6 +15,7 @@ export const useTotalBucketedTime = (
   const [loading, setLoading] = useState<boolean>(true);
   const [hasBranchData, setHasBranchData] = useState(false);
   const [branches, setBranches] = useState<string[]>([]);
+  const { preset } = usePresetFilter();
 
   useEffect(() => {
     let cancelled = false;
@@ -32,7 +29,7 @@ export const useTotalBucketedTime = (
       const inputWithBranch: BucketedSummaryInput = {
         ...baseInput,
         group_by: "branch",
-        ...(selectedBranches ? { branch_names: selectedBranches } : {}),
+        ...(selectedBranches ? { branch_names: selectedBranches } : null),
       };
 
       try {
