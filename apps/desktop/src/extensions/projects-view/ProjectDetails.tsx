@@ -23,6 +23,7 @@ import BranchSelectionDialog from "./components/BranchSelectionDialog";
 import { useTotalBucketedTime } from "./hooks/useTotalBucketedTime";
 import LineChartSection from "./components/LineChartSection";
 import CategoryChartSection from "./components/CategoryChartSection";
+import CirclePackingChartSection from "./components/CirclePackingChartSection";
 
 const ProjectDetails = () => {
   const { projectId } = useParams();
@@ -159,6 +160,7 @@ const ProjectDetails = () => {
 
       <LineChartSection projectName={project.name} />
       <CategoryChartSection projectName={project.name} />
+      <CirclePackingChartSection projectName={project.name} />
     </div>
   );
 };

@@ -5,6 +5,7 @@ import ChartContainer from "./ChartContainer";
 import StackedBarChart from "../../../components/StackedBarChart";
 import { BarChartData } from "../../../types/types";
 
+// TODO: expose project name without passing as prop.
 interface CategoryChartSectionProps {
   projectName: string;
 }
@@ -29,7 +30,6 @@ const CategoryChartSection: React.FC<CategoryChartSectionProps> = ({
 
     try {
       const summary = await commands.fetchBucketedSummary(query);
-      console.log("The summary: ", summary);
       const grouped: {
         date: Date;
         label: string;

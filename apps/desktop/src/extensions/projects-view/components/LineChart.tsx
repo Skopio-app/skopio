@@ -27,6 +27,7 @@ const LineChart: React.FC<LineChartProps> = ({ id, data }) => {
   const maxChartValue = Math.max(...sortedData.map((d) => d.y));
   const yAxisMaxValue = maxChartValue * 1.4;
 
+  // TODO: Refactor custom tooltip to use ChartTooltipPortal
   return (
     <div className="h-[200px] w-full flex">
       <div className="flex-1">

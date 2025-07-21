@@ -915,6 +915,24 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@nivo/circle-packing@npm:^0.99.0":
+  version: 0.99.0
+  resolution: "@nivo/circle-packing@npm:0.99.0"
+  dependencies:
+    "@nivo/colors": "npm:0.99.0"
+    "@nivo/core": "npm:0.99.0"
+    "@nivo/theming": "npm:0.99.0"
+    "@nivo/tooltip": "npm:0.99.0"
+    "@react-spring/web": "npm:9.4.5 || ^9.7.2 || ^10.0"
+    "@types/d3-hierarchy": "npm:^3.1.7"
+    d3-hierarchy: "npm:^3.1.2"
+    lodash: "npm:^4.17.21"
+  peerDependencies:
+    react: ^16.14 || ^17.0 || ^18.0 || ^19.0
+  checksum: 10c0/e1cf106eed680fad659f164eea4e33844dce0e8ccc5bc9a50e3cedf60ec522ccf8df8c3db07996a0a1078c0ce106bb0f014f7e7232340ff13b0c19d6ee6f7a6e
+  languageName: node
+  linkType: hard
+
 "@nivo/colors@npm:0.99.0, @nivo/colors@npm:^0.99.0":
   version: 0.99.0
   resolution: "@nivo/colors@npm:0.99.0"
@@ -2289,6 +2307,7 @@ __metadata:
     "@hookform/resolvers": "npm:^5.1.1"
     "@nivo/bar": "npm:^0.99.0"
     "@nivo/calendar": "npm:^0.99.0"
+    "@nivo/circle-packing": "npm:^0.99.0"
     "@nivo/colors": "npm:^0.99.0"
     "@nivo/core": "npm:^0.99.0"
     "@nivo/line": "npm:^0.99.0"
@@ -2904,6 +2923,13 @@ __metadata:
   version: 1.4.5
   resolution: "@types/d3-format@npm:1.4.5"
   checksum: 10c0/d4dbfff22afdf1ad60db7115e877b891864fac380537534dbacf9b5f87cdcd0a418e8d83d4947c59ed8715befa7d018aecd8445f05ae3a5b0796dd495508c082
+  languageName: node
+  linkType: hard
+
+"@types/d3-hierarchy@npm:^3.1.7":
+  version: 3.1.7
+  resolution: "@types/d3-hierarchy@npm:3.1.7"
+  checksum: 10c0/873711737d6b8e7b6f1dda0bcd21294a48f75024909ae510c5d2c21fad2e72032e0958def4d9f68319d3aaac298ad09c49807f8bfc87a145a82693b5208613c7
   languageName: node
   linkType: hard
 
@@ -3602,6 +3628,13 @@ __metadata:
   version: 1.4.5
   resolution: "d3-format@npm:1.4.5"
   checksum: 10c0/40800a2fb2182d2d711cea3acc2b8b2b3afdb6f644c51de77feb9b08a6150b14c753933d2fd4ad2f6f45130757b738673372c45b4b820466c560f3b1ec0b3ce8
+  languageName: node
+  linkType: hard
+
+"d3-hierarchy@npm:^3.1.2":
+  version: 3.1.2
+  resolution: "d3-hierarchy@npm:3.1.2"
+  checksum: 10c0/6dcdb480539644aa7fc0d72dfc7b03f99dfbcdf02714044e8c708577e0d5981deb9d3e99bbbb2d26422b55bcc342ac89a0fa2ea6c9d7302e2fc0951dd96f89cf
   languageName: node
   linkType: hard
 
