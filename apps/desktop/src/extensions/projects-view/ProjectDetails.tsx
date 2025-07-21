@@ -25,6 +25,7 @@ import LineChartSection from "./components/LineChartSection";
 import CategoryChartSection from "./components/CategoryChartSection";
 import CirclePackingChartSection from "./components/CirclePackingChartSection";
 import EntityList from "./components/EntityList";
+import BranchList from "./components/BranchList";
 
 const ProjectDetails = () => {
   const { projectId } = useParams();
@@ -163,6 +164,7 @@ const ProjectDetails = () => {
       <CategoryChartSection projectName={project.name} />
       <CirclePackingChartSection projectName={project.name} />
       <EntityList projectName={project.name} />
+      <BranchList projectName={project.name} />
     </div>
   );
 };
