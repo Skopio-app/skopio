@@ -5,8 +5,7 @@ import {
   commands,
 } from "../../../types/tauri.gen";
 import { usePresetFilter } from "../stores/usePresetFilter";
-import { formatDuration } from "../../../utils/time";
-import { Skeleton } from "@skopio/ui";
+import ItemsList from "./ItemsList";
 
 interface BranchListProps {
   projectName: string;
@@ -54,27 +53,7 @@ const BranchList: React.FC<BranchListProps> = ({ projectName }) => {
       .sort((a, b) => b.value - a.value);
   }, [data]);
 
-  // TODO: Make list reusable for both entities and branches
-  return (
-    <div className="flex flex-col space-y-2">
-      <h3 className="font-semibold">Branches</h3>
-      {processedData.length === 0 && (
-        <p className="w-full text-sm font-light">No branches found</p>
-      )}
-      {!loading && processedData ? (
-        processedData.map((item) => {
-          return (
-            <div className="space-x-2 flex-row">
-              <p className="text-xs font-light">{formatDuration(item.value)}</p>
-              <p className="text-sm">{item.name}</p>
-            </div>
-          );
-        })
-      ) : (
-        <Skeleton className="w-xl" />
-      )}
-    </div>
-  );
+  return <ItemsList title="Branches" data={processedData} loading={loading} />;
 };
 
 export default BranchList;

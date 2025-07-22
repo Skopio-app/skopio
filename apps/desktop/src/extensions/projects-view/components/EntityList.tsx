@@ -5,8 +5,7 @@ import {
   commands,
 } from "../../../types/tauri.gen";
 import { usePresetFilter } from "../stores/usePresetFilter";
-import { formatDuration } from "../../../utils/time";
-import { Skeleton } from "@skopio/ui";
+import ItemsList from "./ItemsList";
 
 interface EntityListProps {
   projectName: string;
@@ -54,26 +53,7 @@ const EntityList: React.FC<EntityListProps> = ({ projectName }) => {
       .sort((a, b) => b.value - a.value);
   }, [data]);
 
-  return (
-    <div className="flex flex-col space-y-2">
-      <h3 className="font-semibold">Entities</h3>
-      {processedData.length === 0 && (
-        <p className="w-full text-sm font-light">No entities found</p>
-      )}
-      {!loading && processedData ? (
-        processedData.map((item) => {
-          return (
-            <div className="space-x-2 flex flex-row">
-              <p className="text-xs font-light">{formatDuration(item.value)}</p>
-              <p className="text-sm">{item.name}</p>
-            </div>
-          );
-        })
-      ) : (
-        <Skeleton className="w-xl" />
-      )}
-    </div>
-  );
+  return <ItemsList title="Entities" data={processedData} loading={loading} />;
 };
 
 export default EntityList;

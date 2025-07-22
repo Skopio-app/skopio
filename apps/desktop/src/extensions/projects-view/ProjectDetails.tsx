@@ -162,13 +162,21 @@ const ProjectDetails = () => {
         <Skeleton className="h-4 max-w-76" />
       )}
 
-      <LineChartSection projectName={project.name} />
-      <CategoryChartSection projectName={project.name} />
-      <CirclePackingChartSection projectName={project.name} />
-      <EntityList projectName={project.name} />
-      <BranchList projectName={project.name} />
-      <AppPieChartSection projectName={project.name} />
-      <LanguagePieChartSection projectName={project.name} />
+      <div className="flex flex-row space-x-2">
+        <LineChartSection projectName={project.name} />
+        <CategoryChartSection projectName={project.name} />
+      </div>
+      <div className="flex flex-row space-x-2">
+        <AppPieChartSection projectName={project.name} />
+        <LanguagePieChartSection projectName={project.name} />
+      </div>
+      <div className="flex items-center justify-center">
+        <CirclePackingChartSection projectName={project.name} />
+      </div>
+      <div className="flex flex-row justify-between mx-3 mb-3">
+        <EntityList projectName={project.name} />
+        <BranchList projectName={project.name} />
+      </div>
     </div>
   );
 };
