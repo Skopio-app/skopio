@@ -21,13 +21,13 @@ import RangeSelectionDialog from "../../components/RangeSelectionDialog";
 import { usePresetFilter } from "./stores/usePresetFilter";
 import BranchSelectionDialog from "./components/BranchSelectionDialog";
 import { useTotalBucketedTime } from "./hooks/useTotalBucketedTime";
-import LineChartSection from "./components/LineChartSection";
-import CategoryChartSection from "./components/CategoryChartSection";
-import CirclePackingChartSection from "./components/CirclePackingChartSection";
-import EntityList from "./components/EntityList";
-import BranchList from "./components/BranchList";
-import AppPieChartSection from "./components/AppPieChartSection";
-import LanguagePieChartSection from "./components/LanguagePieChartSection";
+import LineChartSection from "./components/sections/LineChartSection";
+import CategoryChartSection from "./components/sections/CategoryChartSection";
+import CirclePackingChartSection from "./components/sections/CirclePackingChartSection";
+import EntityList from "./components/sections/EntityList";
+import BranchList from "./components/sections/BranchList";
+import AppPieChartSection from "./components/sections/AppPieChartSection";
+import LanguagePieChartSection from "./components/sections/LanguagePieChartSection";
 
 const ProjectDetails = () => {
   const { projectId } = useParams();
@@ -83,7 +83,7 @@ const ProjectDetails = () => {
     loading: timeLoading,
     hasBranchData,
     branches,
-  } = useTotalBucketedTime(project?.name ?? "", selectedBranches);
+  } = useTotalBucketedTime(selectedBranches);
 
   const formattedDuration = formatDuration(total);
 
@@ -96,6 +96,7 @@ const ProjectDetails = () => {
         };
 
         const result = await commands.fetchProject(query);
+        usePresetFilter.setState({ project: result?.name });
         setProject(result);
       } catch (err) {
         console.error("Failed to fetch project", err);
@@ -163,19 +164,19 @@ const ProjectDetails = () => {
       )}
 
       <div className="flex flex-row space-x-2">
-        <LineChartSection projectName={project.name} />
-        <CategoryChartSection projectName={project.name} />
+        <LineChartSection />
+        <CategoryChartSection />
       </div>
       <div className="flex flex-row space-x-2">
-        <AppPieChartSection projectName={project.name} />
-        <LanguagePieChartSection projectName={project.name} />
+        <AppPieChartSection />
+        <LanguagePieChartSection />
       </div>
       <div className="flex items-center justify-center">
-        <CirclePackingChartSection projectName={project.name} />
+        <CirclePackingChartSection />
       </div>
       <div className="flex flex-row justify-between mx-3 mb-3">
-        <EntityList projectName={project.name} />
-        <BranchList projectName={project.name} />
+        <EntityList />
+        <BranchList />
       </div>
     </div>
   );

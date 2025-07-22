@@ -3,7 +3,6 @@ import { BucketedSummaryInput, commands } from "../../../types/tauri.gen";
 import { usePresetFilter } from "../stores/usePresetFilter";
 
 export const useTotalBucketedTime = (
-  projectName: string,
   selectedBranches: string[] | null,
 ): {
   total: number;
@@ -15,14 +14,14 @@ export const useTotalBucketedTime = (
   const [loading, setLoading] = useState<boolean>(true);
   const [hasBranchData, setHasBranchData] = useState(false);
   const [branches, setBranches] = useState<string[]>([]);
-  const { preset } = usePresetFilter();
+  const { preset, project } = usePresetFilter();
 
   useEffect(() => {
     let cancelled = false;
     const fetchData = async () => {
       const baseInput: BucketedSummaryInput = {
         preset,
-        project_names: [projectName],
+        project_names: [project],
         include_afk: false,
       };
 
@@ -92,7 +91,7 @@ export const useTotalBucketedTime = (
     return () => {
       cancelled = true;
     };
-  }, [preset, projectName, selectedBranches?.join(",")]);
+  }, [preset, project, selectedBranches?.join(",")]);
 
   return { total, loading, hasBranchData, branches };
 };

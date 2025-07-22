@@ -13,3 +13,8 @@ export type CalendarChartData = {
   value: number;
   day: string;
 };
+
+export type LineChartData = {
+  x: string;
+  y: number;
+};

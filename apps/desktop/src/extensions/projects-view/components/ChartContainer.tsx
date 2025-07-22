@@ -12,12 +12,14 @@ const ChartContainer: React.FC<ChartContainerProps> = ({
   loading,
 }) => {
   return (
-    <div className="relative flex rounded-2xl border border-muted w-full max-w-3xl">
-      <div className="flex items-center justify-between mb-2">
-        {title && (
-          <h2 className="text-sm font-medium text-muted-foreground">{title}</h2>
-        )}
-      </div>
+    <div className="relative flex flex-col rounded-2xl w-full max-w-3xl">
+      {title && (
+        <div className="flex items-center justify-center py-2">
+          <h2 className="text-sm font-medium text-muted-foreground text-center">
+            {title}
+          </h2>
+        </div>
+      )}
 
       {loading ? (
         <SkeletonChart />
