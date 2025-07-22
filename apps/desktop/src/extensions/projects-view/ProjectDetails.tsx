@@ -26,6 +26,8 @@ import CategoryChartSection from "./components/CategoryChartSection";
 import CirclePackingChartSection from "./components/CirclePackingChartSection";
 import EntityList from "./components/EntityList";
 import BranchList from "./components/BranchList";
+import AppPieChartSection from "./components/AppPieChartSection";
+import LanguagePieChartSection from "./components/LanguagePieChartSection";
 
 const ProjectDetails = () => {
   const { projectId } = useParams();
@@ -165,6 +167,8 @@ const ProjectDetails = () => {
       <CirclePackingChartSection projectName={project.name} />
       <EntityList projectName={project.name} />
       <BranchList projectName={project.name} />
+      <AppPieChartSection projectName={project.name} />
+      <LanguagePieChartSection projectName={project.name} />
     </div>
   );
 };

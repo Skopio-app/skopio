@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import WidgetCard from "../components/WidgetCard";
 import { useSummaryData } from "../hooks/useSummaryData";
-import CustomPieChart from "../charts/CustomPieChart";
+import CustomPieChart from "../../../components/CustomPieChart";
 import { PieChartData } from "../../../types/types";
 
 const AppPieChartWidget = () => {
