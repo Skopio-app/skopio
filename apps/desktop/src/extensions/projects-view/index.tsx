@@ -14,7 +14,7 @@ import { useNavigate, useParams } from "react-router";
 const ProjectsView = () => {
   const [projects, setProjects] = useState<Project[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [currentPage, setCurrentPage] = useState<number>(1);
+  const [currentPage, setCurrentPage] = useState<number>(0);
   const [cursors, setCursors] = useState<(number | null)[]>([]);
   const [totalPages, setTotalPages] = useState<number>(0);
   const limit = 15;
@@ -90,6 +90,7 @@ const ProjectsView = () => {
             <PaginationContent>
               <PaginationItem>
                 <PaginationPrevious
+                  disabled={currentPage === 0}
                   onClick={() =>
                     setCurrentPage((prev) => Math.max(prev - 1, 0))
                   }
@@ -142,6 +143,7 @@ const ProjectsView = () => {
 
               <PaginationItem>
                 <PaginationNext
+                  disabled={currentPage >= totalPages - 1}
                   onClick={() =>
                     setCurrentPage((prev) =>
                       prev + 1 < totalPages ? prev + 1 : prev,
