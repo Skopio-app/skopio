@@ -50,6 +50,14 @@ const ProjectsView = () => {
   const start = Math.max(0, currentPage - Math.floor(pageWindowSize / 2));
   const end = Math.min(total, start + pageWindowSize);
 
+  if (projects.length === 0) {
+    return (
+      <p className="h-[300px] w-full flex items-center justify-center text-sm text-gray-500">
+        No projects found
+      </p>
+    );
+  }
+
   return (
     <div className="flex flex-col h-full">
       <div className="flex-1 overflow-auto space-y-6">

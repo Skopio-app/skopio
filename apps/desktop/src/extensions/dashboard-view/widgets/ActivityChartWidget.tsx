@@ -57,6 +57,7 @@ const ActivityChartWidget = () => {
         setData(cached.values);
       }
 
+      // TODO: Fix activity chart not updating total time
       const [todayBucket] = getTodayData();
       if (!todayBucket) return;
 

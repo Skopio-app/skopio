@@ -8,6 +8,7 @@ import StackedBarChart from "../../../components/StackedBarChart";
 const ProjectChartWidget = () => {
   const { rawGrouped, loading } = useSummaryData(undefined, ["project"]);
 
+  // TODO: Fix data display issue
   const [data, keys] = useMemo(() => {
     const projectBuckets = rawGrouped.project ?? [];
 

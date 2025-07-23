@@ -9,7 +9,12 @@ const CategoryChartSection = () => {
 
   return (
     <ChartContainer loading={loading}>
-      <StackedBarChart data={data} keys={keys} />
+      <StackedBarChart
+        data={data}
+        keys={keys}
+        axisBottom={false}
+        axisLeft={true}
+      />
     </ChartContainer>
   );
 };
