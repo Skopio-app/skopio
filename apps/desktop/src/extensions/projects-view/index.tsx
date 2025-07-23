@@ -1,4 +1,5 @@
 import {
+  Input,
   Pagination,
   PaginationContent,
   PaginationItem,
@@ -10,6 +11,7 @@ import {
 import { useEffect, useState } from "react";
 import { commands, PaginatedProjects, Project } from "../../types/tauri.gen";
 import { useNavigate, useParams } from "react-router";
+import { SearchIcon } from "lucide-react";
 
 const ProjectsView = () => {
   const [projects, setProjects] = useState<Project[]>([]);
@@ -59,7 +61,12 @@ const ProjectsView = () => {
   }
 
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full px-4 py-4 space-y-4">
+      <div className="relative w-full max-w-md">
+        <SearchIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground size-4" />
+        <Input placeholder="Search projects..." className="pl-10" />
+      </div>
+
       <div className="flex-1 overflow-auto space-y-6">
         <ul className="divide-y divide-muted border">
           {isLoading
@@ -71,7 +78,7 @@ const ProjectsView = () => {
             : projects.map((project) => (
                 <li
                   key={project.id}
-                  className="p-4 hover:bg-muted/40 transition-colors"
+                  className="p-4 hover:bg-muted/40 transition-colors hover:cursor-pointer"
                   onClick={() =>
                     navigate(`/tab/${tabId}/projects/${project.id}`)
                   }
