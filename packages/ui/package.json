@@ -25,16 +25,16 @@
     "date-fns": "^4.1.0",
     "lucide-react": "^0.516.0",
     "react-day-picker": "^9.7.0",
-    "tailwind-merge": "^3.3.0"
+    "tailwind-merge": "^3.3.1"
   },
   "devDependencies": {
-    "@tailwindcss/cli": "^4.1.8",
+    "@tailwindcss/cli": "^4.1.11",
     "typescript": "^5.8.3"
   },
   "peerDependencies": {
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "tailwindcss": "^4.1.8"
+    "tailwindcss": "^4.1.11"
   },
   "exports": {
     ".": "./src/index.ts",
