@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "\n            SELECT p.id, p.name, p.root_path\n            FROM projects_fts fts\n            JOIN projects p ON fts.rowid = p.id\n            WHERE fts.name MATCH ?\n            ORDER BY bm25('fts') ASC\n            LIMIT ?\n            ",
+  "query": "\n            SELECT p.id, p.name, p.root_path\n            FROM projects_fts fts\n            JOIN projects p ON fts.rowid = p.id\n            WHERE fts.name MATCH ?\n            ORDER BY fts.rank ASC\n            LIMIT ?\n            ",
   "describe": {
     "columns": [
       {
@@ -28,5 +28,5 @@
       true
     ]
   },
-  "hash": "dec223c513d80947d92c8e31c8b330ff070a463e6d74b8e9131a60240580a528"
+  "hash": "eb5327fddaf7895cd4a540a4a00986c7f9eb7fb595fb158cfd6bd23948d37039"
 }

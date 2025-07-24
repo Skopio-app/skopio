@@ -12,6 +12,12 @@ import { useEffect, useState } from "react";
 import { commands, PaginatedProjects, Project } from "../../types/tauri.gen";
 import { useNavigate, useParams } from "react-router";
 import { SearchIcon } from "lucide-react";
+import z from "zod/v4";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { toast } from "sonner";
+
+const schema = z.object({ query: z.string() });
 
 const ProjectsView = () => {
   const [projects, setProjects] = useState<Project[]>([]);
@@ -19,10 +25,19 @@ const ProjectsView = () => {
   const [currentPage, setCurrentPage] = useState<number>(0);
   const [cursors, setCursors] = useState<(number | null)[]>([]);
   const [totalPages, setTotalPages] = useState<number>(0);
+  const [searchResults, setSearchResults] = useState<Project[]>([]);
+
   const limit = 15;
 
   const { id: tabId } = useParams();
   const navigate = useNavigate();
+
+  const { register, watch } = useForm({
+    resolver: zodResolver(schema),
+    defaultValues: { query: "" },
+  });
+
+  const query = watch("query");
 
   const fetchData = async (page: number) => {
     setIsLoading(true);
@@ -47,6 +62,19 @@ const ProjectsView = () => {
     fetchData(currentPage);
   }, [currentPage]);
 
+  useEffect(() => {
+    const delay = setTimeout(() => {
+      if (query.length > 0) {
+        commands
+          .searchProjects({ name: query, limit })
+          .then(setSearchResults)
+          .catch(toast.error);
+      }
+    }, 300);
+
+    return () => clearTimeout(delay);
+  }, [query]);
+
   const pageWindowSize = 7;
   const total = totalPages;
   const start = Math.max(0, currentPage - Math.floor(pageWindowSize / 2));
@@ -64,7 +92,11 @@ const ProjectsView = () => {
     <div className="flex flex-col h-full px-4 py-4 space-y-4">
       <div className="relative w-full max-w-md">
         <SearchIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground size-4" />
-        <Input placeholder="Search projects..." className="pl-10" />
+        <Input
+          placeholder="Search projects..."
+          className="pl-10"
+          {...register("query")}
+        />
       </div>
 
       <div className="flex-1 overflow-auto space-y-6">
@@ -75,7 +107,7 @@ const ProjectsView = () => {
                   <Skeleton className="h-6 w-1/2" />
                 </li>
               ))
-            : projects.map((project) => (
+            : (query.length > 0 ? searchResults : projects).map((project) => (
                 <li
                   key={project.id}
                   className="p-4 hover:bg-muted/40 transition-colors hover:cursor-pointer"

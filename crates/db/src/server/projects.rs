@@ -131,7 +131,8 @@ impl ServerProject {
     ) -> Result<Vec<Project>, sqlx::Error> {
         let limit = limit.min(100) as i64;
 
-        let formatted_query = format!("{}*", query);
+        let escaped_query = query.replace('"', "\"\"");
+        let formatted_query = format!("\"{}\"*", escaped_query);
 
         let rows: Vec<ServerProject> = sqlx::query_as!(
             ServerProject,
@@ -140,7 +141,7 @@ impl ServerProject {
             FROM projects_fts fts
             JOIN projects p ON fts.rowid = p.id
             WHERE fts.name MATCH ?
-            ORDER BY bm25('fts') ASC
+            ORDER BY fts.rank ASC
             LIMIT ?
             ",
             formatted_query,
