@@ -52,7 +52,7 @@ const ProjectsView = () => {
       setCursors(res.cursors ?? null);
       setTotalPages(res.totalPages ?? 0);
     } catch (err) {
-      console.error("Failed to fetch projects", err);
+      toast.error((err as Error).message);
     } finally {
       setIsLoading(false);
     }
@@ -80,14 +80,6 @@ const ProjectsView = () => {
   const start = Math.max(0, currentPage - Math.floor(pageWindowSize / 2));
   const end = Math.min(total, start + pageWindowSize);
 
-  if (projects.length === 0) {
-    return (
-      <p className="h-[300px] w-full flex items-center justify-center text-sm text-gray-500">
-        No projects found
-      </p>
-    );
-  }
-
   return (
     <div className="flex flex-col h-full px-4 py-4 space-y-4">
       <div className="relative w-full max-w-md">
@@ -101,25 +93,29 @@ const ProjectsView = () => {
 
       <div className="flex-1 overflow-auto space-y-6">
         <ul className="divide-y divide-muted border">
-          {isLoading
-            ? Array.from({ length: limit }).map((_, i) => (
-                <li key={i} className="p-4">
-                  <Skeleton className="h-6 w-1/2" />
-                </li>
-              ))
-            : (query.length > 0 ? searchResults : projects).map((project) => (
-                <li
-                  key={project.id}
-                  className="p-4 hover:bg-muted/40 transition-colors hover:cursor-pointer"
-                  onClick={() =>
-                    navigate(`/tab/${tabId}/projects/${project.id}`)
-                  }
-                >
-                  <h3 className="text-base font-medium break-words">
-                    {project.name}
-                  </h3>
-                </li>
-              ))}
+          {isLoading ? (
+            Array.from({ length: limit }).map((_, i) => (
+              <li key={i} className="p-4">
+                <Skeleton className="h-6 w-1/2" />
+              </li>
+            ))
+          ) : projects.length === 0 ? (
+            <p className="h-[300px] w-full flex items-center justify-center text-sm text-gray-500">
+              No projects found
+            </p>
+          ) : (
+            (query.length > 0 ? searchResults : projects).map((project) => (
+              <li
+                key={project.id}
+                className="p-4 hover:bg-muted/40 transition-colors hover:cursor-pointer"
+                onClick={() => navigate(`/tab/${tabId}/projects/${project.id}`)}
+              >
+                <h3 className="text-base font-medium break-words">
+                  {project.name}
+                </h3>
+              </li>
+            ))
+          )}
         </ul>
       </div>
 
