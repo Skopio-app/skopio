@@ -14,3 +14,7 @@ export * from "./components/label";
 export * from "./components/ChipSelector";
 export * from "./components/card";
 export * from "./components/hotkey";
+export * from "./components/pagination";
+export * from "./components/breadcrumb";
+export * from "./components/checkbox";
+export * from "./components/scroll-area";

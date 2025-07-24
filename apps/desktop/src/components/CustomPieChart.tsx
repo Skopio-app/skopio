@@ -1,7 +1,7 @@
 import { ResponsivePieCanvas } from "@nivo/pie";
 import { useMemo } from "react";
 import { useOrdinalColorScale } from "@nivo/colors";
-import { formatDuration } from "../../../utils/time";
+import { formatDuration } from "../utils/time";
 
 interface CustomPieChartProps {
   data: {
@@ -49,7 +49,7 @@ const CustomPieChart: React.FC<CustomPieChartProps> = ({ data }) => {
           tooltip={({ datum }) => {
             const time = formatDuration(datum.value);
             return (
-              <div className="rounded-md border border-gray-300 bg-white px-3 py-2 text-sm shadow-md text-gray-600 flex items-center gap-2">
+              <div className="min-w-36 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm shadow-md text-gray-600 flex items-center gap-2">
                 <span
                   className="w-2.5 h-2.5 rounded-full inline-block"
                   style={{ backgroundColor: datum.color }}

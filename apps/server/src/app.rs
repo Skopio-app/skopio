@@ -4,6 +4,7 @@ use crate::routes::categories::category_routes;
 use crate::routes::events::event_routes;
 use crate::routes::health::health_routes;
 use crate::routes::heartbeats::heartbeat_routes;
+use crate::routes::projects::project_routes;
 use crate::routes::summary::summary_routes;
 use axum::Router;
 use db::DBContext;
@@ -20,5 +21,6 @@ pub async fn create_app(db: Arc<Mutex<DBContext>>) -> Router {
         .merge(summary_routes(db.clone()))
         .merge(app_routes(db.clone()))
         .merge(category_routes(db.clone()))
+        .merge(project_routes(db.clone()))
         .layer(CorsLayer::permissive())
 }

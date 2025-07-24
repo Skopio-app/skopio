@@ -71,7 +71,7 @@ const BarLineChart: React.FC<BasicBarChartProps> = ({
             }
 
             return (
-              <div className="min-w-60 rounded-md border border-gray-200 bg-white px-3 py-2 text-sm shadow-md text-gray-700">
+              <div className="min-w-48 rounded-md border border-gray-200 bg-white px-3 py-2 text-sm shadow-md text-gray-700">
                 <div className="flex items-center gap-2 mb-1">
                   <span
                     className="w-2.5 h-2.5 rounded-full inline-block"
@@ -80,8 +80,8 @@ const BarLineChart: React.FC<BasicBarChartProps> = ({
                   <span className="font-semibold">{formattedLabel}</span>
                 </div>
                 <div className="text-xs space-y-1">
-                  <div>Actual: {actualTime}</div>
-                  <div>Goal: {goalTime}</div>
+                  <p>Actual: {actualTime}</p>
+                  <p>Goal: {goalTime}</p>
                 </div>
               </div>
             );
@@ -89,6 +89,7 @@ const BarLineChart: React.FC<BasicBarChartProps> = ({
           axisBottom={{
             tickSize: 4,
             tickPadding: 6,
+            tickValues: 5,
             tickRotation: 0,
             legendPosition: "middle",
             legendOffset: 36,

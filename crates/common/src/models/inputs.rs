@@ -80,7 +80,7 @@ pub struct BucketedSummaryInput {
     #[specta(optional)]
     pub entity_names: Option<Vec<String>>,
     #[specta(optional)]
-    pub activity_types: Option<Vec<String>>,
+    pub category_names: Option<Vec<String>>,
     #[specta(optional)]
     pub branch_names: Option<Vec<String>>,
     #[specta(optional)]
@@ -88,4 +88,21 @@ pub struct BucketedSummaryInput {
     #[specta(optional)]
     pub group_by: Option<Group>,
     pub include_afk: bool,
+}
+
+#[derive(Serialize, Deserialize, Debug, specta::Type)]
+pub struct PaginationQuery {
+    pub after: Option<i64>,
+    pub limit: Option<u32>,
+}
+
+#[derive(Serialize, Deserialize, Debug, specta::Type)]
+pub struct ProjectQuery {
+    pub id: i64,
+}
+
+#[derive(Serialize, Deserialize, Debug, specta::Type)]
+pub struct ProjectSearchQuery {
+    pub name: String,
+    pub limit: u32,
 }

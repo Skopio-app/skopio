@@ -49,6 +49,15 @@ export const commands = {
   async fetchCategories(): Promise<Category[]> {
     return await TAURI_INVOKE("fetch_categories");
   },
+  async fetchProjects(query: PaginationQuery): Promise<PaginatedProjects> {
+    return await TAURI_INVOKE("fetch_projects", { query });
+  },
+  async fetchProject(query: ProjectQuery): Promise<Project | null> {
+    return await TAURI_INVOKE("fetch_project", { query });
+  },
+  async searchProjects(query: ProjectSearchQuery): Promise<Project[]> {
+    return await TAURI_INVOKE("search_projects", { query });
+  },
   async dismissNotificationWindow(): Promise<null> {
     return await TAURI_INVOKE("dismiss_notification_window");
   },
@@ -77,7 +86,7 @@ export type BucketedSummaryInput = {
   app_names?: string[] | null;
   project_names?: string[] | null;
   entity_names?: string[] | null;
-  activity_types?: string[] | null;
+  category_names?: string[] | null;
   branch_names?: string[] | null;
   language_names?: string[] | null;
   group_by?: Group | null;
@@ -136,6 +145,19 @@ export type NotificationPayload = {
   message: string | null;
   soundFile: string | null;
 };
+export type PaginatedProjects = {
+  data: Project[];
+  totalPages: number | null;
+  cursors: (number | null)[];
+};
+export type PaginationQuery = { after: number | null; limit: number | null };
+export type Project = {
+  id: number | null;
+  name: string;
+  root_path: string | null;
+};
+export type ProjectQuery = { id: number };
+export type ProjectSearchQuery = { name: string; limit: number };
 export type SummaryQueryInput = {
   start: string | null;
   end: string | null;

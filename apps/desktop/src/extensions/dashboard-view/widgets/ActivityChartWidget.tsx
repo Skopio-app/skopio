@@ -4,7 +4,7 @@ import CalendarChart from "../charts/CalendarChart";
 import { TimeRangePreset } from "../../../types/tauri.gen";
 import { endOfYear, startOfYear } from "date-fns";
 import { useSummaryData } from "../hooks/useSummaryData";
-import { CalendarChartData } from "../types";
+import { CalendarChartData } from "../../../types/types";
 import {
   getYearlyActivity,
   storeYearlyActivity,
@@ -57,6 +57,7 @@ const ActivityChartWidget = () => {
         setData(cached.values);
       }
 
+      // TODO: Fix activity chart not updating total time
       const [todayBucket] = getTodayData();
       if (!todayBucket) return;
 

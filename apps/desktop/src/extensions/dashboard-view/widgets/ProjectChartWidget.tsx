@@ -1,13 +1,14 @@
 import { useMemo } from "react";
-import { BarChartData } from "../types";
+import { BarChartData } from "../../../types/types";
 import WidgetCard from "../components/WidgetCard";
-import StackedBarChart from "../charts/StackedBarChart";
 import { useSummaryData } from "../hooks/useSummaryData";
 import { format, parseISO } from "date-fns";
+import StackedBarChart from "../../../components/StackedBarChart";
 
 const ProjectChartWidget = () => {
   const { rawGrouped, loading } = useSummaryData(undefined, ["project"]);
 
+  // TODO: Fix data display issue
   const [data, keys] = useMemo(() => {
     const projectBuckets = rawGrouped.project ?? [];
 

@@ -87,5 +87,31 @@ CREATE TABLE IF NOT EXISTS categories
     name TEXT NOT NULL UNIQUE
 );
 
+CREATE VIRTUAL TABLE IF NOT EXISTS projects_fts
+USING fts5(
+    name,
+    content='projects',
+    content_rowid='id',
+    tokenize = 'porter unicode61'
+);
+
+CREATE TRIGGER IF NOT EXISTS projects_ai
+AFTER INSERT ON projects
+BEGIN
+    INSERT INTO projects_fts(rowid, name) VALUES (new.id, new.name);
+END;
+
+CREATE TRIGGER IF NOT EXISTS projects_au
+AFTER UPDATE ON projects
+BEGIN
+    UPDATE projects_fts SET name = new.name WHERE rowid = old.id;
+END;
+
+CREATE TRIGGER IF NOT EXISTS projects_ad
+AFTER DELETE ON projects
+BEGIN
+    DELETE FROM projects_fts WHERE rowid = old.id;
+END;
+
 
 

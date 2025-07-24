@@ -3,6 +3,7 @@ import App from "./App";
 import TabExtensionPage from "./pages/TabExtensionPage";
 import DashboardLayout from "./components/Dashboard";
 import RedirectToTab from "./components/RedirectToTab";
+import ProjectDetails from "./extensions/projects-view/ProjectDetails";
 
 const router = createBrowserRouter([
   {
@@ -19,6 +20,12 @@ const router = createBrowserRouter([
           {
             path: "tab/:id",
             element: <TabExtensionPage />,
+            children: [
+              {
+                path: "projects/:projectId",
+                element: <ProjectDetails />,
+              },
+            ],
           },
         ],
       },

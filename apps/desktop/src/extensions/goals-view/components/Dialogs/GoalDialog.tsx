@@ -257,6 +257,7 @@ const GoalDialog: React.FC<GoalDialogProps> = ({
           >
             <Dialog.Title className="text-xl font-semibold break-words">
               {goal ? (
+                // TODO: Add edit goal text
                 <div className="space-y-1">
                   <p className="text-gray-600 text-base">{goal.name}</p>
                   <p className="text-black font-light">{summaryText}</p>

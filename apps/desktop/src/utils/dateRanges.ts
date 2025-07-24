@@ -10,7 +10,7 @@ import {
   subMonths,
   subWeeks,
 } from "date-fns";
-import { TimeBucket, TimeRangePreset } from "../../../types/tauri.gen";
+import { TimeBucket, TimeRangePreset } from "../types/tauri.gen";
 
 export enum DateRangeType {
   Today = "Today",

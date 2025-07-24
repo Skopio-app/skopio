@@ -1,9 +1,10 @@
-import { useParams } from "react-router";
+import { Outlet, useMatch, useParams } from "react-router";
 import { builtinExtensionRegistry } from "../extensions/registry";
 import { TabExtensionHost } from "./TabExtensionHost";
 
 const TabExtensionPage = () => {
   const { id } = useParams();
+  const isProjectView = useMatch("/tab/:id/projects/:projectId");
   const extension = builtinExtensionRegistry.getExtensionById(id ?? "");
 
   if (!extension || !extension.component) {
@@ -12,7 +13,11 @@ const TabExtensionPage = () => {
     );
   }
 
-  return <TabExtensionHost extension={extension} />;
+  return (
+    <div className="h-full w-full">
+      {isProjectView ? <Outlet /> : <TabExtensionHost extension={extension} />}
+    </div>
+  );
 };
 
 export default TabExtensionPage;

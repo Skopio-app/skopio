@@ -1,9 +1,9 @@
 import { ResponsiveBarCanvas } from "@nivo/bar";
 import { useRef, useState, useEffect } from "react";
-import ChartTooltipPortal from "../components/ChartTooltipPortal";
 import { useOrdinalColorScale } from "@nivo/colors";
 import { useColorCache } from "../stores/useColorCache";
-import { formatDuration } from "../../../utils/time";
+import ChartTooltipPortal from "./ChartTooltipPortal";
+import { formatDuration } from "../utils/time";
 
 interface StackedBarChartProps {
   data: {
@@ -12,12 +12,16 @@ interface StackedBarChartProps {
   }[];
   keys: string[];
   bucketLabel?: string;
+  axisBottom?: boolean;
+  axisLeft?: boolean;
 }
 
 const StackedBarChart: React.FC<StackedBarChartProps> = ({
   data,
   keys,
   bucketLabel = "Time",
+  axisBottom = true,
+  axisLeft = false,
 }) => {
   const [mousePos, setMousePos] = useState<{ x: number; y: number } | null>(
     null,
@@ -63,11 +67,12 @@ const StackedBarChart: React.FC<StackedBarChartProps> = ({
 
   const MAX_TOOLTIP_ENTRIES = 10;
 
+  // TODO: Reuse not available text
   if (!data.length) {
     return (
-      <div className="h-[220px] w-full flex items-center justify-center text-sm text-gray-500">
+      <p className="h-[220px] w-full flex items-center justify-center text-sm text-gray-500">
         No data available
-      </div>
+      </p>
     );
   }
 
@@ -81,22 +86,39 @@ const StackedBarChart: React.FC<StackedBarChartProps> = ({
         data={data}
         keys={keys}
         indexBy="label"
-        margin={{ top: 20, right: 30, bottom: 50, left: 50 }}
+        margin={{ top: 20, right: 30, bottom: 50, left: axisLeft ? 90 : 50 }}
         padding={0.3}
         groupMode="stacked"
         colors={(bar) => getColorForKey(String(bar.id), getColor)}
         borderRadius={2}
         borderWidth={1}
         borderColor={{ from: "color", modifiers: [["darker", 1.6]] }}
-        axisBottom={{
-          tickSize: 4,
-          tickPadding: 6,
-          tickRotation: 0,
-          legend: bucketLabel,
-          legendPosition: "middle",
-          legendOffset: 36,
-        }}
-        axisLeft={null}
+        axisBottom={
+          axisBottom
+            ? {
+                tickSize: 4,
+                tickPadding: 6,
+                tickRotation: 0,
+                legend: bucketLabel,
+                legendPosition: "middle",
+                legendOffset: 36,
+              }
+            : null
+        }
+        axisLeft={
+          axisLeft
+            ? {
+                tickSize: 10,
+                tickPadding: 5,
+                tickRotation: 0,
+                tickValues: 5,
+                legend: bucketLabel,
+                legendOffset: -80,
+                legendPosition: "middle",
+                format: (value) => formatDuration(value),
+              }
+            : null
+        }
         tooltip={({ data }) => {
           const entries = Object.entries(data)
             .filter(([key]) => key !== "label" && typeof data[key] === "number")

@@ -6,7 +6,7 @@ import {
   DateRangeType,
   getRangeDates,
   mapRangeToPreset,
-} from "./helpers/dateRanges";
+} from "../../utils/dateRanges";
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
 import { Layout, Responsive, WidthProvider } from "react-grid-layout";
@@ -16,7 +16,7 @@ import { useDashboardFilter } from "./stores/useDashboardFilter";
 import LanguagePieChartWidget from "./widgets/LanguagePieChartWidget";
 import CategoryChartWidget from "./widgets/CategoryChartWidget";
 import EntityChartWidget from "./widgets/EntityChartWidget";
-import RangeSelectionDialog from "./components/RangeSelectionDialog";
+import RangeSelectionDialog from "../../components/RangeSelectionDialog";
 import ActivityChartWidget from "./widgets/ActivityChartWidget";
 import { useTotalTime } from "./hooks/useTotalTime";
 import { usePersistentLayout } from "./hooks/usePersistentLayout";

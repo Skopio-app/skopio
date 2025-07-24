@@ -1,8 +1,8 @@
 import { useMemo } from "react";
 import WidgetCard from "../components/WidgetCard";
 import { useSummaryData } from "../hooks/useSummaryData";
-import CustomPieChart from "../charts/CustomPieChart";
-import { PieChartData } from "../types";
+import CustomPieChart from "../../../components/CustomPieChart";
+import { PieChartData } from "../../../types/types";
 
 const AppPieChartWidget = () => {
   const { getGroupData, loading } = useSummaryData(undefined, ["app"]);

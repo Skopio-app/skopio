@@ -12,3 +12,4 @@ serde = { workspace = true, features = ["derive"] }
 chrono = { workspace = true, features = ["serde"] }
 specta = { workspace = true , features = ["chrono", "derive"] }
 thiserror = { workspace = true }
+types = { path = "../types" }
