@@ -55,6 +55,9 @@ export const commands = {
   async fetchProject(query: ProjectQuery): Promise<Project | null> {
     return await TAURI_INVOKE("fetch_project", { query });
   },
+  async searchProjects(query: ProjectSearchQuery): Promise<Project[]> {
+    return await TAURI_INVOKE("search_projects", { query });
+  },
   async dismissNotificationWindow(): Promise<null> {
     return await TAURI_INVOKE("dismiss_notification_window");
   },
@@ -154,6 +157,7 @@ export type Project = {
   root_path: string | null;
 };
 export type ProjectQuery = { id: number };
+export type ProjectSearchQuery = { name: string; limit: number };
 export type SummaryQueryInput = {
   start: string | null;
   end: string | null;

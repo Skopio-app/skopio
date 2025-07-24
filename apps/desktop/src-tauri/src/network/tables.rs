@@ -1,7 +1,7 @@
 use std::{collections::HashMap, sync::LazyLock, time::Duration};
 
 use common::models::{
-    inputs::{PaginationQuery, ProjectQuery},
+    inputs::{PaginationQuery, ProjectQuery, ProjectSearchQuery},
     outputs::PaginatedProjects,
 };
 use db::models::{App, Category};
@@ -83,4 +83,10 @@ pub async fn fetch_projects(query: PaginationQuery) -> Result<PaginatedProjects,
 #[specta::specta]
 pub async fn fetch_project(query: ProjectQuery) -> Result<Option<Project>, String> {
     req_json("project", Some(&query)).await
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn search_projects(query: ProjectSearchQuery) -> Result<Vec<Project>, String> {
+    req_json("projects/search", Some(&query)).await
 }

@@ -100,3 +100,9 @@ pub struct PaginationQuery {
 pub struct ProjectQuery {
     pub id: i64,
 }
+
+#[derive(Serialize, Deserialize, Debug, specta::Type)]
+pub struct ProjectSearchQuery {
+    pub name: String,
+    pub limit: u32,
+}

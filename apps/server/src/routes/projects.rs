@@ -7,7 +7,7 @@ use axum::{
     Json, Router,
 };
 use common::models::{
-    inputs::{PaginationQuery, ProjectQuery},
+    inputs::{PaginationQuery, ProjectQuery, ProjectSearchQuery},
     outputs::PaginatedProjects,
 };
 use db::{server::projects::ServerProject, DBContext};
@@ -52,9 +52,23 @@ pub async fn fetch_project(
     Ok(Json(project))
 }
 
+pub async fn search_projects(
+    State(db): State<Arc<Mutex<DBContext>>>,
+    Query(query): Query<ProjectSearchQuery>,
+) -> Result<Json<Vec<Project>>, (StatusCode, Json<String>)> {
+    let db = db.lock().await;
+
+    let projects = ServerProject::search_project(&db, &query.name, query.limit)
+        .await
+        .map_err(error_response)?;
+
+    Ok(Json(projects))
+}
+
 pub fn project_routes(db: Arc<Mutex<DBContext>>) -> Router {
     Router::new()
         .route("/projects", get(get_projects))
         .route("/project", get(fetch_project))
+        .route("/projects/search", get(search_projects))
         .with_state(db)
 }

@@ -59,16 +59,6 @@ impl ServerProject {
         Ok(result.map(Into::into))
     }
 
-    // pub async fn delete(self, db_context: &DBContext) -> Result<(), sqlx::Error> {
-    //     if let Some(id) = self.id {
-    //         sqlx::query!("DELETE FROM projects WHERE id = ?", id)
-    //             .execute(db_context.pool())
-    //             .await?;
-    //     }
-
-    //     Ok(())
-    // }
-
     pub async fn fetch_paginated(
         db_context: &DBContext,
         after_id: Option<i64>,
@@ -132,5 +122,35 @@ impl ServerProject {
         let cursors = cursors.into_iter().map(Some).collect();
 
         Ok(cursors)
+    }
+
+    pub async fn search_project(
+        db_context: &DBContext,
+        query: &str,
+        limit: u32,
+    ) -> Result<Vec<Project>, sqlx::Error> {
+        let limit = limit.min(100) as i64;
+
+        let formatted_query = format!("{}*", query);
+
+        let rows: Vec<ServerProject> = sqlx::query_as!(
+            ServerProject,
+            "
+            SELECT p.id, p.name, p.root_path
+            FROM projects_fts fts
+            JOIN projects p ON fts.rowid = p.id
+            WHERE fts.name MATCH ?
+            ORDER BY bm25('fts') ASC
+            LIMIT ?
+            ",
+            formatted_query,
+            limit
+        )
+        .fetch_all(db_context.pool())
+        .await?;
+
+        let projects = rows.into_iter().map(Into::into).collect();
+
+        Ok(projects)
     }
 }
