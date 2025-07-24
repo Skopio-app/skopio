@@ -123,7 +123,7 @@ const ProjectsView = () => {
         </ul>
       </div>
 
-      {totalPages > 1 && (
+      {query.length === 0 && totalPages > 1 && (
         <div className="pt-4 mb-6">
           <Pagination className="mt-auto">
             <PaginationContent>
