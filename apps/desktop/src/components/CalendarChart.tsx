@@ -1,6 +1,6 @@
 import { CalendarTooltipProps, ResponsiveCalendar } from "@nivo/calendar";
 import { format, startOfYear } from "date-fns";
-import { formatDuration } from "../../../utils/time";
+import { formatDuration } from "../utils/time";
 
 interface CalendarChartProps {
   data: {
@@ -34,26 +34,7 @@ const CalendarChart: React.FC<CalendarChartProps> = ({ data }) => {
         dayBorderWidth={2}
         dayBorderColor="#ffffff"
         tooltip={CalendarTooltip}
-        legends={[
-          {
-            anchor: "bottom-left",
-            direction: "row",
-            translateY: 36,
-            itemCount: 4,
-            itemWidth: 42,
-            itemHeight: 36,
-            itemsSpacing: 14,
-            itemDirection: "right-to-left",
-            //TODO: Add full legend once goal logic is configured
-            // data: [
-            //     {
-            //         id: "test",
-            //         label: "Active time",
-            //         color: "#4ade80",
-            //     },
-            // ],
-          },
-        ]}
+        legends={undefined}
       />
     </div>
   );

@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
 import WidgetCard from "../components/WidgetCard";
-import CalendarChart from "../charts/CalendarChart";
 import { TimeRangePreset } from "../../../types/tauri.gen";
 import { endOfYear, startOfYear } from "date-fns";
 import { useSummaryData } from "../hooks/useSummaryData";
@@ -11,6 +10,7 @@ import {
   updateTodayActivity,
 } from "../helpers/activityCache";
 import { isDeltaOutdated } from "../helpers/delta";
+import CalendarChart from "../../../components/CalendarChart";
 
 const getTodayPreset = (): TimeRangePreset => "today";
 
