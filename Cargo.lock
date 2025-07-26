@@ -1215,6 +1215,7 @@ checksum = "575f75dfd25738df5b91b8e43e14d44bda14637a58fae779fd2b064f8bf3e010"
 name = "db"
 version = "0.1.0"
 dependencies = [
+ "async-trait",
  "chrono",
  "common",
  "log",

@@ -20,3 +20,4 @@ specta = {workspace = true }
 common = { path = "../common"}
 thiserror = { workspace = true }
 types = { path = "../types" }
+async-trait = { workspace = true }
