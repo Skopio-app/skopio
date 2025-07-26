@@ -58,6 +58,9 @@ export const commands = {
   async searchProjects(query: ProjectSearchQuery): Promise<Project[]> {
     return await TAURI_INVOKE("search_projects", { query });
   },
+  async fetchActiveYears(): Promise<number[]> {
+    return await TAURI_INVOKE("fetch_active_years");
+  },
   async dismissNotificationWindow(): Promise<null> {
     return await TAURI_INVOKE("dismiss_notification_window");
   },

@@ -5,6 +5,7 @@ pub mod categories;
 pub mod entities;
 pub mod events;
 pub mod heartbeats;
+pub mod insights;
 pub mod languages;
 pub mod projects;
 pub mod summary;
