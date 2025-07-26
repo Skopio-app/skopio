@@ -1,5 +1,7 @@
+use std::collections::BTreeMap;
+
 use async_trait::async_trait;
-use chrono::{NaiveDate, Weekday};
+use chrono::NaiveDate;
 use common::models::inputs::Group;
 use sqlx::Row;
 
@@ -21,10 +23,15 @@ pub enum Aggregation {
 #[derive(Debug, Clone)]
 pub enum InsightType {
     ActiveYears,
-    WeekdayAverages,
-    TopN { group_by: Group, limit: usize },
+    TopN {
+        group_by: Group,
+        limit: usize,
+    },
     MostActiveDay,
-    AggregatedAverage,
+    AggregatedAverage {
+        bucket: Aggregation,
+        group_by: Option<Group>,
+    },
 }
 
 pub struct InsightQuery {
@@ -38,10 +45,9 @@ pub struct InsightQuery {
 #[derive(Debug, Clone)]
 pub enum InsightResult {
     ActiveYears(Vec<i32>),
-    WeekdayAverage(Vec<(Weekday, i64)>),
     TopN(Vec<(String, i64)>),
     MostActiveDay { date: String, total_duration: i64 },
-    AggregatedAverage(Vec<(String, f64)>),
+    AggregatedAverage(BTreeMap<String, Vec<(String, f64)>>),
 }
 
 #[async_trait]
@@ -93,30 +99,6 @@ impl InsightProvider for Insights {
                     .collect();
 
                 Ok(InsightResult::ActiveYears(years))
-            }
-
-            InsightType::WeekdayAverages => {
-                let rows = sqlx::query!(
-                    "
-                    SELECT strftime('%w', datetime(timestamp, 'localtime')) as weekday,
-                            AVG(duration) as avg_duration
-                    FROM events
-                    GROUP BY weekday
-                    "
-                )
-                .fetch_all(db_context.pool())
-                .await?;
-
-                let weekday_avg = rows
-                    .into_iter()
-                    .filter_map(|r| {
-                        let weekday = r.weekday?.parse::<u32>().ok()?;
-                        let duration = r.avg_duration.unwrap_or(0);
-                        Some((Weekday::try_from(weekday as u8).ok()?, duration))
-                    })
-                    .collect();
-
-                Ok(InsightResult::WeekdayAverage(weekday_avg))
             }
 
             InsightType::TopN { group_by, limit } => {
@@ -190,46 +172,139 @@ impl InsightProvider for Insights {
                 })
             }
 
-            InsightType::AggregatedAverage => {
-                let mut where_clause = String::new();
+            InsightType::AggregatedAverage { bucket, group_by } => {
+                let Some(year) = query.year else {
+                    return Err(sqlx::Error::Protocol("Year is required".into()));
+                };
 
-                if let Some(year) = query.year {
-                    where_clause.push_str(&format!(
-                        "WHERE strftime('%Y', datetime(timestamp, 'localtime')) = '{}'",
-                        year
-                    ));
-                }
+                let bucket_format = match bucket {
+                    Aggregation::Day => "%Y-%m-%d",
+                    Aggregation::Month => "%Y-%m",
+                    _ => {
+                        return Err(sqlx::Error::Protocol(
+                            "Only day or month is supported".into(),
+                        ));
+                    }
+                };
 
-                let query_string = format!(
-                    "
-                        SELECT strftime('%m', datetime(timestamp, 'localtime')) as bucket,
-                                AVG(duration) as avg_duration
-                        FROM events
-                        {where_clause}
-                        GROUP BY bucket
-                        "
+                let (join_clause, label_select, group_by_clause) = match group_by {
+                    Some(Group::App) => (
+                        "JOIN apps a ON a.id = e.app_id",
+                        ", a.name as label",
+                        ", label",
+                    ),
+                    Some(Group::Project) => (
+                        "JOIN projects p ON p.id = e.project_id",
+                        ", p.name as label",
+                        ", label",
+                    ),
+                    Some(Group::Category) => (
+                        "JOIN categories c ON c.id = e.category_id",
+                        ", c.name as label",
+                        ", label",
+                    ),
+                    Some(Group::Branch) => (
+                        "JOIN branches b ON b.id = e.branch_id",
+                        ", b.name as label",
+                        ", label",
+                    ),
+                    Some(Group::Entity) => (
+                        "JOIN entities en ON en.id = e.entity_id",
+                        ", en.name as label",
+                        ", label",
+                    ),
+                    Some(Group::Language) => (
+                        "JOIN languages l ON l.id = e.language_id",
+                        ", l.name as label",
+                        ", label",
+                    ),
+                    None => ("", ", '_' as label", ""),
+                };
+
+                let year_clause = format!(
+                    "WHERE strftime('%Y', datetime(e.timestamp, 'localtime')) = '{}'",
+                    year
                 );
 
-                let rows = sqlx::query(&query_string)
-                    .fetch_all(db_context.pool())
-                    .await?;
+                let sql = format!(
+                    "
+                    SELECT
+                        strftime('{bucket_format}', datetime(e.timestamp, 'localtime')) as bucket,
+                        ROUND(AVG(e.duration), 2) as avg_duration
+                        {label_select}
+                    FROM events e
+                    {join_clause}
+                    {year_clause}
+                    GROUP BY bucket{group_by_clause}
+                    ORDER BY bucket
+                    "
+                );
 
-                let result = rows
-                    .into_iter()
-                    .filter_map(|r| {
-                        let bucket = r.try_get("bucket").ok();
-                        let avg_duration = r.try_get("avg_duration").ok();
+                let rows = sqlx::query(&sql).fetch_all(db_context.pool()).await?;
 
-                        if let (Some(b), Some(avg)) = (bucket, avg_duration) {
-                            Some((b, avg))
-                        } else {
-                            None
+                let mut map: BTreeMap<String, Vec<(String, f64)>> = BTreeMap::new();
+
+                for row in rows {
+                    let bucket_str: Option<String> = row.try_get("bucket").ok();
+                    let avg: Option<f64> = row.try_get("avg_duration").ok();
+                    let label: Option<String> = row.try_get("label").ok();
+
+                    if let (Some(bucket_str), Some(avg_duration), Some(group)) =
+                        (bucket_str, avg, label)
+                    {
+                        let label_key = match bucket {
+                            Aggregation::Day => NaiveDate::parse_from_str(&bucket_str, "%Y-%m-%d")
+                                .ok()
+                                .map(|d| d.format("%a").to_string()),
+                            Aggregation::Month => {
+                                NaiveDate::parse_from_str(&format!("{}-01", bucket_str), "%Y-%m-%d")
+                                    .ok()
+                                    .map(|d| d.format("%b").to_string())
+                            }
+                            _ => None,
+                        };
+
+                        if let Some(label) = label_key {
+                            map.entry(label).or_default().push((group, avg_duration));
                         }
-                    })
-                    .collect();
+                    }
+                }
 
-                Ok(InsightResult::AggregatedAverage(result))
+                Ok(InsightResult::AggregatedAverage(map))
             }
+        }
+    }
+}
+
+impl InsightResult {
+    pub fn into_active_years(self) -> Result<Vec<i32>, String> {
+        match self {
+            InsightResult::ActiveYears(years) => Ok(years),
+            other => Err(format!("Expected ActiveYears, got {:?}", other)),
+        }
+    }
+
+    pub fn into_top_n(self) -> Result<Vec<(String, i64)>, String> {
+        match self {
+            InsightResult::TopN(data) => Ok(data),
+            other => Err(format!("Expected TopN, got {:?}", other)),
+        }
+    }
+
+    pub fn into_most_active_day(self) -> Result<(String, i64), String> {
+        match self {
+            InsightResult::MostActiveDay {
+                date,
+                total_duration,
+            } => Ok((date, total_duration)),
+            other => Err(format!("Expected MostActiveDay, got {:?}", other)),
+        }
+    }
+
+    pub fn into_aggregated_average(self) -> Result<BTreeMap<String, Vec<(String, f64)>>, String> {
+        match self {
+            InsightResult::AggregatedAverage(data) => Ok(data),
+            other => Err(format!("Expected AggregatedAverage, got {:?}", other)),
         }
     }
 }
