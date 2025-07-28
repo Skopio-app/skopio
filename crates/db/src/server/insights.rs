@@ -6,7 +6,6 @@ use common::{
     models::{outputs::InsightResult, Group, InsightBucket, InsightType},
     time::InsightRange,
 };
-use log::info;
 use sqlx::Row;
 use thiserror::Error;
 
@@ -186,8 +185,6 @@ impl InsightProvider for Insights {
             }
 
             InsightType::AggregatedAverage => {
-                info!("The query: {:?}", query);
-
                 let Some(InsightRange { start, end }) = query.insight_range else {
                     return Err(InsightError::MissingField("insight_range"));
                 };

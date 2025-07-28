@@ -9,7 +9,11 @@ const TopProjectsSection = () => {
   return (
     <TextSectionItem
       title="Top projects"
-      text={`Your top projects were ${projects.join(", ")}`}
+      text={
+        projects.length === 0
+          ? "No projects found"
+          : `Your top projects were ${projects.join(", ")}`
+      }
       loading={loading}
     />
   );

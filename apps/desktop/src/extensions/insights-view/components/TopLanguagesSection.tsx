@@ -9,7 +9,11 @@ const TopLanguagesSection = () => {
   return (
     <TextSectionItem
       title="Top Languages"
-      text={`Your top languages were ${languages.join(", ")}`}
+      text={
+        languages.length === 0
+          ? "No languages found"
+          : `Your top languages were ${languages.join(", ")}`
+      }
       loading={loading}
     />
   );
