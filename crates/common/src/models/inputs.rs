@@ -1,7 +1,10 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
-use crate::time::TimeRangePreset;
+use crate::{
+    models::{Group, InsightBucket, InsightType},
+    time::TimeRangePreset,
+};
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct EventInput {
@@ -38,17 +41,6 @@ pub struct AFKEventInput {
     pub afk_start: DateTime<Utc>,
     pub afk_end: Option<DateTime<Utc>>,
     pub duration: Option<i64>,
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone, Copy, specta::Type)]
-#[serde(rename_all = "camelCase")]
-pub enum Group {
-    App,
-    Project,
-    Language,
-    Branch,
-    Category,
-    Entity,
 }
 
 #[derive(Debug, Serialize, Deserialize, specta::Type)]
@@ -105,4 +97,18 @@ pub struct ProjectQuery {
 pub struct ProjectSearchQuery {
     pub name: String,
     pub limit: u32,
+}
+
+#[derive(Serialize, Deserialize, Debug, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub struct InsightQueryPayload {
+    pub insight_type: InsightType,
+    #[specta(optional)]
+    pub insight_range: Option<String>,
+    #[specta(optional)]
+    pub group_by: Option<Group>,
+    #[specta(optional)]
+    pub limit: Option<usize>,
+    #[specta(optional)]
+    pub bucket: Option<InsightBucket>,
 }

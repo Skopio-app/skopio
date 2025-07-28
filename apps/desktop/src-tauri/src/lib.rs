@@ -251,11 +251,12 @@ fn make_specta_builder<R: Runtime>() -> tauri_specta::Builder<R> {
             crate::goals_service::get_goals,
             crate::goals_service::update_goal,
             crate::goals_service::remove_goal,
-            crate::network::tables::fetch_apps,
-            crate::network::tables::fetch_categories,
-            crate::network::tables::fetch_projects,
-            crate::network::tables::fetch_project,
-            crate::network::tables::search_projects,
+            crate::network::data::fetch_apps,
+            crate::network::data::fetch_categories,
+            crate::network::data::fetch_projects,
+            crate::network::data::fetch_project,
+            crate::network::data::search_projects,
+            crate::network::insights::fetch_insights,
             crate::ui::notification::dismiss_notification_window::<tauri::Wry>,
         ])
         .error_handling(tauri_specta::ErrorHandlingMode::Throw)

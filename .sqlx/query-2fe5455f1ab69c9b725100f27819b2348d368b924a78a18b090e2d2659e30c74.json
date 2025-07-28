@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "\n                    SELECT DISTINCT strftime('%Y', datetime(timestamp, 'localtime')) as year\n                    FROM events\n                    ORDER BY year DESC\n                    ",
+  "describe": {
+    "columns": [
+      {
+        "name": "year",
+        "ordinal": 0,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": [
+      true
+    ]
+  },
+  "hash": "2fe5455f1ab69c9b725100f27819b2348d368b924a78a18b090e2d2659e30c74"
+}

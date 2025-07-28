@@ -1,5 +1,5 @@
 use chrono::{DateTime, Utc};
-use common::{models::inputs::Group, time::TimeBucket};
+use common::{models::Group, time::TimeBucket};
 
 /// A reusable trait for extracting query filters
 pub trait SummaryQueryParams {

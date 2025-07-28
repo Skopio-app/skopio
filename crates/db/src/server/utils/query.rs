@@ -1,5 +1,5 @@
 use chrono::{DateTime, Utc};
-use common::{models::inputs::Group, time::TimeBucket};
+use common::{models::Group, time::TimeBucket};
 
 use crate::server::utils::summary_filter::SummaryFilters;
 

@@ -1,7 +1,7 @@
 use std::{collections::HashMap, fmt::Debug, time::Instant};
 
 use chrono::{DateTime, Utc};
-use common::{models::inputs::Group, time::TimeBucket};
+use common::{models::Group, time::TimeBucket};
 use log::info;
 
 use crate::{
