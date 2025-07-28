@@ -15,6 +15,7 @@ import { commands, InsightQueryPayload } from "../../types/tauri.gen";
 import { useYearFilter } from "./stores/useYearFilter";
 import TopLanguagesSection from "./components/TopLanguagesSection";
 import MostActiveDaySection from "./components/MostActiveDaySection";
+import TotalTimeSection from "./components/TotalTimeSection";
 
 const InsightsView = () => {
   const [years, setYears] = useState<number[]>([]);
@@ -68,6 +69,8 @@ const InsightsView = () => {
 
       <AverageDaySection />
       <ActivitySection />
+      <TotalTimeSection />
+      {/* <DailyAverageSection /> */}
       <TopProjectsSection />
       <TopLanguagesSection />
       <MostActiveDaySection />
