@@ -97,7 +97,7 @@ impl InsightProvider for Insights {
                     Group::Category => ("category_id", "JOIN categories c ON c.id = e.category_id"),
                     Group::Branch => ("branch_id", "JOIN branches b ON b.id = e.branch_id"),
                     Group::Entity => ("entity_id", "JOIN entities en ON en.id = e.entity_id"),
-                    Group::Language => ("language_id", "JOIN langauges l ON l.id = e.language_id"),
+                    Group::Language => ("language_id", "JOIN languages l ON l.id = e.language_id"),
                 };
 
                 let label = match group_by {

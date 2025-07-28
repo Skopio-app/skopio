@@ -9,10 +9,12 @@ import {
 } from "@skopio/ui";
 import AverageDaySection from "./components/AverageDaySection";
 import ActivitySection from "./components/ActivitySection";
-import DailyAverageSection from "./components/DailyAverageSection";
+import TopProjectsSection from "./components/TopProjectsSection";
 import { useEffect, useState } from "react";
 import { commands, InsightQueryPayload } from "../../types/tauri.gen";
 import { useYearFilter } from "./stores/useYearFilter";
+import TopLanguagesSection from "./components/TopLanguagesSection";
+import MostActiveDaySection from "./components/MostActiveDaySection";
 
 const InsightsView = () => {
   const [years, setYears] = useState<number[]>([]);
@@ -66,7 +68,9 @@ const InsightsView = () => {
 
       <AverageDaySection />
       <ActivitySection />
-      <DailyAverageSection />
+      <TopProjectsSection />
+      <TopLanguagesSection />
+      <MostActiveDaySection />
     </div>
   );
 };
