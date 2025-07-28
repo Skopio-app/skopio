@@ -11,15 +11,30 @@ import AverageDaySection from "./components/AverageDaySection";
 import ActivitySection from "./components/ActivitySection";
 import DailyAverageSection from "./components/DailyAverageSection";
 import { useEffect, useState } from "react";
-import { commands } from "../../types/tauri.gen";
-import { toast } from "sonner";
+import { commands, InsightQueryPayload } from "../../types/tauri.gen";
+import { useYearFilter } from "./stores/useYearFilter";
 
 const InsightsView = () => {
   const [years, setYears] = useState<number[]>([]);
-  // const [selectedYear, setSelectedYear] = useState<string | null>(null);
+  const [selectedYear, setSelectedYear] = useState<string | null>(null);
 
   useEffect(() => {
-    commands.fetchActiveYears().then(setYears).catch(toast.error);
+    const query: InsightQueryPayload = {
+      insightType: "activeYears",
+    };
+
+    commands
+      .fetchInsights(query)
+      .then((result) => {
+        if ("activeYears" in result) {
+          setYears(result.activeYears);
+          if (result.activeYears.length > 0) {
+            useYearFilter.setState({ year: String(result.activeYears[0]) });
+            setSelectedYear(String(result.activeYears[0]));
+          }
+        }
+      })
+      .catch(console.error);
   }, []);
 
   return (
@@ -27,7 +42,13 @@ const InsightsView = () => {
       <h2 className="text-neutral-800 font-semibold mb-4 mt-3 text-lg">
         Insights
       </h2>
-      <Select>
+      <Select
+        value={String(selectedYear)}
+        onValueChange={(year) => {
+          setSelectedYear(year);
+          useYearFilter.setState({ year });
+        }}
+      >
         <SelectTrigger className="w-[180px]">
           <SelectValue placeholder="Select a year" />
         </SelectTrigger>

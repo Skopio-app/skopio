@@ -103,8 +103,12 @@ pub struct ProjectSearchQuery {
 #[serde(rename_all = "camelCase")]
 pub struct InsightQueryPayload {
     pub insight_type: InsightType,
-    pub range: Option<String>,
+    #[specta(optional)]
+    pub insight_range: Option<String>,
+    #[specta(optional)]
     pub group_by: Option<Group>,
+    #[specta(optional)]
     pub limit: Option<usize>,
+    #[specta(optional)]
     pub bucket: Option<InsightBucket>,
 }

@@ -1,11 +1,12 @@
 use std::collections::BTreeMap;
 
 use async_trait::async_trait;
-use chrono::{DateTime, Datelike, Duration, LocalResult, NaiveDate, TimeZone, Utc, Weekday};
+use chrono::NaiveDate;
 use common::{
     models::{outputs::InsightResult, Group, InsightBucket, InsightType},
-    time::TimeError,
+    time::InsightRange,
 };
+use log::info;
 use sqlx::Row;
 
 use crate::DBContext;
@@ -13,18 +14,6 @@ use crate::DBContext;
 #[derive(sqlx::FromRow)]
 struct YearResult {
     year: Option<String>,
-}
-
-pub struct InsightQuery {
-    pub insight_type: InsightType,
-    pub insight_range: Option<InsightRange>,
-}
-
-#[derive(Debug)]
-pub struct InsightRange {
-    pub start: DateTime<Utc>,
-    pub end: DateTime<Utc>,
-    pub bucket: Option<InsightBucket>,
 }
 
 #[async_trait]
@@ -35,7 +24,7 @@ pub trait InsightProvider {
     ) -> Result<InsightResult, sqlx::Error>;
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Insights {
     pub year: Option<i32>,
     pub month: Option<u32>,
@@ -49,6 +38,15 @@ pub struct Insights {
     pub language_ids: Option<Vec<i64>>,
     pub top_n: Option<usize>,
     pub kind: InsightType,
+}
+
+#[derive(Debug)]
+pub struct InsightQuery {
+    pub insight_type: InsightType,
+    pub insight_range: Option<InsightRange>,
+    pub group_by: Option<Group>,
+    pub limit: Option<usize>,
+    pub bucket: Option<InsightBucket>,
 }
 
 #[async_trait]
@@ -78,9 +76,19 @@ impl InsightProvider for Insights {
                 Ok(InsightResult::ActiveYears(years))
             }
 
-            InsightType::TopN { group_by, limit } => {
+            InsightType::TopN => {
                 let Some(InsightRange { start, end, .. }) = query.insight_range else {
                     return Err(sqlx::Error::Protocol("insight_range is required".into()));
+                };
+
+                let Some(group_by) = query.group_by else {
+                    return Err(sqlx::Error::Protocol(
+                        "group_by is required for TopN".into(),
+                    ));
+                };
+
+                let Some(limit) = query.limit else {
+                    return Err(sqlx::Error::Protocol("limit is required for TopN".into()));
                 };
 
                 let (_field, join) = match group_by {
@@ -181,14 +189,15 @@ impl InsightProvider for Insights {
                 }
             }
 
-            InsightType::AggregatedAverage { bucket, group_by } => {
-                let Some(InsightRange {
-                    start,
-                    end,
-                    bucket: _,
-                }) = query.insight_range
-                else {
+            InsightType::AggregatedAverage => {
+                info!("The query: {:?}", query);
+
+                let Some(InsightRange { start, end, bucket }) = query.insight_range else {
                     return Err(sqlx::Error::Protocol("insight_range is required".into()));
+                };
+
+                let Some(bucket) = bucket else {
+                    return Err(sqlx::Error::Protocol("bucket is required".into()));
                 };
 
                 let bucket_format = match bucket {
@@ -201,7 +210,7 @@ impl InsightProvider for Insights {
                     }
                 };
 
-                let (join_clause, label_select, group_by_clause) = match group_by {
+                let (join_clause, label_select, group_by_clause) = match query.group_by {
                     Some(Group::App) => (
                         "JOIN apps a ON a.id = e.app_id",
                         ", a.name as label",
@@ -288,95 +297,5 @@ impl InsightProvider for Insights {
                 Ok(InsightResult::AggregatedAverage(map))
             }
         }
-    }
-}
-
-impl TryFrom<String> for InsightRange {
-    type Error = TimeError;
-
-    fn try_from(value: String) -> Result<Self, Self::Error> {
-        // Handle "yyyy-mm-dd"
-        if let Ok(date) = NaiveDate::parse_from_str(&value, "%Y-%m-%d") {
-            let start = match Utc.with_ymd_and_hms(date.year(), date.month(), date.day(), 0, 0, 0) {
-                LocalResult::Single(dt) => dt,
-                _ => return Err(TimeError::InvalidDate),
-            };
-            let end = start + Duration::days(1);
-            return Ok(InsightRange {
-                start: start,
-                end: end,
-                bucket: Some(InsightBucket::Day),
-            });
-        }
-
-        // Handle "yyyy-mm"
-        if let Ok(date) = NaiveDate::parse_from_str(&format!("{}-01", value), "%Y-%m-%d") {
-            let start = match Utc.with_ymd_and_hms(date.year(), date.month(), 1, 0, 0, 0) {
-                LocalResult::Single(dt) => dt,
-                _ => return Err(TimeError::InvalidDate),
-            };
-            let end = match if date.month() == 12 {
-                Utc.with_ymd_and_hms(date.year() + 1, 1, 1, 0, 0, 0)
-            } else {
-                Utc.with_ymd_and_hms(date.year(), date.month() + 1, 1, 0, 0, 0)
-            } {
-                LocalResult::Single(dt) => dt,
-                _ => return Err(TimeError::InvalidDate),
-            };
-
-            return Ok(InsightRange {
-                start: start,
-                end: end,
-                bucket: Some(InsightBucket::Month),
-            });
-        }
-
-        // Handle "yyyy-W##"
-        if let Some((year, week_str)) = value.split_once("-W") {
-            let year = year.parse::<i32>().map_err(|_| TimeError::InvalidDate)?;
-            let week = week_str
-                .parse::<u32>()
-                .map_err(|_| TimeError::InvalidDate)?;
-
-            let iso_week_start = NaiveDate::from_isoywd_opt(year, week, Weekday::Mon)
-                .ok_or(TimeError::InvalidDate)?;
-
-            let start = match Utc.with_ymd_and_hms(
-                iso_week_start.year(),
-                iso_week_start.month(),
-                iso_week_start.day(),
-                0,
-                0,
-                0,
-            ) {
-                LocalResult::Single(dt) => dt,
-                _ => return Err(TimeError::InvalidDate),
-            };
-            let end = start + Duration::days(7);
-
-            return Ok(InsightRange {
-                start: start,
-                end: end,
-                bucket: Some(InsightBucket::Week),
-            });
-        }
-
-        if let Ok(year) = value.parse::<i32>() {
-            let start = match Utc.with_ymd_and_hms(year, 1, 1, 0, 0, 0) {
-                LocalResult::Single(dt) => dt,
-                _ => return Err(TimeError::InvalidDate),
-            };
-            let end = match Utc.with_ymd_and_hms(year + 1, 1, 1, 0, 0, 0) {
-                LocalResult::Single(dt) => dt,
-                _ => return Err(TimeError::InvalidDate),
-            };
-            return Ok(InsightRange {
-                start: start,
-                end: end,
-                bucket: Some(InsightBucket::Year),
-            });
-        }
-
-        Err(TimeError::InvalidDate)
     }
 }

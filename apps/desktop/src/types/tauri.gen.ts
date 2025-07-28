@@ -58,8 +58,8 @@ export const commands = {
   async searchProjects(query: ProjectSearchQuery): Promise<Project[]> {
     return await TAURI_INVOKE("search_projects", { query });
   },
-  async fetchActiveYears(): Promise<number[]> {
-    return await TAURI_INVOKE("fetch_active_years");
+  async fetchInsights(query: InsightQueryPayload): Promise<InsightResult> {
+    return await TAURI_INVOKE("fetch_insights", { query });
   },
   async dismissNotificationWindow(): Promise<null> {
     return await TAURI_INVOKE("dismiss_notification_window");
@@ -142,6 +142,24 @@ export type Group =
   | "category"
   | "entity";
 export type GroupedTimeSummary = { group_key: string; total_seconds: number };
+export type InsightBucket = "day" | "week" | "month" | "year";
+export type InsightQueryPayload = {
+  insightType: InsightType;
+  insightRange?: string | null;
+  groupBy?: Group | null;
+  limit?: number | null;
+  bucket?: InsightBucket | null;
+};
+export type InsightResult =
+  | { activeYears: number[] }
+  | { topN: [string, number][] }
+  | { mostActiveDay: { date: string; total_duration: number } }
+  | { aggregatedAverage: Partial<{ [key in string]: [string, number][] }> };
+export type InsightType =
+  | "activeYears"
+  | "topN"
+  | "mostActiveDay"
+  | "aggregatedAverage";
 export type NotificationPayload = {
   title: string;
   durationMs: number;

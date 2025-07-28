@@ -4,9 +4,10 @@
  * @returns A string like "1h 45m 30s"
  */
 export const formatDuration = (seconds: number): string => {
-  const hrs = Math.floor(seconds / 3600);
-  const mins = Math.floor((seconds % 3600) / 60);
-  const secs = seconds % 60;
+  const roundedSecs = Math.round(seconds);
+  const hrs = Math.floor(roundedSecs / 3600);
+  const mins = Math.floor((roundedSecs % 3600) / 60);
+  const secs = roundedSecs % 60;
 
   const padded = (n: number) => String(n).padStart(2, "0");
   const hrStr = `${hrs}h`;

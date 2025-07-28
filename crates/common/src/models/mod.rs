@@ -23,17 +23,11 @@ pub enum Group {
     Entity,
 }
 
-#[derive(Debug, Serialize, Deserialize, specta::Type)]
-#[serde(rename_all = "camelCase", tag = "type", content = "value")]
+#[derive(Debug, Serialize, Deserialize, Clone, Copy, specta::Type)]
+#[serde(rename_all = "camelCase")]
 pub enum InsightType {
     ActiveYears,
-    TopN {
-        group_by: Group,
-        limit: usize,
-    },
+    TopN,
     MostActiveDay,
-    AggregatedAverage {
-        bucket: InsightBucket,
-        group_by: Option<Group>,
-    },
+    AggregatedAverage,
 }

@@ -1,7 +1,9 @@
+use common::models::{inputs::InsightQueryPayload, outputs::InsightResult};
+
 use crate::network::utils::req_json;
 
 #[tauri::command]
 #[specta::specta]
-pub async fn fetch_active_years() -> Result<Vec<i32>, String> {
-    req_json::<_, ()>("insights/years", None).await
+pub async fn fetch_insights(query: InsightQueryPayload) -> Result<InsightResult, String> {
+    req_json("insights", Some(&query)).await
 }
