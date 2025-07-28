@@ -15,7 +15,6 @@ use db::{
     DBContext,
 };
 use tokio::sync::Mutex;
-use tracing::info;
 
 use crate::utils::error_response;
 
@@ -25,7 +24,6 @@ pub async fn fetch_insight(
 ) -> Result<Json<InsightResult>, (StatusCode, Json<String>)> {
     let db = db.lock().await;
 
-    info!("The insight payload: {:?}", payload);
     let insight_range = match &payload.insight_range {
         Some(s) => Some(InsightRange::try_from(s.clone()).map_err(error_response)?),
         None => None,

@@ -1,11 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import CalendarChart from "../../../components/CalendarChart";
 import SectionContainer from "./SectionContainer";
 import { CalendarChartData } from "../../../types/types";
 import {
   BucketedSummaryInput,
   commands,
-  TimeRangePreset,
+  TimeBucket,
 } from "../../../types/tauri.gen";
 import { endOfYear, startOfYear } from "date-fns";
 import { useYearFilter } from "../stores/useYearFilter";
@@ -15,13 +15,7 @@ const ActivitySection = () => {
   const [data, setData] = useState<CalendarChartData[]>([]);
   const { year } = useYearFilter();
 
-  const getYearPreset = (
-    year?: string | number,
-  ): {
-    start: Date;
-    end: Date;
-    preset: TimeRangePreset;
-  } => {
+  const yearConfig = useMemo(() => {
     const parsedYear = year
       ? parseInt(year.toString(), 10)
       : new Date().getFullYear();
@@ -35,13 +29,11 @@ const ActivitySection = () => {
         custom: {
           start: start.toISOString(),
           end: end.toISOString(),
-          bucket: "day",
+          bucket: "day" as TimeBucket,
         },
       },
     };
-  };
-
-  const yearConfig = getYearPreset(year);
+  }, [year]);
 
   useEffect(() => {
     const fetchActivityData = async () => {
@@ -67,7 +59,7 @@ const ActivitySection = () => {
     };
 
     fetchActivityData();
-  }, [year]);
+  }, [yearConfig.preset]);
 
   return (
     <SectionContainer title="Activity" loading={false}>

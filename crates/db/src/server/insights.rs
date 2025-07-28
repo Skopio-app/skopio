@@ -8,6 +8,7 @@ use common::{
 };
 use log::info;
 use sqlx::Row;
+use thiserror::Error;
 
 use crate::DBContext;
 
@@ -16,29 +17,28 @@ struct YearResult {
     year: Option<String>,
 }
 
+#[derive(Debug, Error)]
+pub enum InsightError {
+    #[error("Missing required field: {0}")]
+    MissingField(&'static str),
+
+    #[error("Unsupported configuration: {0}")]
+    Unsupported(&'static str),
+
+    #[error("sqlx error: {0}")]
+    Sqlx(#[from] sqlx::Error),
+}
+
 #[async_trait]
 pub trait InsightProvider {
     async fn execute(
         db_context: &DBContext,
         query: InsightQuery,
-    ) -> Result<InsightResult, sqlx::Error>;
+    ) -> Result<InsightResult, InsightError>;
 }
 
 #[derive(Debug, Clone)]
-pub struct Insights {
-    pub year: Option<i32>,
-    pub month: Option<u32>,
-    pub week: Option<u32>,
-    pub day: Option<u32>,
-    pub category_ids: Option<Vec<i64>>,
-    pub app_ids: Option<Vec<i64>>,
-    pub project_ids: Option<Vec<i64>>,
-    pub entity_ids: Option<Vec<i64>>,
-    pub branch_ids: Option<Vec<i64>>,
-    pub language_ids: Option<Vec<i64>>,
-    pub top_n: Option<usize>,
-    pub kind: InsightType,
-}
+pub struct Insights;
 
 #[derive(Debug)]
 pub struct InsightQuery {
@@ -54,7 +54,7 @@ impl InsightProvider for Insights {
     async fn execute(
         db_context: &DBContext,
         query: InsightQuery,
-    ) -> Result<InsightResult, sqlx::Error> {
+    ) -> Result<InsightResult, InsightError> {
         match query.insight_type {
             InsightType::ActiveYears => {
                 let rows: Vec<YearResult> = sqlx::query_as!(
@@ -78,17 +78,15 @@ impl InsightProvider for Insights {
 
             InsightType::TopN => {
                 let Some(InsightRange { start, end, .. }) = query.insight_range else {
-                    return Err(sqlx::Error::Protocol("insight_range is required".into()));
+                    return Err(InsightError::MissingField("insight_range"));
                 };
 
                 let Some(group_by) = query.group_by else {
-                    return Err(sqlx::Error::Protocol(
-                        "group_by is required for TopN".into(),
-                    ));
+                    return Err(InsightError::MissingField("group_by"));
                 };
 
                 let Some(limit) = query.limit else {
-                    return Err(sqlx::Error::Protocol("limit is required for TopN".into()));
+                    return Err(InsightError::MissingField("limit"));
                 };
 
                 let (_field, join) = match group_by {
@@ -146,16 +144,14 @@ impl InsightProvider for Insights {
 
             InsightType::MostActiveDay => {
                 let Some(InsightRange { start, end }) = query.insight_range else {
-                    return Err(sqlx::Error::Protocol("insight_range is required".into()));
+                    return Err(InsightError::MissingField("insight_range"));
                 };
 
                 match query.bucket {
                     Some(InsightBucket::Year | InsightBucket::Month | InsightBucket::Week) => {}
                     _ => {
-                        return Err(sqlx::Error::Protocol(
-                            "
-                        Only year, month, or week formats are allowed for MostActiveDay"
-                                .into(),
+                        return Err(InsightError::Unsupported(
+                            "Only year, month, or week buckets are supported",
                         ));
                     }
                 }
@@ -193,20 +189,18 @@ impl InsightProvider for Insights {
                 info!("The query: {:?}", query);
 
                 let Some(InsightRange { start, end }) = query.insight_range else {
-                    return Err(sqlx::Error::Protocol("insight_range is required".into()));
+                    return Err(InsightError::MissingField("insight_range"));
                 };
 
                 let Some(bucket) = query.bucket else {
-                    return Err(sqlx::Error::Protocol("bucket is required".into()));
+                    return Err(InsightError::MissingField("bucket"));
                 };
 
                 let bucket_format = match bucket {
                     InsightBucket::Day => "%Y-%m-%d",
                     InsightBucket::Month => "%Y-%m",
                     _ => {
-                        return Err(sqlx::Error::Protocol(
-                            "Only day or month is supported".into(),
-                        ));
+                        return Err(InsightError::Unsupported("Only day or month is supported"));
                     }
                 };
 
