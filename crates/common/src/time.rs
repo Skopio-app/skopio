@@ -1,5 +1,3 @@
-use std::{fmt, str::FromStr};
-
 use chrono::{DateTime, Datelike, Duration, Local, LocalResult, NaiveDate, TimeZone, Utc, Weekday};
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
@@ -389,29 +387,5 @@ impl TryFrom<String> for InsightRange {
         }
 
         Err(TimeError::InvalidDate)
-    }
-}
-
-impl fmt::Display for InsightRange {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        // Customize to match frontend input format
-        match self.bucket {
-            Some(InsightBucket::Year) => write!(f, "{}", self.start.year()),
-            Some(InsightBucket::Month) => write!(f, "{}", self.start.format("%Y-%m")),
-            Some(InsightBucket::Day) => write!(f, "{}", self.start.format("%Y-%m-%d")),
-            Some(InsightBucket::Week) => {
-                let iso = self.start.date_naive().iso_week();
-                write!(f, "{}-W{:02}", iso.year(), iso.week())
-            }
-            _ => Err(fmt::Error),
-        }
-    }
-}
-
-impl FromStr for InsightRange {
-    type Err = TimeError;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        InsightRange::try_from(s.to_string())
     }
 }

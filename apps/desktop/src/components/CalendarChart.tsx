@@ -1,5 +1,5 @@
 import { CalendarTooltipProps, ResponsiveCalendar } from "@nivo/calendar";
-import { format, startOfYear } from "date-fns";
+import { format } from "date-fns";
 import { formatDuration } from "../utils/time";
 
 interface CalendarChartProps {
@@ -7,6 +7,8 @@ interface CalendarChartProps {
     value: number;
     day: string;
   }[];
+  start: Date;
+  end: Date;
 }
 
 const CalendarTooltip: React.FC<CalendarTooltipProps> = ({ day, value }) => {
@@ -20,13 +22,13 @@ const CalendarTooltip: React.FC<CalendarTooltipProps> = ({ day, value }) => {
   );
 };
 
-const CalendarChart: React.FC<CalendarChartProps> = ({ data }) => {
+const CalendarChart: React.FC<CalendarChartProps> = ({ data, start, end }) => {
   return (
     <div className="h-[200px] w-full">
       <ResponsiveCalendar
         data={data}
-        from={startOfYear(new Date())}
-        to={new Date()}
+        from={start}
+        to={end}
         emptyColor="#eeeeee"
         colors={["#4ade80"]}
         margin={{ top: 40, right: 40, bottom: 40, left: 40 }}

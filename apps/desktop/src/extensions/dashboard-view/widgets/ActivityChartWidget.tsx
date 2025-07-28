@@ -95,7 +95,11 @@ const ActivityChartWidget = () => {
 
   return (
     <WidgetCard title="Daily Activity" loading={todayLoading || yearLoading}>
-      <CalendarChart data={data} />
+      <CalendarChart
+        data={data}
+        start={startOfYear(new Date())}
+        end={new Date()}
+      />
     </WidgetCard>
   );
 };
