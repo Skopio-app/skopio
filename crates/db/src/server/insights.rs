@@ -1,8 +1,11 @@
 use std::collections::BTreeMap;
 
 use async_trait::async_trait;
-use chrono::NaiveDate;
-use common::models::inputs::Group;
+use chrono::{DateTime, Datelike, Duration, LocalResult, NaiveDate, TimeZone, Utc, Weekday};
+use common::{
+    models::{outputs::InsightResult, Group, InsightBucket, InsightType},
+    time::TimeError,
+};
 use sqlx::Row;
 
 use crate::DBContext;
@@ -12,42 +15,16 @@ struct YearResult {
     year: Option<String>,
 }
 
-#[derive(Debug, Clone)]
-pub enum Aggregation {
-    Day,
-    Week,
-    Month,
-    Year,
-}
-
-#[derive(Debug, Clone)]
-pub enum InsightType {
-    ActiveYears,
-    TopN {
-        group_by: Group,
-        limit: usize,
-    },
-    MostActiveDay,
-    AggregatedAverage {
-        bucket: Aggregation,
-        group_by: Option<Group>,
-    },
-}
-
 pub struct InsightQuery {
     pub insight_type: InsightType,
-    pub year: Option<i32>,
-    pub month: Option<u32>,
-    pub week: Option<u32>,
-    pub day: Option<NaiveDate>,
+    pub insight_range: Option<InsightRange>,
 }
 
-#[derive(Debug, Clone)]
-pub enum InsightResult {
-    ActiveYears(Vec<i32>),
-    TopN(Vec<(String, i64)>),
-    MostActiveDay { date: String, total_duration: i64 },
-    AggregatedAverage(BTreeMap<String, Vec<(String, f64)>>),
+#[derive(Debug)]
+pub struct InsightRange {
+    pub start: DateTime<Utc>,
+    pub end: DateTime<Utc>,
+    pub bucket: Option<InsightBucket>,
 }
 
 #[async_trait]
@@ -58,7 +35,7 @@ pub trait InsightProvider {
     ) -> Result<InsightResult, sqlx::Error>;
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct Insights {
     pub year: Option<i32>,
     pub month: Option<u32>,
@@ -102,6 +79,10 @@ impl InsightProvider for Insights {
             }
 
             InsightType::TopN { group_by, limit } => {
+                let Some(InsightRange { start, end, .. }) = query.insight_range else {
+                    return Err(sqlx::Error::Protocol("insight_range is required".into()));
+                };
+
                 let (_field, join) = match group_by {
                     Group::Project => ("project_id", "JOIN projects p ON p.id = e.project_id"),
                     Group::App => ("app_id", "JOIN apps a ON a.id = e.app_id"),
@@ -125,6 +106,7 @@ impl InsightProvider for Insights {
                         SELECT {label} as name, SUM(e.duration) as total_duration
                         FROM events e
                         {join}
+                        WHERE e.timestamp >= ? AND e.timestamp < ?
                         GROUP BY {label}
                         ORDER BY total_duration DESC
                         LIMIT ?
@@ -132,6 +114,8 @@ impl InsightProvider for Insights {
                 );
 
                 let rows = sqlx::query(&query_string)
+                    .bind(start)
+                    .bind(end)
                     .bind(limit as i64)
                     .fetch_all(db_context.pool())
                     .await?;
@@ -153,33 +137,63 @@ impl InsightProvider for Insights {
             }
 
             InsightType::MostActiveDay => {
+                let Some(InsightRange { start, end, bucket }) = query.insight_range else {
+                    return Err(sqlx::Error::Protocol("insight_range is required".into()));
+                };
+
+                match bucket {
+                    Some(InsightBucket::Year | InsightBucket::Month | InsightBucket::Week) => {}
+                    _ => {
+                        return Err(sqlx::Error::Protocol(
+                            "
+                        Only year, month, or week formats are allowed for MostActiveDay"
+                                .into(),
+                        ));
+                    }
+                }
+
                 let rows = sqlx::query!(
                     "
                     SELECT DATE(datetime(timestamp, 'localtime')) as date,
                             SUM(duration) as total
                     FROM events
+                    WHERE timestamp >= ? AND timestamp < ?
                     GROUP BY date
                     ORDER BY total DESC
                     LIMIT 1
-                    "
+                    ",
+                    start,
+                    end
                 )
-                .fetch_one(db_context.pool())
+                .fetch_optional(db_context.pool())
                 .await?;
 
-                Ok(InsightResult::MostActiveDay {
-                    date: rows.date.unwrap_or_default(),
-                    total_duration: rows.total.unwrap_or(0),
-                })
+                if let Some(row) = rows {
+                    Ok(InsightResult::MostActiveDay {
+                        date: row.date.unwrap_or_default(),
+                        total_duration: row.total.unwrap_or(0),
+                    })
+                } else {
+                    Ok(InsightResult::MostActiveDay {
+                        date: "".into(),
+                        total_duration: 0,
+                    })
+                }
             }
 
             InsightType::AggregatedAverage { bucket, group_by } => {
-                let Some(year) = query.year else {
-                    return Err(sqlx::Error::Protocol("Year is required".into()));
+                let Some(InsightRange {
+                    start,
+                    end,
+                    bucket: _,
+                }) = query.insight_range
+                else {
+                    return Err(sqlx::Error::Protocol("insight_range is required".into()));
                 };
 
                 let bucket_format = match bucket {
-                    Aggregation::Day => "%Y-%m-%d",
-                    Aggregation::Month => "%Y-%m",
+                    InsightBucket::Day => "%Y-%m-%d",
+                    InsightBucket::Month => "%Y-%m",
                     _ => {
                         return Err(sqlx::Error::Protocol(
                             "Only day or month is supported".into(),
@@ -221,11 +235,6 @@ impl InsightProvider for Insights {
                     None => ("", ", '_' as label", ""),
                 };
 
-                let year_clause = format!(
-                    "WHERE strftime('%Y', datetime(e.timestamp, 'localtime')) = '{}'",
-                    year
-                );
-
                 let sql = format!(
                     "
                     SELECT
@@ -234,13 +243,17 @@ impl InsightProvider for Insights {
                         {label_select}
                     FROM events e
                     {join_clause}
-                    {year_clause}
+                    WHERE timestamp >= ? AND timestamp < ?
                     GROUP BY bucket{group_by_clause}
                     ORDER BY bucket
                     "
                 );
 
-                let rows = sqlx::query(&sql).fetch_all(db_context.pool()).await?;
+                let rows = sqlx::query(&sql)
+                    .bind(start)
+                    .bind(end)
+                    .fetch_all(db_context.pool())
+                    .await?;
 
                 let mut map: BTreeMap<String, Vec<(String, f64)>> = BTreeMap::new();
 
@@ -253,10 +266,12 @@ impl InsightProvider for Insights {
                         (bucket_str, avg, label)
                     {
                         let label_key = match bucket {
-                            Aggregation::Day => NaiveDate::parse_from_str(&bucket_str, "%Y-%m-%d")
-                                .ok()
-                                .map(|d| d.format("%a").to_string()),
-                            Aggregation::Month => {
+                            InsightBucket::Day => {
+                                NaiveDate::parse_from_str(&bucket_str, "%Y-%m-%d")
+                                    .ok()
+                                    .map(|d| d.format("%a").to_string())
+                            }
+                            InsightBucket::Month => {
                                 NaiveDate::parse_from_str(&format!("{}-01", bucket_str), "%Y-%m-%d")
                                     .ok()
                                     .map(|d| d.format("%b").to_string())
@@ -276,35 +291,92 @@ impl InsightProvider for Insights {
     }
 }
 
-impl InsightResult {
-    pub fn into_active_years(self) -> Result<Vec<i32>, String> {
-        match self {
-            InsightResult::ActiveYears(years) => Ok(years),
-            other => Err(format!("Expected ActiveYears, got {:?}", other)),
-        }
-    }
+impl TryFrom<String> for InsightRange {
+    type Error = TimeError;
 
-    pub fn into_top_n(self) -> Result<Vec<(String, i64)>, String> {
-        match self {
-            InsightResult::TopN(data) => Ok(data),
-            other => Err(format!("Expected TopN, got {:?}", other)),
+    fn try_from(value: String) -> Result<Self, Self::Error> {
+        // Handle "yyyy-mm-dd"
+        if let Ok(date) = NaiveDate::parse_from_str(&value, "%Y-%m-%d") {
+            let start = match Utc.with_ymd_and_hms(date.year(), date.month(), date.day(), 0, 0, 0) {
+                LocalResult::Single(dt) => dt,
+                _ => return Err(TimeError::InvalidDate),
+            };
+            let end = start + Duration::days(1);
+            return Ok(InsightRange {
+                start: start,
+                end: end,
+                bucket: Some(InsightBucket::Day),
+            });
         }
-    }
 
-    pub fn into_most_active_day(self) -> Result<(String, i64), String> {
-        match self {
-            InsightResult::MostActiveDay {
-                date,
-                total_duration,
-            } => Ok((date, total_duration)),
-            other => Err(format!("Expected MostActiveDay, got {:?}", other)),
-        }
-    }
+        // Handle "yyyy-mm"
+        if let Ok(date) = NaiveDate::parse_from_str(&format!("{}-01", value), "%Y-%m-%d") {
+            let start = match Utc.with_ymd_and_hms(date.year(), date.month(), 1, 0, 0, 0) {
+                LocalResult::Single(dt) => dt,
+                _ => return Err(TimeError::InvalidDate),
+            };
+            let end = match if date.month() == 12 {
+                Utc.with_ymd_and_hms(date.year() + 1, 1, 1, 0, 0, 0)
+            } else {
+                Utc.with_ymd_and_hms(date.year(), date.month() + 1, 1, 0, 0, 0)
+            } {
+                LocalResult::Single(dt) => dt,
+                _ => return Err(TimeError::InvalidDate),
+            };
 
-    pub fn into_aggregated_average(self) -> Result<BTreeMap<String, Vec<(String, f64)>>, String> {
-        match self {
-            InsightResult::AggregatedAverage(data) => Ok(data),
-            other => Err(format!("Expected AggregatedAverage, got {:?}", other)),
+            return Ok(InsightRange {
+                start: start,
+                end: end,
+                bucket: Some(InsightBucket::Month),
+            });
         }
+
+        // Handle "yyyy-W##"
+        if let Some((year, week_str)) = value.split_once("-W") {
+            let year = year.parse::<i32>().map_err(|_| TimeError::InvalidDate)?;
+            let week = week_str
+                .parse::<u32>()
+                .map_err(|_| TimeError::InvalidDate)?;
+
+            let iso_week_start = NaiveDate::from_isoywd_opt(year, week, Weekday::Mon)
+                .ok_or(TimeError::InvalidDate)?;
+
+            let start = match Utc.with_ymd_and_hms(
+                iso_week_start.year(),
+                iso_week_start.month(),
+                iso_week_start.day(),
+                0,
+                0,
+                0,
+            ) {
+                LocalResult::Single(dt) => dt,
+                _ => return Err(TimeError::InvalidDate),
+            };
+            let end = start + Duration::days(7);
+
+            return Ok(InsightRange {
+                start: start,
+                end: end,
+                bucket: Some(InsightBucket::Week),
+            });
+        }
+
+        if let Ok(year) = value.parse::<i32>() {
+            let start = match Utc.with_ymd_and_hms(year, 1, 1, 0, 0, 0) {
+                LocalResult::Single(dt) => dt,
+                _ => return Err(TimeError::InvalidDate),
+            };
+            let end = match Utc.with_ymd_and_hms(year + 1, 1, 1, 0, 0, 0) {
+                LocalResult::Single(dt) => dt,
+                _ => return Err(TimeError::InvalidDate),
+            };
+            return Ok(InsightRange {
+                start: start,
+                end: end,
+                bucket: Some(InsightBucket::Year),
+            });
+        }
+
+        Err(TimeError::InvalidDate)
     }
 }
