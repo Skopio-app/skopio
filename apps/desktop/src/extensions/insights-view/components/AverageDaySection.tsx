@@ -3,6 +3,7 @@ import { useYearFilter } from "../stores/useYearFilter";
 import { commands, InsightQueryPayload } from "../../../types/tauri.gen";
 import SectionContainer from "./SectionContainer";
 import StackedBarChart from "../../../components/StackedBarChart";
+import { toast } from "sonner";
 
 const AverageDaySection = () => {
   const [results, setResults] = useState<
@@ -21,6 +22,7 @@ const AverageDaySection = () => {
       insightRange: year,
     };
 
+    if (year.length === 0) return;
     commands
       .fetchInsights(query)
       .then((result) => {
@@ -65,7 +67,7 @@ const AverageDaySection = () => {
           setKeys(Array.from(allKeys));
         }
       })
-      .catch(console.error)
+      .catch(toast.error)
       .finally(() => setLoading(false));
   }, [year]);
 

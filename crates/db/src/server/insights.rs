@@ -145,11 +145,11 @@ impl InsightProvider for Insights {
             }
 
             InsightType::MostActiveDay => {
-                let Some(InsightRange { start, end, bucket }) = query.insight_range else {
+                let Some(InsightRange { start, end }) = query.insight_range else {
                     return Err(sqlx::Error::Protocol("insight_range is required".into()));
                 };
 
-                match bucket {
+                match query.bucket {
                     Some(InsightBucket::Year | InsightBucket::Month | InsightBucket::Week) => {}
                     _ => {
                         return Err(sqlx::Error::Protocol(
@@ -192,11 +192,11 @@ impl InsightProvider for Insights {
             InsightType::AggregatedAverage => {
                 info!("The query: {:?}", query);
 
-                let Some(InsightRange { start, end, bucket }) = query.insight_range else {
+                let Some(InsightRange { start, end }) = query.insight_range else {
                     return Err(sqlx::Error::Protocol("insight_range is required".into()));
                 };
 
-                let Some(bucket) = bucket else {
+                let Some(bucket) = query.bucket else {
                     return Err(sqlx::Error::Protocol("bucket is required".into()));
                 };
 

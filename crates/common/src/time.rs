@@ -2,8 +2,6 @@ use chrono::{DateTime, Datelike, Duration, Local, LocalResult, NaiveDate, TimeZo
 use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
-use crate::models::InsightBucket;
-
 #[derive(Debug, Error)]
 pub enum TimeError {
     #[error("Invalid UTC datetime")]
@@ -296,7 +294,6 @@ impl TimeRange {
 pub struct InsightRange {
     pub start: DateTime<Utc>,
     pub end: DateTime<Utc>,
-    pub bucket: Option<InsightBucket>,
 }
 
 impl TryFrom<String> for InsightRange {
@@ -313,7 +310,6 @@ impl TryFrom<String> for InsightRange {
             return Ok(InsightRange {
                 start: start,
                 end: end,
-                bucket: Some(InsightBucket::Day),
             });
         }
 
@@ -335,7 +331,6 @@ impl TryFrom<String> for InsightRange {
             return Ok(InsightRange {
                 start: start,
                 end: end,
-                bucket: Some(InsightBucket::Month),
             });
         }
 
@@ -365,7 +360,6 @@ impl TryFrom<String> for InsightRange {
             return Ok(InsightRange {
                 start: start,
                 end: end,
-                bucket: Some(InsightBucket::Week),
             });
         }
 
@@ -382,7 +376,6 @@ impl TryFrom<String> for InsightRange {
             return Ok(InsightRange {
                 start: start,
                 end: end,
-                bucket: Some(InsightBucket::Day),
             });
         }
 

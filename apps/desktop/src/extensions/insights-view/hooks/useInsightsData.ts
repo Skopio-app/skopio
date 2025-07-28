@@ -24,6 +24,7 @@ export const useTopNInsights = ({
       };
 
       try {
+        if (year.length === 0) return;
         const result = await commands.fetchInsights(query);
         if ("topN" in result) {
           setData(result.topN);

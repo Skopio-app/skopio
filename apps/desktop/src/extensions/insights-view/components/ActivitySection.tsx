@@ -9,6 +9,7 @@ import {
 } from "../../../types/tauri.gen";
 import { endOfYear, startOfYear } from "date-fns";
 import { useYearFilter } from "../stores/useYearFilter";
+import { toast } from "sonner";
 
 const ActivitySection = () => {
   const [data, setData] = useState<CalendarChartData[]>([]);
@@ -61,7 +62,7 @@ const ActivitySection = () => {
         );
         setData(values);
       } catch (err) {
-        console.error("The error: ", err);
+        toast.error(`Error fetching activity section data: ${err}`);
       }
     };
 
