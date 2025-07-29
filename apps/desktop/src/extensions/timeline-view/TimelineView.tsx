@@ -7,10 +7,12 @@ import {
   addSeconds,
   differenceInSeconds,
   isValid as isValidDate,
+  format,
 } from "date-fns";
 
 import "vis-timeline/styles/vis-timeline-graph2d.css";
 import { AFKEventStream, EventStream } from "./index";
+import { formatDuration } from "../../utils/time";
 
 type Props = {
   requestDataForRange: (start: Date, end: Date) => void;
@@ -18,7 +20,6 @@ type Props = {
   eventStream: EventStream[];
   durationMinutes: number;
   queriedInterval?: [Date, Date];
-  // showQueriedInterval?: boolean;
 };
 
 interface TimelineDataItem {
@@ -58,7 +59,6 @@ export const TimelineView: React.FC<Props> = ({
   eventStream,
   durationMinutes,
   queriedInterval,
-  // showQueriedInterval = false,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const timelineRef = useRef<Timeline | null>(null);
@@ -74,7 +74,6 @@ export const TimelineView: React.FC<Props> = ({
       { id: "AFK", content: "AFK" },
       { id: "VSCode", content: "skopio-vscode" },
       { id: "General", content: "skopio-desktop" },
-      // { id: "Query", content: "Query" },
     ],
     [],
   );
@@ -153,13 +152,6 @@ export const TimelineView: React.FC<Props> = ({
 
       const itemsToRemove: string[] = [];
       dataSetRef.current.forEach((item: any) => {
-        // if (
-        //   item.id === "query-interval" &&
-        //   queriedInterval &&
-        //   showQueriedInterval
-        // ) {
-        //   return;
-        // }
         // Remove items whose entire range is outside the prune buffer
         if (item.end < pruneStart || item.start > pruneEnd) {
           itemsToRemove.push(item.id);
@@ -176,9 +168,53 @@ export const TimelineView: React.FC<Props> = ({
     FETCH_BUFFER_MINUTES,
     PRUNE_BUFFER_MINUTES,
     clearAnimationTimeout,
-    // queriedInterval,
-    // showQueriedInterval,
   ]);
+
+  const formatTimelineTitle = ({
+    start,
+    end,
+    duration,
+    app,
+    entity,
+  }: {
+    start: Date;
+    end: Date;
+    duration: number;
+    app?: string | null;
+    entity?: string | null;
+  }): string => {
+    const formattedDuration = formatDuration(duration);
+
+    return [
+      `Start: ${format(start, "HH:mm:ss")}`,
+      `End: ${format(end, "HH:mm:ss")}`,
+      `Duration: ${formattedDuration}`,
+      `App: ${app ?? "unknown"}`,
+      `Entity: ${entity ?? "unknown"}`,
+    ]
+      .map((line) => line.replace(/"/g, "&quot;"))
+      .join("<br/>");
+  };
+
+  const formatAFKTimelimeTitle = ({
+    start,
+    end,
+    duration,
+  }: {
+    start: Date;
+    end: Date;
+    duration: number;
+  }): string => {
+    const formattedDuration = formatDuration(duration);
+
+    return [
+      `Start: ${format(start, "HH:mm:ss")}`,
+      `End: ${format(end, "HH:mm:ss")}`,
+      `Duration: ${formattedDuration}`,
+    ]
+      .map((line) => line.replace(/"/g, "&quot;"))
+      .join("<br/>");
+  };
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -269,7 +305,6 @@ export const TimelineView: React.FC<Props> = ({
     requestDataForRange,
     clearAnimationTimeout,
     queriedInterval,
-    // showQueriedInterval
   ]);
 
   // TODO: Add a tooltip helper to display additional event data
@@ -301,7 +336,13 @@ export const TimelineView: React.FC<Props> = ({
         content: `${e.app ?? "unknown"}`,
         start,
         end,
-        title: `App: ${e.app}<br/>Entity: ${e.entity}`,
+        title: formatTimelineTitle({
+          start,
+          end,
+          app: e.app,
+          entity: e.entity,
+          duration: e.duration ?? 0,
+        }),
         style: `background-color: ${color}; border-color: ${Color(color).darken(0.6)};`,
       };
 
@@ -324,30 +365,11 @@ export const TimelineView: React.FC<Props> = ({
         content: "AFK",
         start,
         end,
-        title: `AFK for ${e.duration} seconds`,
+        title: formatAFKTimelimeTitle({ start, end, duration: e.duration }),
         style: "background-color: #868e96; border-color: #495057;",
       };
       itemsToProcess.push(item); // Add for batch update/add
     }
-
-    // const queriedIntervalId = "query-interval";
-    // if (queriedInterval && showQueriedInterval) {
-    //   const [start, end] = queriedInterval;
-    //   const queryItem: TimelineDataItem = {
-    //     id: queriedIntervalId,
-    //     group: "Query",
-    //     content: "Query Range",
-    //     title: "Queried Time Interval",
-    //     start,
-    //     end,
-    //     style: "background-color: rgba(173, 216, 230, 0.3); border: 1px dashed #6495ED;",
-    //   };
-    //   itemsToProcess.push(queryItem);
-    // } else {
-    //   if (dataSetRef.current.get(queriedIntervalId)) {
-    //     dataSetRef.current.remove(queriedIntervalId);
-    //   }
-    // }
 
     if (itemsToProcess.length > 0) {
       dataSetRef.current.update(itemsToProcess);
