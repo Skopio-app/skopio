@@ -9,7 +9,16 @@ import {
   addDays,
   differenceInMonths,
 } from "date-fns";
-import { Button, Input, Label, ToggleGroup, ToggleGroupItem } from "@skopio/ui";
+import {
+  Button,
+  Calendar,
+  Label,
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+  ToggleGroup,
+  ToggleGroupItem,
+} from "@skopio/ui";
 
 export type EventStream = {
   id: number;
@@ -56,13 +65,10 @@ const TimelineExtension = () => {
   const [selectedLabel, setSelectedLabel] = useState<string>(
     durations[0].label,
   );
-  // const [openTo, setOpenTo] = useState<boolean>(false);
-  // const [openFrom, setOpenFrom] = useState<boolean>(false);
-  // const [dateFrom, setDateFrom] = useState<Date | undefined>(new Date());
-  // const [dateTo, setDateTo] = useState<Date | undefined>(new Date());
-
-  const [customStartDate, setCustomStartDate] = useState<string>("");
-  const [customEndDate, setCustomEndDate] = useState<string>("");
+  const [openTo, setOpenTo] = useState<boolean>(false);
+  const [openFrom, setOpenFrom] = useState<boolean>(false);
+  const [dateFrom, setDateFrom] = useState<Date | undefined>(new Date());
+  const [dateTo, setDateTo] = useState<Date | undefined>(new Date());
 
   const [queriedInterval, setQueriedInterval] = useState<
     [Date, Date] | undefined
@@ -193,10 +199,10 @@ const TimelineExtension = () => {
   }, [setupWebSocket, updateMapState]);
 
   const handleApplyCustomRange = useCallback(() => {
-    const start = customStartDate
-      ? startOfDay(parseISO(customStartDate))
+    const start = dateFrom
+      ? startOfDay(parseISO(dateFrom.toISOString()))
       : null;
-    const end = customEndDate ? endOfDay(parseISO(customEndDate)) : null;
+    const end = dateTo ? endOfDay(parseISO(dateTo.toISOString())) : null;
 
     if (!start || !end || !isValidDate(start) || !isValidDate(end)) {
       alert("Please select valid end and start dates");
@@ -219,7 +225,7 @@ const TimelineExtension = () => {
     requestDataForRange(start, end);
 
     setCurrentDurationMinutes(0);
-  }, [customStartDate, customEndDate, requestDataForRange]);
+  }, [dateTo, dateFrom, requestDataForRange]);
 
   useEffect(() => {
     if (currentDurationMinutes > 0) {
@@ -274,26 +280,69 @@ const TimelineExtension = () => {
       </div>
 
       <div className="flex flex-wrap justify-start items-center gap-2 mt-4">
-        <Label htmlFor="startDate" className="text-neutral-800">
+        <Label htmlFor="date-from" className="text-neutral-800">
           Show from
         </Label>
-        <Input
-          type="date"
-          id="startDate"
-          value={customStartDate}
-          onChange={(e) => setCustomStartDate(e.target.value)}
-          className="p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 w-30"
-        />
-        <Label htmlFor="endDate" className="text-gray-700">
+        <Popover open={openFrom} onOpenChange={setOpenFrom}>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              id="date-from"
+              className="w-30 justify-between font-normal"
+            >
+              {dateFrom
+                ? dateFrom.toLocaleDateString("en-US", {
+                    day: "2-digit",
+                    month: "short",
+                    year: "numeric",
+                  })
+                : "Select date"}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto overflow-hidden p-0" align="start">
+            <Calendar
+              mode="single"
+              selected={dateFrom}
+              captionLayout="dropdown"
+              onSelect={(date) => {
+                setDateFrom(date);
+                setOpenFrom(false);
+              }}
+            />
+          </PopoverContent>
+        </Popover>
+        <Label htmlFor="date-to" className="text-gray-700">
           to
         </Label>
-        <Input
-          type="date"
-          id="endDate"
-          value={customEndDate}
-          onChange={(e) => setCustomEndDate(e.target.value)}
-          className="p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 w-30"
-        />
+        <Popover open={openTo} onOpenChange={setOpenTo}>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              id="date-to"
+              className="w-30 justify-between font-normal"
+            >
+              {dateTo
+                ? dateTo.toLocaleDateString("en-US", {
+                    day: "2-digit",
+                    month: "short",
+                    year: "numeric",
+                  })
+                : "Select date"}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto overflow-hidden p-0" align="start">
+            <Calendar
+              mode="single"
+              selected={dateTo}
+              captionLayout="dropdown"
+              onSelect={(date) => {
+                setDateTo(date);
+                setOpenTo(false);
+              }}
+              disabled={dateFrom && { before: dateFrom }}
+            />
+          </PopoverContent>
+        </Popover>
         <Button
           variant="outline"
           onClick={handleApplyCustomRange}
