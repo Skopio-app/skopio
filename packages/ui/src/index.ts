@@ -19,3 +19,5 @@ export * from "./components/breadcrumb";
 export * from "./components/checkbox";
 export * from "./components/scroll-area";
 export * from "./components/select";
+export * from "./components/toggle";
+export * from "./components/toggle-group";

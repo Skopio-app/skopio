@@ -9,6 +9,7 @@ import {
   addDays,
   differenceInMonths,
 } from "date-fns";
+import { Button, Input, Label, ToggleGroup, ToggleGroupItem } from "@skopio/ui";
 
 export type EventStream = {
   id: number;
@@ -52,6 +53,13 @@ const TimelineExtension = () => {
   >(new Map());
   const [currentDurationMinutes, setCurrentDurationMinutes] =
     useState<number>(15);
+  const [selectedLabel, setSelectedLabel] = useState<string>(
+    durations[0].label,
+  );
+  // const [openTo, setOpenTo] = useState<boolean>(false);
+  // const [openFrom, setOpenFrom] = useState<boolean>(false);
+  // const [dateFrom, setDateFrom] = useState<Date | undefined>(new Date());
+  // const [dateTo, setDateTo] = useState<Date | undefined>(new Date());
 
   const [customStartDate, setCustomStartDate] = useState<string>("");
   const [customEndDate, setCustomEndDate] = useState<string>("");
@@ -236,50 +244,63 @@ const TimelineExtension = () => {
   );
 
   return (
-    <div className="flex-col items-center h-full w-full space-y-4 px-4 py-20">
-      <div className="flex flex-wrap justify-center gap-2">
-        {durations.map((d) => (
-          <button
-            key={d.minutes}
-            className={`px-3 py-1 rounded text-sm font-medium border transition ${
-              currentDurationMinutes === d.minutes
-                ? "bg-blue-600 text-white border-blue-700"
-                : "bg-white text-gray-800 border-gray-300 hover:bg-gray-100"
-            }`}
-            onClick={() => setCurrentDurationMinutes(d.minutes)}
-          >
-            {d.label}
-          </button>
-        ))}
+    <div className="flex-col items-center h-full w-full space-y-4 px-4 py-8">
+      <h3 className="font-semibold text-3xl">Timeline</h3>
+      <div className="flex flex-wrap justify-start gap-2">
+        <Label htmlFor="timePreset" className="text-neutral-800">
+          Show last
+        </Label>
+        <ToggleGroup
+          type="single"
+          variant="outline"
+          size="default"
+          id="timePreset"
+          value={selectedLabel}
+          onValueChange={(val) => {
+            if (!val) return;
+            setSelectedLabel(val);
+            const selected = durations.find((d) => d.label === val);
+            if (selected) {
+              setCurrentDurationMinutes(selected.minutes);
+            }
+          }}
+        >
+          {durations.map((d) => (
+            <ToggleGroupItem key={d.label} value={d.label}>
+              {d.label}
+            </ToggleGroupItem>
+          ))}
+        </ToggleGroup>
       </div>
 
-      <div className="flex flex-wrap justify-center items-center gap-2 mt-4">
-        <label htmlFor="startDate" className="text-gray-700">
+      <div className="flex flex-wrap justify-start items-center gap-2 mt-4">
+        <Label htmlFor="startDate" className="text-neutral-800">
           Show from
-        </label>
-        <input
+        </Label>
+        <Input
           type="date"
           id="startDate"
           value={customStartDate}
           onChange={(e) => setCustomStartDate(e.target.value)}
-          className="p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 w-30"
         />
-        <label htmlFor="endDate" className="text-gray-700">
+        <Label htmlFor="endDate" className="text-gray-700">
           to
-        </label>
-        <input
+        </Label>
+        <Input
           type="date"
           id="endDate"
           value={customEndDate}
           onChange={(e) => setCustomEndDate(e.target.value)}
-          className="p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+          className="p-2 border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500 w-30"
         />
-        <button
+        <Button
+          variant="outline"
           onClick={handleApplyCustomRange}
-          className="px-4 py-2 bg-green-400 text-neutral-200 rounded font-medium border border-green-700 hover:bg-green-700 transition"
+          className="px-4 py-2 rounded font-medium border"
         >
           Apply
-        </button>
+        </Button>
       </div>
       <TimelineView
         afkEventStream={afkEventDataArray}
