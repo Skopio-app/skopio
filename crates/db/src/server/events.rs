@@ -57,64 +57,6 @@ impl Event {
     }
 }
 
-// TODO: Add time bucket implementation
-/// Fetch recent events
-pub async fn fetch_recent(db: &DBContext, since: DateTime<Utc>) -> Result<Vec<FullEvent>, DBError> {
-    let rows = sqlx::query!(
-        r#"
-            SELECT
-                events.id,
-                events.timestamp,
-                events.end_timestamp,
-                events.duration,
-                apps.name AS app,
-                categories.name AS category,
-                entities.name AS entity,
-                projects.name AS project,
-                branches.name AS branch,
-                languages.name AS language
-            FROM events
-            LEFT JOIN apps ON events.app_id = apps.id
-            LEFT JOIN entities ON events.entity_id = entities.id
-            LEFT JOIN projects ON events.project_id = projects.id
-            LEFT JOIN branches ON events.branch_id = branches.id
-            LEFT JOIN languages ON events.language_id = languages.id
-            LEFT JOIN categories ON events.category_id = categories.id
-            WHERE events.timestamp > ?
-            ORDER BY events.timestamp ASC
-            "#,
-        since
-    )
-    .fetch_all(db.pool())
-    .await?;
-
-    let events = rows
-        .into_iter()
-        .map(|row| {
-            let timestamp = row.timestamp.parse::<DateTime<Utc>>()?;
-            let end_timestamp = match row.end_timestamp {
-                Some(ref s) => Some(s.parse::<DateTime<Utc>>()?),
-                None => None,
-            };
-
-            Ok(FullEvent {
-                id: row.id,
-                timestamp,
-                end_timestamp,
-                duration: row.duration,
-                category: row.category.unwrap_or_default(),
-                app: row.app,
-                entity: row.entity,
-                project: row.project,
-                branch: row.branch,
-                language: row.language,
-            })
-        })
-        .collect::<Result<Vec<_>, DBError>>()?;
-
-    Ok(events)
-}
-
 impl SummaryQueryBuilder {
     /// Fetches events given a range
     pub async fn fetch_event_range(&self, db: &DBContext) -> Result<EventGroupResult, DBError> {

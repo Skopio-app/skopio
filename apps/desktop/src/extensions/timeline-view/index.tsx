@@ -16,9 +16,16 @@ import {
   Popover,
   PopoverContent,
   PopoverTrigger,
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
   ToggleGroup,
   ToggleGroupItem,
 } from "@skopio/ui";
+import { Group } from "../../types/tauri.gen";
+import { useGroupFilter } from "./stores/useGroupFilter";
 
 export type EventStream = {
   id: number;
@@ -70,10 +77,20 @@ const TimelineExtension = () => {
   const [dateFrom, setDateFrom] = useState<Date | undefined>(new Date());
   const [dateTo, setDateTo] = useState<Date | undefined>(new Date());
 
+  const { group } = useGroupFilter();
+
+  const group_options: Group[] = [
+    "app",
+    "branch",
+    "category",
+    "entity",
+    "language",
+    "project",
+  ];
+
   const [queriedInterval, setQueriedInterval] = useState<
     [Date, Date] | undefined
   >(undefined);
-  // const [showQueriedInterval, setShowQueriedInterval] = useState<boolean>(false);
 
   const eventSocketRef = useRef<WebSocket | null>(null);
   const afkSocketRef = useRef<WebSocket | null>(null);
@@ -221,7 +238,6 @@ const TimelineExtension = () => {
     }
 
     setQueriedInterval([start, end]);
-    // setShowQueriedInterval(true);
     requestDataForRange(start, end);
 
     setCurrentDurationMinutes(0);
@@ -229,7 +245,6 @@ const TimelineExtension = () => {
 
   useEffect(() => {
     if (currentDurationMinutes > 0) {
-      // setShowQueriedInterval(false);
       setQueriedInterval(undefined);
       const now = new Date();
       const initialMax = new Date(now.getTime() + 5 * 60 * 1000);
@@ -355,13 +370,36 @@ const TimelineExtension = () => {
           Apply
         </Button>
       </div>
+
+      <div className="flex flex-wrap justify-start items-center gap-2 mt-4">
+        <Label htmlFor="filter" className="text-neutral-700">
+          Filter:
+        </Label>
+        <Select
+          value={group}
+          onValueChange={(value) =>
+            useGroupFilter.setState({ group: value as Group })
+          }
+        >
+          <SelectTrigger className="w-38" id="filter">
+            <SelectValue placeholder="Select a filter" />
+          </SelectTrigger>
+          <SelectContent>
+            {group_options.map((option) => (
+              <SelectItem key={option} value={option}>
+                {option}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
       <TimelineView
         afkEventStream={afkEventDataArray}
         eventStream={eventDataArray}
         durationMinutes={currentDurationMinutes}
         requestDataForRange={requestDataForRange}
         queriedInterval={queriedInterval}
-        // showQueriedInterval={showQueriedInterval}
       />
     </div>
   );
