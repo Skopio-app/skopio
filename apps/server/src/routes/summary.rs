@@ -14,53 +14,13 @@ use tokio::sync::Mutex;
 
 use crate::utils::error_response;
 
-pub fn summary_query_from_input(input: SummaryQueryInput) -> SummaryQueryBuilder {
-    let mut builder = SummaryQueryBuilder::default();
-
-    if let Some(start) = input.start {
-        builder = builder.start(start);
-    }
-
-    if let Some(end) = input.end {
-        builder = builder.end(end);
-    }
-
-    if let Some(apps) = input.apps {
-        builder = builder.apps(apps);
-    }
-
-    if let Some(projects) = input.projects {
-        builder = builder.projects(projects);
-    }
-
-    if let Some(types) = input.categories {
-        builder = builder.categories(types);
-    }
-
-    if let Some(entities) = input.entities {
-        builder = builder.entities(entities);
-    }
-
-    if let Some(branches) = input.branches {
-        builder = builder.branches(branches);
-    }
-
-    if let Some(langs) = input.languages {
-        builder = builder.languages(langs);
-    }
-
-    builder = builder.include_afk(input.include_afk);
-
-    builder
-}
-
 pub async fn total_time_handler(
     State(db): State<Arc<Mutex<DBContext>>>,
     Json(payload): Json<SummaryQueryInput>,
 ) -> Result<Json<i64>, (StatusCode, Json<String>)> {
     let db = db.lock().await;
 
-    let builder: SummaryQueryBuilder = summary_query_from_input(payload);
+    let builder: SummaryQueryBuilder = payload.into();
     builder
         .execute_total_time(&db)
         .await
@@ -74,7 +34,7 @@ pub async fn execute_range_summary(
 ) -> Result<Json<Vec<GroupedTimeSummary>>, (StatusCode, Json<String>)> {
     let db = db.lock().await;
 
-    let builder: SummaryQueryBuilder = summary_query_from_input(payload);
+    let builder: SummaryQueryBuilder = payload.into();
     builder
         .execute_range_summary(&db)
         .await
@@ -90,53 +50,21 @@ pub async fn get_bucketed_summary(
 
     let range = TimeRange::from(payload.preset);
 
-    let builder = SummaryQueryBuilder::default()
+    let mut builder = SummaryQueryBuilder::default()
         .start(range.start())
         .end(range.end())
         .time_bucket(range.bucket().unwrap())
-        .include_afk(payload.include_afk);
+        .include_afk(payload.include_afk)
+        .apps(payload.app_names.unwrap_or_default())
+        .projects(payload.project_names.unwrap_or_default())
+        .entities(payload.entity_names.unwrap_or_default())
+        .categories(payload.category_names.unwrap_or_default())
+        .branches(payload.branch_names.unwrap_or_default())
+        .languages(payload.language_names.unwrap_or_default());
 
-    let builder = if let Some(names) = payload.app_names {
-        builder.apps(names)
-    } else {
-        builder
-    };
-
-    let builder = if let Some(names) = payload.project_names {
-        builder.projects(names)
-    } else {
-        builder
-    };
-
-    let builder = if let Some(names) = payload.entity_names {
-        builder.entities(names)
-    } else {
-        builder
-    };
-
-    let builder = if let Some(names) = payload.category_names {
-        builder.categories(names)
-    } else {
-        builder
-    };
-
-    let builder = if let Some(names) = payload.branch_names {
-        builder.branches(names)
-    } else {
-        builder
-    };
-
-    let builder = if let Some(names) = payload.language_names {
-        builder.languages(names)
-    } else {
-        builder
-    };
-
-    let builder = if let Some(group_by) = payload.group_by {
-        builder.group_by(group_by)
-    } else {
-        builder
-    };
+    if let Some(group) = payload.group_by {
+        builder = builder.group_by(group);
+    }
 
     let records = builder
         .execute_range_summary_with_bucket(&db)

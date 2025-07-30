@@ -272,7 +272,11 @@ const TimelineExtension = () => {
           }}
         >
           {durations.map((d) => (
-            <ToggleGroupItem key={d.label} value={d.label}>
+            <ToggleGroupItem
+              key={d.label}
+              value={d.label}
+              className="hover:cursor-pointer"
+            >
               {d.label}
             </ToggleGroupItem>
           ))}

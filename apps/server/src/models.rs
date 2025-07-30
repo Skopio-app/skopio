@@ -1,4 +1,5 @@
-use db::server::{afk_events::AFKEvent, events::FullEvent};
+use common::models::outputs::FullEvent;
+use db::server::afk_events::AFKEvent;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize)]

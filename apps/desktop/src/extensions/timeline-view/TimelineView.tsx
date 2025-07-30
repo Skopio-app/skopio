@@ -307,7 +307,6 @@ export const TimelineView: React.FC<Props> = ({
     queriedInterval,
   ]);
 
-  // TODO: Add a tooltip helper to display additional event data
   useEffect(() => {
     if (!dataSetRef.current || !timelineRef.current) {
       console.warn(
