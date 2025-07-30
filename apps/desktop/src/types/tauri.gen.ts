@@ -106,7 +106,7 @@ export type EventGroupResult =
 export type FullEvent = {
   id: number;
   timestamp: string;
-  end_timestamp: string | null;
+  endTimestamp: string | null;
   duration: number | null;
   category: string;
   app: string | null;

@@ -11,15 +11,13 @@ import {
 } from "date-fns";
 
 import "vis-timeline/styles/vis-timeline-graph2d.css";
-import { AFKEventStream, EventStream } from "./index";
 import { formatDuration } from "../../utils/time";
+import { EventGroup, FullEvent } from "../../types/tauri.gen";
 
 type Props = {
   requestDataForRange: (start: Date, end: Date) => void;
-  afkEventStream: AFKEventStream[];
-  eventStream: EventStream[];
   durationMinutes: number;
-  queriedInterval?: [Date, Date];
+  groupedEvents: EventGroup[];
 };
 
 interface TimelineDataItem {
@@ -54,29 +52,27 @@ interface TimelineGroup {
 }
 
 export const TimelineView: React.FC<Props> = ({
-  requestDataForRange,
-  afkEventStream,
-  eventStream,
+  // requestDataForRange,
   durationMinutes,
-  queriedInterval,
+  groupedEvents,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const timelineRef = useRef<Timeline | null>(null);
   const dataSetRef = useRef<DataSet<TimelineDataItem> | null>(null);
   const animationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  const FETCH_BUFFER_MINUTES = 30; // Fetch 30 mins before and after the visible range
+  // const FETCH_BUFFER_MINUTES = 30; // Fetch 30 mins before and after the visible range
   const PRUNE_BUFFER_MINUTES = 60; // Prune items 60 minutes outside the visible range
   const ANIMATION_INACTIVITY_DELAY_MS = 5000; // Animate to latest after 10 seconds
 
-  const groups: TimelineGroup[] = useMemo<TimelineGroup[]>(
-    () => [
-      { id: "AFK", content: "AFK" },
-      { id: "VSCode", content: "skopio-vscode" },
-      { id: "General", content: "skopio-desktop" },
-    ],
-    [],
-  );
+  const groups: TimelineGroup[] = useMemo(() => {
+    const dynamicGroups: TimelineGroup[] = [];
+    groupedEvents.forEach((group) => {
+      dynamicGroups.push({ id: group.group, content: group.group });
+    });
+
+    return dynamicGroups;
+  }, [groupedEvents]);
 
   const safeParseISO = (dateInput: unknown): Date | null => {
     if (typeof dateInput === "number") {
@@ -97,12 +93,6 @@ export const TimelineView: React.FC<Props> = ({
     }
 
     return null;
-  };
-
-  const getGroupId = (app?: string | null): string => {
-    if (!app) return "General";
-    const name = app.toLowerCase();
-    return name === "vscode" || name === "code" ? "VSCode" : "General";
   };
 
   const getColorForActivity = (type: string): string => {
@@ -134,13 +124,13 @@ export const TimelineView: React.FC<Props> = ({
       clearAnimationTimeout();
 
       // Request new data for the expanded range (visible range + buffer)
-      const fetchStart = new Date(
-        start.getTime() - FETCH_BUFFER_MINUTES * 60 * 1000,
-      );
-      const fetchEnd = new Date(
-        end.getTime() + FETCH_BUFFER_MINUTES * 60 * 1000,
-      );
-      requestDataForRange(fetchStart, fetchEnd);
+      // const fetchStart = new Date(
+      //   start.getTime() - FETCH_BUFFER_MINUTES * 60 * 1000
+      // );
+      // const fetchEnd = new Date(
+      //   end.getTime() + FETCH_BUFFER_MINUTES * 60 * 1000
+      // );
+      // requestDataForRange(fetchStart, fetchEnd);
 
       // Prune data outside a larger buffer from the DataSet
       const pruneStart = new Date(
@@ -164,8 +154,8 @@ export const TimelineView: React.FC<Props> = ({
       }
     }, 500);
   }, [
-    requestDataForRange,
-    FETCH_BUFFER_MINUTES,
+    // requestDataForRange,
+    // FETCH_BUFFER_MINUTES,
     PRUNE_BUFFER_MINUTES,
     clearAnimationTimeout,
   ]);
@@ -191,26 +181,6 @@ export const TimelineView: React.FC<Props> = ({
       `Duration: ${formattedDuration}`,
       `App: ${app ?? "unknown"}`,
       `Entity: ${entity ?? "unknown"}`,
-    ]
-      .map((line) => line.replace(/"/g, "&quot;"))
-      .join("<br/>");
-  };
-
-  const formatAFKTimelimeTitle = ({
-    start,
-    end,
-    duration,
-  }: {
-    start: Date;
-    end: Date;
-    duration: number;
-  }): string => {
-    const formattedDuration = formatDuration(duration);
-
-    return [
-      `Start: ${format(start, "HH:mm:ss")}`,
-      `End: ${format(end, "HH:mm:ss")}`,
-      `Duration: ${formattedDuration}`,
     ]
       .map((line) => line.replace(/"/g, "&quot;"))
       .join("<br/>");
@@ -249,39 +219,23 @@ export const TimelineView: React.FC<Props> = ({
       options,
     );
 
-    let initialMin: Date = new Date();
-    let initialMax: Date = new Date();
+    const now = new Date();
+    const initialMax = new Date(now.getTime() + 5 * 60 * 1000);
+    const initialMin = new Date(
+      initialMax.getTime() - durationMinutes * 60 * 1000,
+    );
 
-    if (queriedInterval) {
-      initialMin = queriedInterval[0];
-      initialMax = queriedInterval[1];
-
-      const buffer = (initialMax.getTime() - initialMin.getTime()) * 0.1;
-      timelineRef.current.setOptions({
-        min: new Date(initialMin.getTime() - buffer),
-        max: new Date(initialMax.getTime() + buffer),
-        start: new Date(initialMin.getTime() - buffer),
-        end: new Date(initialMax.getTime() + buffer),
-      });
-    } else {
-      const now = new Date();
-      const initialMax = new Date(now.getTime() + 5 * 60 * 1000);
-      const initialMin = new Date(
-        initialMax.getTime() - durationMinutes * 60 * 1000,
-      );
-
-      timelineRef.current.setOptions({
-        min: initialMin,
-        max: initialMax,
-        start: initialMin,
-        end: initialMax,
-      });
-    }
+    timelineRef.current.setOptions({
+      min: initialMin,
+      max: initialMax,
+      start: initialMin,
+      end: initialMax,
+    });
 
     timelineRef.current.on("rangechanged", handleRangeChanged);
 
     // Initial data request for the default view
-    requestDataForRange(initialMin, initialMax);
+    // requestDataForRange(initialMin, initialMax);
 
     return () => {
       if (timelineRef.current) {
@@ -302,9 +256,8 @@ export const TimelineView: React.FC<Props> = ({
     groups,
     durationMinutes,
     handleRangeChanged,
-    requestDataForRange,
+    // requestDataForRange,
     clearAnimationTimeout,
-    queriedInterval,
   ]);
 
   useEffect(() => {
@@ -317,58 +270,38 @@ export const TimelineView: React.FC<Props> = ({
 
     const itemsToProcess: TimelineDataItem[] = [];
 
-    for (const e of eventStream.values()) {
-      const start = safeParseISO(e.timestamp);
-      const end = e.endTimestamp
-        ? safeParseISO(e.endTimestamp)
-        : addSeconds(start ?? 0, e.duration ?? 0);
+    groupedEvents.forEach((groupData: EventGroup) => {
+      groupData.events.forEach((e: FullEvent) => {
+        const start = safeParseISO(e.timestamp);
+        const end = e.endTimestamp
+          ? safeParseISO(e.endTimestamp)
+          : addSeconds(start ?? 0, e.duration ?? 0);
 
-      if (!start || !end || differenceInSeconds(end, start) <= 1) continue;
+        if (!start || !end || differenceInSeconds(end, start) <= 1) return;
 
-      const id = String(e.id);
-      const group = getGroupId(e.app);
-      const color = getColorForActivity(e.activityType);
+        const id = String(e.id);
+        const group = groupData.group;
+        const color = getColorForActivity(e.category);
 
-      const item: TimelineDataItem = {
-        id,
-        group,
-        content: `${e.app ?? "unknown"}`,
-        start,
-        end,
-        title: formatTimelineTitle({
+        const item: TimelineDataItem = {
+          id,
+          group,
+          content: `${e.app ?? "unknown"}`,
           start,
           end,
-          app: e.app,
-          entity: e.entity,
-          duration: e.duration ?? 0,
-        }),
-        style: `background-color: ${color}; border-color: ${Color(color).darken(0.6)};`,
-      };
+          title: formatTimelineTitle({
+            start,
+            end,
+            app: e.app,
+            entity: e.entity,
+            duration: e.duration ?? 0,
+          }),
+          style: `background-color: ${color}; border-color: ${Color(color).darken(0.6)};`,
+        };
 
-      itemsToProcess.push(item);
-    }
-
-    for (const e of afkEventStream.values()) {
-      const start = safeParseISO(e.afkStart);
-      const end = e.afkEnd
-        ? safeParseISO(e.afkEnd)
-        : addSeconds(start ?? 0, e.duration ?? 0);
-      if (!start || !end || isNaN(start.getTime()) || isNaN(end.getTime()))
-        continue;
-
-      const id = `afk-${e.id}`;
-
-      const item: TimelineDataItem = {
-        id,
-        group: "AFK",
-        content: "AFK",
-        start,
-        end,
-        title: formatAFKTimelimeTitle({ start, end, duration: e.duration }),
-        style: "background-color: #868e96; border-color: #495057;",
-      };
-      itemsToProcess.push(item); // Add for batch update/add
-    }
+        itemsToProcess.push(item);
+      });
+    });
 
     if (itemsToProcess.length > 0) {
       dataSetRef.current.update(itemsToProcess);
@@ -394,7 +327,7 @@ export const TimelineView: React.FC<Props> = ({
         }, ANIMATION_INACTIVITY_DELAY_MS);
       }
     }
-  }, [eventStream, afkEventStream, clearAnimationTimeout]);
+  }, [groupedEvents, clearAnimationTimeout]);
 
   return (
     <div className="flex justify-center items-center">

@@ -22,6 +22,7 @@ pub enum InsightResult {
 }
 
 #[derive(Debug, Serialize, Deserialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
 pub struct FullEvent {
     pub id: i64,
     pub timestamp: DateTime<Utc>,

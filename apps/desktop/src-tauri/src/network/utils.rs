@@ -1,6 +1,5 @@
 use std::{sync::LazyLock, time::Duration};
 
-use log::debug;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use url::Url;
@@ -24,10 +23,7 @@ where
     if let Some(q) = query {
         let query_string = serde_qs::to_string(q).map_err(|e| e.to_string())?;
         url.set_query(Some(&query_string));
-        debug!("Generated query string: {}", query_string);
     }
-
-    debug!("The url: {}", url);
 
     let res = HTTP_CLIENT
         .get(url)

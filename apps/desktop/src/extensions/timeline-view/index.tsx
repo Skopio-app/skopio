@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   Button,
   Calendar,
@@ -17,30 +17,21 @@ import {
 import {
   BucketedSummaryInput,
   commands,
+  EventGroup,
   EventGroupResult,
   Group,
 } from "../../types/tauri.gen";
 import { useGroupFilter } from "./stores/useGroupFilter";
-
-export type EventStream = {
-  id: number;
-  timestamp: string;
-  endTimestamp?: string | null;
-  duration?: number | null;
-  activityType: string;
-  app?: string | null;
-  entity?: string | null;
-  project?: string | null;
-  branch?: string | null;
-  language?: string | null;
-};
-
-export type AFKEventStream = {
-  id: number;
-  afkStart: string;
-  afkEnd: string | null;
-  duration: number;
-};
+import { TimelineView } from "./TimelineView";
+import {
+  // addDays,
+  // differenceInMonths,
+  // endOfDay,
+  // parseISO,
+  // startOfDay,
+  // isValid as isValidDate,
+  formatISO,
+} from "date-fns";
 
 const durations = [
   { label: "15m", minutes: 15 },
@@ -65,7 +56,7 @@ const TimelineExtension = () => {
   const [openFrom, setOpenFrom] = useState<boolean>(false);
   const [dateFrom, setDateFrom] = useState<Date | undefined>(new Date());
   const [dateTo, setDateTo] = useState<Date | undefined>(new Date());
-
+  const [events, setEvents] = useState<EventGroup[]>([]);
   const { group } = useGroupFilter();
 
   const group_options: Group[] = [
@@ -88,6 +79,7 @@ const TimelineExtension = () => {
       try {
         const result: EventGroupResult = await commands.fetchEvents(query);
         if ("Grouped" in result) {
+          setEvents(result.Grouped);
           console.log("Thr result: ", result.Grouped);
         }
       } catch (err) {
@@ -121,7 +113,13 @@ const TimelineExtension = () => {
   //   }
 
   //   setCurrentDurationMinutes(0);
-  // }, [dateTo, dateFrom, requestDataForRange]);
+  // }, [dateTo, dateFrom]);
+
+  const requestDataForRange = useCallback((start: Date, end: Date) => {
+    console.log(
+      `Requesting data for range: ${formatISO(start)} to ${formatISO(end)}`,
+    );
+  }, []);
 
   return (
     <div className="flex-col items-center h-full w-full space-y-4 px-4 py-8">
@@ -253,13 +251,11 @@ const TimelineExtension = () => {
         </Select>
       </div>
 
-      {/* <TimelineView
-        afkEventStream={afkEventDataArray}
-        eventStream={eventDataArray}
+      <TimelineView
         durationMinutes={currentDurationMinutes}
         requestDataForRange={requestDataForRange}
-        queriedInterval={queriedInterval}
-      /> */}
+        groupedEvents={events}
+      />
     </div>
   );
 };
