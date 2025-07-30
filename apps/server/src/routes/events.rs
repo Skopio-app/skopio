@@ -1,5 +1,5 @@
 use crate::utils::error_response;
-use axum::extract::{Query, State};
+use axum::extract::State;
 use axum::http::StatusCode;
 use axum::routing::{get, post};
 use axum::{Json, Router};
@@ -14,6 +14,7 @@ use db::server::languages::Language;
 use db::server::projects::ServerProject;
 use db::server::summary::SummaryQueryBuilder;
 use db::DBContext;
+use serde_qs::axum::QsQuery;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use tracing::{debug, info};
@@ -71,7 +72,7 @@ async fn insert_events(
 
 async fn fetch_events(
     State(db): State<Arc<Mutex<DBContext>>>,
-    Query(payload): Query<BucketedSummaryInput>,
+    QsQuery(payload): QsQuery<BucketedSummaryInput>,
 ) -> Result<Json<EventGroupResult>, (StatusCode, Json<String>)> {
     info!("The payload: {:?}", payload);
 

@@ -40,6 +40,7 @@ tauri-plugin-dialog = "2.0.0"
 specta = { workspace = true, features = ["chrono"] }
 specta-typescript = { workspace = true }
 tauri-specta = { workspace = true, features = ["derive", "typescript"] }
+serde_qs = { workspace = true }
 ril = { version = "0.10.3", features = ["png"] }
 
 db = { path = "../../../crates/db", features = ["desktop"] }
