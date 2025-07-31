@@ -64,14 +64,20 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
   const animationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const ANIMATION_INACTIVITY_DELAY_MS = 5000; // Animate to latest after 10 seconds
+  const MAX_LABEL_LENGTH = 40;
 
   const groups: TimelineGroup[] = useMemo(() => {
-    const dynamicGroups: TimelineGroup[] = [];
-    groupedEvents.forEach((group) => {
-      dynamicGroups.push({ id: group.group, content: group.group });
-    });
+    return groupedEvents.map((group) => {
+      const content =
+        group.group.length > MAX_LABEL_LENGTH
+          ? `${group.group.slice(0, MAX_LABEL_LENGTH)}...`
+          : group.group;
 
-    return dynamicGroups;
+      return {
+        id: group.group,
+        content,
+      };
+    });
   }, [groupedEvents]);
 
   const safeParseISO = (dateInput: unknown): Date | null => {
@@ -117,7 +123,7 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
     return _.debounce(({ start, end }: { start: Date; end: Date }) => {
       if (!dataSetRef.current || !timelineRef.current) return;
       console.debug(
-        `Range changed: ${start.toISOString()} to ${end.toISOString()}`,
+        `Range changed: ${format(start, "MMM d, yyyy HH:mm")} to ${format(end, "MMM d, yyyy HH:mm")}`,
       );
       clearAnimationTimeout();
     }, 500);
@@ -143,7 +149,7 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
       `End: ${format(end, "HH:mm:ss")}`,
       `Duration: ${formattedDuration}`,
       `App: ${app ?? "unknown"}`,
-      `Entity: ${entity ?? "unknown"}`,
+      `Entity: ${entity?.slice(0, MAX_LABEL_LENGTH) ?? "unknown"}`,
     ]
       .map((line) => line.replace(/"/g, "&quot;"))
       .join("<br/>");
@@ -223,7 +229,7 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
 
   useEffect(() => {
     if (!dataSetRef.current || !timelineRef.current) {
-      console.warn(
+      console.debug(
         "Timeline or DataSet not initialized, skipping data update.",
       );
       return;
@@ -282,7 +288,7 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
 
         animationTimeoutRef.current = setTimeout(() => {
           if (timelineRef.current) {
-            console.log("Animating to latest entry after inactivity.");
+            console.debug("Animating to latest entry after inactivity.");
             timelineRef.current.moveTo(latestOverallEnd, { animation: true });
           }
         }, ANIMATION_INACTIVITY_DELAY_MS);
