@@ -1,7 +1,10 @@
 use std::{collections::HashMap, fmt::Debug, time::Instant};
 
 use chrono::{DateTime, Utc};
-use common::{models::Group, time::TimeBucket};
+use common::{
+    models::{inputs::SummaryQueryInput, Group},
+    time::TimeBucket,
+};
 use log::info;
 
 use crate::{
@@ -20,11 +23,52 @@ pub trait SummaryQueryParams {
     fn filters(&self) -> &SummaryFilters;
 }
 
+#[derive(Debug)]
 pub struct SummaryQueryBuilder {
-    filters: SummaryFilters,
-    group_by: Option<Group>,
-    include_afk: bool,
-    time_bucket: Option<TimeBucket>,
+    pub filters: SummaryFilters,
+    pub group_by: Option<Group>,
+    pub include_afk: bool,
+    pub time_bucket: Option<TimeBucket>,
+}
+
+impl From<SummaryQueryInput> for SummaryQueryBuilder {
+    fn from(input: SummaryQueryInput) -> Self {
+        let mut builder = SummaryQueryBuilder::new();
+
+        if let Some(start) = input.start {
+            builder = builder.start(start);
+        }
+
+        if let Some(end) = input.end {
+            builder = builder.end(end);
+        }
+
+        if let Some(apps) = input.apps {
+            builder = builder.apps(apps);
+        }
+
+        if let Some(projects) = input.projects {
+            builder = builder.projects(projects);
+        }
+
+        if let Some(types) = input.categories {
+            builder = builder.categories(types);
+        }
+
+        if let Some(entities) = input.entities {
+            builder = builder.entities(entities);
+        }
+
+        if let Some(branches) = input.branches {
+            builder = builder.branches(branches);
+        }
+
+        if let Some(langs) = input.languages {
+            builder = builder.languages(langs);
+        }
+
+        builder.include_afk(input.include_afk)
+    }
 }
 
 #[derive(Debug, sqlx::FromRow)]

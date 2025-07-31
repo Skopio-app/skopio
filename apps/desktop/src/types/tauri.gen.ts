@@ -61,6 +61,9 @@ export const commands = {
   async fetchInsights(query: InsightQueryPayload): Promise<InsightResult> {
     return await TAURI_INVOKE("fetch_insights", { query });
   },
+  async fetchEvents(query: BucketedSummaryInput): Promise<EventGroupResult> {
+    return await TAURI_INVOKE("fetch_events", { query });
+  },
   async dismissNotificationWindow(): Promise<null> {
     return await TAURI_INVOKE("dismiss_notification_window");
   },
@@ -96,6 +99,22 @@ export type BucketedSummaryInput = {
   include_afk: boolean;
 };
 export type Category = { id: number | null; name: string };
+export type EventGroup = { group: string; events: FullEvent[] };
+export type EventGroupResult =
+  | { Flat: FullEvent[] }
+  | { Grouped: EventGroup[] };
+export type FullEvent = {
+  id: number;
+  timestamp: string;
+  endTimestamp: string | null;
+  duration: number | null;
+  category: string;
+  app: string | null;
+  entity: string | null;
+  project: string | null;
+  branch: string | null;
+  language: string | null;
+};
 export type Goal = {
   id: number;
   name: string;
@@ -249,6 +268,7 @@ export type TimeRangePreset =
    * The previous calendar month
    */
   | "lastMonth"
+  | { lastNMinutes: number }
   /**
    * The last N full days (excludes today by default).
    */

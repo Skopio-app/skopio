@@ -81,7 +81,7 @@ const ProjectsView = () => {
   const end = Math.min(total, start + pageWindowSize);
 
   return (
-    <div className="flex flex-col h-full px-4 py-4 space-y-4">
+    <div className="flex flex-col h-full px-4 py-8 space-y-4">
       <div className="relative w-full max-w-md">
         <SearchIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground size-4" />
         <Input

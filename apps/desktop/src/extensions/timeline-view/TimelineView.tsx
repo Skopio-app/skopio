@@ -7,19 +7,19 @@ import {
   addSeconds,
   differenceInSeconds,
   isValid as isValidDate,
+  format,
 } from "date-fns";
 
 import "vis-timeline/styles/vis-timeline-graph2d.css";
-import { AFKEventStream, EventStream } from "./index";
+import { formatDuration } from "../../utils/time";
+import { EventGroup, FullEvent } from "../../types/tauri.gen";
 
-type Props = {
-  requestDataForRange: (start: Date, end: Date) => void;
-  afkEventStream: AFKEventStream[];
-  eventStream: EventStream[];
+interface TimelineViewProps {
   durationMinutes: number;
-  queriedInterval?: [Date, Date];
-  // showQueriedInterval?: boolean;
-};
+  groupedEvents: EventGroup[];
+  customStart?: Date;
+  customEnd?: Date;
+}
 
 interface TimelineDataItem {
   id?: string | number;
@@ -52,32 +52,33 @@ interface TimelineGroup {
   showNested?: boolean;
 }
 
-export const TimelineView: React.FC<Props> = ({
-  requestDataForRange,
-  afkEventStream,
-  eventStream,
+export const TimelineView: React.FC<TimelineViewProps> = ({
   durationMinutes,
-  queriedInterval,
-  // showQueriedInterval = false,
+  groupedEvents,
+  customStart,
+  customEnd,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const timelineRef = useRef<Timeline | null>(null);
   const dataSetRef = useRef<DataSet<TimelineDataItem> | null>(null);
   const animationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  const FETCH_BUFFER_MINUTES = 30; // Fetch 30 mins before and after the visible range
-  const PRUNE_BUFFER_MINUTES = 60; // Prune items 60 minutes outside the visible range
   const ANIMATION_INACTIVITY_DELAY_MS = 5000; // Animate to latest after 10 seconds
+  const MAX_LABEL_LENGTH = 40;
 
-  const groups: TimelineGroup[] = useMemo<TimelineGroup[]>(
-    () => [
-      { id: "AFK", content: "AFK" },
-      { id: "VSCode", content: "skopio-vscode" },
-      { id: "General", content: "skopio-desktop" },
-      // { id: "Query", content: "Query" },
-    ],
-    [],
-  );
+  const groups: TimelineGroup[] = useMemo(() => {
+    return groupedEvents.map((group) => {
+      const content =
+        group.group.length > MAX_LABEL_LENGTH
+          ? `${group.group.slice(0, MAX_LABEL_LENGTH)}...`
+          : group.group;
+
+      return {
+        id: group.group,
+        content,
+      };
+    });
+  }, [groupedEvents]);
 
   const safeParseISO = (dateInput: unknown): Date | null => {
     if (typeof dateInput === "number") {
@@ -98,12 +99,6 @@ export const TimelineView: React.FC<Props> = ({
     }
 
     return null;
-  };
-
-  const getGroupId = (app?: string | null): string => {
-    if (!app) return "General";
-    const name = app.toLowerCase();
-    return name === "vscode" || name === "code" ? "VSCode" : "General";
   };
 
   const getColorForActivity = (type: string): string => {
@@ -127,58 +122,38 @@ export const TimelineView: React.FC<Props> = ({
   const handleRangeChanged = useMemo(() => {
     return _.debounce(({ start, end }: { start: Date; end: Date }) => {
       if (!dataSetRef.current || !timelineRef.current) return;
-
-      console.log(
-        `Range changed: ${start.toISOString()} to ${end.toISOString()}`,
+      console.debug(
+        `Range changed: ${format(start, "MMM d, yyyy HH:mm")} to ${format(end, "MMM d, yyyy HH:mm")}`,
       );
-
       clearAnimationTimeout();
-
-      // Request new data for the expanded range (visible range + buffer)
-      const fetchStart = new Date(
-        start.getTime() - FETCH_BUFFER_MINUTES * 60 * 1000,
-      );
-      const fetchEnd = new Date(
-        end.getTime() + FETCH_BUFFER_MINUTES * 60 * 1000,
-      );
-      requestDataForRange(fetchStart, fetchEnd);
-
-      // Prune data outside a larger buffer from the DataSet
-      const pruneStart = new Date(
-        start.getTime() - PRUNE_BUFFER_MINUTES * 60 * 1000,
-      );
-      const pruneEnd = new Date(
-        end.getTime() + PRUNE_BUFFER_MINUTES * 60 * 1000,
-      );
-
-      const itemsToRemove: string[] = [];
-      dataSetRef.current.forEach((item: any) => {
-        // if (
-        //   item.id === "query-interval" &&
-        //   queriedInterval &&
-        //   showQueriedInterval
-        // ) {
-        //   return;
-        // }
-        // Remove items whose entire range is outside the prune buffer
-        if (item.end < pruneStart || item.start > pruneEnd) {
-          itemsToRemove.push(item.id);
-        }
-      });
-
-      if (itemsToRemove.length > 0) {
-        console.log(`Pruning ${itemsToRemove.length} items from DataSet`);
-        dataSetRef.current.remove(itemsToRemove);
-      }
     }, 500);
-  }, [
-    requestDataForRange,
-    FETCH_BUFFER_MINUTES,
-    PRUNE_BUFFER_MINUTES,
-    clearAnimationTimeout,
-    // queriedInterval,
-    // showQueriedInterval,
-  ]);
+  }, [clearAnimationTimeout]);
+
+  const formatTimelineTitle = ({
+    start,
+    end,
+    duration,
+    app,
+    entity,
+  }: {
+    start: Date;
+    end: Date;
+    duration: number;
+    app?: string | null;
+    entity?: string | null;
+  }): string => {
+    const formattedDuration = formatDuration(duration);
+
+    return [
+      `Start: ${format(start, "HH:mm:ss")}`,
+      `End: ${format(end, "HH:mm:ss")}`,
+      `Duration: ${formattedDuration}`,
+      `App: ${app ?? "unknown"}`,
+      `Entity: ${entity?.slice(0, MAX_LABEL_LENGTH) ?? "unknown"}`,
+    ]
+      .map((line) => line.replace(/"/g, "&quot;"))
+      .join("<br/>");
+  };
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -213,39 +188,20 @@ export const TimelineView: React.FC<Props> = ({
       options,
     );
 
-    let initialMin: Date = new Date();
-    let initialMax: Date = new Date();
+    const now = new Date();
+    const initialMax = customEnd ?? new Date(now.getTime() + 5 * 60 * 1000);
+    const initialMin =
+      customStart ??
+      new Date(initialMax.getTime() - durationMinutes * 60 * 1000);
 
-    if (queriedInterval) {
-      initialMin = queriedInterval[0];
-      initialMax = queriedInterval[1];
-
-      const buffer = (initialMax.getTime() - initialMin.getTime()) * 0.1;
-      timelineRef.current.setOptions({
-        min: new Date(initialMin.getTime() - buffer),
-        max: new Date(initialMax.getTime() + buffer),
-        start: new Date(initialMin.getTime() - buffer),
-        end: new Date(initialMax.getTime() + buffer),
-      });
-    } else {
-      const now = new Date();
-      const initialMax = new Date(now.getTime() + 5 * 60 * 1000);
-      const initialMin = new Date(
-        initialMax.getTime() - durationMinutes * 60 * 1000,
-      );
-
-      timelineRef.current.setOptions({
-        min: initialMin,
-        max: initialMax,
-        start: initialMin,
-        end: initialMax,
-      });
-    }
+    timelineRef.current.setOptions({
+      min: initialMin,
+      max: initialMax,
+      start: initialMin,
+      end: initialMax,
+    });
 
     timelineRef.current.on("rangechanged", handleRangeChanged);
-
-    // Initial data request for the default view
-    requestDataForRange(initialMin, initialMax);
 
     return () => {
       if (timelineRef.current) {
@@ -266,16 +222,14 @@ export const TimelineView: React.FC<Props> = ({
     groups,
     durationMinutes,
     handleRangeChanged,
-    requestDataForRange,
+    customStart,
+    customEnd,
     clearAnimationTimeout,
-    queriedInterval,
-    // showQueriedInterval
   ]);
 
-  // TODO: Add a tooltip helper to display additional event data
   useEffect(() => {
     if (!dataSetRef.current || !timelineRef.current) {
-      console.warn(
+      console.debug(
         "Timeline or DataSet not initialized, skipping data update.",
       );
       return;
@@ -283,71 +237,38 @@ export const TimelineView: React.FC<Props> = ({
 
     const itemsToProcess: TimelineDataItem[] = [];
 
-    for (const e of eventStream.values()) {
-      const start = safeParseISO(e.timestamp);
-      const end = e.endTimestamp
-        ? safeParseISO(e.endTimestamp)
-        : addSeconds(start ?? 0, e.duration ?? 0);
+    groupedEvents.forEach((groupData: EventGroup) => {
+      groupData.events.forEach((e: FullEvent) => {
+        const start = safeParseISO(e.timestamp);
+        const end = e.endTimestamp
+          ? safeParseISO(e.endTimestamp)
+          : addSeconds(start ?? 0, e.duration ?? 0);
 
-      if (!start || !end || differenceInSeconds(end, start) <= 1) continue;
+        if (!start || !end || differenceInSeconds(end, start) <= 1) return;
 
-      const id = String(e.id);
-      const group = getGroupId(e.app);
-      const color = getColorForActivity(e.activityType);
+        const id = String(e.id);
+        const group = groupData.group;
+        const color = getColorForActivity(e.category);
 
-      const item: TimelineDataItem = {
-        id,
-        group,
-        content: `${e.app ?? "unknown"}`,
-        start,
-        end,
-        title: `App: ${e.app}<br/>Entity: ${e.entity}`,
-        style: `background-color: ${color}; border-color: ${Color(color).darken(0.6)};`,
-      };
+        const item: TimelineDataItem = {
+          id,
+          group,
+          content: `${e.app ?? "unknown"}`,
+          start,
+          end,
+          title: formatTimelineTitle({
+            start,
+            end,
+            app: e.app,
+            entity: e.entity,
+            duration: e.duration ?? 0,
+          }),
+          style: `background-color: ${color}; border-color: ${Color(color).darken(0.6)};`,
+        };
 
-      itemsToProcess.push(item);
-    }
-
-    for (const e of afkEventStream.values()) {
-      const start = safeParseISO(e.afkStart);
-      const end = e.afkEnd
-        ? safeParseISO(e.afkEnd)
-        : addSeconds(start ?? 0, e.duration ?? 0);
-      if (!start || !end || isNaN(start.getTime()) || isNaN(end.getTime()))
-        continue;
-
-      const id = `afk-${e.id}`;
-
-      const item: TimelineDataItem = {
-        id,
-        group: "AFK",
-        content: "AFK",
-        start,
-        end,
-        title: `AFK for ${e.duration} seconds`,
-        style: "background-color: #868e96; border-color: #495057;",
-      };
-      itemsToProcess.push(item); // Add for batch update/add
-    }
-
-    // const queriedIntervalId = "query-interval";
-    // if (queriedInterval && showQueriedInterval) {
-    //   const [start, end] = queriedInterval;
-    //   const queryItem: TimelineDataItem = {
-    //     id: queriedIntervalId,
-    //     group: "Query",
-    //     content: "Query Range",
-    //     title: "Queried Time Interval",
-    //     start,
-    //     end,
-    //     style: "background-color: rgba(173, 216, 230, 0.3); border: 1px dashed #6495ED;",
-    //   };
-    //   itemsToProcess.push(queryItem);
-    // } else {
-    //   if (dataSetRef.current.get(queriedIntervalId)) {
-    //     dataSetRef.current.remove(queriedIntervalId);
-    //   }
-    // }
+        itemsToProcess.push(item);
+      });
+    });
 
     if (itemsToProcess.length > 0) {
       dataSetRef.current.update(itemsToProcess);
@@ -367,13 +288,21 @@ export const TimelineView: React.FC<Props> = ({
 
         animationTimeoutRef.current = setTimeout(() => {
           if (timelineRef.current) {
-            console.log("Animating to latest entry after inactivity.");
+            console.debug("Animating to latest entry after inactivity.");
             timelineRef.current.moveTo(latestOverallEnd, { animation: true });
           }
         }, ANIMATION_INACTIVITY_DELAY_MS);
       }
     }
-  }, [eventStream, afkEventStream, clearAnimationTimeout]);
+  }, [groupedEvents, clearAnimationTimeout]);
+
+  if (groupedEvents.length === 0) {
+    return (
+      <p className="text-neutral-700 flex items-center justify-center py-10">
+        No events to display for the selected range
+      </p>
+    );
+  }
 
   return (
     <div className="flex justify-center items-center">

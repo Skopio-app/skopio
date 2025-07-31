@@ -1,4 +1,4 @@
-use std::{collections::HashMap, sync::LazyLock, time::Duration};
+use std::{sync::LazyLock, time::Duration};
 
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
@@ -21,8 +21,8 @@ where
     let mut url = Url::parse(&format!("{}/{}", SERVER_URL, path)).map_err(|e| e.to_string())?;
 
     if let Some(q) = query {
-        let map = to_string_map(q)?;
-        url.query_pairs_mut().extend_pairs(map);
+        let query_string = serde_qs::to_string(q).map_err(|e| e.to_string())?;
+        url.set_query(Some(&query_string));
     }
 
     let res = HTTP_CLIENT
@@ -39,18 +39,4 @@ where
             .await
             .unwrap_or_else(|_| "Unknown error".to_string()))
     }
-}
-
-fn to_string_map<T: Serialize>(value: &T) -> Result<HashMap<String, String>, String> {
-    let json = serde_json::to_value(value).map_err(|e| e.to_string())?;
-    let obj = json.as_object().ok_or("Expected object for query")?;
-
-    let mut map = HashMap::new();
-    for (k, v) in obj {
-        if !v.is_null() {
-            map.insert(k.to_string(), v.to_string().trim_matches('"').to_string());
-        }
-    }
-
-    Ok(map)
 }

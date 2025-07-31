@@ -47,6 +47,7 @@ pub enum TimeRangePreset {
     /// The previous calendar month
     LastMonth,
     // ThisYear,
+    LastNMinutes(i64),
     /// The last N full days (excludes today by default).
     LastNDays(i64, bool),
     /// The last N full weeks (excludes this week by default).
@@ -171,6 +172,15 @@ impl From<TimeRangePreset> for TimeRange {
                 Self {
                     start: start_local.with_timezone(&Utc),
                     end: end_local.with_timezone(&Utc),
+                    bucket: Some(TimeBucket::Day),
+                }
+            }
+            TimeRangePreset::LastNMinutes(n) => {
+                let end = Utc::now();
+                let start = end - Duration::minutes(n);
+                Self {
+                    start,
+                    end,
                     bucket: Some(TimeBucket::Day),
                 }
             }
