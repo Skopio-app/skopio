@@ -176,9 +176,8 @@ impl From<TimeRangePreset> for TimeRange {
                 }
             }
             TimeRangePreset::LastNMinutes(n) => {
-                let clamped = n.clamp(1, 12 * 60);
                 let end = Utc::now();
-                let start = end - Duration::minutes(clamped);
+                let start = end - Duration::minutes(n);
                 Self {
                     start,
                     end,

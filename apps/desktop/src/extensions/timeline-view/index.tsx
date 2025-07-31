@@ -21,17 +21,19 @@ import {
   EventGroupResult,
   Group,
 } from "../../types/tauri.gen";
-import { useGroupFilter } from "./stores/useGroupFilter";
 import { TimelineView } from "./TimelineView";
 import {
-  // addDays,
-  // differenceInMonths,
-  // endOfDay,
-  // parseISO,
-  // startOfDay,
-  // isValid as isValidDate,
+  addDays,
+  differenceInMonths,
+  endOfDay,
+  parseISO,
+  startOfDay,
+  isValid as isValidDate,
   formatISO,
+  subDays,
 } from "date-fns";
+import SkeletonChart from "../../components/SkeletonChart";
+import { toast } from "sonner";
 
 const durations = [
   { label: "15m", minutes: 15 },
@@ -57,7 +59,8 @@ const TimelineExtension = () => {
   const [dateFrom, setDateFrom] = useState<Date | undefined>(new Date());
   const [dateTo, setDateTo] = useState<Date | undefined>(new Date());
   const [events, setEvents] = useState<EventGroup[]>([]);
-  const { group } = useGroupFilter();
+  const [loading, setLoading] = useState<boolean>(true);
+  const [group, setGroup] = useState<Group>("category");
 
   const group_options: Group[] = [
     "app",
@@ -77,49 +80,79 @@ const TimelineExtension = () => {
       };
 
       try {
-        const result: EventGroupResult = await commands.fetchEvents(query);
-        if ("Grouped" in result) {
-          setEvents(result.Grouped);
-          console.log("Thr result: ", result.Grouped);
+        if (currentDurationMinutes > 0) {
+          const result: EventGroupResult = await commands.fetchEvents(query);
+          if ("Grouped" in result) {
+            setEvents(result.Grouped);
+          }
         }
       } catch (err) {
         console.error("Failed to fetch events: ", err);
+      } finally {
+        setLoading(false);
       }
     };
 
     fetchEventData();
   }, [currentDurationMinutes, group]);
 
-  // const handleApplyCustomRange = useCallback(() => {
-  //   const start = dateFrom
-  //     ? startOfDay(parseISO(dateFrom.toISOString()))
-  //     : null;
-  //   const end = dateTo ? endOfDay(parseISO(dateTo.toISOString())) : null;
+  const requestDataForRange = useCallback(
+    async (start: Date, end: Date) => {
+      console.log(
+        `Requesting data for range: ${formatISO(start)} to ${formatISO(end)}`,
+      );
+      const input: BucketedSummaryInput = {
+        preset: {
+          custom: {
+            start: start.toISOString(),
+            end: end.toISOString(),
+            bucket: "day",
+          },
+        },
+        group_by: group,
+        include_afk: false,
+      };
 
-  //   if (!start || !end || !isValidDate(start) || !isValidDate(end)) {
-  //     alert("Please select valid end and start dates");
-  //     return;
-  //   }
+      try {
+        const result: EventGroupResult = await commands.fetchEvents(input);
+        if ("Grouped" in result) {
+          setEvents(result.Grouped);
+          console.log("The result: ", result.Grouped);
+        }
+      } catch (err) {
+        console.error("Failed to fetch events: ", err);
+      } finally {
+        setLoading(false);
+      }
+    },
+    [group],
+  );
 
-  //   if (start >= end) {
-  //     alert("End date must be after start date");
-  //     return;
-  //   }
+  const handleApplyCustomRange = useCallback(() => {
+    const start = dateFrom
+      ? startOfDay(parseISO(dateFrom.toISOString()))
+      : null;
+    const end = dateTo ? endOfDay(parseISO(dateTo.toISOString())) : null;
 
-  //   const adjustedEnd = addDays(end, 1);
-  //   if (differenceInMonths(adjustedEnd, start) > 1) {
-  //     alert("The selected duration cannot be more than one month");
-  //     return;
-  //   }
+    if (!start || !end || !isValidDate(start) || !isValidDate(end)) {
+      toast.error("Please select valid end and start dates");
+      return;
+    }
 
-  //   setCurrentDurationMinutes(0);
-  // }, [dateTo, dateFrom]);
+    if (start >= end) {
+      toast.warning("End date must be after start date");
+      return;
+    }
 
-  const requestDataForRange = useCallback((start: Date, end: Date) => {
-    console.log(
-      `Requesting data for range: ${formatISO(start)} to ${formatISO(end)}`,
-    );
-  }, []);
+    const adjustedEnd = addDays(end, 1);
+    if (differenceInMonths(adjustedEnd, start) > 1) {
+      toast.warning("The selected duration cannot be more than one month");
+      return;
+    }
+
+    requestDataForRange(start, end);
+    setCurrentDurationMinutes(0);
+  }, [dateTo, dateFrom, requestDataForRange]);
 
   return (
     <div className="flex-col items-center h-full w-full space-y-4 px-4 py-8">
@@ -219,13 +252,13 @@ const TimelineExtension = () => {
             />
           </PopoverContent>
         </Popover>
-        {/* <Button
+        <Button
           variant="outline"
           onClick={handleApplyCustomRange}
           className="px-4 py-2 rounded font-medium border"
         >
           Apply
-        </Button> */}
+        </Button>
       </div>
 
       <div className="flex flex-wrap justify-start items-center gap-2 mt-4">
@@ -234,9 +267,7 @@ const TimelineExtension = () => {
         </Label>
         <Select
           value={group}
-          onValueChange={(value) =>
-            useGroupFilter.setState({ group: value as Group })
-          }
+          onValueChange={(value) => setGroup(value as Group)}
         >
           <SelectTrigger className="w-38" id="filter">
             <SelectValue placeholder="Select a filter" />
@@ -251,11 +282,24 @@ const TimelineExtension = () => {
         </Select>
       </div>
 
-      <TimelineView
-        durationMinutes={currentDurationMinutes}
-        requestDataForRange={requestDataForRange}
-        groupedEvents={events}
-      />
+      {loading ? (
+        <SkeletonChart />
+      ) : (
+        <TimelineView
+          durationMinutes={currentDurationMinutes}
+          groupedEvents={events}
+          customStart={
+            currentDurationMinutes === 0
+              ? subDays(endOfDay(dateFrom ?? new Date()), 1)
+              : undefined
+          }
+          customEnd={
+            currentDurationMinutes === 0
+              ? addDays(endOfDay(dateTo ?? new Date()), 1)
+              : undefined
+          }
+        />
+      )}
     </div>
   );
 };

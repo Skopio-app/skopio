@@ -14,11 +14,12 @@ import "vis-timeline/styles/vis-timeline-graph2d.css";
 import { formatDuration } from "../../utils/time";
 import { EventGroup, FullEvent } from "../../types/tauri.gen";
 
-type Props = {
-  requestDataForRange: (start: Date, end: Date) => void;
+interface TimelineViewProps {
   durationMinutes: number;
   groupedEvents: EventGroup[];
-};
+  customStart?: Date;
+  customEnd?: Date;
+}
 
 interface TimelineDataItem {
   id?: string | number;
@@ -51,18 +52,17 @@ interface TimelineGroup {
   showNested?: boolean;
 }
 
-export const TimelineView: React.FC<Props> = ({
-  // requestDataForRange,
+export const TimelineView: React.FC<TimelineViewProps> = ({
   durationMinutes,
   groupedEvents,
+  customStart,
+  customEnd,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const timelineRef = useRef<Timeline | null>(null);
   const dataSetRef = useRef<DataSet<TimelineDataItem> | null>(null);
   const animationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // const FETCH_BUFFER_MINUTES = 30; // Fetch 30 mins before and after the visible range
-  const PRUNE_BUFFER_MINUTES = 60; // Prune items 60 minutes outside the visible range
   const ANIMATION_INACTIVITY_DELAY_MS = 5000; // Animate to latest after 10 seconds
 
   const groups: TimelineGroup[] = useMemo(() => {
@@ -116,49 +116,12 @@ export const TimelineView: React.FC<Props> = ({
   const handleRangeChanged = useMemo(() => {
     return _.debounce(({ start, end }: { start: Date; end: Date }) => {
       if (!dataSetRef.current || !timelineRef.current) return;
-
-      console.log(
+      console.debug(
         `Range changed: ${start.toISOString()} to ${end.toISOString()}`,
       );
-
       clearAnimationTimeout();
-
-      // Request new data for the expanded range (visible range + buffer)
-      // const fetchStart = new Date(
-      //   start.getTime() - FETCH_BUFFER_MINUTES * 60 * 1000
-      // );
-      // const fetchEnd = new Date(
-      //   end.getTime() + FETCH_BUFFER_MINUTES * 60 * 1000
-      // );
-      // requestDataForRange(fetchStart, fetchEnd);
-
-      // Prune data outside a larger buffer from the DataSet
-      const pruneStart = new Date(
-        start.getTime() - PRUNE_BUFFER_MINUTES * 60 * 1000,
-      );
-      const pruneEnd = new Date(
-        end.getTime() + PRUNE_BUFFER_MINUTES * 60 * 1000,
-      );
-
-      const itemsToRemove: string[] = [];
-      dataSetRef.current.forEach((item: any) => {
-        // Remove items whose entire range is outside the prune buffer
-        if (item.end < pruneStart || item.start > pruneEnd) {
-          itemsToRemove.push(item.id);
-        }
-      });
-
-      if (itemsToRemove.length > 0) {
-        console.log(`Pruning ${itemsToRemove.length} items from DataSet`);
-        dataSetRef.current.remove(itemsToRemove);
-      }
     }, 500);
-  }, [
-    // requestDataForRange,
-    // FETCH_BUFFER_MINUTES,
-    PRUNE_BUFFER_MINUTES,
-    clearAnimationTimeout,
-  ]);
+  }, [clearAnimationTimeout]);
 
   const formatTimelineTitle = ({
     start,
@@ -220,10 +183,10 @@ export const TimelineView: React.FC<Props> = ({
     );
 
     const now = new Date();
-    const initialMax = new Date(now.getTime() + 5 * 60 * 1000);
-    const initialMin = new Date(
-      initialMax.getTime() - durationMinutes * 60 * 1000,
-    );
+    const initialMax = customEnd ?? new Date(now.getTime() + 5 * 60 * 1000);
+    const initialMin =
+      customStart ??
+      new Date(initialMax.getTime() - durationMinutes * 60 * 1000);
 
     timelineRef.current.setOptions({
       min: initialMin,
@@ -233,9 +196,6 @@ export const TimelineView: React.FC<Props> = ({
     });
 
     timelineRef.current.on("rangechanged", handleRangeChanged);
-
-    // Initial data request for the default view
-    // requestDataForRange(initialMin, initialMax);
 
     return () => {
       if (timelineRef.current) {
@@ -256,7 +216,8 @@ export const TimelineView: React.FC<Props> = ({
     groups,
     durationMinutes,
     handleRangeChanged,
-    // requestDataForRange,
+    customStart,
+    customEnd,
     clearAnimationTimeout,
   ]);
 
@@ -328,6 +289,14 @@ export const TimelineView: React.FC<Props> = ({
       }
     }
   }, [groupedEvents, clearAnimationTimeout]);
+
+  if (groupedEvents.length === 0) {
+    return (
+      <p className="text-neutral-700 flex items-center justify-center py-10">
+        No events to display for the selected range
+      </p>
+    );
+  }
 
   return (
     <div className="flex justify-center items-center">
