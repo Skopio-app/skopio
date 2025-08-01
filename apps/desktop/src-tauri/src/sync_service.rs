@@ -4,7 +4,7 @@ use async_trait::async_trait;
 use common::models::inputs::{AFKEventInput, EventInput, HeartbeatInput};
 use db::desktop::{afk_events::AFKEvent, events::Event, heartbeats::Heartbeat};
 use db::DBContext;
-use log::{error, info};
+use log::{debug, error, info};
 use reqwest::Client;
 use tokio::sync::{mpsc, oneshot, watch, Mutex};
 use tokio::task::JoinHandle;
@@ -200,7 +200,6 @@ async fn flush(
     info!("Flushed {} items in {:?}", batch_size, start.elapsed())
 }
 
-// TODO: Fix up issue with empty branch names being stored
 async fn sync_with_server(db_context: &Arc<DBContext>) -> Result<(), anyhow::Error> {
     let client = Client::new();
     let heartbeats = Heartbeat::unsynced(db_context).await?;
@@ -221,6 +220,8 @@ async fn sync_with_server(db_context: &Arc<DBContext>) -> Result<(), anyhow::Err
                 cursorpos: hb.cursorpos,
             })
             .collect();
+
+        debug!("The heartbeat payload: {:?}", payload);
 
         let res = client
             .post(format!("{}/heartbeats", SERVER_URL))
@@ -251,11 +252,13 @@ async fn sync_with_server(db_context: &Arc<DBContext>) -> Result<(), anyhow::Err
                 entity_type: ev.entity_type.clone().unwrap_or_default(),
                 project_name: ev.project_name.clone().unwrap_or_default(),
                 project_path: ev.project_path.clone().unwrap_or_default(),
-                branch_name: Some(ev.branch_name.clone().unwrap_or_default()),
-                language_name: Some(ev.language_name.clone().unwrap_or_default()),
+                branch_name: ev.branch_name.clone(),
+                language_name: ev.language_name.clone(),
                 end_timestamp: ev.end_timestamp,
             })
             .collect();
+
+        debug!("The event payload: {:?}", payload);
 
         let res = client
             .post(format!("{}/events", SERVER_URL))
