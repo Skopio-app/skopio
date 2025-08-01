@@ -7,6 +7,7 @@ use db::DBContext;
 use log::{error, info};
 use reqwest::Client;
 use tokio::sync::{mpsc, oneshot, watch, Mutex};
+use tokio::task::JoinHandle;
 use tokio::time::{interval, Duration, Instant};
 
 use crate::tracking_service::TrackingService;
@@ -22,6 +23,7 @@ enum TrackingStats {
 pub struct BufferedTrackingService {
     sender: mpsc::Sender<TrackingStats>,
     shutdown_tx: Arc<Mutex<Option<oneshot::Sender<()>>>>,
+    flush_handle: Arc<Mutex<Option<JoinHandle<()>>>>,
 }
 
 impl BufferedTrackingService {
@@ -39,7 +41,7 @@ impl BufferedTrackingService {
         let inner_clone = Arc::clone(&inner);
         let db_clone = Arc::clone(&db);
 
-        tokio::spawn(run_buffer_flush_loop(
+        let flush_handle = tokio::spawn(run_buffer_flush_loop(
             rx,
             shutdown_rx,
             inner_clone,
@@ -51,6 +53,7 @@ impl BufferedTrackingService {
         Self {
             sender: tx,
             shutdown_tx: shutdown_tx_arc,
+            flush_handle: Arc::new(Mutex::new(Some(flush_handle))),
         }
     }
 
@@ -58,6 +61,12 @@ impl BufferedTrackingService {
         let mut tx_guard = self.shutdown_tx.lock().await;
         if let Some(tx) = tx_guard.take() {
             let _ = tx.send(());
+        }
+
+        if let Some(handle) = self.flush_handle.lock().await.take() {
+            if let Err(err) = handle.await {
+                error!("Flush loop task panicked or failed to join: {}", err);
+            }
         }
     }
 }
@@ -126,11 +135,9 @@ async fn run_buffer_flush_loop(
                     let mut flush_data = buffer.split_off(0);
                     let mut retry_data = retry_queue.split_off(0);
 
-                    tokio::spawn(async move {
-                        info!("Flushing buffer before shutdown ({}) items...", flush_data.len());
-                        flush(&inner, &mut flush_data, &mut retry_data).await;
-                        info!("Buffer service shut down gracefully.");
-                    });
+                    info!("Flushing buffer before shutdown ({}) items...", flush_data.len());
+                    flush(&inner, &mut flush_data, &mut retry_data).await;
+                    info!("Buffer service shut down gracefully.");
                 }
                 break;
             }
