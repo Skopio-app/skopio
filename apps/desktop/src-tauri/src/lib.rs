@@ -101,6 +101,7 @@ pub async fn run() {
                 if window.label() == "main" {
                     let cursor_tracker = window.state::<Arc<MouseTracker>>();
                     let keyboard_tracker = window.state::<Arc<KeyboardTracker>>();
+                    let event_tracker = window.state::<Arc<EventTracker>>();
                     let buffered_service = window.state::<Arc<BufferedTrackingService>>();
                     let goal_service = window.state::<Arc<GoalService>>();
                     cursor_tracker.stop_tracking();
@@ -108,7 +109,9 @@ pub async fn run() {
                     goal_service.shutdown();
 
                     let buffered_service = Arc::clone(&buffered_service);
+                    let event_tracker = Arc::clone(&event_tracker);
                     tokio::spawn(async move {
+                        event_tracker.stop_tracking().await;
                         buffered_service.shutdown().await;
                     });
                 }
@@ -198,6 +201,7 @@ async fn setup_trackers(app_handle: &AppHandle) -> Result<(), anyhow::Error> {
         Arc::clone(&keyboard_tracker),
         Arc::clone(&service_trait),
     ));
+    app_handle.manage(Arc::clone(&event_tracker));
 
     let window_tracker_ref = Arc::clone(&window_tracker);
     window_tracker_ref.start_tracking();

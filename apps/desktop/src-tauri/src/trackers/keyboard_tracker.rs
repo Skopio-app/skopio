@@ -96,7 +96,7 @@ impl KeyboardTracker {
     pub fn stop_tracking(&self) {
         if let Some(ref rl) = *self.runloop.lock().unwrap() {
             CFRunLoop::stop(rl);
-            info!("Window tracker stopped");
+            info!("Keyboard tracker stopped");
         }
     }
 }

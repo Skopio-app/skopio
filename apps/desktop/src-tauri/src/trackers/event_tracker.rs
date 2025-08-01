@@ -183,10 +183,10 @@ impl EventTracker {
                                 .map(|(prev_app, prev_file)| prev_app != &app_name || prev_file != &file)
                                 .unwrap_or(true);
 
-                            if changed {
-                                last_state = Some((app_name.clone(), file.clone()));
-                                self.track_event(&app_name, &bundle_id, &app_path, &file).await;
-                            }
+                        if changed {
+                            last_state = Some((app_name.clone(), file.clone()));
+                            self.track_event(&app_name, &bundle_id, &app_path, &file).await;
+                        }
 
                         if activity_detected {
                             *self.last_activity.lock().await = Instant::now();
@@ -237,9 +237,14 @@ impl EventTracker {
                 .unwrap_or_else(|error| error!("Failed to batch event: {}", error));
 
             info!(
-                "Auto-ending inactive event: App: {}, Entity: {:?}, Activity: {}, Duration: {}s",
+                "Auto-ending event: App: {}, Entity: {:?}, Activity: {}, Duration: {}s",
                 prev_event.app_name, prev_event.entity_name, prev_event.category, event_duration
             );
         }
+    }
+
+    pub async fn stop_tracking(&self) {
+        self.end_active_event().await;
+        info!("Event tracker stopped");
     }
 }
