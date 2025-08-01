@@ -178,11 +178,7 @@ impl EventTracker {
                             mouse_active || mouse_clicked || keyboard_active
                         };
 
-                        if activity_detected {
-                            *self.last_activity.lock().await = Instant::now();
-                            last_check = Instant::now();
-
-                            let changed = last_state
+                         let changed = last_state
                                 .as_ref()
                                 .map(|(prev_app, prev_file)| prev_app != &app_name || prev_file != &file)
                                 .unwrap_or(true);
@@ -191,6 +187,10 @@ impl EventTracker {
                                 last_state = Some((app_name.clone(), file.clone()));
                                 self.track_event(&app_name, &bundle_id, &app_path, &file).await;
                             }
+
+                        if activity_detected {
+                            *self.last_activity.lock().await = Instant::now();
+                            last_check = Instant::now();
                         }
                     }
 

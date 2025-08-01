@@ -268,6 +268,9 @@ export type TimeRangePreset =
    * The previous calendar month
    */
   | "lastMonth"
+  /**
+   * The last N full minutes
+   */
   | { lastNMinutes: number }
   /**
    * The last N full days (excludes today by default).
