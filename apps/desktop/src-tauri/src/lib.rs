@@ -97,22 +97,29 @@ pub async fn run() {
             Ok(())
         })
         .on_window_event(|window, event| {
-            if let tauri::WindowEvent::CloseRequested { .. } = event {
+            if let tauri::WindowEvent::CloseRequested { api, .. } = event {
                 if window.label() == "main" {
+                    api.prevent_close();
+
                     let cursor_tracker = window.state::<Arc<MouseTracker>>();
                     let keyboard_tracker = window.state::<Arc<KeyboardTracker>>();
                     let event_tracker = window.state::<Arc<EventTracker>>();
                     let buffered_service = window.state::<Arc<BufferedTrackingService>>();
                     let goal_service = window.state::<Arc<GoalService>>();
+                    let window_tracker = window.state::<Arc<WindowTracker>>();
                     cursor_tracker.stop_tracking();
                     keyboard_tracker.stop_tracking();
                     goal_service.shutdown();
+                    window_tracker.stop_tracking();
 
+                    let window = window.clone();
                     let buffered_service = Arc::clone(&buffered_service);
                     let event_tracker = Arc::clone(&event_tracker);
                     tokio::spawn(async move {
                         event_tracker.stop_tracking().await;
                         buffered_service.shutdown().await;
+
+                        window.app_handle().exit(0);
                     });
                 }
             }
