@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "DELETE FROM afk_events\n             WHERE id IN (\n                SELECT id FROM afk_events\n                WHERE synced = 1\n                  AND afk_start < datetime('now', '-15days')\n                LIMIT 100\n            );\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": []
+  },
+  "hash": "710a3c3b0444ba6d3567e4c432a6673ae8426f5d419b4add7635b4be09e024a9"
+}

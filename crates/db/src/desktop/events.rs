@@ -104,4 +104,21 @@ impl Event {
         let ids: Vec<i64> = events.iter().filter_map(|e| e.id).collect();
         update_synced_in(db_context, "events", &ids).await
     }
+
+    pub async fn delete_synced(db_context: &DBContext) -> Result<(), sqlx::Error> {
+        sqlx::query!(
+            "DELETE FROM events
+             WHERE id IN (
+                SELECT id FROM events
+                WHERE synced = 1
+                  AND timestamp < datetime('now', '-15days')
+                LIMIT 100
+            );
+            "
+        )
+        .execute(db_context.pool())
+        .await?;
+
+        Ok(())
+    }
 }

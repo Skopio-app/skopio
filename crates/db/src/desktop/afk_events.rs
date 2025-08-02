@@ -75,4 +75,21 @@ impl AFKEvent {
         let ids: Vec<i64> = events.iter().filter_map(|afk| afk.id).collect();
         update_synced_in(db_context, "afk_events", &ids).await
     }
+
+    pub async fn delete_synced(db_context: &DBContext) -> Result<(), sqlx::Error> {
+        sqlx::query!(
+            "DELETE FROM afk_events
+             WHERE id IN (
+                SELECT id FROM afk_events
+                WHERE synced = 1
+                  AND afk_start < datetime('now', '-15days')
+                LIMIT 100
+            );
+        "
+        )
+        .execute(db_context.pool())
+        .await?;
+
+        Ok(())
+    }
 }
