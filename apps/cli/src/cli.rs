@@ -35,9 +35,6 @@ pub enum Commands {
         entity_type: String,
 
         #[arg(long)]
-        language: String,
-
-        #[arg(long)]
         app: String,
 
         #[arg(long)]

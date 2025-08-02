@@ -1,7 +1,6 @@
-use crate::utils::find_git_branch;
+use common::git::find_git_branch;
 use log::info;
 use rusqlite::{params, Connection};
-use std::path::Path;
 
 pub struct EventData {
     pub timestamp: i32,
@@ -19,8 +18,7 @@ pub fn log_event(
     conn: &Connection,
     event_data: EventData,
 ) -> Result<(), Box<dyn std::error::Error>> {
-    let project_path = Path::new(&event_data.project);
-    let branch = find_git_branch(project_path);
+    let branch = find_git_branch(&event_data.project);
 
     conn.execute(
         "INSERT INTO events (timestamp, activity_type, app, entity_name, entity_type, duration, project_path, branch, language, end_timestamp, synced)

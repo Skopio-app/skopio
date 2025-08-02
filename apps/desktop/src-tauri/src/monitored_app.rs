@@ -1,12 +1,10 @@
 use std::{collections::HashSet, sync::LazyLock};
 
+use common::language::detect_language;
 use serde::{Deserialize, Serialize};
 use strum_macros::{Display, EnumString};
 
-use crate::helpers::{
-    app::{get_browser_active_tab, get_xcode_project_details, run_osascript},
-    language::detect_language,
-};
+use crate::helpers::app::{get_browser_active_tab, get_xcode_project_details, run_osascript};
 
 static BROWSER_APPS: LazyLock<HashSet<MonitoredApp>> = LazyLock::new(|| {
     HashSet::from([

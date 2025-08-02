@@ -12,4 +12,7 @@ serde = { workspace = true, features = ["derive"] }
 chrono = { workspace = true, features = ["serde"] }
 specta = { workspace = true , features = ["chrono", "derive"] }
 thiserror = { workspace = true }
+git2 = { workspace = true }
 types = { path = "../types" }
+tokei = { workspace = true }
+percent-encoding = { workspace = true }

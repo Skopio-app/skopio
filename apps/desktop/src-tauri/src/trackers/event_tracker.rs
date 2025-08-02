@@ -1,7 +1,7 @@
-use crate::helpers::git::get_git_branch;
 use crate::monitored_app::{resolve_app_details, Category, Entity, MonitoredApp, IGNORED_APPS};
 use crate::tracking_service::TrackingService;
 use chrono::{DateTime, Utc};
+use common::git::find_git_branch;
 use db::desktop::events::Event as DBEvent;
 use log::{error, info};
 use serde::{Deserialize, Serialize};
@@ -73,7 +73,7 @@ impl EventTracker {
             resolve_app_details(&bundle_id, app_name, app_path, entity);
 
         let branch_name = if app_name == "Xcode" {
-            project_path.as_deref().map(get_git_branch)
+            project_path.as_ref().and_then(find_git_branch)
         } else {
             None
         };

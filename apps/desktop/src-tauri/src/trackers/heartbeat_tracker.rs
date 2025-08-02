@@ -1,7 +1,7 @@
-use crate::helpers::git::get_git_branch;
 use crate::monitored_app::{resolve_app_details, Entity, MonitoredApp, IGNORED_APPS};
 use crate::tracking_service::TrackingService;
 use chrono::{DateTime, Utc};
+use common::git::find_git_branch;
 use dashmap::DashMap;
 use db::desktop::heartbeats::Heartbeat as DBHeartbeat;
 use log::{debug, error};
@@ -127,7 +127,7 @@ impl HeartbeatTracker {
         // let lines_edited: Option<i64> = if app_name == "Xcode" { Some(0) } else { None };
 
         let branch_name = if app_name == "Xcode" {
-            project_path.as_deref().map(get_git_branch)
+            project_path.as_ref().and_then(find_git_branch)
         } else {
             None
         };

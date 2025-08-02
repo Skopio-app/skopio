@@ -1,9 +1,10 @@
 use std::{panic, process::Command};
 
+use common::language::detect_language;
 use log::{error, warn};
 use url::Url;
 
-use crate::{helpers::language::detect_language, monitored_app::MonitoredApp};
+use crate::monitored_app::MonitoredApp;
 
 /// Returns (domain, url, tab title) from the active tab of a supported browser
 pub fn get_browser_active_tab(bundle_id: &MonitoredApp) -> (String, String, String) {
