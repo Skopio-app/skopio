@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE goals set ignore_no_activity_days = ? WHERE id = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "94a705d84f1854c7249036d0ba29f37781694b102a9bb076b35f8512e330e5ce"
+}

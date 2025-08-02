@@ -84,6 +84,7 @@ CREATE TABLE IF NOT EXISTS shown_goal_notifications
     time_span TEXT NOT NULL,
     period_key TEXT NOT NULL,
     shown_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (goal_id, time_span, period_key)
+    PRIMARY KEY (goal_id, time_span, period_key),
+    FOREIGN KEY (goal_id) REFERENCES goals(id) ON DELETE CASCADE
 );
 

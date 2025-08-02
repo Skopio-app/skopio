@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE shown_goal_notifications set time_span = ? WHERE goal_id = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "25a7ca4486b30fcbe36449dfc1b4646270170718dce5739667f8e123db422430"
+}

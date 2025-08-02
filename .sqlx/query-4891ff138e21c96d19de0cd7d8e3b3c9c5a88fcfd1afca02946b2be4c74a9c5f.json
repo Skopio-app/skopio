@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE goals set time_span = ? WHERE id = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "4891ff138e21c96d19de0cd7d8e3b3c9c5a88fcfd1afca02946b2be4c74a9c5f"
+}
