@@ -10,7 +10,7 @@ pub struct EventData {
     pub entity_type: String,
     pub duration: i32,
     pub project: String,
-    pub language: String,
+    pub language: Option<String>,
     pub end_timestamp: i32,
 }
 

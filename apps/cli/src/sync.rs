@@ -4,7 +4,6 @@ use common::models::inputs::{EventInput, HeartbeatInput};
 use log::{debug, info};
 use reqwest::blocking::Client;
 use rusqlite::Connection;
-use std::path::Path;
 
 const SERVER_URL: &str = "http://localhost:8080";
 
@@ -21,7 +20,7 @@ pub fn sync_data(conn: &Connection) -> Result<(), Box<dyn std::error::Error>> {
 
             let heartbeat = HeartbeatInput {
                 timestamp: Some(timestamp_utc),
-                project_name: extract_project_name(Path::new(&project_path.unwrap_or_else(|| "unknown".to_string()))),
+                project_name: extract_project_name(project_path.unwrap_or_default()),
                 project_path: row.get(1)?,
                 branch_name: row.get(2)?,
                 entity_name: row.get(3)?,
@@ -38,9 +37,8 @@ pub fn sync_data(conn: &Connection) -> Result<(), Box<dyn std::error::Error>> {
         .flatten()
         .collect();
 
-    // TODO: Change to category from activity_type
     let events: Vec<EventInput> = conn
-        .prepare("SELECT timestamp, activity_type, app, entity_name, entity_type, duration, project_path, branch, language, end_timestamp FROM events WHERE synced = 0")?
+        .prepare("SELECT timestamp, category, app, entity_name, entity_type, duration, project_path, branch, language, end_timestamp FROM events WHERE synced = 0")?
         .query_map([], |row| {
             let timestamp_unix: Option<i64> = row.get(0)?;
             let end_timestamp_unix: Option<i64> = row.get(9)?;
@@ -48,7 +46,7 @@ pub fn sync_data(conn: &Connection) -> Result<(), Box<dyn std::error::Error>> {
             let timestamp_utc: Option<DateTime<Utc>> = timestamp_unix.map(|ts| Utc.timestamp_opt(ts, 0).unwrap().to_utc());
             let end_timestamp_utc: Option<DateTime<Utc>> = end_timestamp_unix.map(|ts| Utc.timestamp_opt(ts, 0).unwrap().to_utc());
 
-            let project_path: String = row.get(6).unwrap_or_else(|_| "unknown".to_string());
+            let project_path: String = row.get(6).unwrap_or_default();
 
             let event = EventInput {
                 timestamp: timestamp_utc,
@@ -57,7 +55,7 @@ pub fn sync_data(conn: &Connection) -> Result<(), Box<dyn std::error::Error>> {
                 entity_name: row.get(3)?,
                 entity_type: row.get(4)?,
                 duration: row.get(5)?,
-                project_name: extract_project_name(Path::new(&project_path)),
+                project_name: extract_project_name(&project_path),
                 project_path: row.get(6)?,
                 branch_name: row.get(7)?,
                 language_name: row.get(8)?,

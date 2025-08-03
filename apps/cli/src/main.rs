@@ -3,6 +3,7 @@ use crate::db::init_db;
 use crate::event::EventData;
 use crate::heartbeat::HeartbeatData;
 use clap::Parser;
+use common::language::detect_language;
 use env_logger::Builder;
 use log::{debug, error, info, LevelFilter};
 use std::io::{stderr, stdout, Write};
@@ -86,9 +87,9 @@ fn main() {
             entity_type,
             duration,
             project,
-            language,
             end_timestamp,
         }) => {
+            let language = detect_language(&project);
             let event_data = EventData {
                 timestamp,
                 category,

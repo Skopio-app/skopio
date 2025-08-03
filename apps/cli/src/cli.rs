@@ -3,10 +3,10 @@ use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::Path;
 
-#[derive(Parser)]
+#[derive(Parser, Debug)]
 #[command(
     name = "skopio-cli",
-    version = "1.0",
+    version,
     about = "Skopio editor plugin CLI helper app"
 )]
 pub struct Cli {
@@ -18,62 +18,75 @@ pub struct Cli {
     pub db: Option<String>,
 }
 
-#[derive(Subcommand)]
+#[derive(Subcommand, Debug)]
 pub enum Commands {
-    /// Log a heartbeat (continuous coding activity)
+    /// Log a heartbeat (additional info, at a particular point in time)
     Heartbeat {
         #[arg(long)]
+        /// The project path.
         project: String,
 
         #[arg(long)]
+        /// The timestamp as the point the heartbeat is generated
         timestamp: i32,
 
         #[arg(long)]
+        /// The entity path
         entity: String,
 
         #[arg(long)]
+        /// The entity type, be it an app, file or URL
         entity_type: String,
 
         #[arg(long)]
+        /// The app being tracked
         app: String,
 
         #[arg(long)]
+        /// The number of lines edited
         lines: Option<i64>,
 
         #[arg(long)]
+        /// The cursor position at the point the heartbeat is generated.
         cursorpos: Option<i64>,
 
         #[arg(short, long)]
+        /// Whether editing is in progress at the point of heartbeat generation.
         is_write: bool,
     },
 
-    /// Log a coding event (like debugging, reviewing)
+    /// Log an event (a period of activity, with a start and end timestamp)
     Event {
         #[arg(long)]
+        /// The start of the recorded event
         timestamp: i32,
 
         #[arg(long)]
+        /// The event category, eg. Coding, Debugging, etc.
         category: String,
 
         #[arg(long)]
+        /// The app being tracked
         app: String,
 
         #[arg(long)]
+        /// The entity path
         entity: String,
 
         #[arg(long)]
+        /// The entity type, be it an app, file or URL
         entity_type: String,
 
         #[arg(long)]
+        /// The duration of an event
         duration: i32,
 
         #[arg(long)]
+        /// The full path of the currently open project
         project: String,
 
         #[arg(long)]
-        language: String,
-
-        #[arg(long)]
+        /// The end timestamp of the event
         end_timestamp: i32,
     },
 
