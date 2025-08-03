@@ -33,7 +33,7 @@ impl AFKEvent {
 
     pub async fn unsynced(db_context: &DBContext) -> Result<Vec<Self>, DBError> {
         let rows = sqlx::query!(
-            r#"
+            "
             SELECT
              id,
              afk_start,
@@ -42,7 +42,7 @@ impl AFKEvent {
             FROM afk_events
             WHERE synced = 0
             LIMIT 100
-            "#
+            "
         )
         .fetch_all(db_context.pool())
         .await?;

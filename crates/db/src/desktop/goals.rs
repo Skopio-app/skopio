@@ -99,7 +99,7 @@ pub struct GoalUpdateInput {
 
 pub async fn fetch_all_goals(db: &DBContext) -> Result<Vec<Goal>, sqlx::Error> {
     let rows = sqlx::query!(
-        r#"
+        "
         SELECT
           g.id,
           g.name,
@@ -118,7 +118,7 @@ pub async fn fetch_all_goals(db: &DBContext) -> Result<Vec<Goal>, sqlx::Error> {
         LEFT JOIN goal_categories gc ON g.id = gc.goal_id
         LEFT JOIN goal_excluded_days gd ON g.id = gd.goal_id
         ORDER BY g.id
-        "#
+        "
     )
     .fetch_all(db.pool())
     .await?;
@@ -168,11 +168,11 @@ pub async fn insert_goal(db: &DBContext, input: GoalInput) -> Result<(), sqlx::E
     let time_span = input.time_span.to_string();
 
     let id = sqlx::query_scalar!(
-        r#"
+        "
         INSERT INTO goals (created_at, updated_at, name, target_seconds, time_span, use_apps, use_categories, ignore_no_activity_days, created_at, updated_at)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         RETURNING id
-        "#,
+        ",
         input.created_at,
         input.updated_at,
         input.name,
@@ -269,7 +269,7 @@ pub async fn modify_goal(
     }
 
     if let Some(val) = update.use_apps {
-        sqlx::query!("UPDATE goals set use_apps = ? WHERE id = ?", val, goal_id,)
+        sqlx::query!("UPDATE goals set use_apps = ? WHERE id = ?", val, goal_id)
             .execute(&mut *tx)
             .await?;
     }
@@ -295,7 +295,7 @@ pub async fn modify_goal(
     }
 
     if let Some(apps) = update.apps {
-        sqlx::query!("DELETE FROM goal_apps WHERE goal_id = ?", goal_id,)
+        sqlx::query!("DELETE FROM goal_apps WHERE goal_id = ?", goal_id)
             .execute(&mut *tx)
             .await?;
         for app in apps {
@@ -310,7 +310,7 @@ pub async fn modify_goal(
     }
 
     if let Some(cats) = update.categories {
-        sqlx::query!("DELETE FROM goal_categories WHERE goal_id = ?", goal_id,)
+        sqlx::query!("DELETE FROM goal_categories WHERE goal_id = ?", goal_id)
             .execute(&mut *tx)
             .await?;
 
@@ -326,7 +326,7 @@ pub async fn modify_goal(
     }
 
     if let Some(days) = update.excluded_days {
-        sqlx::query!("DELETE FROM goal_excluded_days WHERE goal_id = ?", goal_id,)
+        sqlx::query!("DELETE FROM goal_excluded_days WHERE goal_id = ?", goal_id)
             .execute(&mut *tx)
             .await?;
 
