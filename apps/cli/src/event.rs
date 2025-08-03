@@ -4,7 +4,7 @@ use rusqlite::{params, Connection};
 
 pub struct EventData {
     pub timestamp: i32,
-    pub activity_type: String,
+    pub category: String,
     pub app: String,
     pub entity: String,
     pub entity_type: String,
@@ -21,11 +21,11 @@ pub fn log_event(
     let branch = find_git_branch(&event_data.project);
 
     conn.execute(
-        "INSERT INTO events (timestamp, activity_type, app, entity_name, entity_type, duration, project_path, branch, language, end_timestamp, synced)
+        "INSERT INTO events (timestamp, category, app, entity_name, entity_type, duration, project_path, branch, language, end_timestamp, synced)
         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, 0)",
         params![
             event_data.timestamp,
-            event_data.activity_type,
+            event_data.category,
             event_data.app,
             event_data.entity,
             event_data.entity_type,
@@ -40,7 +40,7 @@ pub fn log_event(
 
     info!(
         "Event '{}' logged for {} ({} sec)",
-        event_data.activity_type, event_data.app, event_data.duration
+        event_data.category, event_data.app, event_data.duration
     );
 
     Ok(())

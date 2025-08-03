@@ -80,7 +80,7 @@ fn main() {
 
         Some(cli::Commands::Event {
             timestamp,
-            activity_type,
+            category,
             app,
             entity,
             entity_type,
@@ -91,7 +91,7 @@ fn main() {
         }) => {
             let event_data = EventData {
                 timestamp,
-                activity_type,
+                category,
                 app,
                 entity,
                 entity_type,

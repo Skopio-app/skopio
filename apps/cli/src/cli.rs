@@ -53,7 +53,7 @@ pub enum Commands {
         timestamp: i32,
 
         #[arg(long)]
-        activity_type: String,
+        category: String,
 
         #[arg(long)]
         app: String,
