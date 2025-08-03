@@ -1,120 +1,33 @@
 use crate::cli::{get_or_store_db_path, Cli};
-use crate::db::init_db;
-use crate::event::EventData;
-use crate::heartbeat::HeartbeatData;
+use crate::handlers::event::handle_event;
+use crate::handlers::heartbeat::handle_heartbeat;
+use crate::handlers::sync::handle_sync;
+use crate::utils::{init_logger, start_db};
 use clap::Parser;
-use common::language::detect_language;
-use env_logger::Builder;
-use log::{debug, error, info, LevelFilter};
-use std::io::{stderr, stdout, Write};
+use log::info;
 
 mod cli;
 mod db;
 mod event;
+mod handlers;
 mod heartbeat;
 mod sync;
 mod utils;
 
 fn main() {
-    Builder::new()
-        .format(|_buf, record| {
-            // Prevent normal logs from appearing as warnings in plugin debug console
-            let mut target: Box<dyn Write> =
-                if record.level() == LevelFilter::Info || record.level() == LevelFilter::Debug {
-                    Box::new(stdout())
-                } else {
-                    Box::new(stderr())
-                };
-
-            writeln!(
-                target,
-                "[{} {}:{}] {}",
-                record.level(),
-                record.file().unwrap_or("unknown"),
-                record.line().unwrap_or(0),
-                record.args()
-            )
-        })
-        .filter(None, LevelFilter::Debug)
-        .init();
+    init_logger();
 
     let cli = Cli::parse();
     let db_path = get_or_store_db_path(cli.db);
 
     info!("Using database path: {}", db_path);
 
-    let conn = match init_db(&db_path) {
-        Ok(conn) => conn,
-        Err(err) => {
-            error!("Error initializing database: {}", err);
-            std::process::exit(1);
-        }
-    };
+    let conn = start_db(&db_path);
 
     match cli.command {
-        Some(cli::Commands::Heartbeat {
-            timestamp,
-            project,
-            entity,
-            entity_type,
-            app,
-            lines,
-            cursorpos,
-            is_write,
-        }) => {
-            let hb_data = HeartbeatData {
-                timestamp,
-                project,
-                entity,
-                entity_type,
-                app,
-                lines,
-                cursorpos,
-                is_write,
-            };
-
-            match heartbeat::log_heartbeat(&conn, hb_data) {
-                Ok(_) => debug!("Heartbeat logged successfully."),
-                Err(err) => error!("Error logging heartbeat: {}", err),
-            }
-        }
-
-        Some(cli::Commands::Event {
-            timestamp,
-            category,
-            app,
-            entity,
-            entity_type,
-            duration,
-            project,
-            end_timestamp,
-        }) => {
-            let language = detect_language(&project);
-            let event_data = EventData {
-                timestamp,
-                category,
-                app,
-                entity,
-                entity_type,
-                duration,
-                project,
-                language,
-                end_timestamp,
-            };
-
-            match event::log_event(&conn, event_data) {
-                Ok(_) => debug!("Event logged successfully."),
-                Err(err) => error!("Error logging event: {}", err),
-            }
-        }
-
-        Some(cli::Commands::Sync) => {
-            if let Err(err) = sync::sync_data(&conn) {
-                error!("Sync failed: {}", err);
-                std::process::exit(1);
-            }
-        }
-
+        Some(cmd @ cli::Commands::Heartbeat { .. }) => handle_heartbeat(&conn, cmd),
+        Some(cmd @ cli::Commands::Event { .. }) => handle_event(&conn, cmd),
+        Some(cmd @ cli::Commands::Sync) => handle_sync(&conn, cmd),
         None => {
             info!("Database initialized at {}", db_path);
         }
