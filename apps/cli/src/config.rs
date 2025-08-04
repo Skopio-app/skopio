@@ -15,7 +15,7 @@ fn get_config_path() -> String {
     )
 }
 
-pub fn get_or_store_db_path(cli_db: Option<String>, app: &str) -> String {
+pub fn get_or_store_db_path(cli_db_path: Option<String>, app: &str) -> String {
     let config_path = get_config_path();
     let config_dir = Path::new(&config_path).parent().unwrap();
 
@@ -30,7 +30,7 @@ pub fn get_or_store_db_path(cli_db: Option<String>, app: &str) -> String {
         Config::default()
     };
 
-    if let Some(db) = cli_db {
+    if let Some(db) = cli_db_path {
         config.db_paths.insert(app.to_string(), db.clone());
         fs::write(&config_path, serde_json::to_string_pretty(&config).unwrap())
             .expect("Failed to write config");

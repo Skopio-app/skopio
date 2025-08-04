@@ -127,6 +127,7 @@ pub enum Category {
     Planning,
     #[strum(serialize = "Writing Docs")]
     WritingDocs,
+    Other,
 }
 
 /// Defines the type of entity being tracked in a monitored application.
@@ -174,7 +175,7 @@ fn get_browser_category(url: &str) -> Category {
     {
         return Category::Coding;
     }
-    Category::Browsing
+    Category::Other
 }
 
 fn get_xcode_category(entity: &str) -> Category {
@@ -194,7 +195,7 @@ fn get_xcode_category(entity: &str) -> Category {
         return Category::WritingDocs;
     }
 
-    Category::Coding
+    Category::Other
 }
 
 fn is_documentation_entity(entity_path: &str) -> bool {
