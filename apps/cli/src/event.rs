@@ -2,6 +2,8 @@ use common::git::find_git_branch;
 use log::info;
 use rusqlite::{params, Connection};
 
+use crate::utils::CliError;
+
 pub struct EventData {
     pub timestamp: i32,
     pub category: String,
@@ -14,10 +16,7 @@ pub struct EventData {
     pub end_timestamp: i32,
 }
 
-pub fn log_event(
-    conn: &Connection,
-    event_data: EventData,
-) -> Result<(), Box<dyn std::error::Error>> {
+pub fn save_event(conn: &Connection, event_data: EventData) -> Result<(), CliError> {
     let branch = find_git_branch(&event_data.project);
 
     conn.execute(
@@ -35,11 +34,10 @@ pub fn log_event(
             event_data.language,
             event_data.end_timestamp,
         ],
-    )
-    .map_err(|e| format!( "Failed to insert event: {}", e))?;
+    )?;
 
     info!(
-        "Event '{}' logged for {} ({} sec)",
+        "Event '{}' saved for {} ({} sec)",
         event_data.category, event_data.app, event_data.duration
     );
 

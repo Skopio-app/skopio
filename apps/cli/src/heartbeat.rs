@@ -2,6 +2,8 @@ use common::git::find_git_branch;
 use log::info;
 use rusqlite::{params, Connection};
 
+use crate::utils::CliError;
+
 pub struct HeartbeatData {
     pub timestamp: i32,
     pub project: String,
@@ -13,10 +15,7 @@ pub struct HeartbeatData {
     pub cursorpos: Option<i64>,
 }
 
-pub fn log_heartbeat(
-    conn: &Connection,
-    hb_data: HeartbeatData,
-) -> Result<(), Box<dyn std::error::Error>> {
+pub fn save_heartbeat(conn: &Connection, hb_data: HeartbeatData) -> Result<(), CliError> {
     let branch_name = find_git_branch(&hb_data.entity);
 
     conn.execute(
@@ -33,10 +32,9 @@ pub fn log_heartbeat(
             hb_data.lines,
             hb_data.cursorpos,
         ],
-    )
-    .map_err(|e| format!("Failed to insert heartbeat: {}", e))?;
+    )?;
 
-    info!("Heartbeat logged for {}", hb_data.entity);
+    info!("Heartbeat saved for {}", hb_data.entity);
 
     Ok(())
 }

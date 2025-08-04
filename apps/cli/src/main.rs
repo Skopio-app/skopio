@@ -2,9 +2,9 @@ use crate::cli::{get_or_store_db_path, Cli};
 use crate::handlers::event::handle_event;
 use crate::handlers::heartbeat::handle_heartbeat;
 use crate::handlers::sync::handle_sync;
-use crate::utils::{init_logger, start_db};
+use crate::utils::{init_logger, start_db, CliError};
 use clap::Parser;
-use log::info;
+use log::{error, info};
 
 mod cli;
 mod db;
@@ -17,12 +17,19 @@ mod utils;
 fn main() {
     init_logger();
 
+    if let Err(err) = run() {
+        error!("Fatal error: {:#}", err);
+        std::process::exit(1);
+    }
+}
+
+fn run() -> Result<(), CliError> {
     let cli = Cli::parse();
     let db_path = get_or_store_db_path(cli.db);
 
     info!("Using database path: {}", db_path);
 
-    let conn = start_db(&db_path);
+    let conn = start_db(&db_path)?;
 
     match cli.command {
         Some(cmd @ cli::Commands::Heartbeat { .. }) => handle_heartbeat(&conn, cmd),
@@ -30,6 +37,7 @@ fn main() {
         Some(cmd @ cli::Commands::Sync) => handle_sync(&conn, cmd),
         None => {
             info!("Database initialized at {}", db_path);
+            Ok(())
         }
     }
 }

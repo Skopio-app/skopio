@@ -18,5 +18,6 @@ log = { workspace = true }
 env_logger = { workspace = true }
 common = { path = "../../crates/common" }
 refinery = { version = "0.8.16", features = ["rusqlite"]}
+thiserror = { workspace = true }
 
 

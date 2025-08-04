@@ -6,8 +6,30 @@ use std::{
 use env_logger::Builder;
 use log::{error, LevelFilter};
 use rusqlite::Connection;
+use thiserror::Error;
 
-use crate::db::init_db;
+use crate::{db::init_db, sync::SyncError};
+
+#[derive(Error, Debug)]
+pub enum CliError {
+    #[error("I/O error: {0}")]
+    Io(#[from] std::io::Error),
+
+    #[error("SQLite error: {0}")]
+    Sqlite(#[from] rusqlite::Error),
+
+    #[error("Migration error: {0}")]
+    Migration(#[from] refinery::Error),
+
+    #[error("Invalid database path: No parent directory")]
+    InvalidDbPath,
+
+    #[error("Sync error: {0}")]
+    Sync(#[from] SyncError),
+
+    #[error("Expected {0} command, but received a different variant")]
+    VariantMismatch(String),
+}
 
 /// Extracts the project name from the project path
 pub fn extract_project_name<T: AsRef<Path>>(project_path: T) -> String {
@@ -15,7 +37,7 @@ pub fn extract_project_name<T: AsRef<Path>>(project_path: T) -> String {
         .as_ref()
         .file_name()
         .map(|s| s.to_string_lossy().into_owned())
-        .unwrap_or_else(|| "UnnamedProject".to_string())
+        .unwrap_or_default()
 }
 
 pub fn init_logger() {
@@ -42,12 +64,6 @@ pub fn init_logger() {
         .init();
 }
 
-pub fn start_db(db_path: &str) -> Connection {
-    match init_db(&db_path) {
-        Ok(conn) => conn,
-        Err(err) => {
-            error!("Error initializing database: {}", err);
-            std::process::exit(1);
-        }
-    }
+pub fn start_db(db_path: &str) -> Result<Connection, CliError> {
+    init_db(&db_path)
 }

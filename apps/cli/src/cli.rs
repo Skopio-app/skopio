@@ -22,15 +22,15 @@ pub struct Cli {
 pub enum Commands {
     /// Log a heartbeat (additional info, at a particular point in time)
     Heartbeat {
-        #[arg(long)]
+        #[arg(long, short)]
         /// The project path.
         project: String,
 
-        #[arg(long)]
+        #[arg(long, short)]
         /// The timestamp as the point the heartbeat is generated
         timestamp: i32,
 
-        #[arg(long)]
+        #[arg(long, short)]
         /// The entity path
         entity: String,
 
@@ -38,15 +38,15 @@ pub enum Commands {
         /// The entity type, be it an app, file or URL
         entity_type: String,
 
-        #[arg(long)]
+        #[arg(long, short)]
         /// The app being tracked
         app: String,
 
-        #[arg(long)]
+        #[arg(long, short)]
         /// The number of lines edited
         lines: Option<i64>,
 
-        #[arg(long)]
+        #[arg(long, short)]
         /// The cursor position at the point the heartbeat is generated.
         cursorpos: Option<i64>,
 
@@ -57,19 +57,19 @@ pub enum Commands {
 
     /// Log an event (a period of activity, with a start and end timestamp)
     Event {
-        #[arg(long)]
+        #[arg(long, short)]
         /// The start of the recorded event
         timestamp: i32,
 
-        #[arg(long)]
+        #[arg(long, short)]
         /// The event category, eg. Coding, Debugging, etc.
         category: String,
 
-        #[arg(long)]
+        #[arg(long, short)]
         /// The app being tracked
         app: String,
 
-        #[arg(long)]
+        #[arg(long, short)]
         /// The entity path
         entity: String,
 
@@ -77,11 +77,11 @@ pub enum Commands {
         /// The entity type, be it an app, file or URL
         entity_type: String,
 
-        #[arg(long)]
+        #[arg(long, short)]
         /// The duration of an event
         duration: i32,
 
-        #[arg(long)]
+        #[arg(long, short)]
         /// The full path of the currently open project
         project: String,
 
