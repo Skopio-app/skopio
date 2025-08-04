@@ -1,5 +1,5 @@
 use crate::utils::extract_project_name;
-use chrono::{TimeZone, Utc};
+use chrono::{Duration, TimeZone, Utc};
 use common::models::inputs::{EventInput, HeartbeatInput};
 use log::{debug, info};
 use reqwest::blocking::Client;
@@ -41,6 +41,8 @@ pub fn sync_data(conn: &Connection) -> Result<(), SyncError> {
         conn.execute("UPDATE events SET synced = 1 WHERE synced = 0", [])?;
         info!("Events synced successfully!")
     }
+
+    delete_synced_date(conn)?;
 
     Ok(())
 }
@@ -125,4 +127,26 @@ fn sync_to_server<T: serde::Serialize>(
             status, body
         )))
     }
+}
+
+fn delete_synced_date(conn: &Connection) -> Result<(), SyncError> {
+    let cutoff = Utc::now() - Duration::days(15);
+    let cutoff_unix = cutoff.timestamp();
+
+    let deleted_hb = conn.execute(
+        "DELETE FROM heartbeats WHERE synced = 1 AND timestamp < ?1",
+        [cutoff_unix],
+    )?;
+
+    let deleted_events = conn.execute(
+        "DELETE FROM events WHERE synced = 1 AND timestamp < ?1",
+        [cutoff_unix],
+    )?;
+
+    debug!(
+        "Deleted {} old synced heartbeats and {} old synced events",
+        deleted_hb, deleted_events
+    );
+
+    Ok(())
 }
