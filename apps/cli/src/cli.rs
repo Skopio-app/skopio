@@ -1,7 +1,4 @@
 use clap::{Parser, Subcommand};
-use serde::{Deserialize, Serialize};
-use std::fs;
-use std::path::Path;
 
 #[derive(Parser, Debug)]
 #[command(
@@ -16,6 +13,10 @@ pub struct Cli {
     /// Optional database path
     #[arg(long)]
     pub db: Option<String>,
+
+    /// The name of the app being tracked
+    #[arg(long)]
+    pub app: String,
 }
 
 #[derive(Subcommand, Debug)]
@@ -92,40 +93,4 @@ pub enum Commands {
 
     /// Sync stored data to the remote server
     Sync,
-}
-
-#[derive(Serialize, Deserialize)]
-struct Config {
-    db_path: String,
-}
-
-fn get_config_path() -> String {
-    let home_dir = dirs::home_dir().expect("Failed to get home directory");
-    format!("{}/.skopio/config.json", home_dir.display())
-}
-
-pub fn get_or_store_db_path(cli_db: Option<String>) -> String {
-    let config_path = get_config_path();
-
-    if let Some(db) = cli_db {
-        let config = Config {
-            db_path: db.clone(),
-        };
-        fs::create_dir_all(Path::new(&config_path).parent().unwrap())
-            .expect("Failed to create config directory");
-        fs::write(config_path, serde_json::to_string(&config).unwrap())
-            .expect("Failed to write config");
-        return db;
-    }
-
-    // If no `--db` is passed, read from config
-    if Path::new(&config_path).exists() {
-        if let Ok(config_str) = fs::read_to_string(&config_path) {
-            if let Ok(config) = serde_json::from_str::<Config>(&config_str) {
-                return config.db_path;
-            }
-        }
-    }
-
-    "skopio-cli-data.db".to_string()
 }

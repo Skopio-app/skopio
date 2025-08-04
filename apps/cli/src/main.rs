@@ -1,4 +1,5 @@
-use crate::cli::{get_or_store_db_path, Cli};
+use crate::cli::Cli;
+use crate::config::get_or_store_db_path;
 use crate::handlers::event::handle_event;
 use crate::handlers::heartbeat::handle_heartbeat;
 use crate::handlers::sync::handle_sync;
@@ -7,6 +8,7 @@ use clap::Parser;
 use log::{error, info};
 
 mod cli;
+mod config;
 mod db;
 mod event;
 mod handlers;
@@ -25,7 +27,7 @@ fn main() {
 
 fn run() -> Result<(), CliError> {
     let cli = Cli::parse();
-    let db_path = get_or_store_db_path(cli.db);
+    let db_path = get_or_store_db_path(cli.db, &cli.app);
 
     info!("Using database path: {}", db_path);
 
