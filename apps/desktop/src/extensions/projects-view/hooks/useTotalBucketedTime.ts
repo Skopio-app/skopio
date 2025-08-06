@@ -12,7 +12,7 @@ export const useTotalBucketedTime = (
 } => {
   const [total, setTotal] = useState<number>(0);
   const [loading, setLoading] = useState<boolean>(true);
-  const [hasBranchData, setHasBranchData] = useState(false);
+  const [hasBranchData, setHasBranchData] = useState(true);
   const [branches, setBranches] = useState<string[]>([]);
   const { preset, project } = usePresetFilter();
 
@@ -46,7 +46,7 @@ export const useTotalBucketedTime = (
           }
 
           setBranches([...allKeys]);
-          setHasBranchData(branches.length > 0);
+          setHasBranchData(allKeys.size > 0);
 
           const branchTotal = branchData.reduce((sum, item) => {
             const values = Object.values(item.grouped_values ?? {});
