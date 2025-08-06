@@ -34,7 +34,6 @@ pub fn get_or_store_db_path(cli_db_path: Option<String>, app: &str) -> String {
         config.db_paths.insert(app.to_string(), db.clone());
         fs::write(&config_path, serde_json::to_string_pretty(&config).unwrap())
             .expect("Failed to write config");
-        return db;
     }
 
     if let Some(db) = config.db_paths.get(app) {

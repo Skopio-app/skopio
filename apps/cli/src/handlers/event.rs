@@ -19,7 +19,7 @@ pub fn handle_event(conn: &Connection, command: Commands) -> Result<(), CliError
             project,
             end_timestamp,
         } => {
-            let language = detect_language(&project);
+            let language = detect_language(&entity);
 
             let event_data = EventData {
                 timestamp,

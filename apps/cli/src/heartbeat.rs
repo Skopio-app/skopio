@@ -1,4 +1,4 @@
-use common::git::find_git_branch;
+use common::{git::find_git_branch, language::detect_language};
 use log::info;
 use rusqlite::{params, Connection};
 
@@ -17,6 +17,7 @@ pub struct HeartbeatData {
 
 pub fn save_heartbeat(conn: &Connection, hb_data: HeartbeatData) -> Result<(), CliError> {
     let branch_name = find_git_branch(&hb_data.entity);
+    let language = detect_language(&hb_data.entity);
 
     conn.execute(
         "INSERT INTO heartbeats (timestamp, project_path, branch, entity_name, entity_type, language, app, is_write, lines, cursorpos, synced)
@@ -27,6 +28,7 @@ pub fn save_heartbeat(conn: &Connection, hb_data: HeartbeatData) -> Result<(), C
             branch_name,
             hb_data.entity,
             hb_data.entity_type,
+            language,
             hb_data.app,
             hb_data.is_write,
             hb_data.lines,

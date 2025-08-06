@@ -5,7 +5,7 @@ CREATE TABLE IF NOT EXISTS heartbeats (
     branch TEXT,
     entity_name TEXT NOT NULL,
     entity_type TEXT,
-    language TEXT NOT NULL,
+    language TEXT,
     app TEXT NOT NULL,
     is_write BOOLEAN DEFAULT FALSE,
     lines INTEGER,
