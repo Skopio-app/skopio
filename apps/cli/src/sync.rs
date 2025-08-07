@@ -42,7 +42,7 @@ pub fn sync_data(conn: &Connection) -> Result<(), SyncError> {
         info!("Events synced successfully!")
     }
 
-    delete_synced_date(conn)?;
+    delete_synced_data(conn)?;
 
     Ok(())
 }
@@ -129,7 +129,7 @@ fn sync_to_server<T: serde::Serialize>(
     }
 }
 
-fn delete_synced_date(conn: &Connection) -> Result<(), SyncError> {
+fn delete_synced_data(conn: &Connection) -> Result<(), SyncError> {
     let cutoff = Utc::now() - Duration::days(15);
     let cutoff_unix = cutoff.timestamp();
 
@@ -149,4 +149,101 @@ fn delete_synced_date(conn: &Connection) -> Result<(), SyncError> {
     );
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::db::migrations;
+    use rusqlite::params;
+
+    fn setup_conn() -> Connection {
+        let mut conn = Connection::open_in_memory().unwrap();
+        migrations::runner().run(&mut conn).unwrap();
+        conn
+    }
+
+    #[test]
+    fn test_fetch_unsynced_heartbeats() {
+        let conn = setup_conn();
+        let now = Utc::now().timestamp();
+
+        // TODO: Use save_heartbeat instead
+        conn.execute(
+            "INSERT INTO heartbeats (timestamp, project_path, branch, entity_name, entity_type, language, app, is_write, lines, cursorpos, synced)
+                   VALUES (?1, ?2, 'main', 'main.rs', 'File', 'Rust', 'VSCode', 1, 10, 42, 0)",
+            params![now, "/tmp/project"],
+        ).unwrap();
+
+        let heartbeats = fetch_unsynced_heartbeats(&conn).unwrap();
+        assert_eq!(heartbeats.len(), 1);
+        assert_eq!(heartbeats[0].entity_name, "main.rs");
+    }
+
+    #[test]
+    fn test_fetch_unsynced_events() {
+        let conn = setup_conn();
+        let now = Utc::now().timestamp();
+
+        conn.execute(
+            "INSERT INTO events (timestamp, category, app, entity_name, entity_type, duration, project_path, branch, language, end_timestamp, synced)
+             VALUES (?1, 'Coding', 'VSCode', 'main.rs', 'file', 100, '/tmp/project', 'main', 'Rust', ?2, 0)",
+            params![now, now + 100],
+        ).unwrap();
+
+        let events = fetch_unsynced_events(&conn).unwrap();
+        assert_eq!(events.len(), 1);
+        assert_eq!(events[0].category, "Coding");
+        assert_eq!(events[0].project_path, "/tmp/project");
+    }
+
+    #[test]
+    fn test_delete_synced_data() {
+        let conn = setup_conn();
+        let old_ts = (Utc::now() - Duration::days(20)).timestamp();
+
+        conn.execute(
+            "INSERT INTO heartbeats (timestamp, project_path, branch, entity_name, entity_type, language, app, is_write, lines, cursorpos, synced)
+             VALUES (?1, '/tmp/project', 'main', 'main.rs', 'file', 'Rust', 'VSCode', 1, 10, 42, 1)",
+            params![old_ts],
+        ).unwrap();
+
+        conn.execute(
+            "INSERT INTO events (timestamp, category, app, entity_name, entity_type, duration, project_path, branch, language, end_timestamp, synced)
+             VALUES (?1, 'Coding', 'VSCode', 'main.rs', 'file', 100, '/tmp/project', 'main', 'Rust', ?2, 1)",
+            params![old_ts, old_ts + 100],
+        ).unwrap();
+
+        delete_synced_data(&conn).unwrap();
+
+        let remaining_hb: i64 = conn
+            .query_row("SELECT COUNT(*) FROM heartbeats", [], |row| row.get(0))
+            .unwrap();
+
+        let remaining_events: i64 = conn
+            .query_row("SELECT COUNT(*) FROM events", [], |row| row.get(0))
+            .unwrap();
+
+        assert_eq!(remaining_hb, 0);
+        assert_eq!(remaining_events, 0);
+    }
+
+    #[test]
+    fn test_delete_synced_data_preserves_recent_data() {
+        let conn = setup_conn();
+        let recent_ts = (Utc::now() - Duration::days(5)).timestamp();
+
+        conn.execute(
+            "INSERT INTO heartbeats (timestamp, project_path, branch, entity_name, entity_type, language, app, is_write, lines, cursorpos, synced)
+             VALUES (?1, '/tmp/project', 'main', 'main.rs', 'file', 'Rust', 'VSCode', 1, 10, 42, 1)",
+            params![recent_ts],
+        ).unwrap();
+
+        delete_synced_data(&conn).unwrap();
+
+        let count: i64 = conn
+            .query_row("SELECT COUNT(*) FROM heartbeats", [], |row| row.get(0))
+            .unwrap();
+        assert_eq!(count, 1);
+    }
 }
