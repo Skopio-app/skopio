@@ -17,11 +17,16 @@ fn get_config_path() -> String {
 
 pub fn get_or_store_db_path(cli_db_path: Option<String>, app: &str) -> String {
     let config_path = get_config_path();
-    let config_dir = Path::new(&config_path).parent().unwrap();
+    let config_dir = Path::new(&config_path);
+    resolve_db_path(cli_db_path, app, config_dir)
+}
+
+fn resolve_db_path(cli_db_path: Option<String>, app: &str, config_path: &Path) -> String {
+    let config_dir = config_path.parent().unwrap();
 
     fs::create_dir_all(config_dir).expect("Failed to create config directory");
 
-    let mut config = if Path::new(&config_path).exists() {
+    let mut config = if config_path.exists() {
         fs::read_to_string(&config_path)
             .ok()
             .and_then(|s| serde_json::from_str::<Config>(&s).ok())
@@ -41,4 +46,48 @@ pub fn get_or_store_db_path(cli_db_path: Option<String>, app: &str) -> String {
     }
 
     format!("skopio-{}-data.db", app)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tempfile::tempdir;
+
+    #[test]
+    fn returns_default_path_when_no_config_exists() {
+        let dir = tempdir().unwrap();
+        let config_path = dir.path().join("cli_config_json");
+
+        let result = resolve_db_path(None, "vscode", &config_path);
+        assert_eq!(result, "skopio-vscode-data.db");
+    }
+
+    #[test]
+    fn stores_and_returns_cli_path() {
+        let dir = tempdir().unwrap();
+        let config_path = dir.path().join("cli_config.json");
+
+        let db_path = "/tmp/db.sqlite".to_string();
+        let result = resolve_db_path(Some(db_path.clone()), "android studio", &config_path);
+        assert_eq!(result, db_path);
+
+        let reread = resolve_db_path(None, "android studio", &config_path);
+        assert_eq!(reread, db_path);
+    }
+
+    #[test]
+    fn returns_existing_path_from_config() {
+        let dir = tempdir().unwrap();
+        let config_path = dir.path().join("cli_config.json");
+
+        let mut config = Config::default();
+        config
+            .db_paths
+            .insert("webstorm".into(), "/data/webstorm.db".into());
+
+        fs::write(&config_path, serde_json::to_string_pretty(&config).unwrap()).unwrap();
+
+        let result = resolve_db_path(None, "webstorm", &config_path);
+        assert_eq!(result, "/data/webstorm.db");
+    }
 }

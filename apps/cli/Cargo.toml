@@ -20,4 +20,7 @@ common = { path = "../../crates/common" }
 refinery = { version = "0.8.16", features = ["rusqlite"]}
 thiserror = { workspace = true }
 
+[dev-dependencies]
+tempfile = { workspace = true }
+
 
