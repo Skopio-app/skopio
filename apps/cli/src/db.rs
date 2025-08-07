@@ -21,3 +21,14 @@ pub fn init_db(db_path: &str) -> Result<Connection, CliError> {
 
     Ok(conn)
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_init_db_invalid_path() {
+        let result = init_db("");
+        assert!(matches!(result, Err(CliError::InvalidDbPath)));
+    }
+}

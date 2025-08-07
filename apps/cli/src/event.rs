@@ -43,3 +43,37 @@ pub fn save_event(conn: &Connection, event_data: EventData) -> Result<(), CliErr
 
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::db::init_db;
+    use tempfile::tempdir;
+
+    #[test]
+    fn test_save_event_inserts_into_db() {
+        let dir = tempdir().unwrap();
+        let db_path = dir.path().join("test.db");
+
+        let conn = init_db(db_path.to_str().unwrap()).expect("failed to init db");
+
+        let test_event = EventData {
+            timestamp: 1720,
+            category: "Coding".into(),
+            app: "Code".into(),
+            entity: "main.rs".into(),
+            entity_type: "File".into(),
+            duration: 300,
+            project: "/tmp/my-project".into(),
+            language: Some("Rust".into()),
+            end_timestamp: 2020,
+        };
+
+        save_event(&conn, test_event).expect("failed to save event");
+
+        let mut stmt = conn.prepare("SELECT COUNT(*) FROM events").unwrap();
+        let count: i64 = stmt.query_row([], |row| row.get(0)).unwrap();
+
+        assert_eq!(count, 1);
+    }
+}

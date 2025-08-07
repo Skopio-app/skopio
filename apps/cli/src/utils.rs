@@ -5,10 +5,9 @@ use std::{
 
 use env_logger::Builder;
 use log::{error, LevelFilter};
-use rusqlite::Connection;
 use thiserror::Error;
 
-use crate::{db::init_db, sync::SyncError};
+use crate::sync::SyncError;
 
 #[derive(Error, Debug)]
 pub enum CliError {
@@ -62,8 +61,4 @@ pub fn init_logger() {
         })
         .filter(None, LevelFilter::Debug)
         .init();
-}
-
-pub fn start_db(db_path: &str) -> Result<Connection, CliError> {
-    init_db(&db_path)
 }

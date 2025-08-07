@@ -1,9 +1,10 @@
 use crate::cli::Cli;
 use crate::config::get_or_store_db_path;
+use crate::db::init_db;
 use crate::handlers::event::handle_event;
 use crate::handlers::heartbeat::handle_heartbeat;
 use crate::handlers::sync::handle_sync;
-use crate::utils::{init_logger, start_db, CliError};
+use crate::utils::{init_logger, CliError};
 use clap::Parser;
 use log::{error, info};
 
@@ -31,7 +32,7 @@ fn run() -> Result<(), CliError> {
 
     info!("Using database path: {}", db_path);
 
-    let conn = start_db(&db_path)?;
+    let conn = init_db(&db_path)?;
 
     match cli.command {
         Some(cmd @ cli::Commands::Heartbeat { .. }) => handle_heartbeat(&conn, cmd),
