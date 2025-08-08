@@ -47,15 +47,11 @@ pub fn save_event(conn: &Connection, event_data: EventData) -> Result<(), CliErr
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::db::init_db;
-    use tempfile::tempdir;
+    use crate::utils::setup_test_conn;
 
     #[test]
     fn test_save_event_inserts_into_db() {
-        let dir = tempdir().unwrap();
-        let db_path = dir.path().join("test.db");
-
-        let conn = init_db(db_path.to_str().unwrap()).expect("failed to init db");
+        let conn = setup_test_conn();
 
         let test_event = EventData {
             timestamp: 1720,

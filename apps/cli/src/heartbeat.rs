@@ -44,12 +44,11 @@ pub fn save_heartbeat(conn: &Connection, hb_data: HeartbeatData) -> Result<(), C
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::db::migrations;
+    use crate::utils::setup_test_conn;
 
     #[test]
     fn test_save_heartbeat_inserts_into_db() {
-        let mut conn = Connection::open_in_memory().unwrap();
-        migrations::runner().run(&mut conn).unwrap();
+        let conn = setup_test_conn();
 
         let test_heartbeat = HeartbeatData {
             timestamp: 1720,

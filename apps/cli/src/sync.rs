@@ -155,21 +155,15 @@ fn delete_synced_data(conn: &Connection) -> Result<(), SyncError> {
 mod tests {
     use super::*;
     use crate::{
-        db::migrations,
         event::{save_event, EventData},
         heartbeat::{save_heartbeat, HeartbeatData},
+        utils::setup_test_conn,
     };
     use rusqlite::params;
 
-    fn setup_conn() -> Connection {
-        let mut conn = Connection::open_in_memory().unwrap();
-        migrations::runner().run(&mut conn).unwrap();
-        conn
-    }
-
     #[test]
     fn test_fetch_unsynced_heartbeats() {
-        let conn = setup_conn();
+        let conn = setup_test_conn();
         let now = Utc::now().timestamp();
 
         let test_heartbeat = HeartbeatData {
@@ -192,7 +186,7 @@ mod tests {
 
     #[test]
     fn test_fetch_unsynced_events() {
-        let conn = setup_conn();
+        let conn = setup_test_conn();
         let now = Utc::now().timestamp();
 
         let test_event = EventData {
@@ -217,7 +211,7 @@ mod tests {
 
     #[test]
     fn test_delete_synced_data() {
-        let conn = setup_conn();
+        let conn = setup_test_conn();
         let old_ts = (Utc::now() - Duration::days(20)).timestamp();
 
         conn.execute(
@@ -248,7 +242,7 @@ mod tests {
 
     #[test]
     fn test_delete_synced_data_preserves_recent_data() {
-        let conn = setup_conn();
+        let conn = setup_test_conn();
         let recent_ts = (Utc::now() - Duration::days(5)).timestamp();
 
         conn.execute(

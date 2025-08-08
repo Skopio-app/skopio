@@ -5,9 +5,10 @@ use std::{
 
 use env_logger::Builder;
 use log::{error, LevelFilter};
+use rusqlite::Connection;
 use thiserror::Error;
 
-use crate::sync::SyncError;
+use crate::{db::migrations, sync::SyncError};
 
 #[derive(Error, Debug)]
 pub enum CliError {
@@ -61,4 +62,11 @@ pub fn init_logger() {
         })
         .filter(None, LevelFilter::Debug)
         .init();
+}
+
+#[allow(dead_code)]
+pub fn setup_test_conn() -> Connection {
+    let mut conn = Connection::open_in_memory().unwrap();
+    migrations::runner().run(&mut conn).unwrap();
+    conn
 }
