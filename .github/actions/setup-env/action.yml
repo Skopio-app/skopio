@@ -11,7 +11,8 @@ runs:
   steps:
     - name: Install Rust
       uses: dtolnay/rust-toolchain@stable
-      targets: ${{ inputs.rust_target }}
+      with:
+        targets: ${{ inputs.rust_target }}
 
     - uses: Swatinem/rust-cache@v2
       with:
