@@ -154,7 +154,11 @@ fn delete_synced_data(conn: &Connection) -> Result<(), SyncError> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::db::migrations;
+    use crate::{
+        db::migrations,
+        event::{save_event, EventData},
+        heartbeat::{save_heartbeat, HeartbeatData},
+    };
     use rusqlite::params;
 
     fn setup_conn() -> Connection {
@@ -168,12 +172,18 @@ mod tests {
         let conn = setup_conn();
         let now = Utc::now().timestamp();
 
-        // TODO: Use save_heartbeat instead
-        conn.execute(
-            "INSERT INTO heartbeats (timestamp, project_path, branch, entity_name, entity_type, language, app, is_write, lines, cursorpos, synced)
-                   VALUES (?1, ?2, 'main', 'main.rs', 'File', 'Rust', 'VSCode', 1, 10, 42, 0)",
-            params![now, "/tmp/project"],
-        ).unwrap();
+        let test_heartbeat = HeartbeatData {
+            timestamp: now as i32,
+            project: "/tmp/project".into(),
+            entity: "main.rs".into(),
+            entity_type: "File".into(),
+            app: "Code".into(),
+            is_write: true,
+            lines: Some(10),
+            cursorpos: Some(60),
+        };
+
+        save_heartbeat(&conn, test_heartbeat).unwrap();
 
         let heartbeats = fetch_unsynced_heartbeats(&conn).unwrap();
         assert_eq!(heartbeats.len(), 1);
@@ -185,11 +195,19 @@ mod tests {
         let conn = setup_conn();
         let now = Utc::now().timestamp();
 
-        conn.execute(
-            "INSERT INTO events (timestamp, category, app, entity_name, entity_type, duration, project_path, branch, language, end_timestamp, synced)
-             VALUES (?1, 'Coding', 'VSCode', 'main.rs', 'file', 100, '/tmp/project', 'main', 'Rust', ?2, 0)",
-            params![now, now + 100],
-        ).unwrap();
+        let test_event = EventData {
+            timestamp: now as i32,
+            category: "Coding".into(),
+            app: "Code".into(),
+            entity: "main.rs".into(),
+            entity_type: "File".into(),
+            duration: 300,
+            project: "/tmp/project".into(),
+            language: Some("Rust".into()),
+            end_timestamp: (now + 100) as i32,
+        };
+
+        save_event(&conn, test_event).unwrap();
 
         let events = fetch_unsynced_events(&conn).unwrap();
         assert_eq!(events.len(), 1);

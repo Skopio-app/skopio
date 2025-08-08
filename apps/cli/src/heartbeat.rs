@@ -40,3 +40,33 @@ pub fn save_heartbeat(conn: &Connection, hb_data: HeartbeatData) -> Result<(), C
 
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::db::migrations;
+
+    #[test]
+    fn test_save_heartbeat_inserts_into_db() {
+        let mut conn = Connection::open_in_memory().unwrap();
+        migrations::runner().run(&mut conn).unwrap();
+
+        let test_heartbeat = HeartbeatData {
+            timestamp: 1720,
+            project: "/tmp/test-project".into(),
+            entity: "main.rs".into(),
+            entity_type: "File".into(),
+            app: "Code".into(),
+            is_write: false,
+            lines: Some(10),
+            cursorpos: Some(62),
+        };
+
+        save_heartbeat(&conn, test_heartbeat).unwrap();
+
+        let mut stmt = conn.prepare("SELECT COUNT(*) FROM heartbeats").unwrap();
+        let count: i64 = stmt.query_row([], |row| row.get(0)).unwrap();
+
+        assert_eq!(count, 1);
+    }
+}
