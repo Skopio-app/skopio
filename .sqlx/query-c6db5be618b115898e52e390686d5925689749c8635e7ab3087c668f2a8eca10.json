@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "DELETE FROM events\n             WHERE id IN (\n                SELECT id FROM events\n                WHERE synced = 1\n                  AND timestamp < datetime('now', '-15days')\n                LIMIT 100\n            );\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 0
+    },
+    "nullable": []
+  },
+  "hash": "c6db5be618b115898e52e390686d5925689749c8635e7ab3087c668f2a8eca10"
+}

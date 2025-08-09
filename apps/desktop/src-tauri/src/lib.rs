@@ -97,19 +97,33 @@ pub async fn run() {
             Ok(())
         })
         .on_window_event(|window, event| {
-            if let tauri::WindowEvent::CloseRequested { .. } = event {
+            if let tauri::WindowEvent::CloseRequested { api, .. } = event {
                 if window.label() == "main" {
+                    api.prevent_close();
+
                     let cursor_tracker = window.state::<Arc<MouseTracker>>();
                     let keyboard_tracker = window.state::<Arc<KeyboardTracker>>();
+                    let event_tracker = window.state::<Arc<EventTracker>>();
                     let buffered_service = window.state::<Arc<BufferedTrackingService>>();
                     let goal_service = window.state::<Arc<GoalService>>();
+                    let window_tracker = window.state::<Arc<WindowTracker>>();
+                    let afk_tracker = window.state::<Arc<AFKTracker>>();
+
                     cursor_tracker.stop_tracking();
                     keyboard_tracker.stop_tracking();
                     goal_service.shutdown();
+                    window_tracker.stop_tracking();
 
+                    let window = window.clone();
                     let buffered_service = Arc::clone(&buffered_service);
+                    let event_tracker = Arc::clone(&event_tracker);
+                    let afk_tracker = Arc::clone(&afk_tracker);
                     tokio::spawn(async move {
+                        event_tracker.stop_tracking().await;
+                        afk_tracker.stop_tracking().await;
                         buffered_service.shutdown().await;
+
+                        window.app_handle().exit(0);
                     });
                 }
             }
@@ -187,6 +201,7 @@ async fn setup_trackers(app_handle: &AppHandle) -> Result<(), anyhow::Error> {
         afk_timeout_rx,
         Arc::clone(&service_trait),
     ));
+    app_handle.manage(Arc::clone(&afk_tracker));
 
     let hb_interval_rx = config_store.subscribe_heartbeat_interval();
     let heartbeat_tracker = Arc::new(HeartbeatTracker::new(
@@ -198,6 +213,7 @@ async fn setup_trackers(app_handle: &AppHandle) -> Result<(), anyhow::Error> {
         Arc::clone(&keyboard_tracker),
         Arc::clone(&service_trait),
     ));
+    app_handle.manage(Arc::clone(&event_tracker));
 
     let window_tracker_ref = Arc::clone(&window_tracker);
     window_tracker_ref.start_tracking();

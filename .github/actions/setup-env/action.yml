@@ -1,0 +1,23 @@
+name: "Setup environment"
+description: "Sets up local action environment with the necessary components"
+
+inputs:
+  rust_target:
+    description: "The Rust target to install"
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: Install Rust
+      uses: dtolnay/rust-toolchain@stable
+      with:
+        targets: ${{ inputs.rust_target }}
+
+    - uses: Swatinem/rust-cache@v2
+      with:
+        workspaces: |
+          apps/cli
+          apps/server
+          apps/desktop/src-tauri
+        shared-key: base-env-${{ inputs.rust_target }}

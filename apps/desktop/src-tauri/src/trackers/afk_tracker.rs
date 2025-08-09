@@ -52,6 +52,7 @@ impl AFKTracker {
                 let last_activity_time = *last_activity.read().await;
                 let mut afk_time = afk_start.lock().await;
 
+                // TODO: Add reusable activity detected helper method
                 // Detect user activity (mouse/keyboard)
                 let mouse_buttons = cursor_tracker.get_pressed_mouse_buttons();
                 let keys_pressed = keyboard_tracker.get_pressed_keys();
@@ -99,5 +100,34 @@ impl AFKTracker {
                 }
             }
         });
+    }
+
+    pub async fn stop_tracking(&self) {
+        let mut afk_time = self.afk_start.lock().await;
+
+        if let Some(afk_start_time) = *afk_time {
+            let now = Utc::now();
+            let afk_duration = (now - afk_start_time).num_seconds();
+
+            info!(
+                "AFK tracker stopping. Flushing AFK event from {} to {} ({}s)",
+                afk_start_time, now, afk_duration
+            );
+
+            let afk_event = AFKEvent {
+                id: None,
+                afk_start: Some(afk_start_time),
+                afk_end: Some(now),
+                duration: Some(afk_duration),
+            };
+
+            if let Err(err) = self.tracker.insert_afk(afk_event).await {
+                error!("Failed to flush AFK event on stop: {}", err);
+            }
+
+            *afk_time = None;
+        } else {
+            info!("AFK tracker stopping. No AFK event to flush.");
+        }
     }
 }

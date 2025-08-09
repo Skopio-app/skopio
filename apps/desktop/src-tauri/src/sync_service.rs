@@ -7,6 +7,7 @@ use db::DBContext;
 use log::{error, info};
 use reqwest::Client;
 use tokio::sync::{mpsc, oneshot, watch, Mutex};
+use tokio::task::JoinHandle;
 use tokio::time::{interval, Duration, Instant};
 
 use crate::tracking_service::TrackingService;
@@ -22,6 +23,7 @@ enum TrackingStats {
 pub struct BufferedTrackingService {
     sender: mpsc::Sender<TrackingStats>,
     shutdown_tx: Arc<Mutex<Option<oneshot::Sender<()>>>>,
+    flush_handle: Arc<Mutex<Option<JoinHandle<()>>>>,
 }
 
 impl BufferedTrackingService {
@@ -39,7 +41,7 @@ impl BufferedTrackingService {
         let inner_clone = Arc::clone(&inner);
         let db_clone = Arc::clone(&db);
 
-        tokio::spawn(run_buffer_flush_loop(
+        let flush_handle = tokio::spawn(run_buffer_flush_loop(
             rx,
             shutdown_rx,
             inner_clone,
@@ -51,6 +53,7 @@ impl BufferedTrackingService {
         Self {
             sender: tx,
             shutdown_tx: shutdown_tx_arc,
+            flush_handle: Arc::new(Mutex::new(Some(flush_handle))),
         }
     }
 
@@ -58,6 +61,12 @@ impl BufferedTrackingService {
         let mut tx_guard = self.shutdown_tx.lock().await;
         if let Some(tx) = tx_guard.take() {
             let _ = tx.send(());
+        }
+
+        if let Some(handle) = self.flush_handle.lock().await.take() {
+            if let Err(err) = handle.await {
+                error!("Flush loop task panicked or failed to join: {}", err);
+            }
         }
     }
 }
@@ -126,11 +135,9 @@ async fn run_buffer_flush_loop(
                     let mut flush_data = buffer.split_off(0);
                     let mut retry_data = retry_queue.split_off(0);
 
-                    tokio::spawn(async move {
-                        info!("Flushing buffer before shutdown ({}) items...", flush_data.len());
-                        flush(&inner, &mut flush_data, &mut retry_data).await;
-                        info!("Buffer service shut down gracefully.");
-                    });
+                    info!("Flushing buffer before shutdown ({}) items...", flush_data.len());
+                    flush(&inner, &mut flush_data, &mut retry_data).await;
+                    info!("Buffer service shut down gracefully.");
                 }
                 break;
             }
@@ -193,7 +200,6 @@ async fn flush(
     info!("Flushed {} items in {:?}", batch_size, start.elapsed())
 }
 
-// TODO: Fix up issue with empty branch names being stored
 async fn sync_with_server(db_context: &Arc<DBContext>) -> Result<(), anyhow::Error> {
     let client = Client::new();
     let heartbeats = Heartbeat::unsynced(db_context).await?;
@@ -223,6 +229,7 @@ async fn sync_with_server(db_context: &Arc<DBContext>) -> Result<(), anyhow::Err
         if res.status().is_success() {
             Heartbeat::mark_as_synced(db_context, &heartbeats).await?;
             info!("Synced {} heartbeats", heartbeats.len());
+            Heartbeat::delete_synced(db_context).await?;
         } else {
             error!(
                 "Something went wrong trying to sync heartbeats: {:?}",
@@ -244,8 +251,8 @@ async fn sync_with_server(db_context: &Arc<DBContext>) -> Result<(), anyhow::Err
                 entity_type: ev.entity_type.clone().unwrap_or_default(),
                 project_name: ev.project_name.clone().unwrap_or_default(),
                 project_path: ev.project_path.clone().unwrap_or_default(),
-                branch_name: Some(ev.branch_name.clone().unwrap_or_default()),
-                language_name: Some(ev.language_name.clone().unwrap_or_default()),
+                branch_name: ev.branch_name.clone(),
+                language_name: ev.language_name.clone(),
                 end_timestamp: ev.end_timestamp,
             })
             .collect();
@@ -259,6 +266,7 @@ async fn sync_with_server(db_context: &Arc<DBContext>) -> Result<(), anyhow::Err
         if res.status().is_success() {
             Event::mark_as_synced(db_context, &events).await?;
             info!("Synced {} events", events.len());
+            Event::delete_synced(db_context).await?;
         } else {
             error!(
                 "Something went wrong trying to sync events: {:?}",
@@ -287,6 +295,7 @@ async fn sync_with_server(db_context: &Arc<DBContext>) -> Result<(), anyhow::Err
         if res.status().is_success() {
             AFKEvent::mark_as_synced(db_context, &afk_events).await?;
             info!("Synced {} afk events", afk_events.len());
+            AFKEvent::delete_synced(db_context).await?;
         } else {
             error!(
                 "Something went wrong trying to sync AFK events: {:?}",

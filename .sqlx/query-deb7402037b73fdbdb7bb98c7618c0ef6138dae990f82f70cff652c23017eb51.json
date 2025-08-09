@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            INSERT INTO goal_excluded_days (goal_id, day) VALUES (?, ?)",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "deb7402037b73fdbdb7bb98c7618c0ef6138dae990f82f70cff652c23017eb51"
+}

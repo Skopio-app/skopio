@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE goals set use_categories = ? WHERE id = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "603d63457169485877fe5caa72cf23aa0e0e612d2d75eeaa55acfc687ae6c075"
+}

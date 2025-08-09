@@ -1,26 +1,23 @@
-use crate::utils::find_git_branch;
+use common::{git::find_git_branch, language::detect_language};
 use log::info;
 use rusqlite::{params, Connection};
-use std::path::Path;
+
+use crate::utils::CliError;
 
 pub struct HeartbeatData {
     pub timestamp: i32,
     pub project: String,
     pub entity: String,
     pub entity_type: String,
-    pub language: String,
     pub app: String,
     pub is_write: bool,
     pub lines: Option<i64>,
     pub cursorpos: Option<i64>,
 }
 
-pub fn log_heartbeat(
-    conn: &Connection,
-    hb_data: HeartbeatData,
-) -> Result<(), Box<dyn std::error::Error>> {
-    let file_path = Path::new(&hb_data.entity);
-    let branch_name = find_git_branch(file_path);
+pub fn save_heartbeat(conn: &Connection, hb_data: HeartbeatData) -> Result<(), CliError> {
+    let branch_name = find_git_branch(&hb_data.entity);
+    let language = detect_language(&hb_data.entity);
 
     conn.execute(
         "INSERT INTO heartbeats (timestamp, project_path, branch, entity_name, entity_type, language, app, is_write, lines, cursorpos, synced)
@@ -31,16 +28,44 @@ pub fn log_heartbeat(
             branch_name,
             hb_data.entity,
             hb_data.entity_type,
-            hb_data.language,
+            language,
             hb_data.app,
             hb_data.is_write,
             hb_data.lines,
             hb_data.cursorpos,
         ],
-    )
-    .map_err(|e| format!("Failed to insert heartbeat: {}", e))?;
+    )?;
 
-    info!("Heartbeat logged for {}", hb_data.entity);
+    info!("Heartbeat saved for {}", hb_data.entity);
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::utils::setup_test_conn;
+
+    #[test]
+    fn test_save_heartbeat_inserts_into_db() {
+        let conn = setup_test_conn();
+
+        let test_heartbeat = HeartbeatData {
+            timestamp: 1720,
+            project: "/tmp/test-project".into(),
+            entity: "main.rs".into(),
+            entity_type: "File".into(),
+            app: "Code".into(),
+            is_write: false,
+            lines: Some(10),
+            cursorpos: Some(62),
+        };
+
+        save_heartbeat(&conn, test_heartbeat).unwrap();
+
+        let mut stmt = conn.prepare("SELECT COUNT(*) FROM heartbeats").unwrap();
+        let count: i64 = stmt.query_row([], |row| row.get(0)).unwrap();
+
+        assert_eq!(count, 1);
+    }
 }

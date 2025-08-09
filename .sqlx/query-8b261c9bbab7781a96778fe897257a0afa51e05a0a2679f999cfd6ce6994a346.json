@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "\n            SELECT id, afk_start, afk_end, duration\n            FROM afk_events\n            WHERE afk_start BETWEEN ? AND ?\n            ORDER BY afk_start ASC\n            ",
+  "query": "\n        SELECT id, afk_start, afk_end, duration\n        FROM afk_events\n        WHERE afk_start BETWEEN ? AND ?\n        ORDER BY afk_start ASC\n            ",
   "describe": {
     "columns": [
       {
@@ -34,5 +34,5 @@
       true
     ]
   },
-  "hash": "d2c77055613280f51c4b016d6b4e53f52ca92a4b43d579909fc53769b9222959"
+  "hash": "8b261c9bbab7781a96778fe897257a0afa51e05a0a2679f999cfd6ce6994a346"
 }

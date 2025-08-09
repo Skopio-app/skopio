@@ -8,12 +8,12 @@ pub async fn has_shown_goal_notification(
 ) -> Result<bool, sqlx::Error> {
     let time_span = time_span.to_string();
     let exists = sqlx::query_scalar!(
-        r#"
+        "
         SELECT EXISTS (
             SELECT 1 FROM shown_goal_notifications
             WHERE goal_id = ? AND TIME_SPAN = ? AND period_key = ?
         )
-        "#,
+        ",
         goal_id,
         time_span,
         period_key
@@ -32,10 +32,10 @@ pub async fn insert_shown_goal_notification(
 ) -> Result<(), sqlx::Error> {
     let time_span = time_span.to_string();
     sqlx::query!(
-        r#"
+        "
         INSERT INTO shown_goal_notifications (goal_id, time_span, period_key)
         VALUES (?, ?, ?)
-        "#,
+        ",
         goal_id,
         time_span,
         period_key,

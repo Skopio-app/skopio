@@ -2,14 +2,14 @@
 
 use core_foundation::base::{CFRelease, TCFType};
 use core_foundation::string::CFString;
-use log::{debug, warn};
+use log::{debug, info, warn};
 use objc2::msg_send;
 use objc2::rc::{autoreleasepool, Retained};
 use objc2::runtime::{AnyClass, AnyObject};
 use std::os::raw::c_void;
 use std::ptr;
 use std::sync::Arc;
-use tokio::sync::watch;
+use tokio::sync::{watch, Notify};
 use tokio::time::{interval, Duration};
 
 #[link(name = "ApplicationServices", kind = "framework")]
@@ -37,23 +37,30 @@ pub struct Window {
 pub struct WindowTracker {
     rx: watch::Receiver<Option<Window>>,
     tx: watch::Sender<Option<Window>>,
+    shutdown: Arc<Notify>,
 }
 
 impl WindowTracker {
     pub fn new() -> Self {
         let (tx, rx) = watch::channel(None);
-        Self { tx, rx }
+        Self {
+            tx,
+            rx,
+            shutdown: Arc::new(Notify::new()),
+        }
     }
 
     pub fn start_tracking(self: Arc<Self>) {
         let tx = self.tx.clone();
+        let shutdown = Arc::clone(&self.shutdown);
 
         tokio::spawn(async move {
             let mut interval = interval(Duration::from_millis(500));
             let mut last_window: Option<Window> = None;
 
             loop {
-                interval.tick().await;
+                tokio::select! {
+                    _ = interval.tick() => {
                 if let Some(window) = Self::get_active_window() {
                     let should_send = match &last_window {
                         Some(prev) if prev != &window => true,
@@ -71,6 +78,13 @@ impl WindowTracker {
                     if tx.send(Some(window)).is_err() {
                         warn!("No subscribers to receive active window update");
                     }
+                }
+                    }
+
+                _ = shutdown.notified() => {
+                    info!("Window tracker stopped");
+                    break;
+                }
                 }
             }
         });
@@ -218,5 +232,9 @@ impl WindowTracker {
 
     pub fn subscribe(&self) -> watch::Receiver<Option<Window>> {
         self.rx.clone()
+    }
+
+    pub fn stop_tracking(&self) {
+        self.shutdown.notify_one();
     }
 }

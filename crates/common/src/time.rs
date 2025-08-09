@@ -47,6 +47,7 @@ pub enum TimeRangePreset {
     /// The previous calendar month
     LastMonth,
     // ThisYear,
+    /// The last N full minutes
     LastNMinutes(i64),
     /// The last N full days (excludes today by default).
     LastNDays(i64, bool),

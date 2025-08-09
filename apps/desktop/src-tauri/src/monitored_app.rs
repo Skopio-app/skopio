@@ -1,12 +1,10 @@
 use std::{collections::HashSet, sync::LazyLock};
 
+use common::language::detect_language;
 use serde::{Deserialize, Serialize};
 use strum_macros::{Display, EnumString};
 
-use crate::helpers::{
-    app::{get_browser_active_tab, get_xcode_project_details, run_osascript},
-    language::detect_language,
-};
+use crate::helpers::app::{get_browser_active_tab, get_xcode_project_details, run_osascript};
 
 static BROWSER_APPS: LazyLock<HashSet<MonitoredApp>> = LazyLock::new(|| {
     HashSet::from([
@@ -44,7 +42,8 @@ static LEARNING_URLS: LazyLock<HashSet<&'static str>> = LazyLock::new(|| {
     ])
 });
 
-pub static IGNORED_APPS: LazyLock<HashSet<MonitoredApp>> = LazyLock::new(|| HashSet::from([]));
+pub static IGNORED_APPS: LazyLock<HashSet<MonitoredApp>> =
+    LazyLock::new(|| HashSet::from([MonitoredApp::Code]));
 
 static CODING_URLS: LazyLock<HashSet<&'static str>> = LazyLock::new(|| {
     HashSet::from([
@@ -129,6 +128,7 @@ pub enum Category {
     Planning,
     #[strum(serialize = "Writing Docs")]
     WritingDocs,
+    Other,
 }
 
 /// Defines the type of entity being tracked in a monitored application.
@@ -176,7 +176,7 @@ fn get_browser_category(url: &str) -> Category {
     {
         return Category::Coding;
     }
-    Category::Browsing
+    Category::Other
 }
 
 fn get_xcode_category(entity: &str) -> Category {
@@ -196,7 +196,7 @@ fn get_xcode_category(entity: &str) -> Category {
         return Category::WritingDocs;
     }
 
-    Category::Coding
+    Category::Other
 }
 
 fn is_documentation_entity(entity_path: &str) -> bool {

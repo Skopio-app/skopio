@@ -48,7 +48,7 @@ impl Heartbeat {
 
     pub async fn unsynced(db_context: &DBContext) -> Result<Vec<Self>, DBError> {
         let rows = sqlx::query!(
-            r#"
+            "
             SELECT
              id,
              timestamp,
@@ -65,7 +65,7 @@ impl Heartbeat {
             FROM heartbeats
             WHERE synced = 0
             LIMIT 100
-            "#
+            "
         )
         .fetch_all(db_context.pool())
         .await?;
@@ -101,5 +101,22 @@ impl Heartbeat {
     ) -> Result<(), sqlx::Error> {
         let ids: Vec<i64> = heartbeats.iter().filter_map(|h| h.id).collect();
         update_synced_in(db_context, "heartbeats", &ids).await
+    }
+
+    pub async fn delete_synced(db_context: &DBContext) -> Result<(), sqlx::Error> {
+        sqlx::query!(
+            "DELETE FROM heartbeats
+             WHERE id IN (
+                SELECT id FROM heartbeats
+                WHERE synced = 1
+                  AND timestamp < datetime('now', '-15days')
+                LIMIT 100
+            );
+        "
+        )
+        .execute(db_context.pool())
+        .await?;
+
+        Ok(())
     }
 }

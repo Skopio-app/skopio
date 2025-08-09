@@ -45,6 +45,7 @@ type UseProjectSummaryDataFn = {
   (options: UseSummaryOptions & { mode: "pie" }): ParsedPieChartResult;
 };
 
+// TODO: Parse entities to avoid having long strings.
 // Shared logic for bar chart grouping
 const generateGroupedChartData = (rawData: BucketTimeSummary[]) => {
   const grouped: {

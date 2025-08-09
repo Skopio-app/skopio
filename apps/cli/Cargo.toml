@@ -9,13 +9,18 @@ rust-version.workspace = true
 [dependencies]
 chrono = { workspace = true, features = ["serde"] }
 clap = { version = "4.5.29", features = ["derive"] }
-git2 = { workspace = true }
 reqwest = { workspace = true, features = ["blocking", "json"] }
-rusqlite = { version = "0.32.0", features = ["bundled"] } # Update blocked by sqlx
+rusqlite = { version = "0.32.0", features = ["bundled-sqlcipher-vendored-openssl"] } # Update blocked by sqlx
 serde = { workspace = true, features = ["derive"] }
 dirs = { workspace = true }
 serde_json = { workspace = true }
 log = { workspace = true }
 env_logger = { workspace = true }
 common = { path = "../../crates/common" }
+refinery = { version = "0.8.16", features = ["rusqlite"]}
+thiserror = { workspace = true }
+
+[dev-dependencies]
+tempfile = { workspace = true }
+
 

@@ -1,33 +1,30 @@
-use crate::utils::find_git_branch;
+use common::git::find_git_branch;
 use log::info;
 use rusqlite::{params, Connection};
-use std::path::Path;
+
+use crate::utils::CliError;
 
 pub struct EventData {
     pub timestamp: i32,
-    pub activity_type: String,
+    pub category: String,
     pub app: String,
     pub entity: String,
     pub entity_type: String,
     pub duration: i32,
     pub project: String,
-    pub language: String,
+    pub language: Option<String>,
     pub end_timestamp: i32,
 }
 
-pub fn log_event(
-    conn: &Connection,
-    event_data: EventData,
-) -> Result<(), Box<dyn std::error::Error>> {
-    let project_path = Path::new(&event_data.project);
-    let branch = find_git_branch(project_path);
+pub fn save_event(conn: &Connection, event_data: EventData) -> Result<(), CliError> {
+    let branch = find_git_branch(&event_data.project);
 
     conn.execute(
-        "INSERT INTO events (timestamp, activity_type, app, entity_name, entity_type, duration, project_path, branch, language, end_timestamp, synced)
+        "INSERT INTO events (timestamp, category, app, entity_name, entity_type, duration, project_path, branch, language, end_timestamp, synced)
         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, 0)",
         params![
             event_data.timestamp,
-            event_data.activity_type,
+            event_data.category,
             event_data.app,
             event_data.entity,
             event_data.entity_type,
@@ -37,13 +34,42 @@ pub fn log_event(
             event_data.language,
             event_data.end_timestamp,
         ],
-    )
-    .map_err(|e| format!( "Failed to insert event: {}", e))?;
+    )?;
 
     info!(
-        "Event '{}' logged for {} ({} sec)",
-        event_data.activity_type, event_data.app, event_data.duration
+        "Event '{}' saved for {} ({} sec)",
+        event_data.category, event_data.app, event_data.duration
     );
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::utils::setup_test_conn;
+
+    #[test]
+    fn test_save_event_inserts_into_db() {
+        let conn = setup_test_conn();
+
+        let test_event = EventData {
+            timestamp: 1720,
+            category: "Coding".into(),
+            app: "Code".into(),
+            entity: "main.rs".into(),
+            entity_type: "File".into(),
+            duration: 300,
+            project: "/tmp/my-project".into(),
+            language: Some("Rust".into()),
+            end_timestamp: 2020,
+        };
+
+        save_event(&conn, test_event).expect("failed to save event");
+
+        let mut stmt = conn.prepare("SELECT COUNT(*) FROM events").unwrap();
+        let count: i64 = stmt.query_row([], |row| row.get(0)).unwrap();
+
+        assert_eq!(count, 1);
+    }
 }

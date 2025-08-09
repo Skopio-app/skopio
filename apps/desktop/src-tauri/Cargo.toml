@@ -26,10 +26,8 @@ chrono = { workspace = true, features = ["serde"] }
 tokio = { workspace = true, features = ["full", "tracing"] }
 strum_macros = "0.27.1"
 strum = "0.27.1"
-tokei = "12.1.2"
 dashmap = "6.1.0"
 anyhow = { workspace = true }
-moka = { workspace = true, features = ["sync"] }
 percent-encoding = { workspace = true }
 async-trait = { workspace = true }
 url = "2.5.4"

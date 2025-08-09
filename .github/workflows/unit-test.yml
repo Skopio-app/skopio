@@ -1,0 +1,25 @@
+name: "Run unit tests (Rust)"
+on: pull_request
+
+jobs:
+  tests:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: "macos-13"
+            args: "x86_64-apple-darwin"
+          - platform: "macos-latest"
+            args: "aarch64-apple-darwin"
+    runs-on: ${{matrix.platform}}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup environment
+        uses: ./.github/actions/setup-env
+        with:
+          rust_target: ${{ matrix.args }}
+
+      - name: Run workspace tests
+        run: cargo test --workspace --all-features --locked --target ${{matrix.args}}

@@ -125,7 +125,6 @@ pub fn create_notification_window<R: Runtime>(
 
     if let Some((monitor_position, monitor_size, scale_factor)) = screen_info {
         let win_width_physical = win_width_logical * scale_factor;
-        // let win_height_physical = win_height_logical * scale_factor;
 
         let x_physical = monitor_position.x + (monitor_size.width - win_width_physical) / 2.0;
 

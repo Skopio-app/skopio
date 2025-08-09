@@ -49,7 +49,7 @@ impl Event {
 
     pub async fn unsynced(db_context: &DBContext) -> Result<Vec<Self>, DBError> {
         let rows = sqlx::query!(
-            r#"
+            "
             SELECT
              id,
              timestamp,
@@ -66,7 +66,7 @@ impl Event {
             FROM events
             WHERE synced = 0
             LIMIT 100
-            "#
+            "
         )
         .fetch_all(db_context.pool())
         .await?;
@@ -103,5 +103,22 @@ impl Event {
     ) -> Result<(), sqlx::Error> {
         let ids: Vec<i64> = events.iter().filter_map(|e| e.id).collect();
         update_synced_in(db_context, "events", &ids).await
+    }
+
+    pub async fn delete_synced(db_context: &DBContext) -> Result<(), sqlx::Error> {
+        sqlx::query!(
+            "DELETE FROM events
+             WHERE id IN (
+                SELECT id FROM events
+                WHERE synced = 1
+                  AND timestamp < datetime('now', '-15days')
+                LIMIT 100
+            );
+            "
+        )
+        .execute(db_context.pool())
+        .await?;
+
+        Ok(())
     }
 }

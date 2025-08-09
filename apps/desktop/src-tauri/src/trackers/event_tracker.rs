@@ -1,7 +1,7 @@
-use crate::helpers::git::get_git_branch;
 use crate::monitored_app::{resolve_app_details, Category, Entity, MonitoredApp, IGNORED_APPS};
 use crate::tracking_service::TrackingService;
 use chrono::{DateTime, Utc};
+use common::git::find_git_branch;
 use db::desktop::events::Event as DBEvent;
 use log::{error, info};
 use serde::{Deserialize, Serialize};
@@ -15,7 +15,6 @@ use super::window_tracker::Window;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Event {
-    #[serde(with = "chrono::serde::ts_seconds_option")]
     pub timestamp: Option<DateTime<Utc>>,
     pub duration: Option<i64>,
     pub category: Category,
@@ -26,7 +25,6 @@ pub struct Event {
     pub project_path: Option<String>,
     pub branch_name: Option<String>,
     pub language_name: Option<String>,
-    #[serde(with = "chrono::serde::ts_seconds_option")]
     pub end_timestamp: Option<DateTime<Utc>>,
 }
 
@@ -73,7 +71,7 @@ impl EventTracker {
             resolve_app_details(&bundle_id, app_name, app_path, entity);
 
         let branch_name = if app_name == "Xcode" {
-            project_path.as_deref().map(get_git_branch)
+            project_path.as_ref().and_then(find_git_branch)
         } else {
             None
         };
@@ -178,19 +176,19 @@ impl EventTracker {
                             mouse_active || mouse_clicked || keyboard_active
                         };
 
-                        if activity_detected {
-                            *self.last_activity.lock().await = Instant::now();
-                            last_check = Instant::now();
-
-                            let changed = last_state
+                         let changed = last_state
                                 .as_ref()
                                 .map(|(prev_app, prev_file)| prev_app != &app_name || prev_file != &file)
                                 .unwrap_or(true);
 
-                            if changed {
-                                last_state = Some((app_name.clone(), file.clone()));
-                                self.track_event(&app_name, &bundle_id, &app_path, &file).await;
-                            }
+                        if changed {
+                            last_state = Some((app_name.clone(), file.clone()));
+                            self.track_event(&app_name, &bundle_id, &app_path, &file).await;
+                        }
+
+                        if activity_detected {
+                            *self.last_activity.lock().await = Instant::now();
+                            last_check = Instant::now();
                         }
                     }
 
@@ -237,9 +235,14 @@ impl EventTracker {
                 .unwrap_or_else(|error| error!("Failed to batch event: {}", error));
 
             info!(
-                "Auto-ending inactive event: App: {}, Entity: {:?}, Activity: {}, Duration: {}s",
+                "Auto-ending event: App: {}, Entity: {:?}, Activity: {}, Duration: {}s",
                 prev_event.app_name, prev_event.entity_name, prev_event.category, event_duration
             );
         }
+    }
+
+    pub async fn stop_tracking(&self) {
+        self.end_active_event().await;
+        info!("Event tracker stopped");
     }
 }
