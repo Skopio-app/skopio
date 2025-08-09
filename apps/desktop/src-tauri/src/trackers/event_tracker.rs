@@ -15,7 +15,6 @@ use super::window_tracker::Window;
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Event {
-    #[serde(with = "chrono::serde::ts_seconds_option")]
     pub timestamp: Option<DateTime<Utc>>,
     pub duration: Option<i64>,
     pub category: Category,
@@ -26,7 +25,6 @@ pub struct Event {
     pub project_path: Option<String>,
     pub branch_name: Option<String>,
     pub language_name: Option<String>,
-    #[serde(with = "chrono::serde::ts_seconds_option")]
     pub end_timestamp: Option<DateTime<Utc>>,
 }
 

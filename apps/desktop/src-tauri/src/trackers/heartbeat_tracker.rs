@@ -16,7 +16,6 @@ use super::window_tracker::Window;
 
 #[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]
 pub struct Heartbeat {
-    #[serde(with = "chrono::serde::ts_seconds_option")]
     pub timestamp: Option<DateTime<Utc>>,
     pub project_name: Option<String>,
     pub project_path: Option<String>,
