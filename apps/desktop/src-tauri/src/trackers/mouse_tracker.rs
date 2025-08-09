@@ -68,7 +68,7 @@ impl MouseTracker {
             match CGEventTap::new(
                 CGEventTapLocation::HID,
                 CGEventTapPlacement::HeadInsertEventTap,
-                CGEventTapOptions::ListenOnly,
+                CGEventTapOptions::Default,
                 vec![
                     CGEventType::MouseMoved,
                     CGEventType::LeftMouseDown,
