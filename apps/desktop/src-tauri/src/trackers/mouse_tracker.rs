@@ -66,9 +66,9 @@ impl MouseTracker {
         tokio::task::spawn_blocking(move || unsafe {
             let pool = NSAutoreleasePool::new();
             match CGEventTap::new(
-                CGEventTapLocation::HID,
+                CGEventTapLocation::Session,
                 CGEventTapPlacement::HeadInsertEventTap,
-                CGEventTapOptions::Default,
+                CGEventTapOptions::ListenOnly,
                 vec![
                     CGEventType::MouseMoved,
                     CGEventType::LeftMouseDown,

@@ -52,6 +52,7 @@ impl AFKTracker {
                 let last_activity_time = *last_activity.read().await;
                 let mut afk_time = afk_start.lock().await;
 
+                // TODO: Add reusable activity detected helper method
                 // Detect user activity (mouse/keyboard)
                 let mouse_buttons = cursor_tracker.get_pressed_mouse_buttons();
                 let keys_pressed = keyboard_tracker.get_pressed_keys();
