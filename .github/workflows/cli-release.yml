@@ -54,13 +54,19 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p dist
-
           TARGET_DIR="${CARGO_TARGET_DIR:-target}"
 
           pack() {
             local arch="$1"
+            local cpu
+            case "$arch" in
+              aarch64-apple-darwin) cpu="aarch64" ;;
+              x86_64-apple-darwin)  cpu="x86_64"  ;;
+              *) cpu="$arch" ;;
+            esac
+
             local bin="${TARGET_DIR}/${arch}/release/${{ env.BIN_NAME }}"
-            local zip="dist/skopio-cli-darwin-${arch##*-}.zip"
+            local zip="dist/skopio-cli-darwin-${cpu}.zip"
 
             if [[ ! -f "$bin" ]]; then
               echo "❌ Expected binary not found: $bin"
