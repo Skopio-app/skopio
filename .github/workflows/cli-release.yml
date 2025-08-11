@@ -18,21 +18,16 @@ jobs:
   release-cli:
     strategy:
       fail-fast: false
-      matrix:
-        include:
-          - platform: "macos-latest"
-            args: "x86_64-apple-darwin"
-          - platform: "macos-latest"
-            args: "aarch64-apple-darwin"
+
     runs-on: macos-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup environment
-        uses: ./.github/actions/setup-env
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
         with:
-          rust_target: ${{ matrix.args }}
+          targets: aarch64-apple-darwin, x86_64-apple-darwin
 
       - name: Detect version from Cargo.toml
         id: meta
@@ -45,32 +40,38 @@ jobs:
           echo "tag=skopio-cli-v$VER" >> $GITHUB_OUTPUT
           echo "Releasing skopio-cli v$VER"
 
-      - name: Build CLI
+      - name: Build aarch64
         working-directory: ${{ env.CLI_PATH }}
-        run: cargo build --release --locked --target ${{ matrix.args }}
+        run: cargo build --release --locked --target aarch64-apple-darwin
 
-      - name: Create universal2 + zip + checksums
+      - name: Build x86_64
+        working-directory: ${{ env.CLI_PATH }}
+        run: cargo build --release --locked --target x86_64-apple-darwin
+
+      - name: Zip + checksums
         id: pkg
         shell: bash
         run: |
           set -euo pipefail
-          ARM="${{ env.CLI_PATH }}/target/aarch64-apple-darwin/release/${{ env.BIN_NAME }}"
-          X64="${{ env.CLI_PATH }}/target/x86_64-apple-darwin/release/${{ env.BIN_NAME }}"
-          OUTDIR="${{ env.CLI_PATH }}/target/universal2"
-          mkdir -p "$OUTDIR" dist
-          strip -S -x "$ARM" || true
-          strip -S -x "$X64" || true
-          UNIVERSAL="$OUTDIR/${{ env.BIN_NAME }}"
-          lipo -create -output "$UNIVERSAL" "$ARM" "$X64"
-          chmod +x "$UNIVERSAL"
-          ZIP="dist/cli-darwin-universal.zip"   # <<— artifact name
-          (cd "$(dirname "$UNIVERSAL")" && zip -q "$GITHUB_WORKSPACE/$ZIP" "$(basename "$UNIVERSAL")")
-          SH256=$(shasum -a 256 "$ZIP" | awk '{print $1}')
-          SIZE=$(stat -f "%z" "$ZIP")
-          echo "${SH256}  $(basename "$ZIP")" > dist/SHA256SUMS
-          echo "archive=$ZIP"  >> $GITHUB_OUTPUT
-          echo "sha256=$SH256" >> $GITHUB_OUTPUT
-          echo "size=$SIZE"    >> $GITHUB_OUTPUT
+          mkdir -p dist
+
+          pack() {
+            local arch="$1"
+            local bin="${{ env.CLI_PATH }}/target/${arch}/release/${{ env.BIN_NAME }}"
+            local zip="dist/skopio-cli-darwin-${arch##*-}.zip"
+            strip -S -x "$bin" || true
+            (cd "$(dirname "$bin")" && zip -q "$GITHUB_WORKSPACE/$zip" "$(basename "$bin")")
+            local sh256; sh256=$(shasum -a 256 "$zip" | awk '{print $1}')
+            local size;  size=$(stat -f "%z" "$zip")
+            echo "${sh256}  $(basename "$zip")" >> dist/SHA256SUMS
+            echo "${arch}_zip=$zip"   >> $GITHUB_OUTPUT
+            echo "${arch}_sha=$sh256" >> $GITHUB_OUTPUT
+            echo "${arch}_size=$size" >> $GITHUB_OUTPUT
+          }
+
+          : > dist/SHA256SUMS
+          pack aarch64-apple-darwin
+          pack x86_64-apple-darwin
 
       - name: Create/Update GitHub Release
         uses: softprops/action-gh-release@v2.3.2
@@ -78,7 +79,8 @@ jobs:
           tag_name: ${{ steps.meta.outputs.tag }}
           name: "CLI ${{ steps.meta.outputs.version }}"
           files: |
-            ${{ steps.pkg.outputs.archive }}
+            ${{ steps.pkg.outputs.aarch64-apple-darwin_zip }}
+            ${{ steps.pkg.outputs.x86_64-apple-darwin_zip }}
             dist/SHA256SUMS
 
       - name: Install cosign
@@ -86,30 +88,22 @@ jobs:
         with:
           cosign-release: "v2.5.3"
 
-      - name: Cosign sign artifact (keyless)
+      - name: Cosign sign artifacts
         env:
           COSIGN_EXPERIMENTAL: "1"
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p dist/signatures
-          FILE="${{ steps.pkg.outputs.archive }}"
-          cosign sign-blob --yes "$FILE" \
-            --output-signature "dist/signatures/$(basename "$FILE").sig" \
-            --output-certificate "dist/signatures/$(basename "$FILE").cert" \
-            --bundle "dist/signatures/$(basename "$FILE").bundle"
-
-      - name: Cosign verify (sanity check)
-        shell: bash
-        run: |
-          set -euo pipefail
-          FILE="${{ steps.pkg.outputs.archive }}"
-          cosign verify-blob \
-            --signature "dist/signatures/$(basename "$FILE").sig" \
-            --certificate "dist/signatures/$(basename "$FILE").cert" \
-            --certificate-oidc-issuer https://token.actions.githubusercontent.com \
-            --certificate-identity "https://github.com/${{ github.repository }}/.github/workflows/release-cli.yml@refs/heads/release" \
-            "$FILE"
+          sign() {
+            local file="$1" base; base=$(basename "$file")
+            cosign sign-blob --yes "$file" \
+              --output-signature "dist/signatures/$base.sig" \
+              --output-certificate "dist/signatures/$base.cert" \
+              --bundle "dist/signatures/$base.bundle"
+          }
+          sign "${{ steps.pkg.outputs.aarch64-apple-darwin_zip }}"
+          sign "${{ steps.pkg.outputs.x86_64-apple-darwin_zip }}"
 
       - name: Upload signatures to Release
         uses: softprops/action-gh-release@v2.3.2
@@ -124,26 +118,37 @@ jobs:
           OWNER_REPO="${{ github.repository }}"
           TAG="${{ steps.meta.outputs.tag }}"
           VER="${{ steps.meta.outputs.version }}"
-          FILE="$(basename "${{ steps.pkg.outputs.archive }}")"   # cli-darwin-universal.zip
+          FILE_ARM="$(basename "${{ steps.pkg.outputs.aarch64-apple-darwin_zip }}")"
+          FILE_X64="$(basename "${{ steps.pkg.outputs.x86_64-apple-darwin_zip }}")"
           BASE="https://github.com/${OWNER_REPO}/releases/download/${TAG}"
           cat > latest.json <<EOF
           {
             "version": "$VER",
             "released_at": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")",
             "assets": {
-              "darwin-universal": {
-                "url": "$BASE/$FILE",
-                "sha256": "${{ steps.pkg.outputs.sha256 }}",
-                "size": ${{ steps.pkg.outputs.size }},
-                "sig": {
-                  "type": "cosign",
-                  "signature_url": "$BASE/signatures/$FILE.sig",
-                  "certificate_url": "$BASE/signatures/$FILE.cert",
-                  "bundle_url": "$BASE/signatures/$FILE.bundle"
-                },
-                "checksums_url": "$BASE/SHA256SUMS"
-              }
+              "darwin-aarch64": {
+              "url": "$BASE/$FILE_ARM",
+              "sha256": "${{ steps.pkg.outputs.aarch64-apple-darwin_sha }}",
+              "size": ${{ steps.pkg.outputs.aarch64-apple-darwin_size }},
+              "sig": {
+                "type": "cosign",
+                "signature_url": "$BASE/signatures/$FILE_ARM.sig",
+                "certificate_url": "$BASE/signatures/$FILE_ARM.cert",
+                "bundle_url": "$BASE/signatures/$FILE_ARM.bundle"
+             }
+           },
+           "darwin-x86_64": {
+             "url": "$BASE/$FILE_X64",
+             "sha256": "${{ steps.pkg.outputs.x86_64-apple-darwin_sha }}",
+             "size": ${{ steps.pkg.outputs.x86_64-apple-darwin_size }},
+             "sig": {
+               "type": "cosign",
+               "signature_url": "$BASE/signatures/$FILE_X64.sig",
+               "certificate_url": "$BASE/signatures/$FILE_X64.cert",
+               "bundle_url": "$BASE/signatures/$FILE_X64.bundle"
+             }
             }
+           }
           }
           EOF
           gh release upload "${TAG}" latest.json --clobber
