@@ -9,10 +9,17 @@ struct Config {
 
 fn get_config_path() -> String {
     let config_dir = dirs::config_dir().expect("Failed to get home directory");
-    format!(
-        "{}/com.samwahome.skopio/cli_config.json",
-        config_dir.display()
-    )
+    if cfg!(debug_assertions) {
+        format!(
+            "{}/com.samwahome.skopio/cli_test_config.json",
+            config_dir.display()
+        )
+    } else {
+        format!(
+            "{}/com.samwahome.skopio/cli_config.json",
+            config_dir.display()
+        )
+    }
 }
 
 pub fn get_or_store_db_path(cli_db_path: Option<String>, app: &str) -> String {
@@ -45,7 +52,11 @@ fn resolve_db_path(cli_db_path: Option<String>, app: &str, config_path: &Path) -
         return db.clone();
     }
 
-    format!("skopio-{}-data.db", app)
+    if cfg!(debug_assertions) {
+        format!("skopio-{}-test-data.db", app)
+    } else {
+        format!("skopio-{}-data.db", app)
+    }
 }
 
 #[cfg(test)]
@@ -56,7 +67,7 @@ mod tests {
     #[test]
     fn returns_default_path_when_no_config_exists() {
         let dir = tempdir().unwrap();
-        let config_path = dir.path().join("cli_config_json");
+        let config_path = dir.path().join("cli_test_config_json");
 
         let result = resolve_db_path(None, "vscode", &config_path);
         assert_eq!(result, "skopio-vscode-data.db");
@@ -65,7 +76,7 @@ mod tests {
     #[test]
     fn stores_and_returns_cli_path() {
         let dir = tempdir().unwrap();
-        let config_path = dir.path().join("cli_config.json");
+        let config_path = dir.path().join("cli_test_config.json");
 
         let db_path = "/tmp/db.sqlite".to_string();
         let result = resolve_db_path(Some(db_path.clone()), "android studio", &config_path);
@@ -78,7 +89,7 @@ mod tests {
     #[test]
     fn returns_existing_path_from_config() {
         let dir = tempdir().unwrap();
-        let config_path = dir.path().join("cli_config.json");
+        let config_path = dir.path().join("cli_test_config.json");
 
         let mut config = Config::default();
         config

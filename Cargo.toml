@@ -34,6 +34,8 @@ thiserror = "2.0.12"
 serde_qs = "0.15.0"
 tokei = "12.1.2"
 tempfile = "3.20.0"
+keyring = "3.6.3"
+uuid = "1.18.0"
 
 specta = "2.0.0-rc.22"
 tauri-specta = "2.0.0-rc.21"

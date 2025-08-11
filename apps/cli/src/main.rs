@@ -32,7 +32,7 @@ fn run() -> Result<(), CliError> {
 
     info!("Using database path: {}", db_path);
 
-    let conn = init_db(&db_path)?;
+    let conn = init_db(&db_path, &cli.app)?;
 
     match cli.command {
         Some(cmd @ cli::Commands::Heartbeat { .. }) => handle_heartbeat(&conn, cmd),

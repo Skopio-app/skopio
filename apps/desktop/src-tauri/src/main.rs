@@ -9,6 +9,8 @@
 // static GLOBAL: Jemalloc = Jemalloc;
 
 fn main() {
+    #[cfg(debug_assertions)]
     console_subscriber::init();
+
     desktop_lib::run();
 }

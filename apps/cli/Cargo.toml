@@ -19,6 +19,7 @@ env_logger = { workspace = true }
 common = { path = "../../crates/common" }
 refinery = { version = "0.8.16", features = ["rusqlite"]}
 thiserror = { workspace = true }
+uuid = { workspace = true, features = ["v4"]}
 
 [dev-dependencies]
 tempfile = { workspace = true }
