@@ -67,10 +67,10 @@ mod tests {
     #[test]
     fn returns_default_path_when_no_config_exists() {
         let dir = tempdir().unwrap();
-        let config_path = dir.path().join("cli_test_config_json");
+        let config_path = dir.path().join("cli_test_config.json");
 
         let result = resolve_db_path(None, "vscode", &config_path);
-        assert_eq!(result, "skopio-vscode-data.db");
+        assert_eq!(result, "skopio-vscode-test-data.db");
     }
 
     #[test]
