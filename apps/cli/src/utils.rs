@@ -30,6 +30,9 @@ pub enum CliError {
 
     #[error("Expected {0} command, but received a different variant")]
     VariantMismatch(String),
+
+    #[error("Serde json error: {0}")]
+    SerdeJson(#[from] serde_json::Error),
 }
 
 /// Extracts the project name from the project path

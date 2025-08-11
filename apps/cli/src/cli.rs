@@ -10,9 +10,9 @@ pub struct Cli {
     #[command(subcommand)]
     pub command: Option<Commands>,
 
-    /// Optional database path
+    /// Optional database directory path
     #[arg(long)]
-    pub db: Option<String>,
+    pub dir: Option<String>,
 
     /// The name of the app being tracked
     #[arg(long)]
