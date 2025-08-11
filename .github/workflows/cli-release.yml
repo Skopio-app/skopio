@@ -55,14 +55,25 @@ jobs:
           set -euo pipefail
           mkdir -p dist
 
+          TARGET_DIR="${CARGO_TARGET_DIR:-target}"
+
           pack() {
             local arch="$1"
-            local bin="${{ env.CLI_PATH }}/target/${arch}/release/${{ env.BIN_NAME }}"
+            local bin="${TARGET_DIR}/${arch}/release/${{ env.BIN_NAME }}"
             local zip="dist/skopio-cli-darwin-${arch##*-}.zip"
+
+            if [[ ! -f "$bin" ]]; then
+              echo "❌ Expected binary not found: $bin"
+              ls -la "${TARGET_DIR}/${arch}/release" || true
+              exit 1
+            fi
+
             strip -S -x "$bin" || true
             (cd "$(dirname "$bin")" && zip -q "$GITHUB_WORKSPACE/$zip" "$(basename "$bin")")
+
             local sh256; sh256=$(shasum -a 256 "$zip" | awk '{print $1}')
             local size;  size=$(stat -f "%z" "$zip")
+
             echo "${sh256}  $(basename "$zip")" >> dist/SHA256SUMS
             echo "${arch}_zip=$zip"   >> $GITHUB_OUTPUT
             echo "${arch}_sha=$sh256" >> $GITHUB_OUTPUT
