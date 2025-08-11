@@ -65,7 +65,7 @@ mod tests {
             end_timestamp: 2020,
         };
 
-        save_event(&conn, test_event).expect("failed to save event");
+        save_event(&conn, test_event).unwrap();
 
         let mut stmt = conn.prepare("SELECT COUNT(*) FROM events").unwrap();
         let count: i64 = stmt.query_row([], |row| row.get(0)).unwrap();
