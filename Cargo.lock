@@ -835,26 +835,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f46ad14479a25103f283c0f10005961cf086d8dc42205bb44c46ac563475dca6"
 
 [[package]]
-name = "cli"
-version = "0.1.0"
-dependencies = [
- "chrono",
- "clap 4.5.29",
- "common",
- "dirs 6.0.0",
- "env_logger 0.11.6",
- "log",
- "refinery",
- "reqwest",
- "rusqlite",
- "serde",
- "serde_json",
- "tempfile",
- "thiserror 2.0.12",
- "uuid",
-]
-
-[[package]]
 name = "color_quant"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5334,6 +5314,26 @@ name = "siphasher"
 version = "1.0.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "56199f7ddabf13fe5074ce809e7d3f42b42ae711800501b5b16ea82ad029c39d"
+
+[[package]]
+name = "skopio-cli"
+version = "0.1.0"
+dependencies = [
+ "chrono",
+ "clap 4.5.29",
+ "common",
+ "dirs 6.0.0",
+ "env_logger 0.11.6",
+ "log",
+ "refinery",
+ "reqwest",
+ "rusqlite",
+ "serde",
+ "serde_json",
+ "tempfile",
+ "thiserror 2.0.12",
+ "uuid",
+]
 
 [[package]]
 name = "slab"

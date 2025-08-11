@@ -18,7 +18,6 @@ pub fn get_connection<P: AsRef<Path>>(
     Ok(conn)
 }
 
-/// Initialize the database connection
 pub fn init_db(db_path: &str, app_name: &str) -> Result<Connection, CliError> {
     let parent = Path::new(db_path).parent().ok_or(CliError::InvalidDbPath)?;
 

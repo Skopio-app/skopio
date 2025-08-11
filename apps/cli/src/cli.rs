@@ -21,7 +21,7 @@ pub struct Cli {
 
 #[derive(Subcommand, Debug)]
 pub enum Commands {
-    /// Log a heartbeat (additional info, at a particular point in time)
+    /// Save a heartbeat (additional info, at a particular point in time)
     Heartbeat {
         #[arg(long, short)]
         /// The project path.
@@ -56,7 +56,7 @@ pub enum Commands {
         is_write: bool,
     },
 
-    /// Log an event (a period of activity, with a start and end timestamp)
+    /// Save an event (a period of activity, with a start and end timestamp)
     Event {
         #[arg(long, short)]
         /// The start of the recorded event
@@ -91,6 +91,6 @@ pub enum Commands {
         end_timestamp: i32,
     },
 
-    /// Sync stored data to the remote server
+    /// Sync stored data to the main server
     Sync,
 }
