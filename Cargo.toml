@@ -1,10 +1,5 @@
 [workspace]
-members = [
-    "apps/cli",
-    "apps/desktop/src-tauri",
-    "apps/server",
-    "crates/*"
-]
+members = ["apps/cli", "apps/desktop/src-tauri", "apps/server", "crates/*"]
 resolver = "2"
 
 [workspace.package]
@@ -53,3 +48,11 @@ opt-level = 3
 # lto = false
 # split-debuginfo = "unpacked"
 # strip = "none"
+
+# https://doc.rust-lang.org/rustc/codegen-options/index.html
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = 3
+panic = "unwind"
+strip = true
