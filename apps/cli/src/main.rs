@@ -28,11 +28,11 @@ fn main() {
 
 fn run() -> Result<(), CliError> {
     let cli = Cli::parse();
-    let db_path = get_or_store_db_path(cli.db, &cli.app);
+    let db_path = get_or_store_db_path(cli.dir, &cli.app)?;
 
     info!("Using database path: {}", db_path);
 
-    let conn = init_db(&db_path)?;
+    let conn = init_db(&db_path, &cli.app)?;
 
     match cli.command {
         Some(cmd @ cli::Commands::Heartbeat { .. }) => handle_heartbeat(&conn, cmd),

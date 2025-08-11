@@ -1,5 +1,5 @@
 [package]
-name = "cli"
+name = "skopio-cli"
 version = "0.1.0"
 edition.workspace = true
 authors.workspace = true
@@ -19,6 +19,7 @@ env_logger = { workspace = true }
 common = { path = "../../crates/common" }
 refinery = { version = "0.8.16", features = ["rusqlite"]}
 thiserror = { workspace = true }
+uuid = { workspace = true, features = ["v4"]}
 
 [dev-dependencies]
 tempfile = { workspace = true }

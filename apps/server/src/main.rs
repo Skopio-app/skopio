@@ -7,7 +7,6 @@ use tracing::info;
 use tracing_subscriber::{fmt, EnvFilter};
 
 mod app;
-mod models;
 mod routes;
 mod utils;
 

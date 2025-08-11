@@ -1,0 +1,151 @@
+name: Build release CLI artifacts
+
+on:
+  push:
+    branches:
+      - release
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+  id-token: write
+
+env:
+  CLI_PATH: apps/cli
+  BIN_NAME: skopio-cli
+
+jobs:
+  release-cli:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: "macos-latest"
+            args: "x86_64-apple-darwin"
+          - platform: "macos-latest"
+            args: "aarch64-apple-darwin"
+    runs-on: macos-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup environment
+        uses: ./.github/actions/setup-env
+        with:
+          rust_target: ${{ matrix.args }}
+
+      - name: Detect version from Cargo.toml
+        id: meta
+        shell: bash
+        run: |
+          set -euo pipefail
+          VER=$(cargo metadata --format-version=1 --no-deps --manifest-path "${{ env.CLI_PATH }}/Cargo.toml" \
+                | /usr/bin/python3 -c 'import sys,json;print(json.load(sys.stdin)["packages"][0]["version"])')
+          echo "version=$VER" >> $GITHUB_OUTPUT
+          echo "tag=skopio-cli-v$VER" >> $GITHUB_OUTPUT
+          echo "Releasing skopio-cli v$VER"
+
+      - name: Build CLI
+        working-directory: ${{ env.CLI_PATH }}
+        run: cargo build --release --locked --target ${{ matrix.args }}
+
+      - name: Create universal2 + zip + checksums
+        id: pkg
+        shell: bash
+        run: |
+          set -euo pipefail
+          ARM="${{ env.CLI_PATH }}/target/aarch64-apple-darwin/release/${{ env.BIN_NAME }}"
+          X64="${{ env.CLI_PATH }}/target/x86_64-apple-darwin/release/${{ env.BIN_NAME }}"
+          OUTDIR="${{ env.CLI_PATH }}/target/universal2"
+          mkdir -p "$OUTDIR" dist
+          strip -S -x "$ARM" || true
+          strip -S -x "$X64" || true
+          UNIVERSAL="$OUTDIR/${{ env.BIN_NAME }}"
+          lipo -create -output "$UNIVERSAL" "$ARM" "$X64"
+          chmod +x "$UNIVERSAL"
+          ZIP="dist/cli-darwin-universal.zip"   # <<— artifact name
+          (cd "$(dirname "$UNIVERSAL")" && zip -q "$GITHUB_WORKSPACE/$ZIP" "$(basename "$UNIVERSAL")")
+          SH256=$(shasum -a 256 "$ZIP" | awk '{print $1}')
+          SIZE=$(stat -f "%z" "$ZIP")
+          echo "${SH256}  $(basename "$ZIP")" > dist/SHA256SUMS
+          echo "archive=$ZIP"  >> $GITHUB_OUTPUT
+          echo "sha256=$SH256" >> $GITHUB_OUTPUT
+          echo "size=$SIZE"    >> $GITHUB_OUTPUT
+
+      - name: Create/Update GitHub Release
+        uses: softprops/action-gh-release@v2.3.2
+        with:
+          tag_name: ${{ steps.meta.outputs.tag }}
+          name: "CLI ${{ steps.meta.outputs.version }}"
+          files: |
+            ${{ steps.pkg.outputs.archive }}
+            dist/SHA256SUMS
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@v3.9.2
+        with:
+          cosign-release: "v2.5.3"
+
+      - name: Cosign sign artifact (keyless)
+        env:
+          COSIGN_EXPERIMENTAL: "1"
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p dist/signatures
+          FILE="${{ steps.pkg.outputs.archive }}"
+          cosign sign-blob --yes "$FILE" \
+            --output-signature "dist/signatures/$(basename "$FILE").sig" \
+            --output-certificate "dist/signatures/$(basename "$FILE").cert" \
+            --bundle "dist/signatures/$(basename "$FILE").bundle"
+
+      - name: Cosign verify (sanity check)
+        shell: bash
+        run: |
+          set -euo pipefail
+          FILE="${{ steps.pkg.outputs.archive }}"
+          cosign verify-blob \
+            --signature "dist/signatures/$(basename "$FILE").sig" \
+            --certificate "dist/signatures/$(basename "$FILE").cert" \
+            --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+            --certificate-identity "https://github.com/${{ github.repository }}/.github/workflows/release-cli.yml@refs/heads/release" \
+            "$FILE"
+
+      - name: Upload signatures to Release
+        uses: softprops/action-gh-release@v2.3.2
+        with:
+          tag_name: ${{ steps.meta.outputs.tag }}
+          files: dist/signatures/*
+
+      - name: Attach latest.json
+        shell: bash
+        run: |
+          set -euo pipefail
+          OWNER_REPO="${{ github.repository }}"
+          TAG="${{ steps.meta.outputs.tag }}"
+          VER="${{ steps.meta.outputs.version }}"
+          FILE="$(basename "${{ steps.pkg.outputs.archive }}")"   # cli-darwin-universal.zip
+          BASE="https://github.com/${OWNER_REPO}/releases/download/${TAG}"
+          cat > latest.json <<EOF
+          {
+            "version": "$VER",
+            "released_at": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")",
+            "assets": {
+              "darwin-universal": {
+                "url": "$BASE/$FILE",
+                "sha256": "${{ steps.pkg.outputs.sha256 }}",
+                "size": ${{ steps.pkg.outputs.size }},
+                "sig": {
+                  "type": "cosign",
+                  "signature_url": "$BASE/signatures/$FILE.sig",
+                  "certificate_url": "$BASE/signatures/$FILE.cert",
+                  "bundle_url": "$BASE/signatures/$FILE.bundle"
+                },
+                "checksums_url": "$BASE/SHA256SUMS"
+              }
+            }
+          }
+          EOF
+          gh release upload "${TAG}" latest.json --clobber
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

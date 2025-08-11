@@ -3,6 +3,7 @@ use std::{
     path::Path,
 };
 
+use common::keyring::Keyring;
 use env_logger::Builder;
 use log::{error, LevelFilter};
 use rusqlite::Connection;
@@ -29,6 +30,9 @@ pub enum CliError {
 
     #[error("Expected {0} command, but received a different variant")]
     VariantMismatch(String),
+
+    #[error("Serde json error: {0}")]
+    SerdeJson(#[from] serde_json::Error),
 }
 
 /// Extracts the project name from the project path
@@ -69,4 +73,14 @@ pub fn setup_test_conn() -> Connection {
     let mut conn = Connection::open_in_memory().unwrap();
     migrations::runner().run(&mut conn).unwrap();
     conn
+}
+
+pub fn setup_keyring(app_name: &str) -> Result<Option<String>, CliError> {
+    if cfg!(debug_assertions) {
+        return Ok(None);
+    }
+    let password = uuid::Uuid::new_v4().to_string();
+    let key = Keyring::get_or_set_password("skopio-cli", app_name, &password)
+        .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, format!("keyring: {e}")))?;
+    Ok(Some(key))
 }
