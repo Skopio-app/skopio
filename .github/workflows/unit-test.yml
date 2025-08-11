@@ -7,7 +7,7 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - platform: "macos-13"
+          - platform: "macos-latest"
             args: "x86_64-apple-darwin"
           - platform: "macos-latest"
             args: "aarch64-apple-darwin"
