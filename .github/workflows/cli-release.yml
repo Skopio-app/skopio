@@ -96,7 +96,10 @@ jobs:
         run: |
           set -euo pipefail
           VER="${{ steps.meta.outputs.version }}"
-          NOTES=RELEASE_NOTES.md
+          NOTES="$GITHUB_WORKSPACE/${{ env.CLI_PATH }}/RELEASE_NOTES.md"
+          CHANGELOG="CHANGELOG.md"
+
+          test -f "$CHANGELOG" || { echo "Missing $CHANGELOG"; exit 1; }
 
           # Match headings like: "## 1.2.3", "## v.1.2.3", "## [1.2.3]", "## [v1.2.3] ..."
           awk -v ver="$VER" '
