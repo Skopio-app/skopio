@@ -16,9 +16,6 @@ env:
 
 jobs:
   release-cli:
-    strategy:
-      fail-fast: false
-
     runs-on: macos-latest
     steps:
       - name: Checkout repository
@@ -92,11 +89,40 @@ jobs:
           pack aarch64-apple-darwin
           pack x86_64-apple-darwin
 
+      - name: Extract release notes from CHANGELOG.md (Required)
+        id: changelog
+        working-directory: ${{ env.CLI_PATH }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          VER="${{ steps.meta.outputs.version }}"
+          NOTES=RELEASE_NOTES.md
+
+          # Match headings like: "## 1.2.3", "## v.1.2.3", "## [1.2.3]", "## [v1.2.3] ..."
+          awk -v ver="$VER" '
+            BEGIN {
+              patv = "^##[[:space:]]*\\[?v?" ver "\\]?([[:space:]-]|$)"
+              insec=0
+            }
+            $0 ~ patv { insec=1; next }         # start after the heading line
+            insec && /^##[[:space:]]*\[?v?[0-9]/ { insec=0 }  # stop at next version section
+            insec { print }
+          ' CHANGELOG.md > "$NOTES" || true
+
+          if ! [ -s "$NOTES" ]; then
+            echo "No changelog section found for version $VER in CHANGELOG.md" >&2
+            echo "Expected a heading like: '## $VER' or '## v$VER' (optionally in [brackets])" >&2
+            exit 1
+          fi
+
+          echo "notes_file=$NOTES" >> "$GITHUB_OUTPUT"
+
       - name: Create/Update GitHub Release
         uses: softprops/action-gh-release@v2.3.2
         with:
           tag_name: ${{ steps.meta.outputs.tag }}
           name: "v${{ steps.meta.outputs.version }}"
+          body_path: ${{ steps.changelog.outputs.notes_file }}
           files: |
             ${{ steps.pkg.outputs.aarch64-apple-darwin_zip }}
             ${{ steps.pkg.outputs.x86_64-apple-darwin_zip }}
