@@ -97,7 +97,7 @@ jobs:
           pack aarch64-apple-darwin
           pack x86_64-apple-darwin
 
-      - name: Extract release notes from CHANGELOG.md (Required)
+      - name: Extract release notes from CHANGELOG.md
         id: changelog
         working-directory: ${{ env.CLI_PATH }}
         shell: bash
@@ -106,12 +106,9 @@ jobs:
           VER="${{ steps.meta.outputs.version }}"
           NOTES="$GITHUB_WORKSPACE/${{ env.CLI_PATH }}/RELEASE_NOTES.md"
           CHANGELOG="CHANGELOG.md"
+          BODY="$(mktemp)"
 
           test -f "$CHANGELOG" || { echo "Missing $CHANGELOG"; exit 1; }
-
-          # Write a title at the top of the notes
-          echo "# Changelog" > "$NOTES"
-          echo "" >> "$NOTES"
 
           # Match headings like: "## 1.2.3", "## v.1.2.3", "## [1.2.3]", "## [v1.2.3] ..."
           awk -v ver="$VER" '
@@ -122,12 +119,18 @@ jobs:
             $0 ~ patv { insec=1; next }         # start after the heading line
             insec && /^##[[:space:]]*\[?v?[0-9]/ { insec=0 }  # stop at next version section
             insec { print }
-          ' "$CHANGELOG" > "$NOTES" || true
+          ' "$CHANGELOG" > "$BODY" || true
 
-          if ! [ -s "$NOTES" ]; then
+          if ! [ -s "$BODY" ]; then
             echo "No changelog section found for version $VER in CHANGELOG.md" >&2
             exit 1
           fi
+
+          {
+            echo "# Changelog"
+            echo
+            cat "$BODY"
+          } > "$NOTES"
 
           echo "notes_file=$NOTES" >> "$GITHUB_OUTPUT"
 
