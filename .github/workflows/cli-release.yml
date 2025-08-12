@@ -37,7 +37,7 @@ jobs:
           VER=$(cargo metadata --format-version=1 --no-deps --manifest-path "${{ env.CLI_PATH }}/Cargo.toml" \
                 | /usr/bin/python3 -c 'import sys,json;print(json.load(sys.stdin)["packages"][0]["version"])')
           echo "version=$VER" >> $GITHUB_OUTPUT
-          echo "tag=skopio-cli-v$VER" >> $GITHUB_OUTPUT
+          echo "tag=v$VER" >> $GITHUB_OUTPUT
           echo "Releasing skopio-cli v$VER"
 
       - name: Build aarch64
@@ -66,7 +66,8 @@ jobs:
             esac
 
             local bin="${TARGET_DIR}/${arch}/release/${{ env.BIN_NAME }}"
-            local zip="dist/skopio-cli-darwin-${cpu}.zip"
+            local staged="dist/${{ env.BIN_NAME }}-darwin-${cpu}"
+            local zip="dist/${{ env.BIN_NAME }}-darwin-${cpu}.zip"
 
             if [[ ! -f "$bin" ]]; then
               echo "❌ Expected binary not found: $bin"
@@ -74,19 +75,20 @@ jobs:
               exit 1
             fi
 
-            strip -S -x "$bin" || true
-            (cd "$(dirname "$bin")" && zip -q "$GITHUB_WORKSPACE/$zip" "$(basename "$bin")")
+            cp "$bin" "$staged"
+            strip -S -x "$staged" || true
+            (cd dist && zip -q "$(basename "$zip")" "$(basename "$staged")")
 
             local sh256; sh256=$(shasum -a 256 "$zip" | awk '{print $1}')
             local size;  size=$(stat -f "%z" "$zip")
 
-            echo "${sh256}  $(basename "$zip")" >> dist/SHA256SUMS
+            echo "${sh256}  $(basename "$zip")" >> dist/checksums_sha256.txt
             echo "${arch}_zip=$zip"   >> $GITHUB_OUTPUT
             echo "${arch}_sha=$sh256" >> $GITHUB_OUTPUT
             echo "${arch}_size=$size" >> $GITHUB_OUTPUT
           }
 
-          : > dist/SHA256SUMS
+          : > dist/checksums_sha256.txt
           pack aarch64-apple-darwin
           pack x86_64-apple-darwin
 
@@ -94,11 +96,11 @@ jobs:
         uses: softprops/action-gh-release@v2.3.2
         with:
           tag_name: ${{ steps.meta.outputs.tag }}
-          name: "CLI ${{ steps.meta.outputs.version }}"
+          name: "v${{ steps.meta.outputs.version }}"
           files: |
             ${{ steps.pkg.outputs.aarch64-apple-darwin_zip }}
             ${{ steps.pkg.outputs.x86_64-apple-darwin_zip }}
-            dist/SHA256SUMS
+            dist/checksums_sha256.txt
 
       - name: Install cosign
         uses: sigstore/cosign-installer@v3.9.2
