@@ -45,6 +45,12 @@ pub fn extract_project_name<T: AsRef<Path>>(project_path: T) -> String {
 }
 
 pub fn init_logger() {
+    let log_level = if cfg!(debug_assertions) {
+        LevelFilter::Debug
+    } else {
+        LevelFilter::Info
+    };
+
     Builder::new()
         .format(|_buf, record| {
             // Prevent normal logs from appearing as warnings in plugin debug console
@@ -64,7 +70,7 @@ pub fn init_logger() {
                 record.args()
             )
         })
-        .filter(None, LevelFilter::Debug)
+        .filter(None, log_level)
         .init();
 }
 

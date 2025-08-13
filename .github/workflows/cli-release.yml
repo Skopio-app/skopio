@@ -16,23 +16,15 @@ env:
 
 jobs:
   release-cli:
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - platform: "macos-latest"
-            args: "x86_64-apple-darwin"
-          - platform: "macos-latest"
-            args: "aarch64-apple-darwin"
     runs-on: macos-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup environment
-        uses: ./.github/actions/setup-env
+      - name: Install Rust
+        uses: dtolnay/rust-toolchain@stable
         with:
-          rust_target: ${{ matrix.args }}
+          targets: aarch64-apple-darwin, x86_64-apple-darwin
 
       - name: Detect version from Cargo.toml
         id: meta
@@ -41,75 +33,140 @@ jobs:
           set -euo pipefail
           VER=$(cargo metadata --format-version=1 --no-deps --manifest-path "${{ env.CLI_PATH }}/Cargo.toml" \
                 | /usr/bin/python3 -c 'import sys,json;print(json.load(sys.stdin)["packages"][0]["version"])')
+          TAG="v${VER}"
+          # mark prerelease if semver has a hyphen suffix (alpha/beta/rc or any pre tag)
+          if [[ "$VER" =~ -([A-Za-z0-9.+-]+)$ ]]; then
+            PRERELEASE=true
+          else
+            PRERELEASE=false
+          fi
           echo "version=$VER" >> $GITHUB_OUTPUT
-          echo "tag=skopio-cli-v$VER" >> $GITHUB_OUTPUT
-          echo "Releasing skopio-cli v$VER"
+          echo "tag=v$VER" >> $GITHUB_OUTPUT
+          echo "prerelease=$PRERELEASE" >> $GITHUB_OUTPUT
+          echo "Release $TAG (prerelease=$PRERELEASE)"
 
-      - name: Build CLI
+      - name: Build aarch64
         working-directory: ${{ env.CLI_PATH }}
-        run: cargo build --release --locked --target ${{ matrix.args }}
+        run: cargo build --release --locked --target aarch64-apple-darwin
 
-      - name: Create universal2 + zip + checksums
+      - name: Build x86_64
+        working-directory: ${{ env.CLI_PATH }}
+        run: cargo build --release --locked --target x86_64-apple-darwin
+
+      - name: Zip + checksums
         id: pkg
         shell: bash
         run: |
           set -euo pipefail
-          ARM="${{ env.CLI_PATH }}/target/aarch64-apple-darwin/release/${{ env.BIN_NAME }}"
-          X64="${{ env.CLI_PATH }}/target/x86_64-apple-darwin/release/${{ env.BIN_NAME }}"
-          OUTDIR="${{ env.CLI_PATH }}/target/universal2"
-          mkdir -p "$OUTDIR" dist
-          strip -S -x "$ARM" || true
-          strip -S -x "$X64" || true
-          UNIVERSAL="$OUTDIR/${{ env.BIN_NAME }}"
-          lipo -create -output "$UNIVERSAL" "$ARM" "$X64"
-          chmod +x "$UNIVERSAL"
-          ZIP="dist/cli-darwin-universal.zip"   # <<— artifact name
-          (cd "$(dirname "$UNIVERSAL")" && zip -q "$GITHUB_WORKSPACE/$ZIP" "$(basename "$UNIVERSAL")")
-          SH256=$(shasum -a 256 "$ZIP" | awk '{print $1}')
-          SIZE=$(stat -f "%z" "$ZIP")
-          echo "${SH256}  $(basename "$ZIP")" > dist/SHA256SUMS
-          echo "archive=$ZIP"  >> $GITHUB_OUTPUT
-          echo "sha256=$SH256" >> $GITHUB_OUTPUT
-          echo "size=$SIZE"    >> $GITHUB_OUTPUT
+          mkdir -p dist
+          TARGET_DIR="${CARGO_TARGET_DIR:-target}"
+
+          pack() {
+            local arch="$1"
+            local cpu
+            case "$arch" in
+              aarch64-apple-darwin) cpu="aarch64" ;;
+              x86_64-apple-darwin)  cpu="x86_64"  ;;
+              *) cpu="$arch" ;;
+            esac
+
+            local bin="${TARGET_DIR}/${arch}/release/${{ env.BIN_NAME }}"
+            local staged="dist/${{ env.BIN_NAME }}-darwin-${cpu}"
+            local zip="dist/${{ env.BIN_NAME }}-darwin-${cpu}.zip"
+
+            if [[ ! -f "$bin" ]]; then
+              echo "❌ Expected binary not found: $bin"
+              ls -la "${TARGET_DIR}/${arch}/release" || true
+              exit 1
+            fi
+
+            cp "$bin" "$staged"
+            strip -S -x "$staged" || true
+            (cd dist && zip -q "$(basename "$zip")" "$(basename "$staged")")
+
+            local sh256; sh256=$(shasum -a 256 "$zip" | awk '{print $1}')
+            local size;  size=$(stat -f "%z" "$zip")
+
+            echo "${sh256}  $(basename "$zip")" >> dist/checksums_sha256.txt
+            echo "${arch}_zip=$zip"   >> $GITHUB_OUTPUT
+            echo "${arch}_sha=$sh256" >> $GITHUB_OUTPUT
+            echo "${arch}_size=$size" >> $GITHUB_OUTPUT
+          }
+
+          : > dist/checksums_sha256.txt
+          pack aarch64-apple-darwin
+          pack x86_64-apple-darwin
+
+      - name: Extract release notes from CHANGELOG.md
+        id: changelog
+        working-directory: ${{ env.CLI_PATH }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          VER="${{ steps.meta.outputs.version }}"
+          NOTES="$GITHUB_WORKSPACE/${{ env.CLI_PATH }}/RELEASE_NOTES.md"
+          CHANGELOG="CHANGELOG.md"
+          BODY="$(mktemp)"
+
+          test -f "$CHANGELOG" || { echo "Missing $CHANGELOG"; exit 1; }
+
+          # Match headings like: "## 1.2.3", "## v.1.2.3", "## [1.2.3]", "## [v1.2.3] ..."
+          awk -v ver="$VER" '
+            BEGIN {
+              patv = "^##[[:space:]]*\\[?v?" ver "\\]?([[:space:]-]|$)"
+              insec=0
+            }
+            $0 ~ patv { insec=1; next }         # start after the heading line
+            insec && /^##[[:space:]]*\[?v?[0-9]/ { insec=0 }  # stop at next version section
+            insec { print }
+          ' "$CHANGELOG" > "$BODY" || true
+
+          if ! [ -s "$BODY" ]; then
+            echo "No changelog section found for version $VER in CHANGELOG.md" >&2
+            exit 1
+          fi
+
+          {
+            echo "# Changelog"
+            echo
+            cat "$BODY"
+          } > "$NOTES"
+
+          echo "notes_file=$NOTES" >> "$GITHUB_OUTPUT"
 
       - name: Create/Update GitHub Release
         uses: softprops/action-gh-release@v2.3.2
         with:
           tag_name: ${{ steps.meta.outputs.tag }}
-          name: "CLI ${{ steps.meta.outputs.version }}"
+          name: "v${{ steps.meta.outputs.version }}"
+          prerelease: ${{ steps.meta.outputs.prerelease }}
+          body_path: ${{ steps.changelog.outputs.notes_file }}
           files: |
-            ${{ steps.pkg.outputs.archive }}
-            dist/SHA256SUMS
+            ${{ steps.pkg.outputs.aarch64-apple-darwin_zip }}
+            ${{ steps.pkg.outputs.x86_64-apple-darwin_zip }}
+            dist/checksums_sha256.txt
 
       - name: Install cosign
         uses: sigstore/cosign-installer@v3.9.2
         with:
           cosign-release: "v2.5.3"
 
-      - name: Cosign sign artifact (keyless)
+      - name: Cosign sign artifacts
         env:
           COSIGN_EXPERIMENTAL: "1"
         shell: bash
         run: |
           set -euo pipefail
           mkdir -p dist/signatures
-          FILE="${{ steps.pkg.outputs.archive }}"
-          cosign sign-blob --yes "$FILE" \
-            --output-signature "dist/signatures/$(basename "$FILE").sig" \
-            --output-certificate "dist/signatures/$(basename "$FILE").cert" \
-            --bundle "dist/signatures/$(basename "$FILE").bundle"
-
-      - name: Cosign verify (sanity check)
-        shell: bash
-        run: |
-          set -euo pipefail
-          FILE="${{ steps.pkg.outputs.archive }}"
-          cosign verify-blob \
-            --signature "dist/signatures/$(basename "$FILE").sig" \
-            --certificate "dist/signatures/$(basename "$FILE").cert" \
-            --certificate-oidc-issuer https://token.actions.githubusercontent.com \
-            --certificate-identity "https://github.com/${{ github.repository }}/.github/workflows/release-cli.yml@refs/heads/release" \
-            "$FILE"
+          sign() {
+            local file="$1" base; base=$(basename "$file")
+            cosign sign-blob --yes "$file" \
+              --output-signature "dist/signatures/$base.sig" \
+              --output-certificate "dist/signatures/$base.cert" \
+              --bundle "dist/signatures/$base.bundle"
+          }
+          sign "${{ steps.pkg.outputs.aarch64-apple-darwin_zip }}"
+          sign "${{ steps.pkg.outputs.x86_64-apple-darwin_zip }}"
 
       - name: Upload signatures to Release
         uses: softprops/action-gh-release@v2.3.2
@@ -118,32 +175,44 @@ jobs:
           files: dist/signatures/*
 
       - name: Attach latest.json
+        if: ${{ steps.meta.outputs.prerelease != 'true' }}
         shell: bash
         run: |
           set -euo pipefail
           OWNER_REPO="${{ github.repository }}"
           TAG="${{ steps.meta.outputs.tag }}"
           VER="${{ steps.meta.outputs.version }}"
-          FILE="$(basename "${{ steps.pkg.outputs.archive }}")"   # cli-darwin-universal.zip
+          FILE_ARM="$(basename "${{ steps.pkg.outputs.aarch64-apple-darwin_zip }}")"
+          FILE_X64="$(basename "${{ steps.pkg.outputs.x86_64-apple-darwin_zip }}")"
           BASE="https://github.com/${OWNER_REPO}/releases/download/${TAG}"
           cat > latest.json <<EOF
           {
             "version": "$VER",
             "released_at": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")",
             "assets": {
-              "darwin-universal": {
-                "url": "$BASE/$FILE",
-                "sha256": "${{ steps.pkg.outputs.sha256 }}",
-                "size": ${{ steps.pkg.outputs.size }},
-                "sig": {
-                  "type": "cosign",
-                  "signature_url": "$BASE/signatures/$FILE.sig",
-                  "certificate_url": "$BASE/signatures/$FILE.cert",
-                  "bundle_url": "$BASE/signatures/$FILE.bundle"
-                },
-                "checksums_url": "$BASE/SHA256SUMS"
-              }
+              "darwin-aarch64": {
+              "url": "$BASE/$FILE_ARM",
+              "sha256": "${{ steps.pkg.outputs.aarch64-apple-darwin_sha }}",
+              "size": ${{ steps.pkg.outputs.aarch64-apple-darwin_size }},
+              "sig": {
+                "type": "cosign",
+                "signature_url": "$BASE/signatures/$FILE_ARM.sig",
+                "certificate_url": "$BASE/signatures/$FILE_ARM.cert",
+                "bundle_url": "$BASE/signatures/$FILE_ARM.bundle"
+             }
+           },
+           "darwin-x86_64": {
+             "url": "$BASE/$FILE_X64",
+             "sha256": "${{ steps.pkg.outputs.x86_64-apple-darwin_sha }}",
+             "size": ${{ steps.pkg.outputs.x86_64-apple-darwin_size }},
+             "sig": {
+               "type": "cosign",
+               "signature_url": "$BASE/signatures/$FILE_X64.sig",
+               "certificate_url": "$BASE/signatures/$FILE_X64.cert",
+               "bundle_url": "$BASE/signatures/$FILE_X64.bundle"
+             }
             }
+           }
           }
           EOF
           gh release upload "${TAG}" latest.json --clobber

@@ -6,7 +6,7 @@ use crate::handlers::heartbeat::handle_heartbeat;
 use crate::handlers::sync::handle_sync;
 use crate::utils::{init_logger, CliError};
 use clap::Parser;
-use log::{error, info};
+use log::{debug, error};
 
 mod cli;
 mod config;
@@ -30,7 +30,7 @@ fn run() -> Result<(), CliError> {
     let cli = Cli::parse();
     let db_path = get_or_store_db_path(cli.dir, &cli.app)?;
 
-    info!("Using database path: {}", db_path);
+    debug!("Using database path: {}", db_path);
 
     let conn = init_db(&db_path, &cli.app)?;
 
@@ -38,9 +38,6 @@ fn run() -> Result<(), CliError> {
         Some(cmd @ cli::Commands::Heartbeat { .. }) => handle_heartbeat(&conn, cmd),
         Some(cmd @ cli::Commands::Event { .. }) => handle_event(&conn, cmd),
         Some(cmd @ cli::Commands::Sync) => handle_sync(&conn, cmd),
-        None => {
-            info!("Database initialized at {}", db_path);
-            Ok(())
-        }
+        None => Ok(()),
     }
 }
