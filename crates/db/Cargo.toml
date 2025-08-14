@@ -14,10 +14,19 @@ server = []
 [dependencies]
 chrono = { workspace = true, features = ["serde"] }
 serde = { workspace = true, features = ["derive"] }
-sqlx = { workspace = true, features = [ "sqlite", "runtime-tokio", "tls-native-tls", "chrono", "macros", "migrate", "derive" ] }
+sqlx = { workspace = true, features = [
+    "sqlite",
+    "runtime-tokio",
+    "tls-native-tls",
+    "chrono",
+    "macros",
+    "migrate",
+    "derive",
+    "uuid"
+] }
 log = { workspace = true }
-specta = {workspace = true }
-common = { path = "../common"}
+specta = { workspace = true, features = ["uuid"] }
+common = { path = "../common" }
 thiserror = { workspace = true }
-types = { path = "../types" }
 async-trait = { workspace = true }
+uuid = { workspace = true, features = ["v7", "fast-rng", "serde"] }

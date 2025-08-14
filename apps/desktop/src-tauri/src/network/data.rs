@@ -1,9 +1,9 @@
 use common::models::{
     inputs::{PaginationQuery, ProjectQuery, ProjectSearchQuery},
     outputs::PaginatedProjects,
+    Project,
 };
 use db::models::{App, Category};
-use types::Project;
 
 use crate::network::utils::req_json;
 

@@ -17,6 +17,7 @@ pub fn handle_event(conn: &Connection, command: Commands) -> Result<(), CliError
             entity_type,
             duration,
             project,
+            source,
             end_timestamp,
         } => {
             let language = detect_language(&entity);
@@ -30,6 +31,7 @@ pub fn handle_event(conn: &Connection, command: Commands) -> Result<(), CliError
                 duration,
                 project,
                 language,
+                source,
                 end_timestamp,
             };
 

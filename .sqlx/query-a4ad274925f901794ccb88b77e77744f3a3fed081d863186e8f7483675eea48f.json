@@ -1,12 +1,12 @@
 {
   "db_name": "SQLite",
-  "query": "INSERT INTO apps (name) VALUES (?) RETURNING id",
+  "query": "SELECT id FROM sources WHERE name = ?",
   "describe": {
     "columns": [
       {
         "name": "id",
         "ordinal": 0,
-        "type_info": "Integer"
+        "type_info": "Blob"
       }
     ],
     "parameters": {
@@ -16,5 +16,5 @@
       false
     ]
   },
-  "hash": "6bf04bae2a7c3b78a9c5916e54521b1609505d34dad40dfb8caf5b83d8b23899"
+  "hash": "a4ad274925f901794ccb88b77e77744f3a3fed081d863186e8f7483675eea48f"
 }

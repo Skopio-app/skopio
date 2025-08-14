@@ -8,5 +8,6 @@ pub mod heartbeats;
 pub mod insights;
 pub mod languages;
 pub mod projects;
+pub mod source;
 pub mod summary;
 pub mod utils;

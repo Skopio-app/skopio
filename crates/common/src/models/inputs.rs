@@ -1,5 +1,6 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 
 use crate::{
     models::{Group, InsightBucket, InsightType},
@@ -18,6 +19,7 @@ pub struct EventInput {
     pub project_path: String,
     pub branch_name: Option<String>,
     pub language_name: Option<String>,
+    pub source_name: String,
     pub end_timestamp: Option<DateTime<Utc>>,
 }
 
@@ -31,6 +33,7 @@ pub struct HeartbeatInput {
     pub branch_name: Option<String>,
     pub language_name: Option<String>,
     pub app_name: String,
+    pub source_name: String,
     pub is_write: bool,
     pub lines: Option<i64>,
     pub cursorpos: Option<i64>,
@@ -84,13 +87,13 @@ pub struct BucketedSummaryInput {
 
 #[derive(Serialize, Deserialize, Debug, specta::Type)]
 pub struct PaginationQuery {
-    pub after: Option<i64>,
+    pub after: Option<Uuid>,
     pub limit: Option<u32>,
 }
 
 #[derive(Serialize, Deserialize, Debug, specta::Type)]
 pub struct ProjectQuery {
-    pub id: i64,
+    pub id: Uuid,
 }
 
 #[derive(Serialize, Deserialize, Debug, specta::Type)]

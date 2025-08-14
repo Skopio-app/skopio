@@ -1,12 +1,12 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT id, name FROM apps",
+  "query": "\n            SELECT\n                id AS \"id: Uuid\",\n                name\n            FROM categories\n            ",
   "describe": {
     "columns": [
       {
-        "name": "id",
+        "name": "id: Uuid",
         "ordinal": 0,
-        "type_info": "Integer"
+        "type_info": "Blob"
       },
       {
         "name": "name",
@@ -22,5 +22,5 @@
       false
     ]
   },
-  "hash": "f46c8cd4c60b895f9e3d1c8a964d63f5d6ccaf5e90ef27734f95757a1b851385"
+  "hash": "f9d9f5f48ba1b13c79ee14059d2c18ef96ac0633340a8cf0b1b0dd9e2149f029"
 }

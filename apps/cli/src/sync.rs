@@ -50,7 +50,7 @@ pub fn sync_data(conn: &Connection) -> Result<(), SyncError> {
 fn fetch_unsynced_heartbeats(conn: &Connection) -> Result<Vec<HeartbeatInput>, rusqlite::Error> {
     let mut stmt = conn
         .prepare(
-            "SELECT timestamp, project_path, branch, entity_name, entity_type, language, app, is_write, lines, cursorpos
+            "SELECT timestamp, project_path, branch, entity_name, entity_type, language, app, source, is_write, lines, cursorpos
                   FROM heartbeats WHERE synced = 0",
                 )?;
     let rows = stmt.query_map([], |row| parse_heartbeat(row))?;
@@ -71,16 +71,17 @@ fn parse_heartbeat(row: &Row) -> rusqlite::Result<HeartbeatInput> {
         entity_type: row.get(4)?,
         language_name: row.get(5)?,
         app_name: row.get(6)?,
-        is_write: row.get(7)?,
-        lines: row.get(8)?,
-        cursorpos: row.get(9)?,
+        source_name: row.get(7)?,
+        is_write: row.get(8)?,
+        lines: row.get(9)?,
+        cursorpos: row.get(10)?,
     })
 }
 
 fn fetch_unsynced_events(conn: &Connection) -> Result<Vec<EventInput>, rusqlite::Error> {
     let mut stmt = conn
         .prepare(
-            "SELECT timestamp, category, app, entity_name, entity_type, duration, project_path, branch, language, end_timestamp
+            "SELECT timestamp, category, app, entity_name, entity_type, duration, project_path, branch, language, source, end_timestamp
                  FROM events WHERE synced = 0"
                 )?;
     let rows = stmt.query_map([], |row| parse_event(row))?;
@@ -89,7 +90,7 @@ fn fetch_unsynced_events(conn: &Connection) -> Result<Vec<EventInput>, rusqlite:
 
 fn parse_event(row: &Row) -> rusqlite::Result<EventInput> {
     let ts: Option<i64> = row.get(0)?;
-    let end_ts: Option<i64> = row.get(9)?;
+    let end_ts: Option<i64> = row.get(10)?;
     let project_path: String = row.get(6)?;
 
     Ok(EventInput {
@@ -103,6 +104,7 @@ fn parse_event(row: &Row) -> rusqlite::Result<EventInput> {
         project_path,
         branch_name: row.get(7)?,
         language_name: row.get(8)?,
+        source_name: row.get(9)?,
         end_timestamp: end_ts.map(|t| Utc.timestamp_opt(t, 0).single().unwrap_or_default()),
     })
 }
@@ -172,6 +174,7 @@ mod tests {
             entity: "main.rs".into(),
             entity_type: "File".into(),
             app: "Code".into(),
+            source: "skopio-vscode".into(),
             is_write: true,
             lines: Some(10),
             cursorpos: Some(60),
@@ -193,6 +196,7 @@ mod tests {
             timestamp: now as i32,
             category: "Coding".into(),
             app: "Code".into(),
+            source: "skopio-vscode".into(),
             entity: "main.rs".into(),
             entity_type: "File".into(),
             duration: 300,
@@ -215,14 +219,14 @@ mod tests {
         let old_ts = (Utc::now() - Duration::days(20)).timestamp();
 
         conn.execute(
-            "INSERT INTO heartbeats (timestamp, project_path, branch, entity_name, entity_type, language, app, is_write, lines, cursorpos, synced)
-             VALUES (?1, '/tmp/project', 'main', 'main.rs', 'file', 'Rust', 'VSCode', 1, 10, 42, 1)",
+            "INSERT INTO heartbeats (timestamp, project_path, branch, entity_name, entity_type, language, app, source, is_write, lines, cursorpos, synced)
+             VALUES (?1, '/tmp/project', 'main', 'main.rs', 'file', 'Rust', 'VSCode', 'skopio-vscode', 1, 10, 42, 1)",
             params![old_ts],
         ).unwrap();
 
         conn.execute(
-            "INSERT INTO events (timestamp, category, app, entity_name, entity_type, duration, project_path, branch, language, end_timestamp, synced)
-             VALUES (?1, 'Coding', 'VSCode', 'main.rs', 'file', 100, '/tmp/project', 'main', 'Rust', ?2, 1)",
+            "INSERT INTO events (timestamp, category, app, entity_name, entity_type, duration, project_path, branch, language, source, end_timestamp, synced)
+             VALUES (?1, 'Coding', 'VSCode', 'main.rs', 'file', 100, '/tmp/project', 'main', 'Rust', 'skopio-vscode', ?2, 1)",
             params![old_ts, old_ts + 100],
         ).unwrap();
 

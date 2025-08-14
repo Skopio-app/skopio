@@ -17,6 +17,7 @@ pub struct Heartbeat {
     pub branch_name: Option<String>,
     pub language_name: Option<String>,
     pub app_name: String,
+    pub source_name: String,
     pub is_write: Option<bool>,
     pub lines: Option<i64>,
     pub cursorpos: Option<i64>,
@@ -26,8 +27,8 @@ impl Heartbeat {
     pub async fn insert(self, db_context: &DBContext) -> Result<(), sqlx::Error> {
         sqlx::query!(
             "
-            INSERT INTO heartbeats (timestamp, project_name, project_path, entity_name, entity_type, branch_name, language_name, app_name, is_write, lines, cursorpos)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO heartbeats (timestamp, project_name, project_path, entity_name, entity_type, branch_name, language_name, app_name, source_name, is_write, lines, cursorpos)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ",
             self.timestamp,
             self.project_name,
@@ -37,6 +38,7 @@ impl Heartbeat {
             self.branch_name,
             self.language_name,
             self.app_name,
+            self.source_name,
             self.is_write,
             self.lines,
             self.cursorpos
@@ -59,6 +61,7 @@ impl Heartbeat {
              branch_name,
              language_name,
              app_name,
+             source_name,
              is_write,
              lines,
              cursorpos
@@ -85,6 +88,7 @@ impl Heartbeat {
                     branch_name: row.branch_name,
                     language_name: row.language_name,
                     app_name: row.app_name,
+                    source_name: row.source_name,
                     is_write: row.is_write,
                     lines: row.lines,
                     cursorpos: row.cursorpos,

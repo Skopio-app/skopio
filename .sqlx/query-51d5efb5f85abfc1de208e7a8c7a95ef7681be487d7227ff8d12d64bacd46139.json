@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT id FROM languages WHERE name = ?",
+  "query": "INSERT INTO projects (id, name, root_path) VALUES (?, ?, ?) RETURNING id",
   "describe": {
     "columns": [
       {
@@ -10,11 +10,11 @@
       }
     ],
     "parameters": {
-      "Right": 1
+      "Right": 3
     },
     "nullable": [
       false
     ]
   },
-  "hash": "b95b1360c64e028a45fccc616e026e50eedb802a708e317efcfd150951461417"
+  "hash": "51d5efb5f85abfc1de208e7a8c7a95ef7681be487d7227ff8d12d64bacd46139"
 }

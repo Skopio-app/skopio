@@ -4,7 +4,7 @@ use axum::http::StatusCode;
 use axum::routing::post;
 use axum::{Json, Router};
 use common::models::inputs::HeartbeatInput;
-use db::models::App;
+use db::models::{App, Source};
 use db::server::branches::Branch;
 use db::server::entities::Entity;
 use db::server::heartbeats::Heartbeat;
@@ -48,13 +48,19 @@ async fn handle_heartbeats(
             None
         };
 
+        let source_id = Source::find_or_insert(&db, &hb.source_name)
+            .await
+            .map_err(error_response)?;
+
+        let id = uuid::Uuid::now_v7();
         let heartbeat = Heartbeat {
-            id: None,
+            id: id,
             project_id: Some(project_id),
             entity_id: Some(entity_id),
             branch_id: Some(branch_id),
             language_id,
             app_id: Some(app_id),
+            source_id,
             timestamp: hb.timestamp.unwrap_or_default(),
             is_write: Some(hb.is_write),
             lines: hb.lines,

@@ -1,9 +1,10 @@
-use crate::DBContext;
-use types::Project;
+use crate::{utils::DBError, DBContext};
+use common::models::Project;
+use uuid::Uuid;
 
 #[derive(Debug, sqlx::FromRow)]
 pub struct ServerProject {
-    pub id: Option<i64>,
+    pub id: Uuid,
     pub name: String,
     pub root_path: Option<String>,
 }
@@ -23,34 +24,42 @@ impl ServerProject {
         db_context: &DBContext,
         name: &str,
         root_path: &str,
-    ) -> Result<i64, sqlx::Error> {
+    ) -> Result<Uuid, DBError> {
         let record = sqlx::query!("SELECT id FROM projects WHERE name = ?", name)
             .fetch_optional(db_context.pool())
             .await?;
 
         if let Some(row) = record {
-            return row.id.ok_or_else(|| sqlx::Error::RowNotFound);
+            let id = Uuid::from_slice(&row.id)?;
+            return Ok(id);
         }
 
+        let id = uuid::Uuid::now_v7();
         let result = sqlx::query!(
-            "INSERT INTO projects (name, root_path) VALUES (?, ?) RETURNING id",
+            "INSERT INTO projects (id, name, root_path) VALUES (?, ?, ?) RETURNING id",
+            id,
             name,
             root_path,
         )
         .fetch_one(db_context.pool())
         .await?;
 
-        Ok(result.id)
+        let result_id = Uuid::from_slice(&result.id)?;
+        Ok(result_id)
     }
 
     /// Fetches a project by id
-    pub async fn find_by_id(
-        db_context: &DBContext,
-        id: i64,
-    ) -> Result<Option<Project>, sqlx::Error> {
+    pub async fn find_by_id(db_context: &DBContext, id: Uuid) -> Result<Option<Project>, DBError> {
         let result = sqlx::query_as!(
             ServerProject,
-            "SELECT id, name, root_path FROM projects WHERE id = ?",
+            r#"
+            SELECT
+                id  AS "id: Uuid",
+                name,
+                root_path
+            FROM projects
+            WHERE id = ?
+            "#,
             id
         )
         .fetch_optional(db_context.pool())
@@ -61,7 +70,7 @@ impl ServerProject {
 
     pub async fn fetch_paginated(
         db_context: &DBContext,
-        after_id: Option<i64>,
+        after_id: Option<uuid::Uuid>,
         limit: u32,
     ) -> Result<Vec<Project>, sqlx::Error> {
         let limit = limit.min(100) as i64;
@@ -69,13 +78,16 @@ impl ServerProject {
         let rows: Vec<ServerProject> = if let Some(cursor) = after_id {
             sqlx::query_as!(
                 ServerProject,
-                "
-                SELECT id, name, root_path
+                r#"
+                SELECT
+                    id  AS "id: Uuid",
+                    name,
+                    root_path
                 FROM projects
                 WHERE id > ?
                 ORDER BY id
                 LIMIT ?
-                ",
+                "#,
                 cursor,
                 limit
             )
@@ -84,12 +96,15 @@ impl ServerProject {
         } else {
             sqlx::query_as!(
                 ServerProject,
-                "
-                SELECT id, name, root_path
+                r#"
+                SELECT
+                    id  AS "id: Uuid",
+                    name,
+                    root_path
                 FROM projects
                 ORDER BY id
                 LIMIT ?
-                ",
+                "#,
                 limit
             )
             .fetch_all(db_context.pool())
@@ -105,16 +120,18 @@ impl ServerProject {
     pub async fn get_all_cursors(
         db_context: &DBContext,
         limit: u32,
-    ) -> Result<Vec<Option<i64>>, sqlx::Error> {
+    ) -> Result<Vec<Option<Uuid>>, DBError> {
         let limit_param = limit.min(100) as i64;
 
-        let cursors: Vec<i64> = sqlx::query_scalar!(
-            "SELECT id FROM (
+        let cursors: Vec<Uuid> = sqlx::query_scalar!(
+            r#"
+            SELECT id AS "id: Uuid"
+            FROM (
                 SELECT id, ROW_NUMBER() OVER (ORDER BY id) as row_num
                 FROM projects
              )
              WHERE (row_num - 1) % ? = 0
-            ",
+            "#,
             limit_param
         )
         .fetch_all(db_context.pool())
@@ -129,7 +146,7 @@ impl ServerProject {
         db_context: &DBContext,
         query: &str,
         limit: u32,
-    ) -> Result<Vec<Project>, sqlx::Error> {
+    ) -> Result<Vec<Project>, DBError> {
         let limit = limit.min(100) as i64;
 
         let escaped_query = query.replace('"', "\"\"");
@@ -137,14 +154,17 @@ impl ServerProject {
 
         let rows: Vec<ServerProject> = sqlx::query_as!(
             ServerProject,
-            "
-            SELECT p.id, p.name, p.root_path
+            r#"
+            SELECT
+                p.id    AS "id: Uuid",
+                p.name,
+                p.root_path
             FROM projects_fts fts
-            JOIN projects p ON fts.rowid = p.id
+            JOIN projects p ON p.id = fts.project_id
             WHERE fts.name MATCH ?
             ORDER BY fts.rank ASC
             LIMIT ?
-            ",
+            "#,
             formatted_query,
             limit
         )

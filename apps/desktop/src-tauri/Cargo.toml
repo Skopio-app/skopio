@@ -43,7 +43,6 @@ ril = { version = "0.10.3", features = ["png"] }
 
 db = { path = "../../../crates/db", features = ["desktop"] }
 common = { path = "../../../crates/common" }
-types = { path = "../../../crates/types" }
 
 [target.'cfg(target_os = "macos")'.dependencies]
 core-foundation = "0.10.0"

@@ -216,6 +216,7 @@ async fn sync_with_server(db_context: &Arc<DBContext>) -> Result<(), anyhow::Err
                 language_name: hb.language_name.clone(),
                 app_name: hb.app_name.clone(),
                 is_write: hb.is_write.unwrap_or_default(),
+                source_name: hb.source_name.clone(),
                 lines: hb.lines,
                 cursorpos: hb.cursorpos,
             })
@@ -253,6 +254,7 @@ async fn sync_with_server(db_context: &Arc<DBContext>) -> Result<(), anyhow::Err
                 project_path: ev.project_path.clone().unwrap_or_default(),
                 branch_name: ev.branch_name.clone(),
                 language_name: ev.language_name.clone(),
+                source_name: ev.source_name.clone(),
                 end_timestamp: ev.end_timestamp,
             })
             .collect();

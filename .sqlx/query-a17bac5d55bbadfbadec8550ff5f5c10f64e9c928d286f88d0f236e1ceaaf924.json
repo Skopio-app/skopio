@@ -1,12 +1,12 @@
 {
   "db_name": "SQLite",
-  "query": "SELECT id, name FROM languages",
+  "query": "\n            SELECT\n                id  AS \"id: Uuid\",\n                name\n            FROM sources\n            ",
   "describe": {
     "columns": [
       {
-        "name": "id",
+        "name": "id: Uuid",
         "ordinal": 0,
-        "type_info": "Integer"
+        "type_info": "Blob"
       },
       {
         "name": "name",
@@ -22,5 +22,5 @@
       false
     ]
   },
-  "hash": "d2281ba20c20a55cc6ff4758e64ac9740c908883549a524ba85148a584fbcfbc"
+  "hash": "a17bac5d55bbadfbadec8550ff5f5c10f64e9c928d286f88d0f236e1ceaaf924"
 }

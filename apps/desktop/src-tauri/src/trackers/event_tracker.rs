@@ -1,4 +1,5 @@
 use crate::monitored_app::{resolve_app_details, Category, Entity, MonitoredApp, IGNORED_APPS};
+use crate::trackers::SOURCE;
 use crate::tracking_service::TrackingService;
 use chrono::{DateTime, Utc};
 use common::git::find_git_branch;
@@ -101,6 +102,7 @@ impl EventTracker {
                         project_path: ended_event.project_path,
                         branch_name: ended_event.branch_name,
                         language_name: ended_event.language_name,
+                        source_name: SOURCE.to_string(),
                         end_timestamp: ended_event.end_timestamp,
                     };
 
@@ -226,6 +228,7 @@ impl EventTracker {
                 project_path: ended_event.project_path,
                 branch_name: ended_event.branch_name,
                 language_name: ended_event.language_name,
+                source_name: SOURCE.to_string(),
                 end_timestamp: ended_event.end_timestamp,
             };
 

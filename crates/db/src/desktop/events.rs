@@ -19,6 +19,7 @@ pub struct Event {
     pub project_path: Option<String>,
     pub branch_name: Option<String>,
     pub language_name: Option<String>,
+    pub source_name: String,
     pub end_timestamp: Option<DateTime<Utc>>,
 }
 
@@ -26,8 +27,8 @@ impl Event {
     pub async fn insert(self, db_context: &DBContext) -> Result<(), sqlx::Error> {
         sqlx::query!(
             "
-            INSERT INTO events (timestamp, duration, category, app_name, entity_name, entity_type, project_name, project_path, branch_name, language_name, end_timestamp)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO events (timestamp, duration, category, app_name, entity_name, entity_type, project_name, project_path, branch_name, language_name, source_name, end_timestamp)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ",
             self.timestamp,
             self.duration,
@@ -39,6 +40,7 @@ impl Event {
             self.project_path,
             self.branch_name,
             self.language_name,
+            self.source_name,
             self.end_timestamp,
         )
         .execute(db_context.pool())
@@ -62,6 +64,7 @@ impl Event {
              project_path,
              branch_name,
              language_name,
+             source_name,
              end_timestamp
             FROM events
             WHERE synced = 0
@@ -89,6 +92,7 @@ impl Event {
                     project_path: row.project_path,
                     branch_name: row.branch_name,
                     language_name: row.language_name,
+                    source_name: row.source_name,
                     end_timestamp: Some(end_timestamp),
                 })
             })

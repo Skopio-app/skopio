@@ -1,12 +1,12 @@
 {
   "db_name": "SQLite",
-  "query": "\n                SELECT id, name, root_path\n                FROM projects\n                ORDER BY id\n                LIMIT ?\n                ",
+  "query": "\n            SELECT\n                id  AS \"id: Uuid\",\n                name,\n                root_path\n            FROM projects\n            WHERE id = ?\n            ",
   "describe": {
     "columns": [
       {
-        "name": "id",
+        "name": "id: Uuid",
         "ordinal": 0,
-        "type_info": "Integer"
+        "type_info": "Blob"
       },
       {
         "name": "name",
@@ -28,5 +28,5 @@
       true
     ]
   },
-  "hash": "72dfe5acb5018fe4ff01ee0871b6c8ea0bc8b90f64dc351b4749c3d7456fb56b"
+  "hash": "b3ce8328fce089d22627dfe6a3389cdd1e6f875f6621ec7d43ce464d967f495d"
 }

@@ -15,6 +15,7 @@ pub fn handle_heartbeat(conn: &Connection, command: Commands) -> Result<(), CliE
             entity_type,
             app,
             lines,
+            source,
             cursorpos,
             is_write,
         } => {
@@ -25,6 +26,7 @@ pub fn handle_heartbeat(conn: &Connection, command: Commands) -> Result<(), CliE
                 entity_type,
                 app,
                 lines,
+                source,
                 cursorpos,
                 is_write,
             };

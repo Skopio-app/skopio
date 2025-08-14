@@ -47,4 +47,7 @@ pub enum DBError {
 
     #[error("Timestamp parse error: {0}")]
     Parse(#[from] chrono::ParseError),
+
+    #[error("UUID error: {0}")]
+    Uuid(#[from] uuid::Error),
 }

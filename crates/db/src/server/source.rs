@@ -1,16 +1,11 @@
-use crate::{utils::DBError, DBContext};
-use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-#[derive(Serialize, Deserialize, Debug, sqlx::FromRow)]
-pub struct Language {
-    pub id: Uuid,
-    pub name: String,
-}
+use crate::{models::Source, utils::DBError, DBContext};
 
-impl Language {
+impl Source {
+    /// Finds an existing source by name or inserts a new one, returning its ID.
     pub async fn find_or_insert(db_context: &DBContext, name: &str) -> Result<Uuid, DBError> {
-        let record = sqlx::query!("SELECT id FROM languages WHERE name = ?", name)
+        let record = sqlx::query!("SELECT id FROM sources WHERE name = ?", name)
             .fetch_optional(db_context.pool())
             .await?;
 
@@ -21,24 +16,26 @@ impl Language {
 
         let id = uuid::Uuid::now_v7();
         let result = sqlx::query!(
-            "INSERT INTO languages (id, name) VALUES (?, ?) RETURNING id",
+            "INSERT INTO sources (id, name) VALUES (?, ?) RETURNING id",
             id,
             name
         )
         .fetch_one(db_context.pool())
         .await?;
+
         let result_id = Uuid::from_slice(&result.id)?;
         Ok(result_id)
     }
 
-    pub async fn all(db_context: &DBContext) -> Result<Vec<Self>, DBError> {
+    /// Retrieves all sources
+    pub async fn get_all(db_context: &DBContext) -> Result<Vec<Self>, DBError> {
         let rows = sqlx::query_as!(
             Self,
             r#"
             SELECT
-                id AS "id: Uuid",
+                id  AS "id: Uuid",
                 name
-            FROM languages
+            FROM sources
             "#
         )
         .fetch_all(db_context.pool())
@@ -47,8 +44,9 @@ impl Language {
         Ok(rows)
     }
 
+    /// Deletes a source
     pub async fn delete(self, db_context: &DBContext) -> Result<(), sqlx::Error> {
-        sqlx::query!("DELETE FROM languages WHERE id = ?", self.id)
+        sqlx::query!("DELETE FROM sources WHERE id = ?", self.id)
             .execute(db_context.pool())
             .await?;
         Ok(())

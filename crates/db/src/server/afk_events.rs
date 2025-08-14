@@ -1,10 +1,11 @@
 use crate::{utils::DBError, DBContext};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct AFKEvent {
-    pub id: Option<i64>,
+    pub id: Uuid,
     pub afk_start: DateTime<Utc>,
     pub afk_end: Option<DateTime<Utc>>,
     pub duration: Option<i64>,
@@ -15,9 +16,10 @@ impl AFKEvent {
     pub async fn create(&self, db_context: &DBContext) -> Result<(), sqlx::Error> {
         sqlx::query!(
             "
-            INSERT INTO afk_events (afk_start, afk_end, duration)
-             VALUES (?, ?, ?)
+            INSERT INTO afk_events (id, afk_start, afk_end, duration)
+             VALUES (?, ?, ?, ?)
              ",
+            self.id,
             self.afk_start,
             self.afk_end,
             self.duration
@@ -53,9 +55,10 @@ pub async fn fetch_recent(
                 Some(ref s) => Some(s.parse::<DateTime<Utc>>()?),
                 None => None,
             };
+            let id = Uuid::from_slice(&row.id)?;
 
             Ok(AFKEvent {
-                id: Some(row.id),
+                id,
                 afk_start,
                 afk_end,
                 duration: row.duration,
@@ -93,9 +96,10 @@ pub async fn fetch_range(
                 Some(ref s) => Some(s.parse::<DateTime<Utc>>()?),
                 None => None,
             };
+            let id = Uuid::from_slice(&row.id)?;
 
             Ok(AFKEvent {
-                id: Some(row.id),
+                id,
                 afk_start,
                 afk_end,
                 duration: row.duration,

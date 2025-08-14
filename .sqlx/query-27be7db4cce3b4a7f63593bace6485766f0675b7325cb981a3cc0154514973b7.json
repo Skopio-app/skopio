@@ -1,20 +1,20 @@
 {
   "db_name": "SQLite",
-  "query": "INSERT INTO branches (project_id, name) VALUES (?, ?) RETURNING id",
+  "query": "INSERT INTO categories (id, name) VALUES (?, ?) RETURNING id",
   "describe": {
     "columns": [
       {
         "name": "id",
         "ordinal": 0,
-        "type_info": "Integer"
+        "type_info": "Blob"
       }
     ],
     "parameters": {
       "Right": 2
     },
     "nullable": [
-      true
+      false
     ]
   },
-  "hash": "cdb3504ade162c5fea82367db8991bac2dc1829497163b83be49a36dbbb156c2"
+  "hash": "27be7db4cce3b4a7f63593bace6485766f0675b7325cb981a3cc0154514973b7"
 }
