@@ -98,31 +98,40 @@ CREATE TABLE IF NOT EXISTS sources
     name TEXT NOT NULL UNIQUE
 ) WITHOUT ROWID;
 
+CREATE TABLE IF NOT EXISTS projects_fts_map
+(
+    docid   INTEGER PRIMARY KEY,
+    project_id BLOB(16) NOT NULL UNIQUE,
+    FOREIGN KEY (project_id) REFERENCES projects(id) ON DELETE CASCADE
+);
+
 CREATE VIRTUAL TABLE IF NOT EXISTS projects_fts
 USING fts5(
     name,
-    project_id UNINDEXED,
-    content='',
     tokenize = 'porter unicode61'
 );
 
 CREATE TRIGGER IF NOT EXISTS projects_ai
 AFTER INSERT ON projects
 BEGIN
-    INSERT INTO projects_fts(name, project_id) VALUES (new.name, new.id);
+    INSERT INTO projects_fts(rowid, name) VALUES (NULL, new.name);
+    INSERT INTO projects_fts_map(docid, project_id) VALUES (last_insert_rowid(), new.id);
 END;
 
 CREATE TRIGGER IF NOT EXISTS projects_au
 AFTER UPDATE ON projects
 BEGIN
-    DELETE FROM projects_fts WHERE project_id = old.id;
-    INSERT INTO projects_fts (name, project_id) VALUES (new.name, new.id);
+    UPDATE projects_fts
+        SET name = new.name
+    WHERE rowid = (SELECT docid FROM projects_fts_map WHERE project_id = old.id);
 END;
 
 CREATE TRIGGER IF NOT EXISTS projects_ad
 AFTER DELETE ON projects
 BEGIN
-    DELETE FROM projects_fts WHERE project_id = old.id;
+    DELETE FROM projects_fts
+        WHERE rowid = (SELECT docid FROM projects_fts_map WHERE project_id = old.id);
+    DELETE FROM projects_fts_map WHERE project_id = old.id;
 END;
 
 CREATE INDEX IF NOT EXISTS idx_branches_project ON branches(project_id);

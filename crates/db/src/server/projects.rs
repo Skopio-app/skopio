@@ -160,7 +160,8 @@ impl ServerProject {
                 p.name,
                 p.root_path
             FROM projects_fts fts
-            JOIN projects p ON p.id = fts.project_id
+            JOIN projects_fts_map m ON m.docid = fts.rowid
+            JOIN projects p ON p.id = m.project_id
             WHERE fts.name MATCH ?
             ORDER BY fts.rank ASC
             LIMIT ?

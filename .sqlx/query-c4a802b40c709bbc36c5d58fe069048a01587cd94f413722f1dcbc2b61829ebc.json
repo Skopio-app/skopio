@@ -1,0 +1,32 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            SELECT\n                p.id    AS \"id: Uuid\",\n                p.name,\n                p.root_path\n            FROM projects_fts fts\n            JOIN projects_fts_map m ON m.docid = fts.rowid\n            JOIN projects p ON p.id = m.project_id\n            WHERE fts.name MATCH ?\n            ORDER BY fts.rank ASC\n            LIMIT ?\n            ",
+  "describe": {
+    "columns": [
+      {
+        "name": "id: Uuid",
+        "ordinal": 0,
+        "type_info": "Blob"
+      },
+      {
+        "name": "name",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "root_path",
+        "ordinal": 2,
+        "type_info": "Text"
+      }
+    ],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": [
+      false,
+      false,
+      true
+    ]
+  },
+  "hash": "c4a802b40c709bbc36c5d58fe069048a01587cd94f413722f1dcbc2b61829ebc"
+}
