@@ -9,6 +9,42 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fe438c63458706e03479442743baae6c88256498e6431708f6dfc520a26515d3"
 
 [[package]]
+name = "Skopio"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "chrono",
+ "common",
+ "console-subscriber",
+ "core-foundation 0.10.0",
+ "core-graphics",
+ "dashmap 6.1.0",
+ "db",
+ "log",
+ "objc2 0.6.1",
+ "objc2-app-kit",
+ "objc2-foundation 0.3.1",
+ "percent-encoding",
+ "reqwest",
+ "ril",
+ "serde",
+ "serde_json",
+ "serde_qs",
+ "specta",
+ "specta-typescript",
+ "strum",
+ "strum_macros",
+ "tauri",
+ "tauri-build",
+ "tauri-plugin-dialog",
+ "tauri-plugin-log",
+ "tauri-specta",
+ "tokio",
+ "url",
+]
+
+[[package]]
 name = "addr2line"
 version = "0.24.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1236,42 +1272,6 @@ dependencies = [
  "quote",
  "rustc_version",
  "syn 2.0.98",
-]
-
-[[package]]
-name = "desktop"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "async-trait",
- "chrono",
- "common",
- "console-subscriber",
- "core-foundation 0.10.0",
- "core-graphics",
- "dashmap 6.1.0",
- "db",
- "log",
- "objc2 0.6.1",
- "objc2-app-kit",
- "objc2-foundation 0.3.1",
- "percent-encoding",
- "reqwest",
- "ril",
- "serde",
- "serde_json",
- "serde_qs",
- "specta",
- "specta-typescript",
- "strum",
- "strum_macros",
- "tauri",
- "tauri-build",
- "tauri-plugin-dialog",
- "tauri-plugin-log",
- "tauri-specta",
- "tokio",
- "url",
 ]
 
 [[package]]
