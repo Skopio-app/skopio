@@ -250,8 +250,8 @@ mod tests {
         let recent_ts = (Utc::now() - Duration::days(5)).timestamp();
 
         conn.execute(
-            "INSERT INTO heartbeats (timestamp, project_path, branch, entity_name, entity_type, language, app, is_write, lines, cursorpos, synced)
-             VALUES (?1, '/tmp/project', 'main', 'main.rs', 'file', 'Rust', 'VSCode', 1, 10, 42, 1)",
+            "INSERT INTO heartbeats (timestamp, project_path, branch, entity_name, entity_type, language, app, source, is_write, lines, cursorpos, synced)
+             VALUES (?1, '/tmp/project', 'main', 'main.rs', 'file', 'Rust', 'VSCode', 'skopio-vscode' 1, 10, 42, 1)",
             params![recent_ts],
         ).unwrap();
 
