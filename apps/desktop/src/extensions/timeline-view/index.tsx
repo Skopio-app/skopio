@@ -47,6 +47,7 @@ const group_options: Group[] = [
   "entity",
   "language",
   "project",
+  "source",
 ];
 
 const TimelineExtension = () => {

@@ -75,7 +75,7 @@ export const commands = {
 
 /** user-defined types **/
 
-export type App = { id: number | null; name: string };
+export type App = { id: string; name: string };
 export type AppConfig = {
   theme: Theme;
   heartbeat_interval: number;
@@ -98,13 +98,13 @@ export type BucketedSummaryInput = {
   group_by?: Group | null;
   include_afk: boolean;
 };
-export type Category = { id: number | null; name: string };
+export type Category = { id: string; name: string };
 export type EventGroup = { group: string; events: FullEvent[] };
 export type EventGroupResult =
   | { Flat: FullEvent[] }
   | { Grouped: EventGroup[] };
 export type FullEvent = {
-  id: number;
+  id: string;
   timestamp: string;
   endTimestamp: string | null;
   duration: number | null;
@@ -114,6 +114,7 @@ export type FullEvent = {
   project: string | null;
   branch: string | null;
   language: string | null;
+  source: string;
 };
 export type Goal = {
   id: number;
@@ -159,7 +160,8 @@ export type Group =
   | "language"
   | "branch"
   | "category"
-  | "entity";
+  | "entity"
+  | "source";
 export type GroupedTimeSummary = { group_key: string; total_seconds: number };
 export type InsightBucket = "day" | "week" | "month" | "year";
 export type InsightQueryPayload = {
@@ -188,15 +190,11 @@ export type NotificationPayload = {
 export type PaginatedProjects = {
   data: Project[];
   totalPages: number | null;
-  cursors: (number | null)[];
+  cursors: (string | null)[];
 };
-export type PaginationQuery = { after: number | null; limit: number | null };
-export type Project = {
-  id: number | null;
-  name: string;
-  root_path: string | null;
-};
-export type ProjectQuery = { id: number };
+export type PaginationQuery = { after: string | null; limit: number | null };
+export type Project = { id: string; name: string; root_path: string | null };
+export type ProjectQuery = { id: string };
 export type ProjectSearchQuery = { name: string; limit: number };
 export type SummaryQueryInput = {
   start: string | null;
