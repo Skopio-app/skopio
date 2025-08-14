@@ -14,33 +14,37 @@ impl Branch {
     pub async fn find_or_insert(
         db_context: &DBContext,
         project_id: Uuid,
-        name: &str,
-    ) -> Result<Uuid, DBError> {
-        let record = sqlx::query!(
-            "SELECT id FROM branches WHERE project_id = ? AND name = ?",
-            project_id,
-            name
-        )
-        .fetch_optional(db_context.pool())
-        .await?;
+        name: &Option<String>,
+    ) -> Result<Option<Uuid>, DBError> {
+        if let Some(branch) = name {
+            let record = sqlx::query!(
+                "SELECT id FROM branches WHERE project_id = ? AND name = ?",
+                project_id,
+                branch
+            )
+            .fetch_optional(db_context.pool())
+            .await?;
 
-        if let Some(row) = record {
-            let id = Uuid::from_slice(&row.id)?;
-            return Ok(id);
+            if let Some(row) = record {
+                let id = Uuid::from_slice(&row.id)?;
+                return Ok(Some(id));
+            }
+
+            let id = uuid::Uuid::now_v7();
+            let result = sqlx::query!(
+                "INSERT INTO branches (id, project_id, name) VALUES (?, ?, ?) RETURNING id",
+                id,
+                project_id,
+                name
+            )
+            .fetch_one(db_context.pool())
+            .await?;
+
+            let result_id = Uuid::from_slice(&result.id)?;
+            return Ok(Some(result_id));
+        } else {
+            Ok(None)
         }
-
-        let id = uuid::Uuid::now_v7();
-        let result = sqlx::query!(
-            "INSERT INTO branches (id, project_id, name) VALUES (?, ?, ?) RETURNING id",
-            id,
-            project_id,
-            name
-        )
-        .fetch_one(db_context.pool())
-        .await?;
-
-        let result_id = Uuid::from_slice(&result.id)?;
-        return Ok(result_id);
     }
 
     pub async fn all_project(

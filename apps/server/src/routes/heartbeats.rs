@@ -31,22 +31,15 @@ async fn handle_heartbeats(
         let project_id = ServerProject::find_or_insert(&db, &hb.project_name, &hb.project_path)
             .await
             .map_err(error_response)?;
-        let branch_id =
-            Branch::find_or_insert(&db, project_id, &hb.branch_name.unwrap_or_default())
-                .await
-                .map_err(error_response)?;
+        let branch_id = Branch::find_or_insert(&db, project_id, &hb.branch_name)
+            .await
+            .map_err(error_response)?;
         let entity_id = Entity::find_or_insert(&db, project_id, &hb.entity_name, &hb.entity_type)
             .await
             .map_err(error_response)?;
-        let language_id = if let Some(lang) = &hb.language_name {
-            Some(
-                Language::find_or_insert(&db, lang)
-                    .await
-                    .map_err(error_response)?,
-            )
-        } else {
-            None
-        };
+        let language_id = Language::find_or_insert(&db, &hb.language_name)
+            .await
+            .map_err(error_response)?;
 
         let source_id = Source::find_or_insert(&db, &hb.source_name)
             .await
@@ -57,7 +50,7 @@ async fn handle_heartbeats(
             id: id,
             project_id: Some(project_id),
             entity_id: Some(entity_id),
-            branch_id: Some(branch_id),
+            branch_id,
             language_id,
             app_id: Some(app_id),
             source_id,

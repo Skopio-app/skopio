@@ -90,9 +90,9 @@ const ProjectDetails = () => {
   useEffect(() => {
     const fetchProject = async () => {
       try {
-        if (!projectId || Number.isNaN(projectId)) return;
+        if (!projectId) return;
         const query: ProjectQuery = {
-          id: Number(projectId),
+          id: projectId,
         };
 
         const result = await commands.fetchProject(query);

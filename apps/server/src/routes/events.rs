@@ -28,6 +28,10 @@ async fn insert_events(
     debug!("Handling {} events", payload.len());
 
     for event in payload {
+        info!(
+            "The branch name: {:?}. The language name: {:?}",
+            event.branch_name, event.language_name
+        );
         let app_id = App::find_or_insert(&db, &event.app_name)
             .await
             .map_err(error_response)?;
@@ -35,15 +39,14 @@ async fn insert_events(
             ServerProject::find_or_insert(&db, &event.project_name, &event.project_path)
                 .await
                 .map_err(error_response)?;
-        let branch_id =
-            Branch::find_or_insert(&db, project_id, &event.branch_name.unwrap_or_default())
-                .await
-                .map_err(error_response)?;
+        let branch_id = Branch::find_or_insert(&db, project_id, &event.branch_name)
+            .await
+            .map_err(error_response)?;
         let entity_id =
             Entity::find_or_insert(&db, project_id, &event.entity_name, &event.entity_type)
                 .await
                 .map_err(error_response)?;
-        let language_id = Language::find_or_insert(&db, &event.language_name.unwrap_or_default())
+        let language_id = Language::find_or_insert(&db, &event.language_name)
             .await
             .map_err(error_response)?;
         let category_id = Category::find_or_insert(&db, &event.category)
@@ -52,6 +55,11 @@ async fn insert_events(
         let source_id = Source::find_or_insert(&db, &event.source_name)
             .await
             .map_err(error_response)?;
+
+        info!(
+            "The branch id: {:?}. The language id: {:?}",
+            branch_id, language_id
+        );
 
         let id = uuid::Uuid::now_v7();
 
@@ -63,13 +71,11 @@ async fn insert_events(
             app_id,
             entity_id: Some(entity_id),
             project_id: Some(project_id),
-            branch_id: Some(branch_id),
-            language_id: Some(language_id),
-            source_id: source_id,
+            branch_id,
+            language_id,
+            source_id,
             end_timestamp: event.end_timestamp,
         };
-
-        info!("The event created: {:?}", event);
 
         event.create(&db).await.map_err(error_response)?;
     }

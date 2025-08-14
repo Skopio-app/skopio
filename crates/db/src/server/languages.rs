@@ -9,26 +9,33 @@ pub struct Language {
 }
 
 impl Language {
-    pub async fn find_or_insert(db_context: &DBContext, name: &str) -> Result<Uuid, DBError> {
-        let record = sqlx::query!("SELECT id FROM languages WHERE name = ?", name)
-            .fetch_optional(db_context.pool())
+    pub async fn find_or_insert(
+        db_context: &DBContext,
+        name: &Option<String>,
+    ) -> Result<Option<Uuid>, DBError> {
+        if let Some(language) = name {
+            let record = sqlx::query!("SELECT id FROM languages WHERE name = ?", language)
+                .fetch_optional(db_context.pool())
+                .await?;
+
+            if let Some(row) = record {
+                let id = Uuid::from_slice(&row.id)?;
+                return Ok(Some(id));
+            }
+
+            let id = uuid::Uuid::now_v7();
+            let result = sqlx::query!(
+                "INSERT INTO languages (id, name) VALUES (?, ?) RETURNING id",
+                id,
+                name
+            )
+            .fetch_one(db_context.pool())
             .await?;
-
-        if let Some(row) = record {
-            let id = Uuid::from_slice(&row.id)?;
-            return Ok(id);
+            let result_id = Uuid::from_slice(&result.id)?;
+            Ok(Some(result_id))
+        } else {
+            Ok(None)
         }
-
-        let id = uuid::Uuid::now_v7();
-        let result = sqlx::query!(
-            "INSERT INTO languages (id, name) VALUES (?, ?) RETURNING id",
-            id,
-            name
-        )
-        .fetch_one(db_context.pool())
-        .await?;
-        let result_id = Uuid::from_slice(&result.id)?;
-        Ok(result_id)
     }
 
     pub async fn all(db_context: &DBContext) -> Result<Vec<Self>, DBError> {
