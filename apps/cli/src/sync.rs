@@ -251,7 +251,7 @@ mod tests {
 
         conn.execute(
             "INSERT INTO heartbeats (timestamp, project_path, branch, entity_name, entity_type, language, app, source, is_write, lines, cursorpos, synced)
-             VALUES (?1, '/tmp/project', 'main', 'main.rs', 'file', 'Rust', 'VSCode', 'skopio-vscode' 1, 10, 42, 1)",
+             VALUES (?1, '/tmp/project', 'main', 'main.rs', 'file', 'Rust', 'VSCode', 'skopio-vscode', 1, 10, 42, 1)",
             params![recent_ts],
         ).unwrap();
 
