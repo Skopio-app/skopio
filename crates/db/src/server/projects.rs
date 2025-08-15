@@ -70,7 +70,7 @@ impl ServerProject {
 
     pub async fn fetch_paginated(
         db_context: &DBContext,
-        after_id: Option<uuid::Uuid>,
+        after_id: Option<Uuid>,
         limit: u32,
     ) -> Result<Vec<Project>, sqlx::Error> {
         let limit = limit.min(100) as i64;

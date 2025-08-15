@@ -113,8 +113,13 @@ const ProjectDetails = () => {
   }
 
   if (!project) {
-    return <p className="p-4 text-red-500">Project not found.</p>;
+    return (
+      <p className="py-30 text-red-500 flex items-center justify-center">
+        Project not found.
+      </p>
+    );
   }
+
   return (
     <div className="p-4 space-y-6 mt-2">
       <Breadcrumb>
