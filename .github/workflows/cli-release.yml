@@ -136,12 +136,6 @@ jobs:
               --wait
           }
 
-          staple_bin() {
-            local bin="$1"
-            /usr/bin/xcrun stapler staple "$bin"
-            /usr/bin/codesign --verify --verbose=2 "$bin"
-          }
-
           pack() {
             local arch="$1"
             local cpu
@@ -167,7 +161,6 @@ jobs:
 
            (cd dist && /usr/bin/zip -q "$(basename "$zip")" "$(basename "$staged")")
            notarize_zip "$zip"
-           staple_bin "$staged"
 
            local sh256; sh256=$(shasum -a 256 "$zip" | awk '{print $1}')
            local size;  size=$(stat -f "%z" "$zip")
