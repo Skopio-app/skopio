@@ -36,7 +36,7 @@ jobs:
           security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
 
           echo "$MAC_CERT_P12_BASE64" | base64 --decode > cert.p12
-          security import cert.p12 -k "$KEYCHAIN" -P "$MAC_CERT_PASSWORD" -t /usr/bin/codesign
+          security import cert.p12 -k "$KEYCHAIN" -P "$MAC_CERT_PASSWORD" -T /usr/bin/codesign
           rm -f cert.p12
 
           security set-key-partition-list -S apple-tool;,apple: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
