@@ -21,6 +21,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v0.1.1] - 2025-08-15
+
+### Added
+
+- `source` flag to save the source of an event/heartbeat
+
+---
+
 ## [v0.1.0] - 2025-08-12
 
 - Initial CLI: heartbeat, event, and sync commands.

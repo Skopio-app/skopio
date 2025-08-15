@@ -4,7 +4,6 @@ on:
   push:
     branches:
       - release
-  workflow_dispatch: {}
 
 permissions:
   contents: write
@@ -27,19 +26,42 @@ jobs:
           targets: aarch64-apple-darwin, x86_64-apple-darwin
 
       - name: Setup Apple signing keychain
+        id: keychain
         shell: bash
         run: |
-          set -euo pipefall
-          KEYCHAIN=build.keychain
+          set -euo pipefail
+          KEYCHAIN="$RUNNER_TEMP/build.keychain-db"
+
           security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
-          security default-keychain -s "$KEYCHAIN"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN"
           security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
 
+          security list-keychains -d user -s "$KEYCHAIN"
+          security default-keychain -d user -s "$KEYCHAIN"
+
           echo "$MAC_CERT_P12_BASE64" | base64 --decode > cert.p12
-          security import cert.p12 -k "$KEYCHAIN" -P "$MAC_CERT_PASSWORD" -t /usr/bin/codesign
+          security import cert.p12 -k "$KEYCHAIN" -P "$MAC_CERT_PASSWORD" \
+            -T /usr/bin/codesign -T /usr/bin/security -T /usr/bin/xcrun
           rm -f cert.p12
 
-          security set-key-partition-list -S apple-tool;,apple: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          security find-identity -v -p codesigning "$KEYCHAIN" || true
+
+          ID_SHA="$(security find-identity -v -p codesigning "$KEYCHAIN" \
+            | awk '/Developer ID Application/ {print $2; exit}')"
+
+          if [ -z "$ID_SHA" ]; then
+            ID_SHA="$(security find-identity -v -p codesigning "$KEYCHAIN" \
+              | awk '/Developer ID/ {print $2; exit}')"
+          fi
+
+          if [ -z "$ID_SHA" ]; then
+            echo "::error::No Developer ID Application identity found in temp keychain."
+            exit 1
+          fi
+
+          echo "keychain=$KEYCHAIN"   >> "$GITHUB_OUTPUT"
+          echo "id_sha=$ID_SHA"       >> "$GITHUB_OUTPUT"
         env:
           MAC_CERT_P12_BASE64: ${{ secrets.MAC_CERT_P12_BASE64 }}
           MAC_CERT_PASSWORD: ${{ secrets.MAC_CERT_PASSWORD }}
@@ -71,11 +93,13 @@ jobs:
         working-directory: ${{ env.CLI_PATH }}
         run: cargo build --release --locked --target x86_64-apple-darwin
 
-      - name: Sign, zip, notarize, staple, checksums
+      - name: Sign, zip, notarize, checksums
         id: pkg
         shell: bash
         env:
-          DEV_IDENTITY: ${{ secrets.DEV_IDENTITY }}
+          KEYCHAIN: ${{ steps.keychain.outputs.keychain }}
+          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+          ID_SHA: ${{ steps.keychain.outputs.id_sha }}
           APPLE_ID: ${{ secrets.APPLE_ID }}
           AC_PASSWORD: ${{ secrets.AC_PASSWORD }}
           TEAM_ID: ${{ secrets.TEAM_ID }}
@@ -84,22 +108,28 @@ jobs:
           mkdir -p dist
           TARGET_DIR="${CARGO_TARGET_DIR:-target}"
 
+          security list-keychains -d user -s "$KEYCHAIN"
+          security default-keychain -d user -s "$KEYCHAIN"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+
           sign_bin() {
             local bin="$1"
-            codesign --force --options runtime --timestamp --sign "$DEV_IDENTITY" "$bin"
-            codesign --verify --verbose=2 "$bin"
-            spctl -a -vv -t execute "$bin" || true
+            /usr/bin/codesign \
+              --keychain "$KEYCHAIN" \
+              --force --options runtime --timestamp \
+              --sign "$ID_SHA" \
+              "$bin"
+            /usr/bin/codesign --verify --verbose=2 "$bin"
+            /usr/sbin/spctl -a -vv -t execute "$bin" || true
           }
 
           notarize_zip() {
             local zip="$1"
-            xcrun notarytool submit "$zip" \
+            /usr/bin/xcrun notarytool submit "$zip" \
               --apple-id "$APPLE_ID" \
-              --team-id "$TEAM_ID" \
+              --team-id  "$TEAM_ID" \
               --password "$AC_PASSWORD" \
               --wait
-
-              xcrun stapler staple "$zip" || true
           }
 
           pack() {
@@ -111,31 +141,30 @@ jobs:
               *) cpu="$arch" ;;
             esac
 
-            local bin="${TARGET_DIR}/${arch}/release/${{ env.BIN_NAME }}"
-            local staged="dist/${{ env.BIN_NAME }}-darwin-${cpu}"
-            local zip="dist/${{ env.BIN_NAME }}-darwin-${cpu}.zip"
+           local bin="${TARGET_DIR}/${arch}/release/${{ env.BIN_NAME }}"
+           local staged="dist/${{ env.BIN_NAME }}-darwin-${cpu}"
+           local zip="dist/${{ env.BIN_NAME }}-darwin-${cpu}.zip"
 
-            if [[ ! -f "$bin" ]]; then
-              echo "❌ Expected binary not found: $bin"
-              ls -la "${TARGET_DIR}/${arch}/release" || true
-              exit 1
-            fi
+           if [[ ! -f "$bin" ]]; then
+             echo "❌ Expected binary not found: $bin"
+             ls -la "${TARGET_DIR}/${arch}/release" || true
+             exit 1
+           fi
 
-            cp "$bin" "$staged"
-            strip -S -x "$staged" || true
-            sign_bin "$staged"
+           cp "$bin" "$staged"
+           strip -S -x "$staged" || true
+           sign_bin "$staged"
 
-            (cd dist && zip -q "$(basename "$zip")" "$(basename "$staged")")
+           (cd dist && /usr/bin/zip -q "$(basename "$zip")" "$(basename "$staged")")
+           notarize_zip "$zip"
 
-            notarize_zip "$zip"
+           local sh256; sh256=$(shasum -a 256 "$zip" | awk '{print $1}')
+           local size;  size=$(stat -f "%z" "$zip")
 
-            local sh256; sh256=$(shasum -a 256 "$zip" | awk '{print $1}')
-            local size;  size=$(stat -f "%z" "$zip")
-
-            echo "${sh256}  $(basename "$zip")" >> dist/checksums_sha256.txt
-            echo "${arch}_zip=$zip"   >> $GITHUB_OUTPUT
-            echo "${arch}_sha=$sh256" >> $GITHUB_OUTPUT
-            echo "${arch}_size=$size" >> $GITHUB_OUTPUT
+           echo "${sh256}  $(basename "$zip")" >> dist/checksums_sha256.txt
+           echo "${arch}_zip=$zip"   >> $GITHUB_OUTPUT
+           echo "${arch}_sha=$sh256" >> $GITHUB_OUTPUT
+           echo "${arch}_size=$size" >> $GITHUB_OUTPUT
           }
 
           : > dist/checksums_sha256.txt
