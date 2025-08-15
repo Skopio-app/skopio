@@ -127,14 +127,19 @@ jobs:
             /usr/sbin/spctl -a -vv -t execute "$bin" || true
           }
 
-          notarize_and_staple() {
-            local bin="$1"
-            /usr/bin/xcrun notarytool submit "$bin" \
+          notarize_zip() {
+            local zip="$1"
+            /usr/bin/xcrun notarytool submit "$zip" \
               --apple-id "$APPLE_ID" \
               --team-id  "$TEAM_ID" \
               --password "$AC_PASSWORD" \
               --wait
-           /usr/bin/xcrun stapler staple "$bin"
+          }
+
+          staple_bin() {
+            local bin="$1"
+            /usr/bin/xcrun stapler staple "$bin"
+            /usr/bin/codesign --verify --verbose=2 "$bin"
           }
 
           pack() {
@@ -158,11 +163,11 @@ jobs:
 
            cp "$bin" "$staged"
            strip -S -x "$staged" || true
-
            sign_bin "$staged"
-           notarize_and_staple "$staged"
 
-           (cd dist && zip -q "$(basename "$zip")" "$(basename "$staged")")
+           (cd dist && /usr/bin/zip -q "$(basename "$zip")" "$(basename "$staged")")
+           notarize_zip "$zip"
+           staple_bin "$staged"
 
            local sh256; sh256=$(shasum -a 256 "$zip" | awk '{print $1}')
            local size;  size=$(stat -f "%z" "$zip")
