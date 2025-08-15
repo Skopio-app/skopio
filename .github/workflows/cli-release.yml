@@ -27,21 +27,27 @@ jobs:
           targets: aarch64-apple-darwin, x86_64-apple-darwin
 
       - name: Setup Apple signing keychain
+        id: keychain
         shell: bash
         run: |
           set -euo pipefail
           KEYCHAIN="$RUNNER_TEMP/build.keychain-db"
+
           security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
           security set-keychain-settings -lut 21600 "$KEYCHAIN"
           security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+
           security list-keychains -d user -s "$KEYCHAIN"
           security default-keychain -d user -s "$KEYCHAIN"
 
           echo "$MAC_CERT_P12_BASE64" | base64 --decode > cert.p12
-          security import cert.p12 -k "$KEYCHAIN" -P "$MAC_CERT_PASSWORD" -T /usr/bin/codesign -T /usr/bin/security
+          security import cert.p12 -k "$KEYCHAIN" -P "$MAC_CERT_PASSWORD" \
+            -T /usr/bin/codesign -T /usr/bin/security -T /usr/bin/xcrun
           rm -f cert.p12
 
           security set-key-partition-list -S apple-tool:,apple: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+
+          echo "keychain=$KEYCHAIN" >> "$GITHUB_OUTPUT"
           security find-identity -v -p codesigning "$KEYCHAIN" || true
         env:
           MAC_CERT_P12_BASE64: ${{ secrets.MAC_CERT_P12_BASE64 }}
@@ -78,6 +84,8 @@ jobs:
         id: pkg
         shell: bash
         env:
+          KEYCHAIN: ${{ steps.keychain.outputs.keychain }}
+          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
           DEV_IDENTITY: ${{ secrets.DEV_IDENTITY }}
           APPLE_ID: ${{ secrets.APPLE_ID }}
           AC_PASSWORD: ${{ secrets.AC_PASSWORD }}
@@ -87,22 +95,29 @@ jobs:
           mkdir -p dist
           TARGET_DIR="${CARGO_TARGET_DIR:-target}"
 
+          security list-keychains -d user -s "$KEYCHAIN"
+          security default-keychain -d user -s "$KEYCHAIN"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+
           sign_bin() {
             local bin="$1"
-            codesign --force --options runtime --timestamp --sign "$DEV_IDENTITY" "$bin"
-            codesign --verify --verbose=2 "$bin"
-            spctl -a -vv -t execute "$bin" || true
+            /usr/bin/codesign \
+              --keychain "$KEYCHAIN" \
+              --force --options runtime --timestamp \
+              --sign "$DEV_IDENTITY" \
+              "$bin"
+            /usr/bin/codesign --verify --verbose=2 "$bin"
+            /usr/sbin/spctl -a -vv -t execute "$bin" || true
           }
 
-          notarize_zip() {
-            local zip="$1"
-            xcrun notarytool submit "$zip" \
+          notarize_and_staple() {
+            local bin="$1"
+            /usr/bin/xcrun notarytool submit "$bin" \
               --apple-id "$APPLE_ID" \
               --team-id "$TEAM_ID" \
               --password "$AC_PASSWORD" \
               --wait
-
-              xcrun stapler staple "$zip" || true
+            /usr/bin/xcrun stapler staple "$bin"
           }
 
           pack() {
@@ -127,10 +142,9 @@ jobs:
             cp "$bin" "$staged"
             strip -S -x "$staged" || true
             sign_bin "$staged"
+            notarize_and_staple "$staged"
 
             (cd dist && zip -q "$(basename "$zip")" "$(basename "$staged")")
-
-            notarize_zip "$zip"
 
             local sh256; sh256=$(shasum -a 256 "$zip" | awk '{print $1}')
             local size;  size=$(stat -f "%z" "$zip")
