@@ -42,11 +42,10 @@ jobs:
 
           echo "$MAC_CERT_P12_BASE64" | base64 --decode > cert.p12
           security import cert.p12 -k "$KEYCHAIN" -P "$MAC_CERT_PASSWORD" \
-            -T codesign -T security -T xcrun
+            -T /usr/bin/codesign -T /usr/bin/security -T /usr/bin/xcrun
           rm -f cert.p12
 
           security set-key-partition-list -S apple-tool:,apple: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
-
           security find-identity -v -p codesigning "$KEYCHAIN" || true
 
           ID_SHA="$(security find-identity -v -p codesigning "$KEYCHAIN" \
@@ -58,6 +57,7 @@ jobs:
           fi
 
           if [ -z "$ID_SHA" ]; then
+            echo "::error::No Developer ID Application identity found in temp keychain."
             exit 1
           fi
 
@@ -115,18 +115,18 @@ jobs:
 
           sign_bin() {
             local bin="$1"
-            codesign \
+            /usr/bin/codesign \
               --keychain "$KEYCHAIN" \
               --force --options runtime --timestamp \
               --sign "$ID_SHA" \
               "$bin"
-            codesign --verify --verbose=2 "$bin"
-            spctl -a -vv -t execute "$bin" || true
+            /usr/bin/codesign --verify --verbose=2 "$bin"
+            /usr/sbin/spctl -a -vv -t execute "$bin" || true
           }
 
           notarize_zip() {
             local zip="$1"
-            xcrun notarytool submit "$zip" \
+            /usr/bin/xcrun notarytool submit "$zip" \
               --apple-id "$APPLE_ID" \
               --team-id  "$TEAM_ID" \
               --password "$AC_PASSWORD" \
