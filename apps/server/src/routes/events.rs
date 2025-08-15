@@ -28,10 +28,6 @@ async fn insert_events(
     debug!("Handling {} events", payload.len());
 
     for event in payload {
-        info!(
-            "The branch name: {:?}. The language name: {:?}",
-            event.branch_name, event.language_name
-        );
         let app_id = App::find_or_insert(&db, &event.app_name)
             .await
             .map_err(error_response)?;
@@ -55,11 +51,6 @@ async fn insert_events(
         let source_id = Source::find_or_insert(&db, &event.source_name)
             .await
             .map_err(error_response)?;
-
-        info!(
-            "The branch id: {:?}. The language id: {:?}",
-            branch_id, language_id
-        );
 
         let id = uuid::Uuid::now_v7();
 
