@@ -42,12 +42,11 @@ jobs:
 
           echo "$MAC_CERT_P12_BASE64" | base64 --decode > cert.p12
           security import cert.p12 -k "$KEYCHAIN" -P "$MAC_CERT_PASSWORD" \
-            -T /usr/bin/codesign -T /usr/bin/security -T /usr/bin/xcrun
+            -T codesign -T security -T xcrun
           rm -f cert.p12
 
           security set-key-partition-list -S apple-tool:,apple: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
 
-          echo "== Codesigning identities =="
           security find-identity -v -p codesigning "$KEYCHAIN" || true
 
           ID_SHA="$(security find-identity -v -p codesigning "$KEYCHAIN" \
@@ -59,8 +58,6 @@ jobs:
           fi
 
           if [ -z "$ID_SHA" ]; then
-            echo "::error::No Developer ID Application identity found in temp keychain."
-            echo "Make sure the .p12 is a *Developer ID Application* cert (with private key)."
             exit 1
           fi
 
@@ -97,7 +94,7 @@ jobs:
         working-directory: ${{ env.CLI_PATH }}
         run: cargo build --release --locked --target x86_64-apple-darwin
 
-      - name: Sign, zip, notarize, staple, checksums
+      - name: Sign, zip, notarize, checksums
         id: pkg
         shell: bash
         env:
@@ -118,18 +115,18 @@ jobs:
 
           sign_bin() {
             local bin="$1"
-            /usr/bin/codesign \
+            codesign \
               --keychain "$KEYCHAIN" \
               --force --options runtime --timestamp \
               --sign "$ID_SHA" \
               "$bin"
-            /usr/bin/codesign --verify --verbose=2 "$bin"
-            /usr/sbin/spctl -a -vv -t execute "$bin" || true
+            codesign --verify --verbose=2 "$bin"
+            spctl -a -vv -t execute "$bin" || true
           }
 
           notarize_zip() {
             local zip="$1"
-            /usr/bin/xcrun notarytool submit "$zip" \
+            xcrun notarytool submit "$zip" \
               --apple-id "$APPLE_ID" \
               --team-id  "$TEAM_ID" \
               --password "$AC_PASSWORD" \
