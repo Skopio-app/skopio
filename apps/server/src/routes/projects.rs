@@ -9,10 +9,10 @@ use axum::{
 use common::models::{
     inputs::{PaginationQuery, ProjectQuery, ProjectSearchQuery},
     outputs::PaginatedProjects,
+    Project,
 };
 use db::{server::projects::ServerProject, DBContext};
 use tokio::sync::Mutex;
-use types::Project;
 
 use crate::utils::error_response;
 

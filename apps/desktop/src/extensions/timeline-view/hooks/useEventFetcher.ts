@@ -40,7 +40,6 @@ export const useEventFetcher = (
       try {
         const result: EventGroupResult = await commands.fetchEvents(input);
         if ("Grouped" in result) {
-          console.debug("Events retrieved: ", result.Grouped);
           setEvents(result.Grouped);
         }
       } catch (err) {

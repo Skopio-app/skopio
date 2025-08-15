@@ -65,7 +65,8 @@ pub fn append_standard_joins(query: &mut String) {
                  LEFT JOIN entities ON events.entity_id = entities.id \
                  LEFT JOIN branches ON events.branch_id = branches.id \
                  LEFT JOIN categories ON events.category_id = categories.id \
-                 LEFT JOIN languages ON events.language_id = languages.id",
+                 LEFT JOIN languages ON events.language_id = languages.id \
+                 LEFT JOIN sources ON events.source_id = sources.id",
     );
 }
 
@@ -84,6 +85,7 @@ pub fn group_key_column(group: Option<Group>) -> &'static str {
         Some(Group::Branch) => "branches.name",
         Some(Group::Category) => "categories.name",
         Some(Group::Entity) => "entities.name",
+        Some(Group::Source) => "sources.name",
         None => "'Total'",
     }
 }

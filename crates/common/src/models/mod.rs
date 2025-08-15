@@ -21,6 +21,7 @@ pub enum Group {
     Branch,
     Category,
     Entity,
+    Source,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, Copy, specta::Type)]
@@ -30,4 +31,11 @@ pub enum InsightType {
     TopN,
     MostActiveDay,
     AggregatedAverage,
+}
+
+#[derive(Serialize, Deserialize, Debug, specta::Type)]
+pub struct Project {
+    pub id: uuid::Uuid,
+    pub name: String,
+    pub root_path: Option<String>,
 }

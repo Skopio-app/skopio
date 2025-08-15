@@ -10,10 +10,10 @@ rust-version.workspace = true
 [dependencies]
 serde = { workspace = true, features = ["derive"] }
 chrono = { workspace = true, features = ["serde"] }
-specta = { workspace = true , features = ["chrono", "derive"] }
+specta = { workspace = true , features = ["chrono", "derive", "uuid"] }
 thiserror = { workspace = true }
 git2 = { workspace = true }
-types = { path = "../types" }
 tokei = { workspace = true }
 percent-encoding = { workspace = true }
 keyring = { workspace = true, features = ["apple-native"]}
+uuid = {workspace = true, features = ["v7", "serde"]}

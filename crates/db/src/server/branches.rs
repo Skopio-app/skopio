@@ -1,10 +1,11 @@
-use crate::DBContext;
+use crate::{utils::DBError, DBContext};
 use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 
 #[derive(Serialize, Deserialize, Debug, sqlx::FromRow)]
 pub struct Branch {
-    pub id: Option<i64>,
-    pub project_id: i64,
+    pub id: Uuid,
+    pub project_id: Uuid,
     pub name: String,
 }
 
@@ -12,52 +13,66 @@ impl Branch {
     /// Inserts a new branch if it doesn't exist, or returns the existing ID
     pub async fn find_or_insert(
         db_context: &DBContext,
-        project_id: i64,
-        name: &str,
-    ) -> Result<i64, sqlx::Error> {
-        let record = sqlx::query!(
-            "SELECT id FROM branches WHERE project_id = ? AND name = ?",
-            project_id,
-            name
-        )
-        .fetch_optional(db_context.pool())
-        .await?;
+        project_id: Uuid,
+        name: &Option<String>,
+    ) -> Result<Option<Uuid>, DBError> {
+        if let Some(branch) = name {
+            let record = sqlx::query!(
+                "SELECT id FROM branches WHERE project_id = ? AND name = ?",
+                project_id,
+                branch
+            )
+            .fetch_optional(db_context.pool())
+            .await?;
 
-        if let Some(row) = record {
-            return Ok(row.id);
+            if let Some(row) = record {
+                let id = Uuid::from_slice(&row.id)?;
+                return Ok(Some(id));
+            }
+
+            let id = uuid::Uuid::now_v7();
+            let result = sqlx::query!(
+                "INSERT INTO branches (id, project_id, name) VALUES (?, ?, ?) RETURNING id",
+                id,
+                project_id,
+                name
+            )
+            .fetch_one(db_context.pool())
+            .await?;
+
+            let result_id = Uuid::from_slice(&result.id)?;
+            return Ok(Some(result_id));
+        } else {
+            Ok(None)
         }
-
-        let result = sqlx::query!(
-            "INSERT INTO branches (project_id, name) VALUES (?, ?) RETURNING id",
-            project_id,
-            name
-        )
-        .fetch_one(db_context.pool())
-        .await?;
-
-        result.id.ok_or_else(|| sqlx::Error::RowNotFound)
     }
 
     pub async fn all_project(
         db_context: &DBContext,
-        project_id: i64,
-    ) -> Result<Vec<Self>, sqlx::Error> {
-        sqlx::query_as!(
+        project_id: Uuid,
+    ) -> Result<Vec<Self>, DBError> {
+        let rows = sqlx::query_as!(
             Self,
-            "SELECT id, project_id, name FROM branches WHERE project_id = ?",
+            r#"
+            SELECT
+                id AS "id: Uuid",
+                project_id  AS "project_id: Uuid",
+                name
+            FROM branches
+            WHERE project_id = ?
+            "#,
             project_id
         )
         .fetch_all(db_context.pool())
-        .await
+        .await?;
+
+        Ok(rows)
     }
 
-    pub async fn delete(self, db_context: &DBContext) -> Result<(), sqlx::Error> {
-        if let Some(id) = self.id {
-            sqlx::query!("DELETE FROM branches WHERE id = ?", id)
-                .execute(db_context.pool())
-                .await?;
-        }
-
+    pub async fn delete(self, db_context: &DBContext) -> Result<(), DBError> {
+        sqlx::query!("DELETE FROM branches WHERE id = ?", self.id)
+            .execute(db_context.pool())
+            .await?;
         Ok(())
     }
 }

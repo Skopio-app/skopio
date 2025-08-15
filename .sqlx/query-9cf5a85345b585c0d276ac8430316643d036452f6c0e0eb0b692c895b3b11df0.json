@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "\n            SELECT\n             id,\n             timestamp,\n             duration,\n             category,\n             app_name,\n             entity_name,\n             entity_type,\n             project_name,\n             project_path,\n             branch_name,\n             language_name,\n             end_timestamp\n            FROM events\n            WHERE synced = 0\n            LIMIT 100\n            ",
+  "query": "\n            SELECT\n             id,\n             timestamp,\n             duration,\n             category,\n             app_name,\n             entity_name,\n             entity_type,\n             project_name,\n             project_path,\n             branch_name,\n             language_name,\n             source_name,\n             end_timestamp\n            FROM events\n            WHERE synced = 0\n            LIMIT 100\n            ",
   "describe": {
     "columns": [
       {
@@ -59,8 +59,13 @@
         "type_info": "Text"
       },
       {
-        "name": "end_timestamp",
+        "name": "source_name",
         "ordinal": 11,
+        "type_info": "Text"
+      },
+      {
+        "name": "end_timestamp",
+        "ordinal": 12,
         "type_info": "Text"
       }
     ],
@@ -79,8 +84,9 @@
       true,
       true,
       true,
+      false,
       false
     ]
   },
-  "hash": "a19e06b0abbc8489923916c1c8059471d80960cad16c34436c981996cec11621"
+  "hash": "9cf5a85345b585c0d276ac8430316643d036452f6c0e0eb0b692c895b3b11df0"
 }

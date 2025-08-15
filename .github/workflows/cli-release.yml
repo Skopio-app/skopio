@@ -26,6 +26,24 @@ jobs:
         with:
           targets: aarch64-apple-darwin, x86_64-apple-darwin
 
+      - name: Setup Apple signing keychain
+        shell: bash
+        run: |
+          set -euo pipefall
+          KEYCHAIN=build.keychain
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+          security default-keychain -s "$KEYCHAIN"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+
+          echo "$MAC_CERT_P12_BASE64" | base64 --decode > cert.p12
+          security import cert.p12 -k "$KEYCHAIN" -P "$MAC_CERT_PASSWORD" -t /usr/bin/codesign
+          rm -f cert.p12
+
+          security set-key-partition-list -S apple-tool;,apple: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
+        env:
+          MAC_CERT_P12_BASE64: ${{ secrets.MAC_CERT_P12_BASE64 }}
+          MAC_CERT_PASSWORD: ${{ secrets.MAC_CERT_PASSWORD }}
+          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
       - name: Detect version from Cargo.toml
         id: meta
         shell: bash
@@ -53,13 +71,36 @@ jobs:
         working-directory: ${{ env.CLI_PATH }}
         run: cargo build --release --locked --target x86_64-apple-darwin
 
-      - name: Zip + checksums
+      - name: Sign, zip, notarize, staple, checksums
         id: pkg
         shell: bash
+        env:
+          DEV_IDENTITY: ${{ secrets.DEV_IDENTITY }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          AC_PASSWORD: ${{ secrets.AC_PASSWORD }}
+          TEAM_ID: ${{ secrets.TEAM_ID }}
         run: |
           set -euo pipefail
           mkdir -p dist
           TARGET_DIR="${CARGO_TARGET_DIR:-target}"
+
+          sign_bin() {
+            local bin="$1"
+            codesign --force --options runtime --timestamp --sign "$DEV_IDENTITY" "$bin"
+            codesign --verify --verbose=2 "$bin"
+            spctl -a -vv -t execute "$bin" || true
+          }
+
+          notarize_zip() {
+            local zip="$1"
+            xcrun notarytool submit "$zip" \
+              --apple-id "$APPLE_ID" \
+              --team-id "$TEAM_ID" \
+              --password "$AC_PASSWORD" \
+              --wait
+
+              xcrun stapler staple "$zip" || true
+          }
 
           pack() {
             local arch="$1"
@@ -82,7 +123,11 @@ jobs:
 
             cp "$bin" "$staged"
             strip -S -x "$staged" || true
+            sign_bin "$staged"
+
             (cd dist && zip -q "$(basename "$zip")" "$(basename "$staged")")
+
+            notarize_zip "$zip"
 
             local sh256; sh256=$(shasum -a 256 "$zip" | awk '{print $1}')
             local size;  size=$(stat -f "%z" "$zip")

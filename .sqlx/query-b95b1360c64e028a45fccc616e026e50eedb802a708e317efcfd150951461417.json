@@ -6,14 +6,14 @@
       {
         "name": "id",
         "ordinal": 0,
-        "type_info": "Integer"
+        "type_info": "Blob"
       }
     ],
     "parameters": {
       "Right": 1
     },
     "nullable": [
-      true
+      false
     ]
   },
   "hash": "b95b1360c64e028a45fccc616e026e50eedb802a708e317efcfd150951461417"

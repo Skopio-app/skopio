@@ -4,6 +4,7 @@ use db::{server::afk_events::AFKEvent, DBContext};
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use tracing::debug;
+use uuid::Uuid;
 
 use crate::utils::error_response;
 
@@ -15,9 +16,11 @@ async fn handle_afk_events(
 
     debug!("Handling {} afk events", payload.len());
 
+    let id = Uuid::now_v7();
+
     for afk in payload {
         let afk_event = AFKEvent {
-            id: None,
+            id,
             afk_start: afk.afk_start,
             afk_end: afk.afk_end,
             duration: afk.duration,

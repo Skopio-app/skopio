@@ -9,6 +9,7 @@ CREATE TABLE IF NOT EXISTS heartbeats
     branch_name TEXT,
     language_name TEXT,
     app_name TEXT NOT NULL,
+    source_name TEXT NOT NULL,
     is_write BOOL,
     lines INTEGER,
     cursorpos INTEGER,
@@ -28,6 +29,7 @@ CREATE TABLE IF NOT EXISTS events
     project_path TEXT,
     branch_name TEXT,
     language_name TEXT,
+    source_name TEXT NOT NULL,
     end_timestamp TEXT NOT NULL,
     synced BOOL DEFAULT 0
 );

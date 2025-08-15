@@ -1,15 +1,16 @@
 use std::collections::BTreeMap;
 
+use super::Project;
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use types::Project;
+use uuid::Uuid;
 
 #[derive(Serialize, Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct PaginatedProjects {
     pub data: Vec<Project>,
     pub total_pages: Option<u32>,
-    pub cursors: Vec<Option<i64>>,
+    pub cursors: Vec<Option<Uuid>>,
 }
 
 #[derive(Debug, Serialize, Deserialize, specta::Type)]
@@ -24,7 +25,7 @@ pub enum InsightResult {
 #[derive(Debug, Serialize, Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct FullEvent {
-    pub id: i64,
+    pub id: uuid::Uuid,
     pub timestamp: DateTime<Utc>,
     pub end_timestamp: Option<DateTime<Utc>>,
     pub duration: Option<i64>,
@@ -34,6 +35,7 @@ pub struct FullEvent {
     pub project: Option<String>,
     pub branch: Option<String>,
     pub language: Option<String>,
+    pub source: String,
 }
 
 #[derive(Debug, Serialize, Deserialize, specta::Type)]

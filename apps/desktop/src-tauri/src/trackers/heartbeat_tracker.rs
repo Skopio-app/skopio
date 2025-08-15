@@ -1,4 +1,5 @@
 use crate::monitored_app::{resolve_app_details, Entity, MonitoredApp, IGNORED_APPS};
+use crate::trackers::SOURCE;
 use crate::tracking_service::TrackingService;
 use chrono::{DateTime, Utc};
 use common::git::find_git_branch;
@@ -162,6 +163,7 @@ impl HeartbeatTracker {
             branch_name: heartbeat.branch_name.clone(),
             language_name: heartbeat.language_name.clone(),
             app_name: heartbeat.app_name.clone(),
+            source_name: SOURCE.to_string(),
             is_write: Some(heartbeat.is_write),
             lines: heartbeat.lines,
             cursorpos: Some(cursor_x as i64),

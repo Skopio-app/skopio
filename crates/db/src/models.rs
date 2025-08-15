@@ -16,12 +16,18 @@ pub struct GroupedTimeSummary {
 
 #[derive(Serialize, Deserialize, Debug, specta::Type, sqlx::FromRow)]
 pub struct App {
-    pub id: Option<i64>,
+    pub id: uuid::Uuid,
     pub name: String,
 }
 
 #[derive(Serialize, Deserialize, Debug, specta::Type, sqlx::FromRow)]
 pub struct Category {
-    pub id: Option<i64>,
+    pub id: uuid::Uuid,
+    pub name: String,
+}
+
+#[derive(Serialize, Deserialize, Debug, specta::Type, sqlx::FromRow)]
+pub struct Source {
+    pub id: uuid::Uuid,
     pub name: String,
 }

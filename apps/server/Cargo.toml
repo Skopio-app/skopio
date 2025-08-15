@@ -20,5 +20,5 @@ dirs = { workspace = true }
 tower-http = { version = "0.6.2", features = ["cors"] }
 common = { path = "../../crates/common" }
 specta = { workspace = true }
-types = { path = "../../crates/types" }
-serde_qs = { workspace = true, features = ["axum"]}
+serde_qs = { workspace = true, features = ["axum"] }
+uuid = { workspace = true, features = ["v7", "fast-rng"] }

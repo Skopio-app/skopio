@@ -1,20 +1,20 @@
 {
   "db_name": "SQLite",
-  "query": "INSERT INTO categories (name) VALUES (?) RETURNING id",
+  "query": "INSERT INTO sources (id, name) VALUES (?, ?) RETURNING id",
   "describe": {
     "columns": [
       {
         "name": "id",
         "ordinal": 0,
-        "type_info": "Integer"
+        "type_info": "Blob"
       }
     ],
     "parameters": {
-      "Right": 1
+      "Right": 2
     },
     "nullable": [
       false
     ]
   },
-  "hash": "6cc0e8b2f7f90e2a589a00189aa6f3fb23bb4948d165d5843205e50a341408ab"
+  "hash": "a7c0e37c6b25518fee71470c7fb5d64b330ef7cab6229e54e4e27cc04664de4e"
 }

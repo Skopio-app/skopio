@@ -95,6 +95,7 @@ impl InsightProvider for Insights {
                     Group::Branch => ("branch_id", "JOIN branches b ON b.id = e.branch_id"),
                     Group::Entity => ("entity_id", "JOIN entities en ON en.id = e.entity_id"),
                     Group::Language => ("language_id", "JOIN languages l ON l.id = e.language_id"),
+                    Group::Source => ("source_id", "JOIN sources s ON s.id = e.source_id"),
                 };
 
                 let label = match group_by {
@@ -104,6 +105,7 @@ impl InsightProvider for Insights {
                     Group::Branch => "b.name",
                     Group::Entity => "en.name",
                     Group::Language => "l.name",
+                    Group::Source => "s.name",
                 };
 
                 let query_string = format!(
@@ -155,26 +157,27 @@ impl InsightProvider for Insights {
                     }
                 }
 
-                let rows = sqlx::query!(
-                    "
-                    SELECT DATE(datetime(timestamp, 'localtime')) as date,
-                            SUM(duration) as total
+                let row = sqlx::query!(
+                    r#"
+                    SELECT
+                        COALESCE(DATE(datetime(timestamp, 'localtime')), '') AS "date: String",
+                        COALESCE(SUM(duration), 0)  AS "total: i64"
                     FROM events
-                    WHERE timestamp >= ? AND timestamp < ?
-                    GROUP BY date
-                    ORDER BY total DESC
+                    WHERE timestamp >= ?1 AND timestamp < ?2
+                    GROUP BY DATE(datetime(timestamp, 'localtime'))
+                    ORDER BY 2 DESC
                     LIMIT 1
-                    ",
+                    "#,
                     start,
                     end
                 )
                 .fetch_optional(db_context.pool())
                 .await?;
 
-                if let Some(row) = rows {
+                if let Some(value) = row {
                     Ok(InsightResult::MostActiveDay {
-                        date: row.date.unwrap_or_default(),
-                        total_duration: row.total.unwrap_or(0),
+                        date: value.date.unwrap_or_default(),
+                        total_duration: value.total.unwrap_or(0),
                     })
                 } else {
                     Ok(InsightResult::MostActiveDay {
@@ -230,6 +233,11 @@ impl InsightProvider for Insights {
                     Some(Group::Language) => (
                         "JOIN languages l ON l.id = e.language_id",
                         ", l.name as label",
+                        ", label",
+                    ),
+                    Some(Group::Source) => (
+                        "JOIN sources s ON s.id = e.source_id",
+                        ", s.name as source",
                         ", label",
                     ),
                     None => ("", ", '_' as label", ""),

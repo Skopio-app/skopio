@@ -6,7 +6,7 @@ use axum::{Json, Router};
 use common::models::inputs::{BucketedSummaryInput, EventInput};
 use common::models::outputs::EventGroupResult;
 use common::time::TimeRange;
-use db::models::{App, Category};
+use db::models::{App, Category, Source};
 use db::server::branches::Branch;
 use db::server::entities::Entity;
 use db::server::events::Event;
@@ -35,35 +35,38 @@ async fn insert_events(
             ServerProject::find_or_insert(&db, &event.project_name, &event.project_path)
                 .await
                 .map_err(error_response)?;
-        let branch_id =
-            Branch::find_or_insert(&db, project_id, &event.branch_name.unwrap_or_default())
-                .await
-                .map_err(error_response)?;
+        let branch_id = Branch::find_or_insert(&db, project_id, &event.branch_name)
+            .await
+            .map_err(error_response)?;
         let entity_id =
             Entity::find_or_insert(&db, project_id, &event.entity_name, &event.entity_type)
                 .await
                 .map_err(error_response)?;
-        let language_id = Language::find_or_insert(&db, &event.language_name.unwrap_or_default())
+        let language_id = Language::find_or_insert(&db, &event.language_name)
             .await
             .map_err(error_response)?;
         let category_id = Category::find_or_insert(&db, &event.category)
             .await
             .map_err(error_response)?;
+        let source_id = Source::find_or_insert(&db, &event.source_name)
+            .await
+            .map_err(error_response)?;
+
+        let id = uuid::Uuid::now_v7();
 
         let event = Event {
-            id: None,
+            id: id,
             timestamp: event.timestamp.unwrap_or_default(),
             duration: event.duration,
             category_id,
             app_id,
             entity_id: Some(entity_id),
             project_id: Some(project_id),
-            branch_id: Some(branch_id),
-            language_id: Some(language_id),
+            branch_id,
+            language_id,
+            source_id,
             end_timestamp: event.end_timestamp,
         };
-
-        info!("The event created: {:?}", event);
 
         event.create(&db).await.map_err(error_response)?;
     }

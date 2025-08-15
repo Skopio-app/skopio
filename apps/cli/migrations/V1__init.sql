@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS heartbeats (
     entity_type TEXT,
     language TEXT,
     app TEXT NOT NULL,
+    source TEXT NOT NULL,
     is_write BOOLEAN DEFAULT FALSE,
     lines INTEGER,
     cursorpos INTEGER,
@@ -24,6 +25,7 @@ CREATE TABLE IF NOT EXISTS events (
     project_path TEXT NOT NULL,
     branch TEXT,
     language TEXT,
+    source TEXT NOT NULL,
     end_timestamp INTEGER,
     synced BOOLEAN DEFAULT FALSE
 )

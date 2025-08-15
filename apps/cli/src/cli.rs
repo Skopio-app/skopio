@@ -48,6 +48,10 @@ pub enum Commands {
         lines: Option<i64>,
 
         #[arg(long, short)]
+        /// The name of the extension that has generated the heartbeat
+        source: String,
+
+        #[arg(long, short)]
         /// The cursor position at the point the heartbeat is generated.
         cursorpos: Option<i64>,
 
@@ -85,6 +89,10 @@ pub enum Commands {
         #[arg(long, short)]
         /// The full path of the currently open project
         project: String,
+
+        #[arg(long, short)]
+        /// The name of the extension/plugin that has generated the event
+        source: String,
 
         #[arg(long)]
         /// The end timestamp of the event

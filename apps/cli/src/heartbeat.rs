@@ -12,6 +12,7 @@ pub struct HeartbeatData {
     pub app: String,
     pub is_write: bool,
     pub lines: Option<i64>,
+    pub source: String,
     pub cursorpos: Option<i64>,
 }
 
@@ -20,8 +21,8 @@ pub fn save_heartbeat(conn: &Connection, hb_data: HeartbeatData) -> Result<(), C
     let language = detect_language(&hb_data.entity);
 
     conn.execute(
-        "INSERT INTO heartbeats (timestamp, project_path, branch, entity_name, entity_type, language, app, is_write, lines, cursorpos, synced)
-        VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, 0)",
+        "INSERT INTO heartbeats (timestamp, project_path, branch, entity_name, entity_type, language, app, source, is_write, lines, cursorpos, synced)
+        VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, 0)",
         params![
             hb_data.timestamp,
             hb_data.project,
@@ -30,6 +31,7 @@ pub fn save_heartbeat(conn: &Connection, hb_data: HeartbeatData) -> Result<(), C
             hb_data.entity_type,
             language,
             hb_data.app,
+            hb_data.source,
             hb_data.is_write,
             hb_data.lines,
             hb_data.cursorpos,
@@ -56,6 +58,7 @@ mod tests {
             entity: "main.rs".into(),
             entity_type: "File".into(),
             app: "Code".into(),
+            source: "skopio-vscode".into(),
             is_write: false,
             lines: Some(10),
             cursorpos: Some(62),

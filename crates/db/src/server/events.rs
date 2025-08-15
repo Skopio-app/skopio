@@ -4,6 +4,7 @@ use chrono::{DateTime, Utc};
 use common::models::outputs::{EventGroup, EventGroupResult, FullEvent};
 use log::info;
 use serde::{Deserialize, Serialize};
+use uuid::Uuid;
 
 use sqlx::Row;
 
@@ -21,26 +22,28 @@ use crate::{
 
 #[derive(Serialize, Deserialize, Debug, sqlx::FromRow)]
 pub struct Event {
-    pub id: Option<i64>,
+    pub id: Uuid,
     pub timestamp: DateTime<Utc>,
     pub duration: Option<i64>,
-    pub category_id: i64,
-    pub app_id: i64,
-    pub entity_id: Option<i64>,
-    pub project_id: Option<i64>,
-    pub branch_id: Option<i64>,
-    pub language_id: Option<i64>,
+    pub category_id: Uuid,
+    pub app_id: Uuid,
+    pub entity_id: Option<Uuid>,
+    pub project_id: Option<Uuid>,
+    pub branch_id: Option<Uuid>,
+    pub language_id: Option<Uuid>,
+    pub source_id: Uuid,
     pub end_timestamp: Option<DateTime<Utc>>,
 }
 
 impl Event {
     // Create a new event
-    pub async fn create(self, db_context: &DBContext) -> Result<(), sqlx::Error> {
+    pub async fn create(self, db_context: &DBContext) -> Result<(), DBError> {
         sqlx::query!(
             "
-            INSERT INTO events (timestamp, duration, category_id, app_id, entity_id, project_id, branch_id, language_id, end_timestamp)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            INSERT INTO events (id, timestamp, duration, category_id, app_id, entity_id, project_id, branch_id, language_id, source_id, end_timestamp)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ",
+            self.id,
             self.timestamp,
             self.duration,
             self.category_id,
@@ -49,6 +52,7 @@ impl Event {
             self.project_id,
             self.branch_id,
             self.language_id,
+            self.source_id,
             self.end_timestamp
         )
         .execute(db_context.pool())
@@ -82,7 +86,8 @@ impl SummaryQueryBuilder {
                 entities.name AS entity,
                 projects.name AS project,
                 branches.name AS branch,
-                languages.name AS language
+                languages.name AS language,
+                sources.name AS source
                 {select_group}
             FROM events
             "
@@ -118,8 +123,10 @@ impl SummaryQueryBuilder {
                 .map(|s| s.parse::<DateTime<Utc>>())
                 .transpose()?;
 
+            let id = row.try_get("id").map(|id| Uuid::from_slice(id)).unwrap()?;
+
             let event = FullEvent {
-                id: row.try_get("id")?,
+                id,
                 timestamp,
                 end_timestamp,
                 duration: row.try_get("duration")?,
@@ -131,6 +138,7 @@ impl SummaryQueryBuilder {
                 project: row.try_get("project")?,
                 branch: row.try_get("branch")?,
                 language: row.try_get("language")?,
+                source: row.try_get("source")?,
             };
 
             if is_grouped {

@@ -9,6 +9,42 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "fe438c63458706e03479442743baae6c88256498e6431708f6dfc520a26515d3"
 
 [[package]]
+name = "Skopio"
+version = "0.1.0"
+dependencies = [
+ "anyhow",
+ "async-trait",
+ "chrono",
+ "common",
+ "console-subscriber",
+ "core-foundation 0.10.0",
+ "core-graphics",
+ "dashmap 6.1.0",
+ "db",
+ "log",
+ "objc2 0.6.1",
+ "objc2-app-kit",
+ "objc2-foundation 0.3.1",
+ "percent-encoding",
+ "reqwest",
+ "ril",
+ "serde",
+ "serde_json",
+ "serde_qs",
+ "specta",
+ "specta-typescript",
+ "strum",
+ "strum_macros",
+ "tauri",
+ "tauri-build",
+ "tauri-plugin-dialog",
+ "tauri-plugin-log",
+ "tauri-specta",
+ "tokio",
+ "url",
+]
+
+[[package]]
 name = "addr2line"
 version = "0.24.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -877,7 +913,7 @@ dependencies = [
  "specta",
  "thiserror 2.0.12",
  "tokei",
- "types",
+ "uuid",
 ]
 
 [[package]]
@@ -1201,7 +1237,7 @@ dependencies = [
  "specta",
  "sqlx",
  "thiserror 2.0.12",
- "types",
+ "uuid",
 ]
 
 [[package]]
@@ -1236,43 +1272,6 @@ dependencies = [
  "quote",
  "rustc_version",
  "syn 2.0.98",
-]
-
-[[package]]
-name = "desktop"
-version = "0.1.0"
-dependencies = [
- "anyhow",
- "async-trait",
- "chrono",
- "common",
- "console-subscriber",
- "core-foundation 0.10.0",
- "core-graphics",
- "dashmap 6.1.0",
- "db",
- "log",
- "objc2 0.6.1",
- "objc2-app-kit",
- "objc2-foundation 0.3.1",
- "percent-encoding",
- "reqwest",
- "ril",
- "serde",
- "serde_json",
- "serde_qs",
- "specta",
- "specta-typescript",
- "strum",
- "strum_macros",
- "tauri",
- "tauri-build",
- "tauri-plugin-dialog",
- "tauri-plugin-log",
- "tauri-specta",
- "tokio",
- "types",
- "url",
 ]
 
 [[package]]
@@ -5222,7 +5221,7 @@ dependencies = [
  "tower-http",
  "tracing",
  "tracing-subscriber",
- "types",
+ "uuid",
 ]
 
 [[package]]
@@ -5431,6 +5430,7 @@ dependencies = [
  "paste",
  "specta-macros",
  "thiserror 1.0.69",
+ "uuid",
 ]
 
 [[package]]
@@ -5532,6 +5532,7 @@ dependencies = [
  "tokio-stream",
  "tracing",
  "url",
+ "uuid",
 ]
 
 [[package]]
@@ -5613,6 +5614,7 @@ dependencies = [
  "stringprep",
  "thiserror 2.0.12",
  "tracing",
+ "uuid",
  "whoami",
 ]
 
@@ -5651,6 +5653,7 @@ dependencies = [
  "stringprep",
  "thiserror 2.0.12",
  "tracing",
+ "uuid",
  "whoami",
 ]
 
@@ -5677,6 +5680,7 @@ dependencies = [
  "thiserror 2.0.12",
  "tracing",
  "url",
+ "uuid",
 ]
 
 [[package]]
@@ -6791,14 +6795,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "42ff0bf0c66b8238c6f3b578df37d0b7848e55df8577b3f74f92a69acceeb825"
 
 [[package]]
-name = "types"
-version = "0.1.0"
-dependencies = [
- "serde",
- "specta",
-]
-
-[[package]]
 name = "ucd-trie"
 version = "0.1.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -6983,6 +6979,7 @@ checksum = "f33196643e165781c20a5ead5582283a7dacbb87855d867fbc2df3f81eddc1be"
 dependencies = [
  "getrandom 0.3.1",
  "js-sys",
+ "rand 0.9.1",
  "serde",
  "wasm-bindgen",
 ]
