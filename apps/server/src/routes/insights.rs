@@ -8,7 +8,7 @@ use axum::{
 };
 use common::{
     models::{inputs::InsightQueryPayload, outputs::InsightResult},
-    time::InsightRange,
+    time::insight::InsightRange,
 };
 use db::{
     server::insights::{InsightProvider, InsightQuery, Insights},

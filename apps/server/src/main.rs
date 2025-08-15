@@ -23,7 +23,7 @@ async fn main() {
 
     info!("🚀 Starting server...");
 
-    let db_path = utils::get_application_support_path();
+    let db_path = utils::get_db_path();
     let db_url = format!("sqlite://{}", db_path.to_str().unwrap());
 
     let db = match DBContext::new(&db_url).await {
