@@ -97,3 +97,72 @@ impl TryFrom<String> for InsightRange {
         Err(TimeError::InvalidDate)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn parse_day_ok() {
+        let r = InsightRange::try_from("2025-03-15".to_string()).unwrap();
+        assert_eq!(r.start, Utc.with_ymd_and_hms(2025, 3, 15, 0, 0, 0).unwrap());
+        assert_eq!(r.end, Utc.with_ymd_and_hms(2025, 3, 16, 0, 0, 0).unwrap());
+    }
+
+    #[test]
+    fn parse_month_ok() {
+        let r = InsightRange::try_from("2025-02".to_string()).unwrap();
+        assert_eq!(r.start, Utc.with_ymd_and_hms(2025, 2, 1, 0, 0, 0).unwrap());
+        assert_eq!(r.end, Utc.with_ymd_and_hms(2025, 3, 1, 0, 0, 0).unwrap());
+    }
+
+    #[test]
+    fn parse_year_ok() {
+        let r = InsightRange::try_from("2025".to_string()).unwrap();
+        assert_eq!(r.start, Utc.with_ymd_and_hms(2025, 1, 1, 0, 0, 0).unwrap());
+        assert_eq!(r.end, Utc.with_ymd_and_hms(2026, 1, 1, 0, 0, 0).unwrap());
+    }
+
+    #[test]
+    fn parse_month_december_rollover_ok() {
+        let r = InsightRange::try_from("2024-12".to_string()).unwrap();
+        assert_eq!(r.start, Utc.with_ymd_and_hms(2024, 12, 1, 0, 0, 0).unwrap());
+        assert_eq!(r.end, Utc.with_ymd_and_hms(2025, 1, 1, 0, 0, 0).unwrap());
+    }
+
+    #[test]
+    fn parse_iso_week_ok() {
+        // ISO week 2020-W01 starts on 2019-12-30 (Monday), ends 7 days later.
+        let r = InsightRange::try_from("2020-W01".to_string()).unwrap();
+        assert_eq!(
+            r.start,
+            Utc.with_ymd_and_hms(2019, 12, 30, 0, 0, 0).unwrap()
+        );
+        assert_eq!(r.end, Utc.with_ymd_and_hms(2020, 1, 6, 0, 0, 0).unwrap());
+    }
+
+    #[test]
+    fn parse_iso_week_within_year() {
+        let r = InsightRange::try_from("2023-W25".to_string()).unwrap();
+        assert!(r.end - r.start == Duration::days(7));
+        assert!(r.start < r.end);
+    }
+
+    #[test]
+    fn reject_bad_day_format() {
+        let err = InsightRange::try_from("2025/03/15".to_string()).unwrap_err();
+        matches!(err, TimeError::InvalidDate);
+    }
+
+    #[test]
+    fn reject_nonexistent_day() {
+        let err = InsightRange::try_from("2025-02-30".to_string()).unwrap_err();
+        matches!(err, TimeError::InvalidDate);
+    }
+
+    #[test]
+    fn reject_out_of_range_week() {
+        let err = InsightRange::try_from("2025-W60".to_string()).unwrap_err();
+        matches!(err, TimeError::InvalidDate);
+    }
+}
