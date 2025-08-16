@@ -432,10 +432,7 @@ mod tests {
         let this_start = this_week_start_utc();
         let r = TimeRange::from(TimeRangePreset::LastNWeeks(2, false));
         assert_eq!(r.end, this_start);
-        assert_eq!(
-            r.start,
-            (this_start + Duration::days(7)) - Duration::weeks(2)
-        );
+        assert_eq!(r.start, (this_start - Duration::weeks(2)));
     }
 
     #[test]
