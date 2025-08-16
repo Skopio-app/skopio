@@ -302,3 +302,230 @@ impl TimeRange {
         (self.start, self.end, self.bucket)
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Helper: local midnight (00:00:00) as Utc
+    fn today_start_utc() -> DateTime<Utc> {
+        let local_now = Local::now();
+        let d = local_now.date_naive();
+        let local_midnight = Local
+            .with_ymd_and_hms(d.year(), d.month(), d.day(), 0, 0, 0)
+            .single()
+            .unwrap();
+        local_midnight.with_timezone(&Utc)
+    }
+
+    /// Helper: start of current week (Monday 00:00:00 local) as Utc
+    fn this_week_start_utc() -> DateTime<Utc> {
+        let local_now = Local::now();
+        let d = local_now.date_naive();
+        let local_midnight = Local
+            .with_ymd_and_hms(d.year(), d.month(), d.day(), 0, 0, 0)
+            .single()
+            .unwrap();
+        let weekday = d.weekday().num_days_from_monday() as i64;
+        (local_midnight - Duration::days(weekday)).with_timezone(&Utc)
+    }
+
+    /// Helper: first day (00:00:00 local) of (year, month) as Utc
+    fn month_start_utc(year: i32, month: u32) -> DateTime<Utc> {
+        Local
+            .with_ymd_and_hms(year, month, 1, 0, 0, 0)
+            .single()
+            .unwrap()
+            .with_timezone(&Utc)
+    }
+
+    #[test]
+    fn preset_today() {
+        let r = TimeRange::from(TimeRangePreset::Today);
+        let start = today_start_utc();
+        assert_eq!(r.start, start);
+        assert_eq!(r.end, start + Duration::days(1));
+    }
+
+    #[test]
+    fn preset_yesterday() {
+        let r = TimeRange::from(TimeRangePreset::Yesterday);
+        let today = today_start_utc();
+        assert_eq!(r.start, today - Duration::days(1));
+        assert_eq!(r.end, today);
+    }
+
+    #[test]
+    fn preset_this_week() {
+        let r = TimeRange::from(TimeRangePreset::ThisWeek);
+        let start = this_week_start_utc();
+        assert_eq!(r.start, start);
+        assert_eq!(r.end, start + Duration::days(7));
+    }
+
+    #[test]
+    fn preset_last_week() {
+        let r = TimeRange::from(TimeRangePreset::LastWeek);
+        let this_start = this_week_start_utc();
+        assert_eq!(r.start, this_start - Duration::days(7));
+        assert_eq!(r.end, this_start);
+    }
+
+    #[test]
+    fn preset_this_month() {
+        let local_now = Local::now().date_naive();
+        let start = month_start_utc(local_now.year(), local_now.month());
+        let end = if local_now.month() == 12 {
+            month_start_utc(local_now.year() + 1, 1)
+        } else {
+            month_start_utc(local_now.year(), local_now.month() + 1)
+        };
+        let r = TimeRange::from(TimeRangePreset::ThisMonth);
+        assert_eq!(r.start, start);
+        assert_eq!(r.end, end);
+    }
+
+    #[test]
+    fn preset_last_month() {
+        let local_now = Local::now().date_naive();
+        let (y, m) = if local_now.month() == 1 {
+            (local_now.year() - 1, 12)
+        } else {
+            (local_now.year(), local_now.month() - 1)
+        };
+        let start = month_start_utc(y, m);
+        let end = month_start_utc(local_now.year(), local_now.month());
+        let r = TimeRange::from(TimeRangePreset::LastMonth);
+        assert_eq!(r.start, start);
+        assert_eq!(r.end, end);
+    }
+
+    #[test]
+    fn preset_last_n_minutes_has_correct_span() {
+        let before = Utc::now();
+        let r = TimeRange::from(TimeRangePreset::LastNMinutes(15));
+        let after = Utc::now();
+
+        let span = r.end - r.start;
+        assert_eq!(span, Duration::minutes(15));
+        assert!(r.end >= before && r.end <= after);
+    }
+
+    #[test]
+    fn preset_last_n_days_excluding_today() {
+        let today = today_start_utc();
+        let r = TimeRange::from(TimeRangePreset::LastNDays(3, false));
+        assert_eq!(r.start, today - Duration::days(2));
+        assert_eq!(r.end, today);
+    }
+
+    #[test]
+    fn preset_last_n_days_including_today() {
+        let today = today_start_utc();
+        let r = TimeRange::from(TimeRangePreset::LastNDays(3, true));
+        assert_eq!(r.start, today - Duration::days(3));
+        assert_eq!(r.end, today + Duration::days(1));
+    }
+
+    #[test]
+    fn preset_last_n_weeks_excluding_this_week() {
+        let this_start = this_week_start_utc();
+        let r = TimeRange::from(TimeRangePreset::LastNWeeks(2, false));
+        assert_eq!(r.end, this_start);
+        assert_eq!(
+            r.start,
+            (this_start + Duration::days(7)) - Duration::weeks(2)
+        );
+    }
+
+    #[test]
+    fn preset_last_n_weeks_including_this_week() {
+        let this_start = this_week_start_utc();
+        let r = TimeRange::from(TimeRangePreset::LastNWeeks(2, true));
+        assert_eq!(r.end, this_start + Duration::days(7));
+        assert_eq!(
+            r.start,
+            (this_start + Duration::days(7)) - Duration::weeks(2)
+        );
+    }
+
+    #[test]
+    fn preset_last_n_months_excluding_this_month() {
+        let local_today = Local::now().date_naive();
+        let n = 3i64;
+        let include_this = false;
+
+        let mut year = local_today.year();
+        let mut month = local_today.month();
+
+        if !include_this {
+            month -= 1;
+            if month <= 0 {
+                month += 12;
+                year -= 1;
+            }
+        }
+
+        let mut start_month = month - n as u32 + 1;
+        let mut start_year = year;
+        while start_month <= 0 {
+            start_month += 12;
+            start_year -= 1;
+        }
+
+        let expected_start = month_start_utc(start_year, start_month);
+        let expected_end = Local
+            .with_ymd_and_hms(year, (month as u32) + 1, 1, 0, 0, 0)
+            .single()
+            .unwrap_or_else(|| {
+                Local
+                    .with_ymd_and_hms(year + 1, 1, 1, 0, 0, 0)
+                    .single()
+                    .unwrap()
+            })
+            .with_timezone(&Utc);
+        let r = TimeRange::from(TimeRangePreset::LastNMonths(n, include_this));
+        assert_eq!(r.start, expected_start);
+        assert_eq!(r.end, expected_end);
+    }
+
+    #[test]
+    fn preset_last_n_years_excluding_this_year() {
+        let local_today = Local::now().date_naive();
+        let end_year = local_today.year();
+        let start_year = end_year - 2;
+        let start = month_start_utc(start_year, 1);
+        let end = month_start_utc(end_year, 1);
+
+        let r = TimeRange::from(TimeRangePreset::LastNYears(2, false));
+        assert_eq!(r.start, start);
+        assert_eq!(r.end, end);
+    }
+
+    #[test]
+    fn preset_last_n_years_including_this_year() {
+        let local_today = Local::now().date_naive();
+        let end_year = local_today.year() + 1;
+        let start_year = end_year - 2;
+        let start = month_start_utc(start_year, 1);
+        let end = month_start_utc(end_year, 1);
+
+        let r = TimeRange::from(TimeRangePreset::LastNYears(2, true));
+        assert_eq!(r.start, start);
+        assert_eq!(r.end, end);
+    }
+
+    #[test]
+    fn preset_custom_passthrough() {
+        let start = Utc.with_ymd_and_hms(2025, 1, 1, 0, 0, 0).unwrap();
+        let end = Utc.with_ymd_and_hms(2025, 1, 2, 0, 0, 0).unwrap();
+        let r = TimeRange::from(TimeRangePreset::Custom {
+            start,
+            end,
+            bucket: TimeBucket::Hour,
+        });
+
+        assert_eq!(r.start, start);
+        assert_eq!(r.end, end);
+    }
+}
