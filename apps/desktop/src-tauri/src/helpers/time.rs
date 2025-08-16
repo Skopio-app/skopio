@@ -37,8 +37,8 @@ mod tests {
 
     #[test]
     fn formats_hours_minutes_seconds() {
-        assert_eq!(format_duration(3600), "1hr 00m 00s");
-        assert_eq!(format_duration(3661), "1hr 01m 01s");
+        assert_eq!(format_duration(3600), "1h 00m 00s");
+        assert_eq!(format_duration(3661), "1h 01m 01s");
         assert_eq!(format_duration(86399), "23h 59m 59s");
     }
 
