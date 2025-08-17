@@ -57,40 +57,55 @@ type UseSummaryDataFn = {
 
 // Shared logic for bar chart grouping
 const generateGroupedChartData = (rawData: BucketTimeSummary[]) => {
-  const grouped: {
-    date: Date;
-    label: string;
-    values: Record<string, number>;
-  }[] = [];
+  const byLabel: Map<string, Record<string, number>> = new Map();
+  const labelToDate: Map<string, Date> = new Map();
+
   const allKeys = new Set<string>();
   const totalPerKey: Record<string, number> = {};
 
   for (const { bucket, grouped_values } of rawData) {
     const date = parseISO(bucket);
     const label = format(date, "MMM d");
-    const values: Record<string, number> = {};
 
-    for (const [key, seconds] of Object.entries(grouped_values)) {
-      const value = seconds ?? 0;
-      values[key] = value;
+    if (!byLabel.has(label)) {
+      byLabel.set(label, {});
+      labelToDate.set(label, date);
+      console.log("byLabel: ", byLabel);
+      console.log("labelToDate: ", labelToDate);
+    }
+
+    const acc = byLabel.get(label)!;
+
+    for (const [rawKey, seconds] of Object.entries(grouped_values)) {
+      if (rawKey === "Total") continue;
+      const key = String(rawKey);
+      const value = Number(seconds ?? 0);
+
+      if (value <= 0) continue;
+
+      acc[key] = (acc[key] ?? 0) + value;
       totalPerKey[key] = (totalPerKey[key] ?? 0) + value;
       allKeys.add(key);
     }
-
-    grouped.push({ date, label, values });
   }
-
-  grouped.sort((a, b) => a.date.getTime() - b.date.getTime());
-  console.log("Total per key: ", totalPerKey);
 
   const sortedKeys = Array.from(allKeys).sort(
     (a, b) => (totalPerKey[b] ?? 0) - (totalPerKey[a] ?? 0),
   );
 
-  const chartData: BarChartData[] = grouped.map(({ label, values }) => ({
-    label,
-    ...values,
-  }));
+  const chartData: BarChartData[] = Array.from(byLabel.entries())
+    .map(([label, values]) => {
+      const row: Record<string, number | string> = { label };
+      for (const k of sortedKeys) {
+        row[k] = values[k] ?? 0;
+      }
+      return row as BarChartData;
+    })
+    .sort(
+      (a, b) =>
+        labelToDate.get(a.label)!.getTime() -
+        labelToDate.get(b.label)!.getTime(),
+    );
 
   return { chartData, sortedKeys };
 };
