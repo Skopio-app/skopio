@@ -1,4 +1,4 @@
-import { startTransition, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   BucketedSummaryInput,
   BucketTimeSummary,
@@ -6,131 +6,201 @@ import {
   Group,
   TimeRangePreset,
 } from "../../../types/tauri.gen";
+import {
+  BarChartData,
+  CalendarChartData,
+  LineChartData,
+  PieChartData,
+} from "../../../types/types";
 import { useDashboardFilter } from "../stores/useDashboardFilter";
-import pMap from "p-map";
+import { format, parseISO } from "date-fns";
 
-interface UseSummaryResult {
-  getGroupData: (group: Group) => Record<string, number>;
-  getUngroupedData: () => BucketTimeSummary[];
-  rawGrouped: Partial<Record<Group, BucketTimeSummary[]>>;
-  ungrouped: BucketTimeSummary[] | null;
-  loading: boolean;
-  error: string | null;
+export interface UseSummaryOptions {
+  groupBy?: Group;
+  mode: "bar" | "line" | "list" | "pie" | "calendar";
+  presetOverride?: TimeRangePreset;
 }
-// TODO: Refactor hook and remove pMap usage
-export const useSummaryData = (
-  overridePreset?: TimeRangePreset,
-  groups: Group[] = [],
-): UseSummaryResult => {
-  const { preset: globalPreset } = useDashboardFilter();
-  const preset = overridePreset ?? globalPreset;
 
-  const [rawGrouped, setRawGrouped] = useState<
-    Partial<Record<Group, BucketTimeSummary[]>>
-  >({});
-  const [ungrouped, setUngrouped] = useState<BucketTimeSummary[] | null>(null);
+interface LoadingResult {
+  loading: boolean;
+}
 
+interface ParsedBarChartResult extends LoadingResult {
+  data: BarChartData[];
+  keys: string[];
+}
+
+interface ParsedLineChartResult extends LoadingResult {
+  data: LineChartData[];
+}
+
+interface ParsedListResult extends LoadingResult {
+  data: { name: string; value: number }[];
+}
+
+interface ParsedPieChartResult extends LoadingResult {
+  data: PieChartData[];
+}
+interface ParsedCalendarChartResult extends LoadingResult {
+  data: CalendarChartData[];
+}
+
+type UseSummaryDataFn = {
+  (options: UseSummaryOptions & { mode: "line" }): ParsedLineChartResult;
+  (options: UseSummaryOptions & { mode: "bar" }): ParsedBarChartResult;
+  (options: UseSummaryOptions & { mode: "list" }): ParsedListResult;
+  (options: UseSummaryOptions & { mode: "pie" }): ParsedPieChartResult;
+  (
+    options: UseSummaryOptions & { mode: "calendar" },
+  ): ParsedCalendarChartResult;
+};
+
+// Shared logic for bar chart grouping
+const generateGroupedChartData = (rawData: BucketTimeSummary[]) => {
+  const grouped: {
+    date: Date;
+    label: string;
+    values: Record<string, number>;
+  }[] = [];
+  const allKeys = new Set<string>();
+  const totalPerKey: Record<string, number> = {};
+
+  for (const { bucket, grouped_values } of rawData) {
+    const date = parseISO(bucket);
+    const label = format(date, "MMM d");
+    const values: Record<string, number> = {};
+
+    for (const [key, seconds] of Object.entries(grouped_values)) {
+      const value = seconds ?? 0;
+      values[key] = value;
+      totalPerKey[key] = (totalPerKey[key] ?? 0) + value;
+      allKeys.add(key);
+    }
+
+    grouped.push({ date, label, values });
+  }
+
+  grouped.sort((a, b) => a.date.getTime() - b.date.getTime());
+  console.log("Total per key: ", totalPerKey);
+
+  const sortedKeys = Array.from(allKeys).sort(
+    (a, b) => (totalPerKey[b] ?? 0) - (totalPerKey[a] ?? 0),
+  );
+
+  const chartData: BarChartData[] = grouped.map(({ label, values }) => ({
+    label,
+    ...values,
+  }));
+
+  return { chartData, sortedKeys };
+};
+
+// Shared logic to merge values
+const mergeGroupedValues = (data: BucketTimeSummary[]) => {
+  const merged: Record<string, number> = {};
+  for (const item of data) {
+    for (const [key, value] of Object.entries(item.grouped_values)) {
+      merged[key] = (merged[key] ?? 0) + (value ?? 0);
+    }
+  }
+
+  return merged;
+};
+
+const useSummaryDataImpl = (
+  rawOptions: UseSummaryOptions,
+):
+  | ParsedBarChartResult
+  | ParsedLineChartResult
+  | ParsedListResult
+  | ParsedPieChartResult
+  | ParsedCalendarChartResult => {
+  const options = useMemo(
+    () => ({
+      groupBy: rawOptions.groupBy,
+      mode: rawOptions.mode,
+      presetOverride: rawOptions.presetOverride,
+    }),
+    [rawOptions.groupBy, rawOptions.mode, rawOptions.presetOverride],
+  );
+
+  const { preset: dashboardPreset } = useDashboardFilter();
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const groupKeys = useMemo(() => JSON.stringify([...groups].sort()), [groups]);
+  const [rawData, setRawData] = useState<BucketTimeSummary[]>([]);
+  const preset = options.presetOverride ?? dashboardPreset;
 
   useEffect(() => {
-    let cancelled = false;
-
-    const run = async () => {
+    const fetchData = async () => {
       setLoading(true);
-      setError(null);
 
-      if (overridePreset || groups.length === 0) {
-        const input: BucketedSummaryInput = {
-          preset,
-          include_afk: false,
-        };
-
-        try {
-          const result = await commands.fetchBucketedSummary(input);
-          if (!Array.isArray(result) || cancelled) return;
-
-          startTransition(() => {
-            setUngrouped(result);
-            setRawGrouped({});
-            setLoading(false);
-          });
-        } catch (err) {
-          setError((err as Error).message);
-          setLoading(false);
-        }
-
-        return;
-      }
+      const query: BucketedSummaryInput = {
+        preset,
+        group_by: options.presetOverride ? null : options.groupBy,
+        include_afk: false,
+      };
 
       try {
-        startTransition(() => {
-          setRawGrouped({});
-          setUngrouped(null);
-        });
-
-        await pMap(
-          groups,
-          async (group_by) => {
-            const input: BucketedSummaryInput = {
-              preset,
-              group_by,
-              include_afk: false,
-            };
-
-            const result = await commands.fetchBucketedSummary(input);
-            if (!Array.isArray(result) || cancelled) return;
-
-            startTransition(() => {
-              setRawGrouped((prev) => ({
-                ...prev,
-                [group_by]: result,
-              }));
-            });
-          },
-          { concurrency: 2 },
-        );
-
-        if (!cancelled) {
-          startTransition(() => setLoading(false));
-        }
+        const summary = await commands.fetchBucketedSummary(query);
+        setRawData(summary);
       } catch (err) {
-        if (!cancelled) {
-          setError((err as Error).message);
-          setLoading(false);
-        }
+        console.error("Error fetching summary data: ", err);
+      } finally {
+        setLoading(false);
       }
     };
 
-    run();
-    return () => {
-      cancelled = true;
-    };
-  }, [preset, overridePreset, groupKeys]);
+    fetchData();
+  }, [options.groupBy, options.mode, JSON.stringify(preset)]);
 
-  const getGroupData = (group: Group): Record<string, number> => {
-    const data = rawGrouped[group];
-    if (!data) return {};
-
-    const totals: Record<string, number> = {};
-    for (const { grouped_values } of data) {
-      for (const [key, value] of Object.entries(grouped_values)) {
-        totals[key] = (totals[key] ?? 0) + (value ?? 0);
-      }
+  switch (options.mode) {
+    case "line": {
+      const data: LineChartData[] = rawData.map((item) => ({
+        x: item.bucket,
+        y: item.grouped_values["Total"] ?? 0,
+      }));
+      return { data, loading };
     }
-    return totals;
-  };
 
-  const getUngroupedData = () => ungrouped ?? [];
+    case "bar": {
+      const { chartData, sortedKeys } = generateGroupedChartData(rawData);
+      return { data: chartData, keys: sortedKeys, loading };
+    }
 
-  return {
-    getGroupData,
-    getUngroupedData,
-    rawGrouped,
-    ungrouped,
-    loading,
-    error,
-  };
+    case "pie": {
+      const merged = mergeGroupedValues(rawData);
+      const data: PieChartData[] = Object.entries(merged).map(
+        ([id, value]) => ({
+          id,
+          label: id,
+          value,
+        }),
+      );
+      return { data, loading };
+    }
+
+    case "list": {
+      const merged = mergeGroupedValues(rawData);
+      const data = Object.entries(merged)
+        .map(([name, value]) => ({ name, value }))
+        .sort((a, b) => b.value - a.value);
+      return { data, loading };
+    }
+
+    case "calendar": {
+      const data: CalendarChartData[] = rawData.map(
+        ({ bucket, grouped_values }) => ({
+          day: bucket,
+          value: grouped_values["Total"] ?? 0,
+        }),
+      );
+
+      const sorted = [...data].sort(
+        (a, b) => new Date(a.day).getTime() - new Date(b.day).getTime(),
+      );
+
+      return { data: sorted, loading };
+    }
+  }
 };
+
+export const useSummaryData = useSummaryDataImpl as UseSummaryDataFn;

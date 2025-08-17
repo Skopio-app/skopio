@@ -1,20 +1,11 @@
-import { useMemo } from "react";
 import WidgetCard from "../components/WidgetCard";
 import { useSummaryData } from "../hooks/useSummaryData";
 import CustomPieChart from "../../../components/CustomPieChart";
-import { PieChartData } from "../../../types/types";
+import { Group } from "../../../types/tauri.gen";
 
 const AppPieChartWidget = () => {
-  const { getGroupData, loading } = useSummaryData(undefined, ["app"]);
-
-  const data = useMemo<PieChartData[]>(() => {
-    const totals = getGroupData("app");
-    return Object.entries(totals).map(([id, value]) => ({
-      id,
-      label: id,
-      value,
-    }));
-  }, [getGroupData]);
+  const options = { groupBy: "app" as Group, mode: "pie" as const };
+  const { data, loading } = useSummaryData(options);
 
   return (
     <WidgetCard title="Apps" loading={loading}>

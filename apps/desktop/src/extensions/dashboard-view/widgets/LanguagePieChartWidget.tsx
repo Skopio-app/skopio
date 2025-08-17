@@ -1,20 +1,11 @@
-import { useMemo } from "react";
-import { PieChartData } from "../../../types/types";
 import WidgetCard from "../components/WidgetCard";
 import CustomPieChart from "../../../components/CustomPieChart";
 import { useSummaryData } from "../hooks/useSummaryData";
+import { Group } from "../../../types/tauri.gen";
 
 const LanguagePieChartWidget = () => {
-  const { getGroupData, loading } = useSummaryData(undefined, ["language"]);
-
-  const data = useMemo<PieChartData[]>(() => {
-    const totals = getGroupData("language");
-    return Object.entries(totals).map(([id, value]) => ({
-      id,
-      label: id,
-      value,
-    }));
-  }, [getGroupData]);
+  const options = { groupBy: "language" as Group, mode: "pie" as const };
+  const { loading, data } = useSummaryData(options);
 
   return (
     <WidgetCard title="Languages" loading={loading}>
