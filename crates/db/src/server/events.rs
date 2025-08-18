@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use chrono::{DateTime, Utc};
 use common::models::outputs::{EventGroup, EventGroupResult, FullEvent};
-use log::info;
+use log::debug;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -13,7 +13,7 @@ use crate::{
         summary::SummaryQueryBuilder,
         utils::query::{
             append_all_filters, append_date_range, append_group_by, append_standard_joins,
-            group_key_column,
+            group_key_info,
         },
     },
     utils::DBError,
@@ -38,6 +38,10 @@ pub struct Event {
 impl Event {
     // Create a new event
     pub async fn create(self, db_context: &DBContext) -> Result<(), DBError> {
+        debug!(
+            "The event timestamps and duration to be inserted: {} to {:?} ({:?})s",
+            self.timestamp, self.end_timestamp, self.duration
+        );
         sqlx::query!(
             "
             INSERT INTO events (id, timestamp, duration, category_id, app_id, entity_id, project_id, branch_id, language_id, source_id, end_timestamp)
@@ -65,8 +69,7 @@ impl SummaryQueryBuilder {
     /// Fetches events given a range
     pub async fn fetch_event_range(&self, db: &DBContext) -> Result<EventGroupResult, DBError> {
         let is_grouped = self.group_by.is_some();
-        info!("self: {:?}", self);
-        let group_key = group_key_column(self.group_by);
+        let (group_key, inner_tbl) = group_key_info(self.group_by);
 
         let select_group = if is_grouped {
             format!(", {group_key} AS group_key")
@@ -93,7 +96,7 @@ impl SummaryQueryBuilder {
             "
         );
 
-        append_standard_joins(&mut query);
+        append_standard_joins(&mut query, inner_tbl);
         query.push_str(" WHERE 1=1");
 
         append_date_range(

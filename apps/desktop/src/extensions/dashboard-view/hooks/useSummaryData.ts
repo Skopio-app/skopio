@@ -242,6 +242,7 @@ const useSummaryDataImpl = (
           value,
         }),
       );
+      console.log("The pie chart: ", data);
       return { data, loading };
     }
 

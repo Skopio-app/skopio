@@ -5,9 +5,7 @@ export const usePersistentTopN = (key: string, defaultValue: number) => {
     try {
       const saved = localStorage.getItem(key);
       if (saved === null) return defaultValue;
-      const n = Number(saved);
-      if (!Number.isFinite(n)) {
-        localStorage.removeItem(key);
+      if (!Number.isInteger(Number(saved))) {
         return defaultValue;
       }
       return parseInt(saved, 10);

@@ -56,18 +56,33 @@ pub fn append_all_filters(query: &mut String, filters: SummaryFilters) {
     }
 }
 
-/// Appends JOIN clauses for events to resolve all foreign keys
-pub fn append_standard_joins(query: &mut String) {
-    // Space at the beginning is intentional
-    query.push_str(
-        " LEFT JOIN apps ON events.app_id = apps.id \
-                 LEFT JOIN projects ON events.project_id = projects.id \
-                 LEFT JOIN entities ON events.entity_id = entities.id \
-                 LEFT JOIN branches ON events.branch_id = branches.id \
-                 LEFT JOIN categories ON events.category_id = categories.id \
-                 LEFT JOIN languages ON events.language_id = languages.id \
-                 LEFT JOIN sources ON events.source_id = sources.id",
-    );
+/// Appends JOIN clauses for events to resolve all foreign keys.
+/// `inner_join` indicates which related table (if any) should be INNER JOINed
+/// instead of LEFT JOINed (i.e., the table that supplies the group_key).
+pub fn append_standard_joins(query: &mut String, inner_join: Option<&str>) {
+    let j = |tbl: &str| {
+        if inner_join == Some(tbl) {
+            " JOIN "
+        } else {
+            " LEFT JOIN "
+        }
+    };
+    query.push_str(&format!(
+        "{j_apps}apps ON events.app_id = apps.id\
+          {j_projects}projects ON events.project_id = projects.id\
+          {j_entities}entities ON events.entity_id = entities.id\
+          {j_branches}branches ON events.branch_id = branches.id\
+          {j_categories}categories ON events.category_id = categories.id\
+          {j_languages}languages ON events.language_id = languages.id\
+          {j_sources}sources ON events.source_id = sources.id",
+        j_apps = j("apps"),
+        j_projects = j("projects"),
+        j_entities = j("entities"),
+        j_branches = j("branches"),
+        j_categories = j("categories"),
+        j_languages = j("languages"),
+        j_sources = j("sources"),
+    ));
 }
 
 /// Optionally appends a GROUP BY clause.
@@ -77,16 +92,17 @@ pub fn append_group_by(query: &mut String, group_by_field: Option<&str>) {
     }
 }
 
-pub fn group_key_column(group: Option<Group>) -> &'static str {
+/// Returns (group_key_sql, inner_join_table_name)
+pub fn group_key_info(group: Option<Group>) -> (&'static str, Option<&'static str>) {
     match group {
-        Some(Group::App) => "apps.name",
-        Some(Group::Project) => "projects.name",
-        Some(Group::Language) => "languages.name",
-        Some(Group::Branch) => "branches.name",
-        Some(Group::Category) => "categories.name",
-        Some(Group::Entity) => "entities.name",
-        Some(Group::Source) => "sources.name",
-        None => "'Total'",
+        Some(Group::App) => ("apps.name", Some("apps")),
+        Some(Group::Project) => ("projects.name", Some("projects")),
+        Some(Group::Entity) => ("entities.name", Some("entities")),
+        Some(Group::Branch) => ("branches.name", Some("branches")),
+        Some(Group::Category) => ("categories.name", Some("categories")),
+        Some(Group::Language) => ("languages.name", Some("languages")),
+        Some(Group::Source) => ("sources.name", Some("sources")),
+        None => ("'Total'", None),
     }
 }
 

@@ -8,7 +8,6 @@ import SettingsContent, { MIN_TOP_N } from "../components/SettingsContent";
 
 const EntityChartWidget = () => {
   const [topN, setTopN] = usePersistentTopN("entityTopN", MIN_TOP_N);
-  console.log("topN", topN);
 
   const options = useMemo(
     () => ({

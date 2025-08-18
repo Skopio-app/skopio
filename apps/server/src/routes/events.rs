@@ -68,6 +68,10 @@ async fn insert_events(
             end_timestamp: event.end_timestamp,
         };
 
+        debug!(
+            "The event start and end: {} to {:?}",
+            event.timestamp, event.end_timestamp
+        );
         event.create(&db).await.map_err(error_response)?;
     }
     Ok(Json("Events saved".to_string()))

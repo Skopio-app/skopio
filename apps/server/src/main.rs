@@ -12,7 +12,13 @@ mod utils;
 
 #[tokio::main]
 async fn main() {
-    let filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
+    let log_level = if cfg!(debug_assertions) {
+        "debug"
+    } else {
+        "info"
+    };
+
+    let filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new(log_level));
 
     fmt()
         .with_env_filter(filter)
