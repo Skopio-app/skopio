@@ -1,15 +1,23 @@
-import { Button, cn } from "@skopio/ui";
-import { GripVertical, X } from "lucide-react";
+import {
+  Button,
+  cn,
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@skopio/ui";
+import { GripVertical, Settings, X } from "lucide-react";
 import SkeletonChart from "../../../components/SkeletonChart";
 import React from "react";
 
 export interface WidgetCardProps {
   title?: string;
+  onSettingsOpenChange?: (open: boolean) => void;
   onRemove?: () => void;
   children: React.ReactNode;
   className?: string;
   draggableHandleId?: string;
   loading: boolean;
+  settingsContent?: React.ReactNode;
 }
 
 const WidgetCard = React.forwardRef<HTMLDivElement, WidgetCardProps>(
@@ -17,10 +25,12 @@ const WidgetCard = React.forwardRef<HTMLDivElement, WidgetCardProps>(
     {
       title,
       onRemove,
+      onSettingsOpenChange,
       children,
       className,
       draggableHandleId = "widget-drag-handle",
       loading,
+      settingsContent,
     },
     ref,
   ) => {
@@ -49,15 +59,38 @@ const WidgetCard = React.forwardRef<HTMLDivElement, WidgetCardProps>(
             >
               <GripVertical className="h-4 w-4" />
             </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="h-6 w-6 text-gray-500 hover:text-red-500"
-              onClick={onRemove}
-              aria-label="Close"
-            >
-              <X className="h-4 w-4" />
-            </Button>
+            {settingsContent && (
+              <Popover onOpenChange={onSettingsOpenChange}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-6 w-6 text-gray-500 hover:text-gray-700"
+                    aria-label="Settings"
+                  >
+                    <Settings className="h-4 w-4" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent
+                  align="end"
+                  sideOffset={8}
+                  className="w-auto rounded-lg border bg-white p-4 shadow-xl"
+                >
+                  {settingsContent}
+                </PopoverContent>
+              </Popover>
+            )}
+            {onRemove && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6 text-gray-500 hover:text-red-500"
+                onClick={onRemove}
+                aria-label="Close"
+              >
+                <X className="h-4 w-4" />
+              </Button>
+            )}
           </div>
         </div>
 
