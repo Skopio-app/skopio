@@ -2,7 +2,6 @@ import { Slider } from "@skopio/ui";
 
 interface SettingsContentProps {
   title: string;
-  min: number;
   topN: number;
   setTopN: (val: number) => void;
 }
@@ -14,7 +13,6 @@ const SettingsContent: React.FC<SettingsContentProps> = ({
   title,
   topN,
   setTopN,
-  min,
 }) => {
   return (
     <div className="w-64">
@@ -24,10 +22,10 @@ const SettingsContent: React.FC<SettingsContentProps> = ({
       <div className="flex items-center gap-3">
         <Slider
           value={[topN]}
-          min={min}
+          min={MIN_TOP_N}
           max={MAX_TOP_N}
           step={1}
-          onValueChange={(val) => setTopN(val[0] ?? min)}
+          onValueChange={(val) => setTopN(val[0] ?? MIN_TOP_N)}
           aria-label="Top N"
           className="flex-1"
         />

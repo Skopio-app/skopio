@@ -19,6 +19,8 @@ export interface UseSummaryOptions {
   groupBy?: Group;
   mode: "bar" | "line" | "list" | "pie" | "calendar";
   presetOverride?: TimeRangePreset;
+  topN?: number;
+  collapseRemainder?: boolean;
 }
 
 interface LoadingResult {
@@ -56,7 +58,10 @@ type UseSummaryDataFn = {
 };
 
 // Shared logic for bar chart grouping
-const generateGroupedChartData = (rawData: BucketTimeSummary[]) => {
+const generateGroupedChartData = (
+  rawData: BucketTimeSummary[],
+  opts?: { topN?: number; collapseRemainder?: boolean },
+) => {
   const byLabel: Map<string, Record<string, number>> = new Map();
   const labelToDate: Map<string, Date> = new Map();
 
@@ -70,8 +75,6 @@ const generateGroupedChartData = (rawData: BucketTimeSummary[]) => {
     if (!byLabel.has(label)) {
       byLabel.set(label, {});
       labelToDate.set(label, date);
-      console.log("byLabel: ", byLabel);
-      console.log("labelToDate: ", labelToDate);
     }
 
     const acc = byLabel.get(label)!;
@@ -89,9 +92,47 @@ const generateGroupedChartData = (rawData: BucketTimeSummary[]) => {
     }
   }
 
-  const sortedKeys = Array.from(allKeys).sort(
+  let sortedKeys = Array.from(allKeys).sort(
     (a, b) => (totalPerKey[b] ?? 0) - (totalPerKey[a] ?? 0),
   );
+
+  const topN = opts?.topN && opts.topN > 0 ? opts.topN : undefined;
+  const collapse = !!opts?.collapseRemainder;
+
+  if (topN && sortedKeys.length > topN) {
+    const keep = new Set(sortedKeys.slice(0, topN));
+    const remainder = new Set(sortedKeys.slice(topN));
+
+    if (collapse) {
+      for (const [, values] of byLabel.entries()) {
+        let other = 0;
+        for (const k of remainder) {
+          if (values[k]) {
+            other += values[k];
+            delete values[k];
+          }
+        }
+        if (other > 0) values["Other"] = (values["Other"] ?? 0) + other;
+      }
+
+      const otherTotal = Array.from(byLabel.values()).reduce(
+        (sum, row) => sum + (row["Other"] ?? 0),
+        0,
+      );
+      if (otherTotal > 0) {
+        totalPerKey["Other"] = otherTotal;
+        keep.add("Other");
+      }
+    } else {
+      for (const [, values] of byLabel.entries()) {
+        for (const k of remainder) delete values[k];
+      }
+    }
+
+    sortedKeys = Array.from(keep).sort(
+      (a, b) => (totalPerKey[b] ?? 0) - (totalPerKey[a] ?? 0),
+    );
+  }
 
   const chartData: BarChartData[] = Array.from(byLabel.entries())
     .map(([label, values]) => {
@@ -135,8 +176,16 @@ const useSummaryDataImpl = (
       groupBy: rawOptions.groupBy,
       mode: rawOptions.mode,
       presetOverride: rawOptions.presetOverride,
+      topN: rawOptions.topN,
+      collapseRemainder: rawOptions.collapseRemainder,
     }),
-    [rawOptions.groupBy, rawOptions.mode, rawOptions.presetOverride],
+    [
+      rawOptions.groupBy,
+      rawOptions.mode,
+      rawOptions.presetOverride,
+      rawOptions.topN,
+      rawOptions.collapseRemainder,
+    ],
   );
 
   const { preset: dashboardPreset } = useDashboardFilter();
@@ -177,7 +226,10 @@ const useSummaryDataImpl = (
     }
 
     case "bar": {
-      const { chartData, sortedKeys } = generateGroupedChartData(rawData);
+      const { chartData, sortedKeys } = generateGroupedChartData(rawData, {
+        topN: options.topN,
+        collapseRemainder: options.collapseRemainder,
+      });
       return { data: chartData, keys: sortedKeys, loading };
     }
 
