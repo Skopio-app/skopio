@@ -86,6 +86,10 @@ export type AppConfig = {
 export type BucketTimeSummary = {
   bucket: string;
   grouped_values: Partial<{ [key in string]: number }>;
+  /**
+   * Optional per-group metadata (e.g. entity type when grouping by Entity)
+   */
+  group_meta: string | null;
 };
 export type BucketedSummaryInput = {
   preset: TimeRangePreset;

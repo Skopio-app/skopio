@@ -76,6 +76,8 @@ struct RawBucketRow {
     bucket: String,
     group_key: String,
     total_seconds: i64,
+    // present only when grouping by Entity; otherwise NULL
+    group_meta: Option<String>,
 }
 
 impl SummaryQueryParams for SummaryQueryBuilder {
@@ -238,7 +240,6 @@ impl SummaryQueryBuilder {
         );
         append_all_filters(&mut query, self.filters.clone());
 
-        debug!("The query: {}", query);
         let result = sqlx::query_scalar::<_, Option<i64>>(&query)
             .fetch_one(db.pool())
             .await?;
@@ -257,13 +258,22 @@ impl SummaryQueryBuilder {
         db: &DBContext,
     ) -> Result<Vec<BucketTimeSummary>, sqlx::Error> {
         let start_time = Instant::now();
-        // let group_key = group_key_column(self.group_by);
         let (group_key, inner_tbl) = group_key_info(self.group_by);
 
         let time_bucket_expr = get_time_bucket_expr(self.time_bucket);
 
+        let needs_entity_type = matches!(self.group_by, Some(Group::Entity));
+        let meta_select = if needs_entity_type {
+            ", entities.type AS group_meta "
+        } else {
+            " , NULL AS group_meta "
+        };
+
         let mut base_query = format!(
-            "SELECT {time_bucket_expr} AS bucket, {group_key} AS group_key, SUM(duration) as total_seconds
+            "SELECT {time_bucket_expr} AS bucket, \
+                    {group_key} AS group_key, \
+                    SUM(duration) as total_seconds \
+                    {meta_select} \
             FROM events",
         );
         append_standard_joins(&mut base_query, inner_tbl);
@@ -280,27 +290,21 @@ impl SummaryQueryBuilder {
 
         base_query.push_str(&format!(" GROUP BY {time_bucket_expr}, {group_key}"));
 
-        debug!("The bucket query: {}", base_query);
         let rows = sqlx::query_as::<_, RawBucketRow>(&base_query)
             .fetch_all(db.pool())
             .await?;
 
-        let mut grouped_map: HashMap<String, HashMap<String, i64>> = HashMap::new();
+        let mut records = Vec::new();
 
         for row in rows {
-            grouped_map
-                .entry(row.bucket)
-                .or_default()
-                .insert(row.group_key, row.total_seconds);
-        }
-
-        let records = grouped_map
-            .into_iter()
-            .map(|(bucket, grouped_values)| BucketTimeSummary {
-                bucket,
+            let mut grouped_values = HashMap::new();
+            grouped_values.insert(row.group_key, row.total_seconds);
+            records.push(BucketTimeSummary {
+                bucket: row.bucket,
                 grouped_values,
-            })
-            .collect::<Vec<_>>();
+                group_meta: row.group_meta,
+            });
+        }
 
         let elapsed = start_time.elapsed();
         debug!(

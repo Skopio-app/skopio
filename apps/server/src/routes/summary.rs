@@ -74,6 +74,7 @@ pub async fn get_bucketed_summary(
     Ok(Json(records))
 }
 
+// TODO: Switch to GET requests instead of POST
 pub fn summary_routes(db: Arc<Mutex<DBContext>>) -> Router {
     Router::new()
         .route("/summary/total-time", post(total_time_handler))

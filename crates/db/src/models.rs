@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use uuid::Uuid;
 
 use serde::{Deserialize, Serialize};
 
@@ -6,6 +7,8 @@ use serde::{Deserialize, Serialize};
 pub struct BucketTimeSummary {
     pub bucket: String,
     pub grouped_values: HashMap<String, i64>,
+    /// Optional per-group metadata (e.g. entity type when grouping by Entity)
+    pub group_meta: Option<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, sqlx::FromRow, specta::Type)]
@@ -16,18 +19,18 @@ pub struct GroupedTimeSummary {
 
 #[derive(Serialize, Deserialize, Debug, specta::Type, sqlx::FromRow)]
 pub struct App {
-    pub id: uuid::Uuid,
+    pub id: Uuid,
     pub name: String,
 }
 
 #[derive(Serialize, Deserialize, Debug, specta::Type, sqlx::FromRow)]
 pub struct Category {
-    pub id: uuid::Uuid,
+    pub id: Uuid,
     pub name: String,
 }
 
 #[derive(Serialize, Deserialize, Debug, specta::Type, sqlx::FromRow)]
 pub struct Source {
-    pub id: uuid::Uuid,
+    pub id: Uuid,
     pub name: String,
 }

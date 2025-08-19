@@ -226,6 +226,7 @@ const useSummaryDataImpl = (
     }
 
     case "bar": {
+      console.log("The chart data: ", rawData);
       const { chartData, sortedKeys } = generateGroupedChartData(rawData, {
         topN: options.topN,
         collapseRemainder: options.collapseRemainder,
@@ -242,7 +243,6 @@ const useSummaryDataImpl = (
           value,
         }),
       );
-      console.log("The pie chart: ", data);
       return { data, loading };
     }
 

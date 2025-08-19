@@ -24,7 +24,7 @@ const CategoryChartWidget = () => {
       title="Categories"
       loading={loading}
       settingsContent={
-        <SettingsContent title="Categories" topN={topN} setTopN={setTopN} />
+        <SettingsContent title="categories" topN={topN} setTopN={setTopN} />
       }
     >
       <StackedBarChart data={data} keys={keys} />

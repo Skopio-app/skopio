@@ -25,7 +25,7 @@ const ProjectChartWidget = () => {
       title="Projects"
       loading={loading}
       settingsContent={
-        <SettingsContent title="Projects" topN={topN} setTopN={setTopN} />
+        <SettingsContent title="projects" topN={topN} setTopN={setTopN} />
       }
     >
       <StackedBarChart data={data} keys={keys} />

@@ -25,7 +25,7 @@ const EntityChartWidget = () => {
       title="Entities"
       loading={loading}
       settingsContent={
-        <SettingsContent title="Entities" topN={topN} setTopN={setTopN} />
+        <SettingsContent title="entities" topN={topN} setTopN={setTopN} />
       }
     >
       <StackedBarChart data={data} keys={keys} />
