@@ -11,9 +11,10 @@ import {
   CalendarChartData,
   LineChartData,
   PieChartData,
-} from "../../../types/types";
+} from "../../../types/chart";
 import { useDashboardFilter } from "../stores/useDashboardFilter";
 import { format, parseISO } from "date-fns";
+import { getEntityName } from "../../../utils/data";
 
 export interface UseSummaryOptions {
   groupBy?: Group;
@@ -68,7 +69,7 @@ const generateGroupedChartData = (
   const allKeys = new Set<string>();
   const totalPerKey: Record<string, number> = {};
 
-  for (const { bucket, grouped_values } of rawData) {
+  for (const { bucket, grouped_values, group_meta } of rawData) {
     const date = parseISO(bucket);
     const label = format(date, "MMM d");
 
@@ -81,7 +82,8 @@ const generateGroupedChartData = (
 
     for (const [rawKey, seconds] of Object.entries(grouped_values)) {
       if (rawKey === "Total") continue;
-      const key = String(rawKey);
+      const entity = getEntityName(rawKey, group_meta);
+      const key = String(entity);
       const value = Number(seconds ?? 0);
 
       if (value <= 0) continue;
@@ -226,7 +228,6 @@ const useSummaryDataImpl = (
     }
 
     case "bar": {
-      console.log("The chart data: ", rawData);
       const { chartData, sortedKeys } = generateGroupedChartData(rawData, {
         topN: options.topN,
         collapseRemainder: options.collapseRemainder,

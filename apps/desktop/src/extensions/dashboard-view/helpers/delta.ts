@@ -1,5 +1,5 @@
 import { BucketTimeSummary } from "../../../types/tauri.gen";
-import { CalendarChartData } from "../../../types/types";
+import { CalendarChartData } from "../../../types/chart";
 
 export const isDeltaOutdated = (
   cached: CalendarChartData | undefined,

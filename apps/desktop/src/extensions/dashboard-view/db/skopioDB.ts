@@ -1,6 +1,6 @@
 import Dexie, { Table } from "dexie";
 import { Layout } from "react-grid-layout";
-import { CalendarChartData } from "../../../types/types";
+import { CalendarChartData } from "../../../types/chart";
 
 export interface CachedActivity {
   year: number;

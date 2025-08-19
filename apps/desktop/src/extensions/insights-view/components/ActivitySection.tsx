@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import CalendarChart from "../../../components/CalendarChart";
 import SectionContainer from "./SectionContainer";
-import { CalendarChartData } from "../../../types/types";
+import { CalendarChartData } from "../../../types/chart";
 import {
   BucketedSummaryInput,
   commands,

@@ -10,7 +10,8 @@ import {
   BarChartData,
   LineChartData,
   PieChartData,
-} from "../../../types/types";
+} from "../../../types/chart";
+import { getEntityName } from "../../../utils/data";
 
 export interface UseSummaryOptions {
   group_by?: Group;
@@ -45,7 +46,6 @@ type UseProjectSummaryDataFn = {
   (options: UseSummaryOptions & { mode: "pie" }): ParsedPieChartResult;
 };
 
-// TODO: Parse entities to avoid having long strings.
 // Shared logic for bar chart grouping
 const generateGroupedChartData = (rawData: BucketTimeSummary[]) => {
   const grouped: {
@@ -89,7 +89,8 @@ const mergeGroupedValues = (data: BucketTimeSummary[]) => {
   const merged: Record<string, number> = {};
   for (const item of data) {
     for (const [key, value] of Object.entries(item.grouped_values)) {
-      merged[key] = (merged[key] ?? 0) + (value ?? 0);
+      const entity = getEntityName(key, item.group_meta);
+      merged[entity] = (merged[entity] ?? 0) + (value ?? 0);
     }
   }
 
