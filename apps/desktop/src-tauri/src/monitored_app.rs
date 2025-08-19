@@ -227,7 +227,7 @@ fn get_category_for_app(app: &MonitoredApp, entity: Option<&str>, url: Option<&s
         return get_xcode_category(entity.unwrap_or_default());
     }
 
-    Category::Browsing
+    Category::Other
 }
 
 pub fn resolve_app_details(

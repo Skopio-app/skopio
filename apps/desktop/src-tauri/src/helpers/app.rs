@@ -1,12 +1,12 @@
 use std::{panic, process::Command};
 
 use common::language::detect_language;
-use log::{error, warn};
-use url::Url;
+use log::{debug, error, warn};
+use url::{Position, Url};
 
 use crate::monitored_app::MonitoredApp;
 
-/// Returns (domain, url, tab title) from the active tab of a supported browser
+/// Returns (domain, url, url path) from the active tab of a supported browser
 pub fn get_browser_active_tab(bundle_id: &MonitoredApp) -> (String, String, String) {
     let script = match bundle_id {
         MonitoredApp::Chrome => {
@@ -72,16 +72,21 @@ pub fn get_browser_active_tab(bundle_id: &MonitoredApp) -> (String, String, Stri
         );
     }
 
+    debug!("The output: {}", output);
     let parts: Vec<&str> = output.split("||").collect();
     let url = parts.first().unwrap_or(&"unknown").trim();
-    let title = parts.get(1).unwrap_or(&"unknown").trim();
+    let url_path = Url::parse(url)
+        .ok()
+        .map(|u| u[Position::BeforePath..].to_string())
+        .unwrap_or_else(|| "unknown".to_string());
+    // let title = parts.get(1).unwrap_or(&"unknown").trim();
 
     let domain = Url::parse(url)
         .ok()
         .and_then(|u| u.domain().map(|d| d.to_string()))
         .unwrap_or_else(|| "unknown".to_string());
 
-    (domain, url.to_string(), title.to_string())
+    (domain, url.to_string(), url_path)
 }
 
 pub fn get_xcode_project_details() -> (Option<String>, Option<String>, String, Option<String>) {
