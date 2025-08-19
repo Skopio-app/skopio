@@ -95,7 +95,7 @@ const generateGroupedChartData = (
   }
 
   let sortedKeys = Array.from(allKeys).sort(
-    (a, b) => (totalPerKey[b] ?? 0) - (totalPerKey[a] ?? 0),
+    (a, b) => (totalPerKey[a] ?? 0) - (totalPerKey[b] ?? 0),
   );
 
   const topN = opts?.topN && opts.topN > 0 ? opts.topN : undefined;
