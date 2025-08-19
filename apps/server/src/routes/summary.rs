@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use axum::{extract::State, http::StatusCode, routing::post, Json, Router};
+use axum::{extract::State, http::StatusCode, routing::get, Json, Router};
 use common::{
     models::inputs::{BucketedSummaryInput, SummaryQueryInput},
     time::TimeRange,
@@ -10,13 +10,14 @@ use db::{
     server::summary::SummaryQueryBuilder,
     DBContext,
 };
+use serde_qs::axum::QsQuery;
 use tokio::sync::Mutex;
 
 use crate::utils::error_response;
 
 pub async fn total_time_handler(
     State(db): State<Arc<Mutex<DBContext>>>,
-    Json(payload): Json<SummaryQueryInput>,
+    QsQuery(payload): QsQuery<SummaryQueryInput>,
 ) -> Result<Json<i64>, (StatusCode, Json<String>)> {
     let db = db.lock().await;
 
@@ -30,7 +31,7 @@ pub async fn total_time_handler(
 
 pub async fn execute_range_summary(
     State(db): State<Arc<Mutex<DBContext>>>,
-    Json(payload): Json<SummaryQueryInput>,
+    QsQuery(payload): QsQuery<SummaryQueryInput>,
 ) -> Result<Json<Vec<GroupedTimeSummary>>, (StatusCode, Json<String>)> {
     let db = db.lock().await;
 
@@ -44,7 +45,7 @@ pub async fn execute_range_summary(
 
 pub async fn get_bucketed_summary(
     State(db): State<Arc<Mutex<DBContext>>>,
-    Json(payload): Json<BucketedSummaryInput>,
+    QsQuery(payload): QsQuery<BucketedSummaryInput>,
 ) -> Result<Json<Vec<BucketTimeSummary>>, (StatusCode, Json<String>)> {
     let db = db.lock().await;
 
@@ -74,11 +75,10 @@ pub async fn get_bucketed_summary(
     Ok(Json(records))
 }
 
-// TODO: Switch to GET requests instead of POST
 pub fn summary_routes(db: Arc<Mutex<DBContext>>) -> Router {
     Router::new()
-        .route("/summary/total-time", post(total_time_handler))
-        .route("/summary/buckets", post(get_bucketed_summary))
-        .route("/summary/range", post(execute_range_summary))
+        .route("/summary/total-time", get(total_time_handler))
+        .route("/summary/buckets", get(get_bucketed_summary))
+        .route("/summary/range", get(execute_range_summary))
         .with_state(db)
 }
