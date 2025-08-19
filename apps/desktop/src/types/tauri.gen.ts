@@ -93,14 +93,13 @@ export type BucketTimeSummary = {
 };
 export type BucketedSummaryInput = {
   preset: TimeRangePreset;
-  app_names?: string[] | null;
-  project_names?: string[] | null;
-  entity_names?: string[] | null;
-  category_names?: string[] | null;
-  branch_names?: string[] | null;
-  language_names?: string[] | null;
-  group_by?: Group | null;
-  include_afk: boolean;
+  apps?: string[] | null;
+  projects?: string[] | null;
+  entities?: string[] | null;
+  categories?: string[] | null;
+  branches?: string[] | null;
+  languages?: string[] | null;
+  groupBy?: Group | null;
 };
 export type Category = { id: string; name: string };
 export type EventGroup = { group: string; events: FullEvent[] };
@@ -209,7 +208,6 @@ export type SummaryQueryInput = {
   entities?: string[] | null;
   branches?: string[] | null;
   languages?: string[] | null;
-  include_afk: boolean;
 };
 export type Theme = "Light" | "Dark" | "System";
 /**

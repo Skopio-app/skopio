@@ -198,8 +198,7 @@ const useSummaryDataImpl = (
 
       const query: BucketedSummaryInput = {
         preset,
-        group_by: options.presetOverride ? null : options.groupBy,
-        include_afk: false,
+        groupBy: options.presetOverride ? null : options.groupBy,
       };
 
       try {

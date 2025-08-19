@@ -88,12 +88,12 @@ async fn fetch_events(
     let mut builder = SummaryQueryBuilder::new()
         .start(time_range.start())
         .end(time_range.end())
-        .apps(payload.app_names.unwrap_or_default())
-        .projects(payload.project_names.unwrap_or_default())
-        .entities(payload.entity_names.unwrap_or_default())
-        .branches(payload.branch_names.unwrap_or_default())
-        .categories(payload.category_names.unwrap_or_default())
-        .languages(payload.language_names.unwrap_or_default());
+        .apps(payload.apps.unwrap_or_default())
+        .projects(payload.projects.unwrap_or_default())
+        .entities(payload.entities.unwrap_or_default())
+        .branches(payload.branches.unwrap_or_default())
+        .categories(payload.categories.unwrap_or_default())
+        .languages(payload.languages.unwrap_or_default());
 
     if let Some(group) = payload.group_by {
         builder = builder.group_by(group);

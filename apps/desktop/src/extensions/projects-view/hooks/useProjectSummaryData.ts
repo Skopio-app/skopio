@@ -122,9 +122,8 @@ const useProjectSummaryDataImpl = (
 
       const query: BucketedSummaryInput = {
         preset,
-        project_names: [project],
-        group_by: options.group_by,
-        include_afk: false,
+        projects: [project],
+        groupBy: options.group_by,
       };
 
       try {

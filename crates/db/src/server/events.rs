@@ -68,8 +68,8 @@ impl Event {
 impl SummaryQueryBuilder {
     /// Fetches events given a range
     pub async fn fetch_event_range(&self, db: &DBContext) -> Result<EventGroupResult, DBError> {
-        let is_grouped = self.group_by.is_some();
-        let (group_key, inner_tbl) = group_key_info(self.group_by);
+        let is_grouped = self.filters.group_by.is_some();
+        let (group_key, inner_tbl) = group_key_info(self.filters.group_by);
 
         let select_group = if is_grouped {
             format!(", {group_key} AS group_key")
@@ -108,7 +108,7 @@ impl SummaryQueryBuilder {
         );
         append_all_filters(&mut query, self.filters.clone());
 
-        if self.group_by.is_some() {
+        if self.filters.group_by.is_some() {
             append_group_by(&mut query, Some(group_key));
         }
 

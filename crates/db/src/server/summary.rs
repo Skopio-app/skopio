@@ -26,9 +26,6 @@ pub trait SummaryQueryParams {
 #[derive(Debug)]
 pub struct SummaryQueryBuilder {
     pub filters: SummaryFilters,
-    pub group_by: Option<Group>,
-    pub include_afk: bool,
-    pub time_bucket: Option<TimeBucket>,
 }
 
 impl From<SummaryQueryInput> for SummaryQueryBuilder {
@@ -66,8 +63,7 @@ impl From<SummaryQueryInput> for SummaryQueryBuilder {
         if let Some(langs) = input.languages {
             builder = builder.languages(langs);
         }
-
-        builder.include_afk(input.include_afk)
+        builder
     }
 }
 
@@ -90,9 +86,6 @@ impl SummaryQueryBuilder {
     pub fn new() -> Self {
         Self {
             filters: SummaryFilters::default(),
-            group_by: None,
-            include_afk: false,
-            time_bucket: None,
         }
     }
 
@@ -137,17 +130,12 @@ impl SummaryQueryBuilder {
     }
 
     pub fn group_by(mut self, field: Group) -> Self {
-        self.group_by = Some(field);
-        self
-    }
-
-    pub fn include_afk(mut self, include: bool) -> Self {
-        self.include_afk = include;
+        self.filters.group_by = Some(field);
         self
     }
 
     pub fn time_bucket(mut self, bucket: TimeBucket) -> Self {
-        self.time_bucket = Some(bucket);
+        self.filters.time_bucket = Some(bucket);
         self
     }
 
@@ -166,7 +154,7 @@ impl SummaryQueryBuilder {
         db: &DBContext,
     ) -> Result<Vec<GroupedTimeSummary>, sqlx::Error> {
         let start_time = Instant::now();
-        let (group_key, inner_tbl) = group_key_info(self.group_by);
+        let (group_key, inner_tbl) = group_key_info(self.filters.group_by);
 
         let mut base_query =
             format!("SELECT {group_key} as group_key, SUM(duration) as total_seconds FROM events");
@@ -182,29 +170,11 @@ impl SummaryQueryBuilder {
         );
         append_all_filters(&mut base_query, self.filters.clone());
 
-        if self.group_by.is_some() {
+        if self.filters.group_by.is_some() {
             append_group_by(&mut base_query, Some(group_key));
         }
 
-        let mut final_query = base_query.clone();
-
-        if self.include_afk {
-            let mut afk_query = String::from("SELECT 'AFK' as group_key, SUM(duration) as total_seconds FROM afk_events WHERE 1=1");
-
-            if let Some(start) = self.filters.start {
-                afk_query.push_str(" AND afk_start >= '");
-                afk_query.push_str(&start.to_string());
-                afk_query.push('\'');
-            }
-
-            if let Some(end) = self.filters.end {
-                afk_query.push_str(" AND afk_end <= '");
-                afk_query.push_str(&end.to_string());
-                afk_query.push('\'');
-            }
-
-            final_query = format!("{} UNION ALL {}", base_query, afk_query);
-        }
+        let final_query = base_query.clone();
 
         let records = sqlx::query_as::<_, GroupedTimeSummary>(&final_query)
             .fetch_all(db.pool())
@@ -214,7 +184,7 @@ impl SummaryQueryBuilder {
             "Executed range summary SQL in {:.2?} - {} rows (group_by: {:?})",
             elapsed,
             records.len(),
-            self.group_by,
+            self.filters.group_by,
         );
 
         Ok(records)
@@ -247,7 +217,7 @@ impl SummaryQueryBuilder {
         let elapsed = start_time.elapsed();
         debug!(
             "Executed total time query in {:.2?} - {:?} (group_by: {:?})",
-            elapsed, result, self.group_by,
+            elapsed, result, self.filters.group_by,
         );
 
         Ok(result.unwrap_or(0))
@@ -258,11 +228,11 @@ impl SummaryQueryBuilder {
         db: &DBContext,
     ) -> Result<Vec<BucketTimeSummary>, sqlx::Error> {
         let start_time = Instant::now();
-        let (group_key, inner_tbl) = group_key_info(self.group_by);
+        let (group_key, inner_tbl) = group_key_info(self.filters.group_by);
 
-        let time_bucket_expr = get_time_bucket_expr(self.time_bucket);
+        let time_bucket_expr = get_time_bucket_expr(self.filters.time_bucket);
 
-        let needs_entity_type = matches!(self.group_by, Some(Group::Entity));
+        let needs_entity_type = matches!(self.filters.group_by, Some(Group::Entity));
         let meta_select = if needs_entity_type {
             ", entities.type AS group_meta "
         } else {
@@ -311,7 +281,7 @@ impl SummaryQueryBuilder {
             "Executed range summary with bucket query in {:.2?} - {} rows (group_key: {:?})",
             elapsed,
             records.len(),
-            self.group_by,
+            self.filters.group_by,
         );
 
         Ok(records)

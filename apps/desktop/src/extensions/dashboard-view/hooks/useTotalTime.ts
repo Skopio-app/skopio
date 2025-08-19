@@ -15,7 +15,6 @@ export const useTotalTime = (
       const input: SummaryQueryInput = {
         start: start.toISOString(),
         end: end.toISOString(),
-        include_afk: false,
       };
 
       setLoading(true);

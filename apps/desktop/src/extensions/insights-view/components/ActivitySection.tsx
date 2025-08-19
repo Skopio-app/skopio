@@ -40,7 +40,6 @@ const ActivitySection = () => {
       try {
         const input: BucketedSummaryInput = {
           preset: yearConfig.preset,
-          include_afk: false,
         };
 
         const result = await commands.fetchBucketedSummary(input);

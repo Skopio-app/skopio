@@ -47,6 +47,7 @@ pub struct AFKEventInput {
 }
 
 #[derive(Debug, Serialize, Deserialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
 pub struct SummaryQueryInput {
     pub start: Option<DateTime<Utc>>,
     pub end: Option<DateTime<Utc>>,
@@ -62,27 +63,26 @@ pub struct SummaryQueryInput {
     pub branches: Option<Vec<String>>,
     #[specta(optional)]
     pub languages: Option<Vec<String>>,
-    pub include_afk: bool,
 }
 
 #[derive(Debug, Serialize, Deserialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
 pub struct BucketedSummaryInput {
     pub preset: TimeRangePreset,
     #[specta(optional)]
-    pub app_names: Option<Vec<String>>,
+    pub apps: Option<Vec<String>>,
     #[specta(optional)]
-    pub project_names: Option<Vec<String>>,
+    pub projects: Option<Vec<String>>,
     #[specta(optional)]
-    pub entity_names: Option<Vec<String>>,
+    pub entities: Option<Vec<String>>,
     #[specta(optional)]
-    pub category_names: Option<Vec<String>>,
+    pub categories: Option<Vec<String>>,
     #[specta(optional)]
-    pub branch_names: Option<Vec<String>>,
+    pub branches: Option<Vec<String>>,
     #[specta(optional)]
-    pub language_names: Option<Vec<String>>,
+    pub languages: Option<Vec<String>>,
     #[specta(optional)]
     pub group_by: Option<Group>,
-    pub include_afk: bool,
 }
 
 #[derive(Serialize, Deserialize, Debug, specta::Type)]

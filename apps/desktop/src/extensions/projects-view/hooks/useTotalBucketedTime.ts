@@ -21,13 +21,12 @@ export const useTotalBucketedTime = (
     const fetchData = async () => {
       const baseInput: BucketedSummaryInput = {
         preset,
-        project_names: [project],
-        include_afk: false,
+        projects: [project],
       };
 
       const inputWithBranch: BucketedSummaryInput = {
         ...baseInput,
-        group_by: "branch",
+        groupBy: "branch",
         ...(selectedBranches ? { branch_names: selectedBranches } : null),
       };
 
@@ -62,7 +61,7 @@ export const useTotalBucketedTime = (
         } else {
           const fallbackData = await commands.fetchBucketedSummary({
             ...baseInput,
-            group_by: "project",
+            groupBy: "project",
           });
           if (cancelled) return;
 

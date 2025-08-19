@@ -28,13 +28,11 @@ export const useEventFetcher = (
                 bucket: "day",
               },
             },
-            group_by: group,
-            include_afk: false,
+            groupBy: group,
           }
         : {
             preset: { lastNMinutes: duration },
-            group_by: group,
-            include_afk: false,
+            groupBy: group,
           };
 
       try {
