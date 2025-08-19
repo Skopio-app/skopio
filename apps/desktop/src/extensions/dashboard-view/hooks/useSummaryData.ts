@@ -66,7 +66,6 @@ const generateGroupedChartData = (
   const byLabel: Map<string, Record<string, number>> = new Map();
   const labelToDate: Map<string, Date> = new Map();
 
-  const allKeys = new Set<string>();
   const totalPerKey: Record<string, number> = {};
 
   for (const { bucket, grouped_values, group_meta } of rawData) {
@@ -82,59 +81,57 @@ const generateGroupedChartData = (
 
     for (const [rawKey, seconds] of Object.entries(grouped_values)) {
       if (rawKey === "Total") continue;
-      const entity = getEntityName(rawKey, group_meta);
-      const key = String(entity);
-      const value = Number(seconds ?? 0);
+      const key = getEntityName(rawKey, group_meta);
+      const value = seconds ?? 0;
 
       if (value <= 0) continue;
 
       acc[key] = (acc[key] ?? 0) + value;
       totalPerKey[key] = (totalPerKey[key] ?? 0) + value;
-      allKeys.add(key);
     }
   }
 
-  let sortedKeys = Array.from(allKeys).sort(
-    (a, b) => (totalPerKey[a] ?? 0) - (totalPerKey[b] ?? 0),
+  const allKeys = Object.keys(totalPerKey);
+  const keysByDesc = allKeys.sort(
+    (a, b) => (totalPerKey[b] ?? 0) - (totalPerKey[a] ?? 0),
   );
 
   const topN = opts?.topN && opts.topN > 0 ? opts.topN : undefined;
   const collapse = !!opts?.collapseRemainder;
 
-  if (topN && sortedKeys.length > topN) {
-    const keep = new Set(sortedKeys.slice(0, topN));
-    const remainder = new Set(sortedKeys.slice(topN));
+  const keepDesc = topN ? keysByDesc.slice(0, topN) : keysByDesc.slice();
+  const keepSet = new Set(keepDesc);
+  const remainder = allKeys.filter((k) => !keepSet.has(k));
 
-    if (collapse) {
-      for (const [, values] of byLabel.entries()) {
-        let other = 0;
-        for (const k of remainder) {
-          if (values[k]) {
-            other += values[k];
-            delete values[k];
-          }
+  if (collapse && remainder.length > 0) {
+    for (const [, values] of byLabel.entries()) {
+      let other = 0;
+      for (const k of remainder) {
+        if (values[k]) {
+          other += values[k];
+          delete values[k];
         }
-        if (other > 0) values["Other"] = (values["Other"] ?? 0) + other;
       }
-
-      const otherTotal = Array.from(byLabel.values()).reduce(
-        (sum, row) => sum + (row["Other"] ?? 0),
-        0,
-      );
-      if (otherTotal > 0) {
-        totalPerKey["Other"] = otherTotal;
-        keep.add("Other");
-      }
-    } else {
-      for (const [, values] of byLabel.entries()) {
-        for (const k of remainder) delete values[k];
-      }
+      if (other > 0) values["Other"] = (values["Other"] ?? 0) + other;
     }
 
-    sortedKeys = Array.from(keep).sort(
-      (a, b) => (totalPerKey[b] ?? 0) - (totalPerKey[a] ?? 0),
+    const otherTotal = Array.from(byLabel.values()).reduce(
+      (sum, row) => sum + (row["Other"] ?? 0),
+      0,
     );
+    if (otherTotal > 0) {
+      totalPerKey["Other"] = otherTotal;
+      keepSet.add("Other");
+    }
+  } else {
+    for (const [, values] of byLabel.entries()) {
+      for (const k of remainder) delete values[k];
+    }
   }
+
+  const sortedKeys = Array.from(keepSet).sort(
+    (a, b) => (totalPerKey[a] ?? 0) - (totalPerKey[b] ?? 0),
+  );
 
   const chartData: BarChartData[] = Array.from(byLabel.entries())
     .map(([label, values]) => {

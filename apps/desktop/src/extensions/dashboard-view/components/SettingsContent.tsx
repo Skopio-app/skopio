@@ -7,7 +7,7 @@ interface SettingsContentProps {
 }
 
 export const MIN_TOP_N = 2;
-const MAX_TOP_N = 20;
+const MAX_TOP_N = 40;
 
 const SettingsContent: React.FC<SettingsContentProps> = ({
   title,
