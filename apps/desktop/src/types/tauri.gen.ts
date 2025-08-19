@@ -83,6 +83,9 @@ export type AppConfig = {
   flush_interval: number;
   sync_interval: number;
 };
+/**
+ * Query input for bucketed summaries (based on a preset time range)
+ */
 export type BucketSummaryInput = {
   preset: TimeRangePreset;
   apps?: string[] | null;
@@ -93,8 +96,17 @@ export type BucketSummaryInput = {
   languages?: string[] | null;
   groupBy?: Group | null;
 };
+/**
+ * A single time bucket with grouped values.
+ */
 export type BucketTimeSummary = {
+  /**
+   * The time bucket (e.g., "2025-08-01")
+   */
   bucket: string;
+  /**
+   * A map of group_key: total_seconds
+   */
   grouped_values: Partial<{ [key in string]: number }>;
   /**
    * Optional per-group metadata (e.g. entity type when grouping by Entity)
@@ -114,6 +126,7 @@ export type FullEvent = {
   category: string;
   app: string | null;
   entity: string | null;
+  entityType: string | null;
   project: string | null;
   branch: string | null;
   language: string | null;
@@ -165,8 +178,23 @@ export type Group =
   | "category"
   | "entity"
   | "source";
-export type GroupedTimeSummary = { group_key: string; total_seconds: number };
+/**
+ * Represents an aggregated total time for a specific group.
+ */
+export type GroupedTimeSummary = {
+  /**
+   * The group key (e.g., project name, app name)
+   */
+  group_key: string;
+  /**
+   * Total aggregated time (in seconds)
+   */
+  total_seconds: number;
+};
 export type InsightBucket = "day" | "week" | "month" | "year";
+/**
+ * Query payload for insights
+ */
 export type InsightQueryPayload = {
   insightType: InsightType;
   insightRange?: string | null;
@@ -199,6 +227,9 @@ export type PaginationQuery = { after: string | null; limit: number | null };
 export type Project = { id: string; name: string; root_path: string | null };
 export type ProjectQuery = { id: string };
 export type ProjectSearchQuery = { name: string; limit: number };
+/**
+ * Query input for requesting summaries over a range of time
+ */
 export type SummaryQueryInput = {
   start: string | null;
   end: string | null;

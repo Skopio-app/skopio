@@ -12,8 +12,7 @@ use crate::{
     server::{
         summary::SummaryQueryBuilder,
         utils::query::{
-            append_all_filters, append_date_range, append_group_by, append_standard_joins,
-            group_key_info,
+            append_all_filters, append_date_range, append_standard_joins, group_key_info,
         },
     },
     utils::DBError,
@@ -87,6 +86,7 @@ impl SummaryQueryBuilder {
                 apps.name AS app,
                 categories.name AS category,
                 entities.name AS entity,
+                entities.type AS entity_type,
                 projects.name AS project,
                 branches.name AS branch,
                 languages.name AS language,
@@ -109,7 +109,9 @@ impl SummaryQueryBuilder {
         append_all_filters(&mut query, self.filters.clone());
 
         if self.filters.group_by.is_some() {
-            append_group_by(&mut query, Some(group_key));
+            query.push_str(&format!(" ORDER BY {}, events.timestamp", group_key));
+        } else {
+            query.push_str(" ORDER BY events.timestamp");
         }
 
         let rows = sqlx::query(&query).fetch_all(db.pool()).await?;
@@ -138,6 +140,7 @@ impl SummaryQueryBuilder {
                     .unwrap_or_default(),
                 app: row.try_get("app")?,
                 entity: row.try_get("entity")?,
+                entity_type: row.try_get("entity_type")?,
                 project: row.try_get("project")?,
                 branch: row.try_get("branch")?,
                 language: row.try_get("language")?,

@@ -7,6 +7,7 @@ use crate::{
     time::TimeRangePreset,
 };
 
+/// Input payload for inserting a new event.
 #[derive(Serialize, Deserialize, Debug)]
 pub struct EventInput {
     pub timestamp: Option<DateTime<Utc>>,
@@ -23,6 +24,7 @@ pub struct EventInput {
     pub end_timestamp: Option<DateTime<Utc>>,
 }
 
+/// Input payload for inserting a new heartbeat.
 #[derive(Serialize, Deserialize, Debug)]
 pub struct HeartbeatInput {
     pub timestamp: Option<DateTime<Utc>>,
@@ -39,6 +41,7 @@ pub struct HeartbeatInput {
     pub cursorpos: Option<i64>,
 }
 
+/// Input payload for AFK (Away From Keyboard) events
 #[derive(Serialize, Deserialize, Debug)]
 pub struct AFKEventInput {
     pub afk_start: DateTime<Utc>,
@@ -46,6 +49,7 @@ pub struct AFKEventInput {
     pub duration: Option<i64>,
 }
 
+/// Query input for requesting summaries over a range of time
 #[derive(Debug, Serialize, Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct SummaryQueryInput {
@@ -65,6 +69,7 @@ pub struct SummaryQueryInput {
     pub languages: Option<Vec<String>>,
 }
 
+/// Query input for bucketed summaries (based on a preset time range)
 #[derive(Debug, Serialize, Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct BucketSummaryInput {
@@ -102,6 +107,7 @@ pub struct ProjectSearchQuery {
     pub limit: u32,
 }
 
+/// Query payload for insights
 #[derive(Serialize, Deserialize, Debug, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct InsightQueryPayload {

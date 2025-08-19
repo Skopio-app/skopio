@@ -26,6 +26,10 @@ pub trait SummaryQueryParams {
     fn filters(&self) -> &SummaryFilters;
 }
 
+/// Builder for constructing and executing time summary queries against the database.
+///
+/// The builder pattern is used to incrementally add filters (apps, projects, categories, etc.)
+/// and execution methods run parameterized SQL queries to return summarized time data.
 #[derive(Debug)]
 pub struct SummaryQueryBuilder {
     pub filters: SummaryFilters,
@@ -111,12 +115,17 @@ impl From<BucketSummaryInput> for SummaryQueryBuilder {
     }
 }
 
+/// Raw row returned when querying bucketed summaries.
+/// Used internally before mapping into `BucketTimeSummary`
 #[derive(Debug, sqlx::FromRow)]
 struct RawBucketRow {
+    /// The time bucket label (e.g., "2025-08-01")
     bucket: String,
+    /// The grouping key value (e.g., project name, app name)
     group_key: String,
+    /// Total time in seconds aggregated for this bucket + group_key
     total_seconds: i64,
-    // present only when grouping by Entity; otherwise NULL
+    // Extra metadata when grouping by entity (entity type)
     group_meta: Option<String>,
 }
 
@@ -183,16 +192,9 @@ impl SummaryQueryBuilder {
         self
     }
 
-    pub async fn execute_grouped_summary_by(
-        self,
-        db: &DBContext,
-        group_key_field: Group,
-    ) -> Result<Vec<GroupedTimeSummary>, sqlx::Error> {
-        self.group_by(group_key_field)
-            .execute_range_summary(db)
-            .await
-    }
-
+    /// Executes a range summary query with the current filters.
+    ///
+    /// Returns aggregated durations grouped by the chosen `Group`, if any.
     pub async fn execute_range_summary(
         &self,
         db: &DBContext,
@@ -234,6 +236,8 @@ impl SummaryQueryBuilder {
         Ok(records)
     }
 
+    /// Executes a query that returns only the total time (in seconds)
+    /// for the current filters
     pub async fn execute_total_time(&self, db: &DBContext) -> Result<i64, sqlx::Error> {
         let start_time = Instant::now();
         let mut query = String::from("SELECT SUM(duration) as total_seconds FROM events");
@@ -267,6 +271,8 @@ impl SummaryQueryBuilder {
         Ok(result.unwrap_or(0))
     }
 
+    /// Executes a bucketed range summary, aggregating durations into
+    /// time buckets (e.g. by day, week, or month) and grouping optionally.
     pub async fn execute_range_summary_with_bucket(
         &self,
         db: &DBContext,
