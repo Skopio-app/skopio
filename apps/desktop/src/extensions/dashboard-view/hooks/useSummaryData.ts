@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import {
-  BucketedSummaryInput,
+  BucketSummaryInput,
   BucketTimeSummary,
   commands,
   Group,
@@ -194,9 +194,7 @@ const useSummaryDataImpl = (
 
   useEffect(() => {
     const fetchData = async () => {
-      setLoading(true);
-
-      const query: BucketedSummaryInput = {
+      const query: BucketSummaryInput = {
         preset,
         groupBy: options.presetOverride ? null : options.groupBy,
       };

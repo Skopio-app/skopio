@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import {
-  BucketedSummaryInput,
+  BucketSummaryInput,
   BucketTimeSummary,
   commands,
   Group,
@@ -120,7 +120,7 @@ const useProjectSummaryDataImpl = (
     const fetchData = async () => {
       setLoading(true);
 
-      const query: BucketedSummaryInput = {
+      const query: BucketSummaryInput = {
         preset,
         projects: [project],
         groupBy: options.group_by,

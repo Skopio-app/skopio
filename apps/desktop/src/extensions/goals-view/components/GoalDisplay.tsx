@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import {
-  BucketedSummaryInput,
+  BucketSummaryInput,
   BucketTimeSummary,
   commands,
   Goal,
@@ -36,7 +36,7 @@ const GoalDisplay = ({ goal }: { goal: Goal }) => {
     }
   };
 
-  const query: BucketedSummaryInput = {
+  const query: BucketSummaryInput = {
     preset: timeRangeToPreset(goal.timeSpan),
     apps: goal.useApps ? goal.apps : null,
     categories: goal.useCategories ? goal.categories : null,

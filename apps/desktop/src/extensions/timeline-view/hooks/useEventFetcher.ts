@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import {
-  BucketedSummaryInput,
+  BucketSummaryInput,
   commands,
   EventGroup,
   EventGroupResult,
@@ -19,7 +19,7 @@ export const useEventFetcher = (
     if (customRange && (!customRange.start || !customRange.end)) return;
 
     const fetch = async () => {
-      const input: BucketedSummaryInput = customRange
+      const input: BucketSummaryInput = customRange
         ? {
             preset: {
               custom: {

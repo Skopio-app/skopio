@@ -1,10 +1,7 @@
 use std::sync::Arc;
 
 use axum::{extract::State, http::StatusCode, routing::get, Json, Router};
-use common::{
-    models::inputs::{BucketedSummaryInput, SummaryQueryInput},
-    time::TimeRange,
-};
+use common::models::inputs::{BucketSummaryInput, SummaryQueryInput};
 use db::{
     models::{BucketTimeSummary, GroupedTimeSummary},
     server::summary::SummaryQueryBuilder,
@@ -12,7 +9,6 @@ use db::{
 };
 use serde_qs::axum::QsQuery;
 use tokio::sync::Mutex;
-use tracing::debug;
 
 use crate::utils::error_response;
 
@@ -46,28 +42,10 @@ pub async fn execute_range_summary(
 
 pub async fn get_bucketed_summary(
     State(db): State<Arc<Mutex<DBContext>>>,
-    QsQuery(payload): QsQuery<BucketedSummaryInput>,
+    QsQuery(payload): QsQuery<BucketSummaryInput>,
 ) -> Result<Json<Vec<BucketTimeSummary>>, (StatusCode, Json<String>)> {
     let db = db.lock().await;
-
-    debug!("The payload: {:?}", payload);
-    let range = TimeRange::from(payload.preset);
-
-    let mut builder = SummaryQueryBuilder::default()
-        .start(range.start())
-        .end(range.end())
-        .time_bucket(range.bucket().unwrap())
-        .apps(payload.apps.unwrap_or_default())
-        .projects(payload.projects.unwrap_or_default())
-        .entities(payload.entities.unwrap_or_default())
-        .categories(payload.categories.unwrap_or_default())
-        .branches(payload.branches.unwrap_or_default())
-        .languages(payload.languages.unwrap_or_default());
-
-    if let Some(group) = payload.group_by {
-        builder = builder.group_by(group);
-    }
-    debug!("The builder: {:?}", builder);
+    let builder: SummaryQueryBuilder = payload.into();
 
     let records = builder
         .execute_range_summary_with_bucket(&db)

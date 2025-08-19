@@ -1,4 +1,4 @@
-use common::models::inputs::{BucketedSummaryInput, SummaryQueryInput};
+use common::models::inputs::{BucketSummaryInput, SummaryQueryInput};
 use db::models::{BucketTimeSummary, GroupedTimeSummary};
 
 use crate::network::utils::req_json;
@@ -20,7 +20,7 @@ pub async fn fetch_range_summary(
 #[tauri::command]
 #[specta::specta]
 pub async fn fetch_bucketed_summary(
-    query: BucketedSummaryInput,
+    query: BucketSummaryInput,
 ) -> Result<Vec<BucketTimeSummary>, String> {
     req_json("summary/buckets", Some(&query)).await
 }

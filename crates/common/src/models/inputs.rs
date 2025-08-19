@@ -67,7 +67,7 @@ pub struct SummaryQueryInput {
 
 #[derive(Debug, Serialize, Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
-pub struct BucketedSummaryInput {
+pub struct BucketSummaryInput {
     pub preset: TimeRangePreset,
     #[specta(optional)]
     pub apps: Option<Vec<String>>,

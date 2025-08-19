@@ -19,7 +19,7 @@ export const commands = {
     return await TAURI_INVOKE("set_heartbeat_interval", { interval });
   },
   async fetchBucketedSummary(
-    query: BucketedSummaryInput,
+    query: BucketSummaryInput,
   ): Promise<BucketTimeSummary[]> {
     return await TAURI_INVOKE("fetch_bucketed_summary", { query });
   },
@@ -61,7 +61,7 @@ export const commands = {
   async fetchInsights(query: InsightQueryPayload): Promise<InsightResult> {
     return await TAURI_INVOKE("fetch_insights", { query });
   },
-  async fetchEvents(query: BucketedSummaryInput): Promise<EventGroupResult> {
+  async fetchEvents(query: BucketSummaryInput): Promise<EventGroupResult> {
     return await TAURI_INVOKE("fetch_events", { query });
   },
   async dismissNotificationWindow(): Promise<null> {
@@ -83,15 +83,7 @@ export type AppConfig = {
   flush_interval: number;
   sync_interval: number;
 };
-export type BucketTimeSummary = {
-  bucket: string;
-  grouped_values: Partial<{ [key in string]: number }>;
-  /**
-   * Optional per-group metadata (e.g. entity type when grouping by Entity)
-   */
-  group_meta: string | null;
-};
-export type BucketedSummaryInput = {
+export type BucketSummaryInput = {
   preset: TimeRangePreset;
   apps?: string[] | null;
   projects?: string[] | null;
@@ -100,6 +92,14 @@ export type BucketedSummaryInput = {
   branches?: string[] | null;
   languages?: string[] | null;
   groupBy?: Group | null;
+};
+export type BucketTimeSummary = {
+  bucket: string;
+  grouped_values: Partial<{ [key in string]: number }>;
+  /**
+   * Optional per-group metadata (e.g. entity type when grouping by Entity)
+   */
+  group_meta: string | null;
 };
 export type Category = { id: string; name: string };
 export type EventGroup = { group: string; events: FullEvent[] };

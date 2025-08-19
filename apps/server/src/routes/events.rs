@@ -3,9 +3,8 @@ use axum::extract::State;
 use axum::http::StatusCode;
 use axum::routing::{get, post};
 use axum::{Json, Router};
-use common::models::inputs::{BucketedSummaryInput, EventInput};
+use common::models::inputs::{BucketSummaryInput, EventInput};
 use common::models::outputs::EventGroupResult;
-use common::time::TimeRange;
 use db::models::{App, Category, Source};
 use db::server::branches::Branch;
 use db::server::entities::Entity;
@@ -17,7 +16,7 @@ use db::DBContext;
 use serde_qs::axum::QsQuery;
 use std::sync::Arc;
 use tokio::sync::Mutex;
-use tracing::{debug, info};
+use tracing::debug;
 
 async fn insert_events(
     State(db): State<Arc<Mutex<DBContext>>>,
@@ -79,27 +78,10 @@ async fn insert_events(
 
 async fn fetch_events(
     State(db): State<Arc<Mutex<DBContext>>>,
-    QsQuery(payload): QsQuery<BucketedSummaryInput>,
+    QsQuery(payload): QsQuery<BucketSummaryInput>,
 ) -> Result<Json<EventGroupResult>, (StatusCode, Json<String>)> {
-    info!("The payload: {:?}", payload);
-
-    let time_range = TimeRange::from(payload.preset);
-
-    let mut builder = SummaryQueryBuilder::new()
-        .start(time_range.start())
-        .end(time_range.end())
-        .apps(payload.apps.unwrap_or_default())
-        .projects(payload.projects.unwrap_or_default())
-        .entities(payload.entities.unwrap_or_default())
-        .branches(payload.branches.unwrap_or_default())
-        .categories(payload.categories.unwrap_or_default())
-        .languages(payload.languages.unwrap_or_default());
-
-    if let Some(group) = payload.group_by {
-        builder = builder.group_by(group);
-    }
-
     let db = db.lock().await;
+    let builder = SummaryQueryBuilder::from(payload);
     match builder.fetch_event_range(&db).await {
         Ok(result) => Ok(Json(result)),
         Err(err) => Err(error_response(err)),

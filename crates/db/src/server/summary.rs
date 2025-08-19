@@ -2,8 +2,11 @@ use std::{collections::HashMap, fmt::Debug, time::Instant};
 
 use chrono::{DateTime, Utc};
 use common::{
-    models::{inputs::SummaryQueryInput, Group},
-    time::TimeBucket,
+    models::{
+        inputs::{BucketSummaryInput, SummaryQueryInput},
+        Group,
+    },
+    time::{TimeBucket, TimeRange},
 };
 use log::debug;
 
@@ -67,6 +70,47 @@ impl From<SummaryQueryInput> for SummaryQueryBuilder {
     }
 }
 
+impl From<BucketSummaryInput> for SummaryQueryBuilder {
+    fn from(input: BucketSummaryInput) -> Self {
+        let mut builder = SummaryQueryBuilder::new();
+
+        let time_range = TimeRange::from(input.preset);
+        builder = builder.start(time_range.start());
+        builder = builder.end(time_range.end());
+        builder.filters.time_bucket = time_range.bucket();
+
+        if let Some(apps) = input.apps {
+            builder = builder.apps(apps);
+        }
+
+        if let Some(projects) = input.projects {
+            builder = builder.projects(projects);
+        }
+
+        if let Some(categories) = input.categories {
+            builder = builder.categories(categories)
+        }
+
+        if let Some(entities) = input.entities {
+            builder = builder.entities(entities);
+        }
+
+        if let Some(branches) = input.branches {
+            builder = builder.branches(branches);
+        }
+
+        if let Some(langs) = input.languages {
+            builder = builder.languages(langs);
+        }
+
+        if let Some(group) = input.group_by {
+            builder = builder.group_by(group);
+        }
+
+        builder
+    }
+}
+
 #[derive(Debug, sqlx::FromRow)]
 struct RawBucketRow {
     bucket: String,
@@ -109,8 +153,8 @@ impl SummaryQueryBuilder {
         self
     }
 
-    pub fn categories(mut self, types: Vec<String>) -> Self {
-        self.filters.categories = Some(types);
+    pub fn categories(mut self, categories: Vec<String>) -> Self {
+        self.filters.categories = Some(categories);
         self
     }
 
