@@ -114,10 +114,40 @@ export type BucketTimeSummary = {
   group_meta: string | null;
 };
 export type Category = { id: string; name: string };
-export type EventGroup = { group: string; events: FullEvent[] };
+/**
+ * A collection of events that share a common grouping key.
+ */
+export type EventGroup = {
+  /**
+   * The group key value
+   */
+  group: string;
+  /**
+   * The list of `FullEvent` rows belonging to this group
+   */
+  events: FullEvent[];
+};
+/**
+ * The result of fetching events for a time/window query
+ *
+ * - `Flat(Vec<FullEvent>)` - returned when no `group_by` is set. Contains every
+ * matching event row.
+ * - `Grouped(Vec<EventGroup>)` - returned when a `group_by` dimension is set.
+ * Each `EventGroup` holds a `group` key (e.g., a category name) and **all**
+ * events that belong to that group.
+ */
 export type EventGroupResult =
+  /**
+   * Ungrouped list of events.
+   */
   | { Flat: FullEvent[] }
+  /**
+   * Events grouped by a group key (e.g., category, app, project, source, etc.)
+   */
   | { Grouped: EventGroup[] };
+/**
+ * A fully materialized event row
+ */
 export type FullEvent = {
   id: string;
   timestamp: string;

@@ -2,7 +2,6 @@ use std::collections::HashMap;
 
 use chrono::{DateTime, Utc};
 use common::models::outputs::{EventGroup, EventGroupResult, FullEvent};
-use log::debug;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -35,12 +34,8 @@ pub struct Event {
 }
 
 impl Event {
-    // Create a new event
+    // Inserts a new event into the database
     pub async fn create(self, db_context: &DBContext) -> Result<(), DBError> {
-        debug!(
-            "The event timestamps and duration to be inserted: {} to {:?} ({:?})s",
-            self.timestamp, self.end_timestamp, self.duration
-        );
         sqlx::query!(
             "
             INSERT INTO events (id, timestamp, duration, category_id, app_id, entity_id, project_id, branch_id, language_id, source_id, end_timestamp)
@@ -65,7 +60,8 @@ impl Event {
 }
 
 impl SummaryQueryBuilder {
-    /// Fetches events given a range
+    /// Fetches events within the configured time range and optional filters,
+    /// and returns them either as a flat list or grouped by a chosen dimension
     pub async fn fetch_event_range(&self, db: &DBContext) -> Result<EventGroupResult, DBError> {
         let is_grouped = self.filters.group_by.is_some();
         let (group_key, inner_tbl) = group_key_info(self.filters.group_by);
