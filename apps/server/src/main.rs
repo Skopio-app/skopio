@@ -12,7 +12,13 @@ mod utils;
 
 #[tokio::main]
 async fn main() {
-    let filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("info"));
+    let log_level = if cfg!(debug_assertions) {
+        "debug"
+    } else {
+        "info"
+    };
+
+    let filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new(log_level));
 
     fmt()
         .with_env_filter(filter)
@@ -23,7 +29,7 @@ async fn main() {
 
     info!("🚀 Starting server...");
 
-    let db_path = utils::get_application_support_path();
+    let db_path = utils::get_db_path();
     let db_url = format!("sqlite://{}", db_path.to_str().unwrap());
 
     let db = match DBContext::new(&db_url).await {

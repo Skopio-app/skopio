@@ -1,5 +1,5 @@
 import { startTransition, useEffect, useState } from "react";
-import { BucketedSummaryInput, commands } from "../../../types/tauri.gen";
+import { BucketSummaryInput, commands } from "../../../types/tauri.gen";
 import { usePresetFilter } from "../stores/usePresetFilter";
 
 export const useTotalBucketedTime = (
@@ -19,15 +19,14 @@ export const useTotalBucketedTime = (
   useEffect(() => {
     let cancelled = false;
     const fetchData = async () => {
-      const baseInput: BucketedSummaryInput = {
+      const baseInput: BucketSummaryInput = {
         preset,
-        project_names: [project],
-        include_afk: false,
+        projects: [project],
       };
 
-      const inputWithBranch: BucketedSummaryInput = {
+      const inputWithBranch: BucketSummaryInput = {
         ...baseInput,
-        group_by: "branch",
+        groupBy: "branch",
         ...(selectedBranches ? { branch_names: selectedBranches } : null),
       };
 
@@ -62,7 +61,7 @@ export const useTotalBucketedTime = (
         } else {
           const fallbackData = await commands.fetchBucketedSummary({
             ...baseInput,
-            group_by: "project",
+            groupBy: "project",
           });
           if (cancelled) return;
 

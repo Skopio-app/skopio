@@ -40,3 +40,25 @@ where
             .unwrap_or_else(|_| "Unknown error".to_string()))
     }
 }
+
+// pub async fn post_json<TReq, TRes>(path: &str, body: &TReq) -> Result<TRes, String>
+// where
+//     TReq: Serialize + ?Sized,
+//     TRes: for<'de> Deserialize<'de>,
+// {
+//     let res = HTTP_CLIENT
+//         .post(format!("{}/{}", SERVER_URL, path))
+//         .json(body)
+//         .send()
+//         .await
+//         .map_err(|e| e.to_string())?;
+
+//     if res.status().is_success() {
+//         res.json::<TRes>().await.map_err(|e| e.to_string())
+//     } else {
+//         Err(res
+//             .text()
+//             .await
+//             .unwrap_or_else(|_| "Unknown error".to_string()))
+//     }
+// }

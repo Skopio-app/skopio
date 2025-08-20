@@ -7,6 +7,7 @@ use crate::{
     time::TimeRangePreset,
 };
 
+/// Input payload for inserting a new event.
 #[derive(Serialize, Deserialize, Debug)]
 pub struct EventInput {
     pub timestamp: Option<DateTime<Utc>>,
@@ -23,6 +24,7 @@ pub struct EventInput {
     pub end_timestamp: Option<DateTime<Utc>>,
 }
 
+/// Input payload for inserting a new heartbeat.
 #[derive(Serialize, Deserialize, Debug)]
 pub struct HeartbeatInput {
     pub timestamp: Option<DateTime<Utc>>,
@@ -39,6 +41,7 @@ pub struct HeartbeatInput {
     pub cursorpos: Option<i64>,
 }
 
+/// Input payload for AFK (Away From Keyboard) events
 #[derive(Serialize, Deserialize, Debug)]
 pub struct AFKEventInput {
     pub afk_start: DateTime<Utc>,
@@ -46,7 +49,9 @@ pub struct AFKEventInput {
     pub duration: Option<i64>,
 }
 
+/// Query input for requesting summaries over a range of time
 #[derive(Debug, Serialize, Deserialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
 pub struct SummaryQueryInput {
     pub start: Option<DateTime<Utc>>,
     pub end: Option<DateTime<Utc>>,
@@ -62,27 +67,27 @@ pub struct SummaryQueryInput {
     pub branches: Option<Vec<String>>,
     #[specta(optional)]
     pub languages: Option<Vec<String>>,
-    pub include_afk: bool,
 }
 
+/// Query input for bucketed summaries (based on a preset time range)
 #[derive(Debug, Serialize, Deserialize, specta::Type)]
-pub struct BucketedSummaryInput {
+#[serde(rename_all = "camelCase")]
+pub struct BucketSummaryInput {
     pub preset: TimeRangePreset,
     #[specta(optional)]
-    pub app_names: Option<Vec<String>>,
+    pub apps: Option<Vec<String>>,
     #[specta(optional)]
-    pub project_names: Option<Vec<String>>,
+    pub projects: Option<Vec<String>>,
     #[specta(optional)]
-    pub entity_names: Option<Vec<String>>,
+    pub entities: Option<Vec<String>>,
     #[specta(optional)]
-    pub category_names: Option<Vec<String>>,
+    pub categories: Option<Vec<String>>,
     #[specta(optional)]
-    pub branch_names: Option<Vec<String>>,
+    pub branches: Option<Vec<String>>,
     #[specta(optional)]
-    pub language_names: Option<Vec<String>>,
+    pub languages: Option<Vec<String>>,
     #[specta(optional)]
     pub group_by: Option<Group>,
-    pub include_afk: bool,
 }
 
 #[derive(Serialize, Deserialize, Debug, specta::Type)]
@@ -102,6 +107,7 @@ pub struct ProjectSearchQuery {
     pub limit: u32,
 }
 
+/// Query payload for insights
 #[derive(Serialize, Deserialize, Debug, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct InsightQueryPayload {

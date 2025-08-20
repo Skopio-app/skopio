@@ -22,7 +22,6 @@ const TotalTimeSection = () => {
       const input: SummaryQueryInput = {
         start: start.toISOString(),
         end: end.toISOString(),
-        include_afk: false,
       };
 
       commands

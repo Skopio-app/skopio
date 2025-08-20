@@ -6,7 +6,7 @@ import {
   DateRangeType,
   getRangeDates,
   mapRangeToPreset,
-} from "../../utils/dateRanges";
+} from "../../utils/time";
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
 import { Layout, Responsive, WidthProvider } from "react-grid-layout";

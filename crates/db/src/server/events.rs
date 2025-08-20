@@ -2,7 +2,6 @@ use std::collections::HashMap;
 
 use chrono::{DateTime, Utc};
 use common::models::outputs::{EventGroup, EventGroupResult, FullEvent};
-use log::info;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -12,8 +11,7 @@ use crate::{
     server::{
         summary::SummaryQueryBuilder,
         utils::query::{
-            append_all_filters, append_date_range, append_group_by, append_standard_joins,
-            group_key_column,
+            append_all_filters, append_date_range, append_standard_joins, group_key_info,
         },
     },
     utils::DBError,
@@ -36,7 +34,7 @@ pub struct Event {
 }
 
 impl Event {
-    // Create a new event
+    // Inserts a new event into the database
     pub async fn create(self, db_context: &DBContext) -> Result<(), DBError> {
         sqlx::query!(
             "
@@ -62,11 +60,11 @@ impl Event {
 }
 
 impl SummaryQueryBuilder {
-    /// Fetches events given a range
+    /// Fetches events within the configured time range and optional filters,
+    /// and returns them either as a flat list or grouped by a chosen dimension
     pub async fn fetch_event_range(&self, db: &DBContext) -> Result<EventGroupResult, DBError> {
-        let is_grouped = self.group_by.is_some();
-        info!("self: {:?}", self);
-        let group_key = group_key_column(self.group_by);
+        let is_grouped = self.filters.group_by.is_some();
+        let (group_key, inner_tbl) = group_key_info(self.filters.group_by);
 
         let select_group = if is_grouped {
             format!(", {group_key} AS group_key")
@@ -84,6 +82,7 @@ impl SummaryQueryBuilder {
                 apps.name AS app,
                 categories.name AS category,
                 entities.name AS entity,
+                entities.type AS entity_type,
                 projects.name AS project,
                 branches.name AS branch,
                 languages.name AS language,
@@ -93,7 +92,7 @@ impl SummaryQueryBuilder {
             "
         );
 
-        append_standard_joins(&mut query);
+        append_standard_joins(&mut query, inner_tbl);
         query.push_str(" WHERE 1=1");
 
         append_date_range(
@@ -105,8 +104,10 @@ impl SummaryQueryBuilder {
         );
         append_all_filters(&mut query, self.filters.clone());
 
-        if self.group_by.is_some() {
-            append_group_by(&mut query, Some(group_key));
+        if self.filters.group_by.is_some() {
+            query.push_str(&format!(" ORDER BY {}, events.timestamp", group_key));
+        } else {
+            query.push_str(" ORDER BY events.timestamp");
         }
 
         let rows = sqlx::query(&query).fetch_all(db.pool()).await?;
@@ -135,6 +136,7 @@ impl SummaryQueryBuilder {
                     .unwrap_or_default(),
                 app: row.try_get("app")?,
                 entity: row.try_get("entity")?,
+                entity_type: row.try_get("entity_type")?,
                 project: row.try_get("project")?,
                 branch: row.try_get("branch")?,
                 language: row.try_get("language")?,

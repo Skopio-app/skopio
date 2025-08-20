@@ -123,7 +123,6 @@ impl GoalService {
             branches: None,
             languages: None,
             projects: None,
-            include_afk: false,
         };
 
         let total = fetch_total_time(query).await.map_err(anyhow::Error::msg)?;

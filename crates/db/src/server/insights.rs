@@ -4,7 +4,7 @@ use async_trait::async_trait;
 use chrono::NaiveDate;
 use common::{
     models::{outputs::InsightResult, Group, InsightBucket, InsightType},
-    time::InsightRange,
+    time::insight::InsightRange,
 };
 use sqlx::Row;
 use thiserror::Error;

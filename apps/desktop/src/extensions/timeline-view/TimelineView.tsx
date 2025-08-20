@@ -13,6 +13,7 @@ import {
 import "vis-timeline/styles/vis-timeline-graph2d.css";
 import { formatDuration } from "../../utils/time";
 import { EventGroup, FullEvent } from "../../types/tauri.gen";
+import { getEntityName } from "../../utils/data";
 
 interface TimelineViewProps {
   durationMinutes: number;
@@ -67,17 +68,21 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
   const MAX_LABEL_LENGTH = 40;
 
   const groups: TimelineGroup[] = useMemo(() => {
-    return groupedEvents.map((group) => {
-      const content =
-        group.group.length > MAX_LABEL_LENGTH
-          ? `${group.group.slice(0, MAX_LABEL_LENGTH)}...`
-          : group.group;
+    return groupedEvents
+      .sort((a, b) => {
+        return a.group.localeCompare(b.group);
+      })
+      .map((group) => {
+        const content =
+          group.group.length > MAX_LABEL_LENGTH
+            ? `${group.group.slice(0, MAX_LABEL_LENGTH)}...`
+            : group.group;
 
-      return {
-        id: group.group,
-        content,
-      };
-    });
+        return {
+          id: group.group,
+          content,
+        };
+      });
   }, [groupedEvents]);
 
   const safeParseISO = (dateInput: unknown): Date | null => {
@@ -135,12 +140,14 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
     duration,
     app,
     entity,
+    entityType,
   }: {
     start: Date;
     end: Date;
     duration: number;
     app?: string | null;
     entity?: string | null;
+    entityType?: string | null;
   }): string => {
     const formattedDuration = formatDuration(duration);
 
@@ -149,7 +156,7 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
       `End: ${format(end, "HH:mm:ss")}`,
       `Duration: ${formattedDuration}`,
       `App: ${app ?? "unknown"}`,
-      `Entity: ${entity?.slice(0, MAX_LABEL_LENGTH) ?? "unknown"}`,
+      `Entity: ${getEntityName(entity ?? "unknown", entityType ?? "unknown")?.slice(0, MAX_LABEL_LENGTH) ?? "unknown"}`,
     ]
       .map((line) => line.replace(/"/g, "&quot;"))
       .join("<br/>");
@@ -262,6 +269,7 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
             app: e.app,
             entity: e.entity,
             duration: e.duration ?? 0,
+            entityType: e.entityType,
           }),
           style: `background-color: ${color}; border-color: ${Color(color).darken(0.6)};`,
         };

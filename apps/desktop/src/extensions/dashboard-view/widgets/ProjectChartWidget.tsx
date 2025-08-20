@@ -1,56 +1,33 @@
-import { useMemo } from "react";
-import { BarChartData } from "../../../types/types";
 import WidgetCard from "../components/WidgetCard";
 import { useSummaryData } from "../hooks/useSummaryData";
-import { format, parseISO } from "date-fns";
 import StackedBarChart from "../../../components/StackedBarChart";
+import { Group } from "../../../types/tauri.gen";
+import { usePersistentTopN } from "../hooks/usePersistentTopN";
+import SettingsContent, { MIN_TOP_N } from "../components/SettingsContent";
+import { useMemo } from "react";
 
 const ProjectChartWidget = () => {
-  const { rawGrouped, loading } = useSummaryData(undefined, ["project"]);
+  const [topN, setTopN] = usePersistentTopN("projectTopN", MIN_TOP_N);
 
-  // TODO: Fix data display issue
-  const [data, keys] = useMemo(() => {
-    const projectBuckets = rawGrouped.project ?? [];
-
-    const grouped: {
-      date: Date;
-      label: string;
-      values: Record<string, number>;
-    }[] = [];
-    const allKeys = new Set<string>();
-    const totalPerKey: Record<string, number> = {};
-
-    for (const { bucket, grouped_values } of projectBuckets) {
-      const parsedDate = parseISO(bucket);
-      const label = format(parsedDate, "MMM d");
-      const values: Record<string, number> = {};
-
-      for (const [project, seconds] of Object.entries(grouped_values)) {
-        const value = seconds ?? 0;
-        values[project] = seconds ?? 0;
-        totalPerKey[project] = (totalPerKey[project] || 0) + value;
-        allKeys.add(project);
-      }
-
-      grouped.push({ date: parsedDate, label, values });
-    }
-
-    grouped.sort((a, b) => a.date.getTime() - b.date.getTime());
-
-    const sortedKeys = Array.from(allKeys).sort(
-      (a, b) => (totalPerKey[b] ?? 0) - (totalPerKey[a] ?? 0),
-    );
-
-    const chartData: BarChartData[] = grouped.map(({ label, values }) => ({
-      label,
-      ...values,
-    }));
-
-    return [chartData, sortedKeys] as [BarChartData[], string[]];
-  }, [rawGrouped.project]);
+  const options = useMemo(
+    () => ({
+      groupBy: "project" as Group,
+      mode: "bar" as const,
+      topN,
+      collapseRemainder: true,
+    }),
+    [topN],
+  );
+  const { data, loading, keys } = useSummaryData(options);
 
   return (
-    <WidgetCard title="Projects" loading={loading}>
+    <WidgetCard
+      title="Projects"
+      loading={loading}
+      settingsContent={
+        <SettingsContent title="projects" topN={topN} setTopN={setTopN} />
+      }
+    >
       <StackedBarChart data={data} keys={keys} />
     </WidgetCard>
   );

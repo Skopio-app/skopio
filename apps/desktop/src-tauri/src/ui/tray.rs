@@ -131,7 +131,6 @@ pub fn init_tray(app: &mut App) -> tauri::Result<()> {
                     entities: None,
                     branches: None,
                     languages: None,
-                    include_afk: false,
                 };
 
                 let time_secs = fetch_total_time(query).await.unwrap();

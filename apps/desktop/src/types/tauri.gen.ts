@@ -19,7 +19,7 @@ export const commands = {
     return await TAURI_INVOKE("set_heartbeat_interval", { interval });
   },
   async fetchBucketedSummary(
-    query: BucketedSummaryInput,
+    query: BucketSummaryInput,
   ): Promise<BucketTimeSummary[]> {
     return await TAURI_INVOKE("fetch_bucketed_summary", { query });
   },
@@ -61,7 +61,7 @@ export const commands = {
   async fetchInsights(query: InsightQueryPayload): Promise<InsightResult> {
     return await TAURI_INVOKE("fetch_insights", { query });
   },
-  async fetchEvents(query: BucketedSummaryInput): Promise<EventGroupResult> {
+  async fetchEvents(query: BucketSummaryInput): Promise<EventGroupResult> {
     return await TAURI_INVOKE("fetch_events", { query });
   },
   async dismissNotificationWindow(): Promise<null> {
@@ -83,26 +83,71 @@ export type AppConfig = {
   flush_interval: number;
   sync_interval: number;
 };
-export type BucketTimeSummary = {
-  bucket: string;
-  grouped_values: Partial<{ [key in string]: number }>;
-};
-export type BucketedSummaryInput = {
+/**
+ * Query input for bucketed summaries (based on a preset time range)
+ */
+export type BucketSummaryInput = {
   preset: TimeRangePreset;
-  app_names?: string[] | null;
-  project_names?: string[] | null;
-  entity_names?: string[] | null;
-  category_names?: string[] | null;
-  branch_names?: string[] | null;
-  language_names?: string[] | null;
-  group_by?: Group | null;
-  include_afk: boolean;
+  apps?: string[] | null;
+  projects?: string[] | null;
+  entities?: string[] | null;
+  categories?: string[] | null;
+  branches?: string[] | null;
+  languages?: string[] | null;
+  groupBy?: Group | null;
+};
+/**
+ * A single time bucket with grouped values.
+ */
+export type BucketTimeSummary = {
+  /**
+   * The time bucket (e.g., "2025-08-01")
+   */
+  bucket: string;
+  /**
+   * A map of group_key: total_seconds
+   */
+  grouped_values: Partial<{ [key in string]: number }>;
+  /**
+   * Optional per-group metadata (e.g. entity type when grouping by Entity)
+   */
+  group_meta: string | null;
 };
 export type Category = { id: string; name: string };
-export type EventGroup = { group: string; events: FullEvent[] };
+/**
+ * A collection of events that share a common grouping key.
+ */
+export type EventGroup = {
+  /**
+   * The group key value
+   */
+  group: string;
+  /**
+   * The list of `FullEvent` rows belonging to this group
+   */
+  events: FullEvent[];
+};
+/**
+ * The result of fetching events for a time/window query
+ *
+ * - `Flat(Vec<FullEvent>)` - returned when no `group_by` is set. Contains every
+ * matching event row.
+ * - `Grouped(Vec<EventGroup>)` - returned when a `group_by` dimension is set.
+ * Each `EventGroup` holds a `group` key (e.g., a category name) and **all**
+ * events that belong to that group.
+ */
 export type EventGroupResult =
+  /**
+   * Ungrouped list of events.
+   */
   | { Flat: FullEvent[] }
+  /**
+   * Events grouped by a group key (e.g., category, app, project, source, etc.)
+   */
   | { Grouped: EventGroup[] };
+/**
+ * A fully materialized event row
+ */
 export type FullEvent = {
   id: string;
   timestamp: string;
@@ -111,6 +156,7 @@ export type FullEvent = {
   category: string;
   app: string | null;
   entity: string | null;
+  entityType: string | null;
   project: string | null;
   branch: string | null;
   language: string | null;
@@ -162,8 +208,23 @@ export type Group =
   | "category"
   | "entity"
   | "source";
-export type GroupedTimeSummary = { group_key: string; total_seconds: number };
+/**
+ * Represents an aggregated total time for a specific group.
+ */
+export type GroupedTimeSummary = {
+  /**
+   * The group key (e.g., project name, app name)
+   */
+  group_key: string;
+  /**
+   * Total aggregated time (in seconds)
+   */
+  total_seconds: number;
+};
 export type InsightBucket = "day" | "week" | "month" | "year";
+/**
+ * Query payload for insights
+ */
 export type InsightQueryPayload = {
   insightType: InsightType;
   insightRange?: string | null;
@@ -196,6 +257,9 @@ export type PaginationQuery = { after: string | null; limit: number | null };
 export type Project = { id: string; name: string; root_path: string | null };
 export type ProjectQuery = { id: string };
 export type ProjectSearchQuery = { name: string; limit: number };
+/**
+ * Query input for requesting summaries over a range of time
+ */
 export type SummaryQueryInput = {
   start: string | null;
   end: string | null;
@@ -205,7 +269,6 @@ export type SummaryQueryInput = {
   entities?: string[] | null;
   branches?: string[] | null;
   languages?: string[] | null;
-  include_afk: boolean;
 };
 export type Theme = "Light" | "Dark" | "System";
 /**

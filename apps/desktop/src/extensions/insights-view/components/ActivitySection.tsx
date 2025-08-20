@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
 import CalendarChart from "../../../components/CalendarChart";
 import SectionContainer from "./SectionContainer";
-import { CalendarChartData } from "../../../types/types";
+import { CalendarChartData } from "../../../types/chart";
 import {
-  BucketedSummaryInput,
+  BucketSummaryInput,
   commands,
   TimeBucket,
 } from "../../../types/tauri.gen";
@@ -38,9 +38,8 @@ const ActivitySection = () => {
   useEffect(() => {
     const fetchActivityData = async () => {
       try {
-        const input: BucketedSummaryInput = {
+        const input: BucketSummaryInput = {
           preset: yearConfig.preset,
-          include_afk: false,
         };
 
         const result = await commands.fetchBucketedSummary(input);

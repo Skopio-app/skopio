@@ -37,7 +37,13 @@ pub enum Theme {
     System,
 }
 
-static CONFIG_FILENAME: &str = "config.json";
+fn get_config_name() -> String {
+    if cfg!(debug_assertions) {
+        String::from("config_test.json")
+    } else {
+        String::from("config.json")
+    }
+}
 
 #[derive(Clone)]
 pub struct ConfigStore {
@@ -79,7 +85,7 @@ impl ConfigStore {
             .path()
             .app_config_dir()
             .unwrap_or_else(|_| std::env::temp_dir())
-            .join(CONFIG_FILENAME)
+            .join(get_config_name())
     }
 
     pub async fn get(&self) -> AppConfig {

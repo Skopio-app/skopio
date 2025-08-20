@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import {
-  BucketedSummaryInput,
+  BucketSummaryInput,
   commands,
   EventGroup,
   EventGroupResult,
@@ -19,7 +19,7 @@ export const useEventFetcher = (
     if (customRange && (!customRange.start || !customRange.end)) return;
 
     const fetch = async () => {
-      const input: BucketedSummaryInput = customRange
+      const input: BucketSummaryInput = customRange
         ? {
             preset: {
               custom: {
@@ -28,13 +28,11 @@ export const useEventFetcher = (
                 bucket: "day",
               },
             },
-            group_by: group,
-            include_afk: false,
+            groupBy: group,
           }
         : {
             preset: { lastNMinutes: duration },
-            group_by: group,
-            include_afk: false,
+            groupBy: group,
           };
 
       try {

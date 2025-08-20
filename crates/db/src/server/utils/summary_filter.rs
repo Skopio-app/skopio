@@ -13,7 +13,6 @@ pub trait SummaryQueryParams {
     fn languages(&self) -> Option<&Vec<String>>;
     fn group_by(&self) -> Option<Group>;
     fn time_bucket(&self) -> Option<TimeBucket>;
-    fn include_afk(&self) -> bool;
 }
 
 /// A base struct that holds shared summary query parameters
@@ -28,7 +27,6 @@ pub struct SummaryFilters {
     pub branches: Option<Vec<String>>,
     pub languages: Option<Vec<String>>,
     pub group_by: Option<Group>,
-    pub include_afk: bool,
     pub time_bucket: Option<TimeBucket>,
 }
 
@@ -77,10 +75,6 @@ impl SummaryQueryParams for SummaryFilters {
 
     fn time_bucket(&self) -> Option<TimeBucket> {
         self.time_bucket
-    }
-
-    fn include_afk(&self) -> bool {
-        self.include_afk
     }
 }
 
@@ -138,11 +132,6 @@ impl SummaryFiltersBuilder {
 
     pub fn time_bucket(mut self, value: TimeBucket) -> Self {
         self.filters.time_bucket = Some(value);
-        self
-    }
-
-    pub fn include_afk(mut self, value: bool) -> Self {
-        self.filters.include_afk = value;
         self
     }
 
