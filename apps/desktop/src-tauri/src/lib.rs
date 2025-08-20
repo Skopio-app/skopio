@@ -4,7 +4,10 @@ use helpers::{config::ConfigStore, db::get_db_path};
 use log::error;
 use std::sync::Arc;
 use sync_service::BufferedTrackingService;
-use tauri::{AppHandle, Manager, Runtime};
+use tauri::{
+    AppHandle, LogicalPosition, Manager, Position, Runtime, TitleBarStyle, WebviewUrl,
+    WebviewWindowBuilder,
+};
 use trackers::{
     afk_tracker::AFKTracker, event_tracker::EventTracker, heartbeat_tracker::HeartbeatTracker,
     keyboard_tracker::KeyboardTracker, mouse_tracker::MouseTracker, window_tracker::WindowTracker,
@@ -69,21 +72,18 @@ pub async fn run() {
                 )?;
             }
 
-            #[cfg(target_os = "macos")]
-            {
-                let window = app_handle.get_webview_window("main").unwrap();
-                let ns_window = window.ns_window().unwrap();
-                unsafe {
-                    use crate::ui::toolbar::{adjust_traffic_light_position, customize_toolbar};
-                    use objc2::runtime::AnyObject;
-                    use objc2_app_kit::NSWindow;
+            let position = Position::from(LogicalPosition::new(20.0, 15.0));
+            let win_builder = WebviewWindowBuilder::new(app, "main", WebviewUrl::default())
+                .title_bar_style(TitleBarStyle::Overlay)
+                .inner_size(1600.0, 900.0)
+                .min_inner_size(800.0, 450.0)
+                .resizable(true)
+                .fullscreen(false)
+                .decorations(true)
+                .traffic_light_position(position)
+                .hidden_title(true);
 
-                    let window: *mut AnyObject = ns_window as *mut AnyObject;
-                    let ns_window: &NSWindow = &*(window as *const NSWindow);
-                    customize_toolbar(ns_window);
-                    adjust_traffic_light_position(ns_window);
-                }
-            }
+            win_builder.build().unwrap();
 
             let app_handle_clone = app_handle.clone();
             tauri::async_runtime::spawn(async move {
@@ -125,26 +125,6 @@ pub async fn run() {
 
                         window.app_handle().exit(0);
                     });
-                }
-            }
-
-            if matches!(
-                event,
-                tauri::WindowEvent::Resized(_) | tauri::WindowEvent::Moved(_)
-            ) {
-                #[cfg(target_os = "macos")]
-                {
-                    use crate::ui::toolbar::adjust_traffic_light_position;
-                    use objc2::runtime::AnyObject;
-                    use objc2_app_kit::NSWindow;
-
-                    unsafe {
-                        let ns_window = window.ns_window().unwrap();
-                        let window: *mut AnyObject = ns_window as *mut AnyObject;
-                        let ns_window: &NSWindow = &*(window as *const NSWindow);
-
-                        adjust_traffic_light_position(ns_window);
-                    }
                 }
             }
         })

@@ -25,7 +25,7 @@
     "@skopio/rpc": "workspace:*",
     "@skopio/ui": "workspace:*",
     "@tailwindcss/vite": "^4.1.11",
-    "@tauri-apps/api": "^2.5.0",
+    "@tauri-apps/api": "^2.8.0",
     "@tauri-apps/plugin-dialog": "^2.2.2",
     "canvas-confetti": "^1.9.3",
     "color": "^5.0.0",
@@ -45,7 +45,7 @@
   "devDependencies": {
     "@eslint/js": "^9.17.0",
     "@react-router/dev": "^7.6.1",
-    "@tauri-apps/cli": "^2.1.0",
+    "@tauri-apps/cli": "^2.8.1",
     "@types/canvas-confetti": "^1",
     "@types/lodash": "^4.17.17",
     "@types/node": "^22.10.2",
