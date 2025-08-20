@@ -19,6 +19,7 @@ use crate::{
         },
         summary_filter::SummaryFilters,
     },
+    utils::DBError,
     DBContext,
 };
 
@@ -135,6 +136,12 @@ impl SummaryQueryParams for SummaryQueryBuilder {
     }
 }
 
+impl Default for SummaryQueryBuilder {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl SummaryQueryBuilder {
     pub fn new() -> Self {
         Self {
@@ -198,7 +205,7 @@ impl SummaryQueryBuilder {
     pub async fn execute_range_summary(
         &self,
         db: &DBContext,
-    ) -> Result<Vec<GroupedTimeSummary>, sqlx::Error> {
+    ) -> Result<Vec<GroupedTimeSummary>, DBError> {
         let start_time = Instant::now();
         let (group_key, inner_tbl) = group_key_info(self.filters.group_by);
 
@@ -238,7 +245,7 @@ impl SummaryQueryBuilder {
 
     /// Executes a query that returns only the total time (in seconds)
     /// for the current filters
-    pub async fn execute_total_time(&self, db: &DBContext) -> Result<i64, sqlx::Error> {
+    pub async fn execute_total_time(&self, db: &DBContext) -> Result<i64, DBError> {
         let start_time = Instant::now();
         let mut query = String::from("SELECT SUM(duration) as total_seconds FROM events");
         append_standard_joins(&mut query, None);
@@ -276,7 +283,7 @@ impl SummaryQueryBuilder {
     pub async fn execute_range_summary_with_bucket(
         &self,
         db: &DBContext,
-    ) -> Result<Vec<BucketTimeSummary>, sqlx::Error> {
+    ) -> Result<Vec<BucketTimeSummary>, DBError> {
         let start_time = Instant::now();
         let (group_key, inner_tbl) = group_key_info(self.filters.group_by);
 
@@ -335,11 +342,5 @@ impl SummaryQueryBuilder {
         );
 
         Ok(records)
-    }
-}
-
-impl Default for SummaryQueryBuilder {
-    fn default() -> Self {
-        Self::new()
     }
 }

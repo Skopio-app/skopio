@@ -26,6 +26,7 @@ const DashboardLayout = () => {
   return (
     <SidebarProvider className="bg-muted relative">
       <div
+        data-tauri-drag-region
         className={cn(
           "fixed left-0 top-0 z-40 flex h-[20px] w-full items-center",
           "bg-background select-none px-4",

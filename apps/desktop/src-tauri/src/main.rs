@@ -12,5 +12,5 @@ fn main() {
     #[cfg(debug_assertions)]
     console_subscriber::init();
 
-    desktop_lib::run();
+    skopio_desktop_lib::run();
 }
