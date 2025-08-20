@@ -20,12 +20,11 @@
     --color-gray-300: oklch(87.2% 0.01 258.338);
     --color-gray-400: oklch(70.7% 0.022 261.325);
     --color-neutral-50: oklch(98.5% 0 0);
+    --color-neutral-100: oklch(97% 0 0);
+    --color-neutral-200: oklch(92.2% 0 0);
     --color-neutral-300: oklch(87% 0 0);
     --color-neutral-500: oklch(55.6% 0 0);
     --color-neutral-600: oklch(43.9% 0 0);
-    --color-neutral-700: oklch(37.1% 0 0);
-    --color-neutral-800: oklch(26.9% 0 0);
-    --color-neutral-900: oklch(20.5% 0 0);
     --color-black: #000;
     --color-white: #fff;
     --spacing: 0.25rem;
@@ -732,9 +731,6 @@
   .bg-amber-600 {
     background-color: var(--color-amber-600);
   }
-  .bg-black {
-    background-color: var(--color-black);
-  }
   .bg-black\/50 {
     background-color: color-mix(in srgb, #000 50%, transparent);
     @supports (color: color-mix(in lab, red, red)) {
@@ -759,6 +755,9 @@
   .bg-neutral-50 {
     background-color: var(--color-neutral-50);
   }
+  .bg-neutral-100 {
+    background-color: var(--color-neutral-100);
+  }
   .bg-neutral-300 {
     background-color: var(--color-neutral-300);
   }
@@ -767,15 +766,6 @@
   }
   .bg-neutral-600 {
     background-color: var(--color-neutral-600);
-  }
-  .bg-neutral-700 {
-    background-color: var(--color-neutral-700);
-  }
-  .bg-neutral-800 {
-    background-color: var(--color-neutral-800);
-  }
-  .bg-neutral-900 {
-    background-color: var(--color-neutral-900);
   }
   .bg-red-500 {
     background-color: var(--color-red-500);
@@ -794,6 +784,12 @@
   }
   .bg-white {
     background-color: var(--color-white);
+  }
+  .fill-neutral-50 {
+    fill: var(--color-neutral-50);
+  }
+  .fill-neutral-100 {
+    fill: var(--color-neutral-100);
   }
   .p-0 {
     padding: calc(var(--spacing) * 0);
@@ -1372,6 +1368,13 @@
     &:hover {
       @media (hover: hover) {
         background-color: var(--color-gray-100);
+      }
+    }
+  }
+  .hover\:bg-neutral-200 {
+    &:hover {
+      @media (hover: hover) {
+        background-color: var(--color-neutral-200);
       }
     }
   }
