@@ -4,10 +4,7 @@ use helpers::{config::ConfigStore, db::get_db_path};
 use log::error;
 use std::sync::Arc;
 use sync_service::BufferedTrackingService;
-use tauri::{
-    AppHandle, LogicalPosition, Manager, Position, Runtime, TitleBarStyle, WebviewUrl,
-    WebviewWindowBuilder,
-};
+use tauri::{AppHandle, Manager, Runtime};
 use trackers::{
     afk_tracker::AFKTracker, event_tracker::EventTracker, heartbeat_tracker::HeartbeatTracker,
     keyboard_tracker::KeyboardTracker, mouse_tracker::MouseTracker, window_tracker::WindowTracker,
@@ -16,7 +13,10 @@ use tracking_service::{DBService, TrackingService};
 
 use crate::{
     goals_service::GoalService,
-    ui::{notification::NotificationPayload, tray::init_tray},
+    ui::{
+        tray::init_tray,
+        window::{NotificationPayload, WindowExt, WindowKind},
+    },
 };
 
 mod goals_service;
@@ -72,18 +72,7 @@ pub async fn run() {
                 )?;
             }
 
-            let position = Position::from(LogicalPosition::new(20.0, 15.0));
-            let win_builder = WebviewWindowBuilder::new(app, "main", WebviewUrl::default())
-                .title_bar_style(TitleBarStyle::Overlay)
-                .inner_size(1600.0, 900.0)
-                .min_inner_size(800.0, 450.0)
-                .resizable(true)
-                .fullscreen(false)
-                .decorations(true)
-                .traffic_light_position(position)
-                .hidden_title(true);
-
-            win_builder.build().unwrap();
+            app_handle.show_window(WindowKind::Main)?;
 
             let app_handle_clone = app_handle.clone();
             tauri::async_runtime::spawn(async move {
@@ -254,7 +243,7 @@ fn make_specta_builder<R: Runtime>() -> tauri_specta::Builder<R> {
             crate::network::data::search_projects,
             crate::network::insights::fetch_insights,
             crate::network::events::fetch_events,
-            crate::ui::notification::dismiss_notification_window::<tauri::Wry>,
+            crate::ui::window::dismiss_notification_window::<tauri::Wry>,
         ])
         .error_handling(tauri_specta::ErrorHandlingMode::Throw)
         .typ::<NotificationPayload>();
