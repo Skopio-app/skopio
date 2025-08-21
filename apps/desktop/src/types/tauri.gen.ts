@@ -67,6 +67,9 @@ export const commands = {
   async dismissNotificationWindow(): Promise<null> {
     return await TAURI_INVOKE("dismiss_notification_window");
   },
+  async showSettingsWindow(): Promise<null> {
+    return await TAURI_INVOKE("show_settings_window");
+  },
 };
 
 /** user-defined events **/

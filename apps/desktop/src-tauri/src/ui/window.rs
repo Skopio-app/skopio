@@ -10,7 +10,7 @@ use url::{ParseError, Url};
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum WindowKind {
     Main,
-    // Settings,
+    Settings,
     Notification,
 }
 
@@ -18,7 +18,7 @@ impl WindowKind {
     pub fn label(self) -> &'static str {
         match self {
             WindowKind::Main => "main",
-            // WindowKind::Settings => "settings",
+            WindowKind::Settings => "settings",
             WindowKind::Notification => "notification",
         }
     }
@@ -26,7 +26,7 @@ impl WindowKind {
     pub fn title(self) -> &'static str {
         match self {
             WindowKind::Main => "Skopio",
-            // WindowKind::Settings => "Settings",
+            WindowKind::Settings => "Settings",
             WindowKind::Notification => "Notification",
         }
     }
@@ -35,7 +35,7 @@ impl WindowKind {
     pub fn default_route(self) -> &'static str {
         match self {
             WindowKind::Main => "/",
-            // WindowKind::Settings => "/settings",
+            WindowKind::Settings => "/settings",
             WindowKind::Notification => "/notification",
         }
     }
@@ -71,13 +71,13 @@ impl WindowKind {
                     .traffic_light_position(position)
                     .build()
             }
-            // WindowKind::Settings => {
-            //     let url = WebviewUrl::App(self.default_route().into());
-            //     self.base_builder(app, url)
-            //         .resizable(false)
-            //         .inner_size(800.0, 450.0)
-            //         .build()
-            // }
+            WindowKind::Settings => {
+                let url = WebviewUrl::App(self.default_route().into());
+                self.base_builder(app, url)
+                    .resizable(false)
+                    .inner_size(800.0, 450.0)
+                    .build()
+            }
             WindowKind::Notification => {
                 let url = notification_base_url();
                 let builder = WebviewWindow::builder(app, self.label(), url)
@@ -200,5 +200,13 @@ pub fn dismiss_notification_window<R: Runtime>(app: AppHandle<R>) -> Result<(), 
         win.close()
             .map_err(|e| format!("Failed to close notification: {e}"))?;
     }
+    Ok(())
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn show_settings_window<R: Runtime>(app: AppHandle<R>) -> Result<(), String> {
+    app.show_window(WindowKind::Settings)
+        .map_err(|e| format!("Error showing settings window: {e}"))?;
     Ok(())
 }

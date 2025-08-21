@@ -1,4 +1,5 @@
 import {
+  Button,
   cn,
   Sidebar,
   SidebarContent,
@@ -17,6 +18,7 @@ import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { builtinExtensionRegistry } from "../extensions/registry";
 import { LAST_ACTIVE_TAB } from "../utils/constants";
 import { Cog } from "lucide-react";
+import { commands } from "../types/tauri.gen";
 
 const DashboardLayout = () => {
   const navigate = useNavigate();
@@ -37,7 +39,14 @@ const DashboardLayout = () => {
 
         <div className="absolute left-[90px] top-[6px] flex flex-row space-x-3">
           <SidebarTrigger className="w-5 h-5 cursor-pointer hover:bg-neutral-200" />
-          <Cog className="h-5 w-5 p-0.5 cursor-pointer hover:bg-neutral-200" />
+          <Button
+            className="h-5 w-5 hover:bg-neutral-200"
+            variant="ghost"
+            size="icon"
+            onClick={async () => await commands.showSettingsWindow()}
+          >
+            <Cog />
+          </Button>
         </div>
       </div>
 
