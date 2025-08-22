@@ -23,3 +23,4 @@ export * from "./components/toggle";
 export * from "./components/toggle-group";
 export * from "./components/popover";
 export * from "./components/slider";
+export * from "./components/context-menu";
