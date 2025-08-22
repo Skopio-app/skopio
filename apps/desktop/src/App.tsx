@@ -1,11 +1,11 @@
-import {
-  ContextMenu,
-  ContextMenuContent,
-  ContextMenuItem,
-  ContextMenuSeparator,
-  ContextMenuShortcut,
-  ContextMenuTrigger,
-} from "@skopio/ui";
+// import {
+//   ContextMenu,
+//   ContextMenuContent,
+//   ContextMenuItem,
+//   ContextMenuSeparator,
+//   ContextMenuShortcut,
+//   ContextMenuTrigger,
+// } from "@skopio/ui";
 import { Outlet } from "react-router";
 import { Toaster } from "sonner";
 
@@ -13,10 +13,10 @@ function App() {
   return (
     <>
       <Toaster richColors />
-      <ContextMenu>
-        <ContextMenuTrigger className="block min-h-screen w-full">
-          <Outlet />
-        </ContextMenuTrigger>
+      {/* <ContextMenu>
+        <ContextMenuTrigger className="block min-h-screen w-full"> */}
+      <Outlet />
+      {/* </ContextMenuTrigger>
         <ContextMenuContent className="w-52">
           <ContextMenuItem inset>
             Back
@@ -32,7 +32,7 @@ function App() {
           </ContextMenuItem>
           <ContextMenuSeparator />
         </ContextMenuContent>
-      </ContextMenu>
+      </ContextMenu> */}
     </>
   );
 }

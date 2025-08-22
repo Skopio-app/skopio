@@ -74,8 +74,9 @@ impl WindowKind {
             WindowKind::Settings => {
                 let url = WebviewUrl::App(self.default_route().into());
                 self.base_builder(app, url)
-                    .resizable(false)
-                    .inner_size(800.0, 450.0)
+                    .resizable(true)
+                    .inner_size(800.0, 600.0)
+                    .min_inner_size(800.0, 600.0)
                     .build()
             }
             WindowKind::Notification => {
