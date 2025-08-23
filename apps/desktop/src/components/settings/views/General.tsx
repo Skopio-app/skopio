@@ -89,9 +89,6 @@ const General = () => {
 
   return (
     <div className="mx-auto w-full max-w-2xl p-2">
-      <h2 className="font-semibold leading-none tracking-tight pb-6">
-        General Settings
-      </h2>
       <Form {...form}>
         <form className="space-y-8">
           <FormField
