@@ -420,7 +420,7 @@ const GoalDialog: React.FC<GoalDialogProps> = ({
               </div>
             </div>
             <div className="mt-4 flex justify-center">
-              <Button className="w-56" type="submit">
+              <Button variant="secondary" className="w-56" type="submit">
                 Save
               </Button>
             </div>

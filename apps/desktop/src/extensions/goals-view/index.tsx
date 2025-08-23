@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import GoalDialog from "./components/Dialogs/GoalDialog";
 import GoalDisplay from "./components/GoalDisplay";
 import { useGoalStore } from "./stores/useGoalStore";
+import { Plus } from "lucide-react";
 
 const GoalsView = () => {
   const [showGoalDialog, setShowGoalDialog] = useState<boolean>(false);
@@ -24,8 +25,8 @@ const GoalsView = () => {
     <div className="w-full px-4 py-6 space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-lg font-semibold">Goals</h1>
-        <Button variant="default" onClick={() => setShowGoalDialog(true)}>
-          New Goal
+        <Button variant="secondary" onClick={() => setShowGoalDialog(true)}>
+          <Plus /> New Goal
         </Button>
       </div>
 
