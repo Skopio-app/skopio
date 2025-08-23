@@ -32,7 +32,7 @@ const DashboardLayout = () => {
         data-tauri-drag-region
         className={cn(
           "fixed left-0 top-0 z-40 flex h-[20px] w-full items-center",
-          "bg-background select-none px-4",
+          "bg-transparent select-none px-4",
         )}
       >
         <div className="w-[64px] h-full" />

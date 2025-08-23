@@ -20,6 +20,7 @@ import { useForm } from "react-hook-form";
 import z from "zod/v4";
 import HotkeyField from "../HotkeyField";
 import { AFK, AFK_KEYS, AFK_SECONDS } from "../../../utils/constants";
+import { useAutostart } from "../../../hooks/useAutostart";
 
 const settingsSchema = z.object({
   launchOnStartup: z.boolean().default(false),
@@ -43,6 +44,12 @@ async function saveSettings(values: GeneralSettingsValues) {
 }
 
 const General = () => {
+  const {
+    enabled: autoEnabled,
+    loading: autoLoading,
+    setAutostart,
+  } = useAutostart();
+
   const form = useForm<GeneralSettingsValues>({
     resolver: zodResolver(settingsSchema),
     defaultValues: {
@@ -53,6 +60,18 @@ const General = () => {
     mode: "onChange",
     reValidateMode: "onChange",
   });
+
+  const didSyncRef = useRef(false);
+  useEffect(() => {
+    if (!didSyncRef.current && autoLoading === false) {
+      didSyncRef.current = true;
+      form.setValue("launchOnStartup", autoEnabled, {
+        shouldDirty: false,
+        shouldTouch: false,
+        shouldValidate: true,
+      });
+    }
+  }, [autoLoading, autoEnabled, form]);
 
   const timerRef = useRef<number | null>(null);
   const lastSavedRef = useRef<string>(JSON.stringify(form.getValues()));
@@ -105,7 +124,14 @@ const General = () => {
                 <FormControl>
                   <Switch
                     checked={field.value}
-                    onCheckedChange={field.onChange}
+                    disabled={autoLoading}
+                    onCheckedChange={async (next) => {
+                      field.onChange(next);
+                      const ok = await setAutostart(next);
+                      if (!ok) {
+                        field.onChange(!next);
+                      }
+                    }}
                   />
                 </FormControl>
               </FormItem>

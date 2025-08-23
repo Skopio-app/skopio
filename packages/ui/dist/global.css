@@ -20,8 +20,6 @@
     --color-neutral-50: oklch(98.5% 0 0);
     --color-neutral-100: oklch(97% 0 0);
     --color-neutral-300: oklch(87% 0 0);
-    --color-neutral-500: oklch(55.6% 0 0);
-    --color-neutral-600: oklch(43.9% 0 0);
     --color-black: #000;
     --color-white: #fff;
     --spacing: 0.25rem;
@@ -57,6 +55,7 @@
     --color-border: var(--border);
     --color-input: var(--input);
     --color-ring: var(--ring);
+    --color-muted: var(--muted);
     --color-primary: var(--primary);
     --color-primary-foreground: var(--primary-foreground);
     --color-secondary: var(--secondary);
@@ -736,6 +735,15 @@
   .border-input {
     border-color: var(--color-input);
   }
+  .border-muted {
+    border-color: var(--color-muted);
+  }
+  .border-muted\/80 {
+    border-color: var(--color-muted);
+    @supports (color: color-mix(in lab, red, red)) {
+      border-color: color-mix(in oklab, var(--color-muted) 80%, transparent);
+    }
+  }
   .border-primary {
     border-color: var(--color-primary);
   }
@@ -805,20 +813,20 @@
   .bg-green-600 {
     background-color: var(--color-green-600);
   }
+  .bg-muted {
+    background-color: var(--color-muted);
+  }
+  .bg-muted\/80 {
+    background-color: var(--color-muted);
+    @supports (color: color-mix(in lab, red, red)) {
+      background-color: color-mix(in oklab, var(--color-muted) 80%, transparent);
+    }
+  }
   .bg-neutral-50 {
     background-color: var(--color-neutral-50);
   }
   .bg-neutral-100 {
     background-color: var(--color-neutral-100);
-  }
-  .bg-neutral-300 {
-    background-color: var(--color-neutral-300);
-  }
-  .bg-neutral-500 {
-    background-color: var(--color-neutral-500);
-  }
-  .bg-neutral-600 {
-    background-color: var(--color-neutral-600);
   }
   .bg-popover {
     background-color: var(--color-popover);
@@ -1548,6 +1556,13 @@
     &:hover {
       @media (hover: hover) {
         background-color: var(--color-gray-100);
+      }
+    }
+  }
+  .hover\:bg-muted {
+    &:hover {
+      @media (hover: hover) {
+        background-color: var(--color-muted);
       }
     }
   }
@@ -2597,6 +2612,8 @@
     --border: oklch(0.9 0 0);
     --input: oklch(0.9 0 0);
     --ring: oklch(0.67 0.17 264);
+    --muted: oklch(0.95 0 0);
+    --muted-foreground: oklch(0.35 0 0);
     --primary: oklch(0.6 0.21 264);
     --primary-foreground: oklch(0.985 0 0);
     --destructive: oklch(0.62 0.24 29);
@@ -2622,6 +2639,8 @@
     --border: oklch(0.32 0 0);
     --input: oklch(0.32 0 0);
     --ring: oklch(0.72 0.19 264);
+    --muted: oklch(0.24 0 0);
+    --muted-foreground: oklch(0.8 0 0);
     --primary: oklch(0.72 0.19 264);
     --primary-foreground: oklch(0.12 0 0);
     --secondary: oklch(0.24 0 0);
