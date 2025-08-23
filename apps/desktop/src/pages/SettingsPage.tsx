@@ -1,30 +1,13 @@
 import { cn } from "@skopio/ui";
-import {
-  Calendar,
-  LucideIcon,
-  MonitorCog,
-  Settings,
-  Settings2,
-} from "lucide-react";
+import { LucideIcon, MonitorCog, Settings2 } from "lucide-react";
 import { NavLink, Outlet, useLocation } from "react-router";
 
 type Tab = "general" | "permissions";
 
 const TABS: { name: Tab; icon: LucideIcon }[] = [
-  { name: "general", icon: Settings },
-  { name: "permissions", icon: Calendar },
+  { name: "general", icon: Settings2 },
+  { name: "permissions", icon: MonitorCog },
 ];
-
-export function TabIcon({ tab }: { tab: Tab }) {
-  switch (tab) {
-    case "general":
-      return <Settings2 className="h-4 w-4" />;
-    case "permissions":
-      return <MonitorCog className="h-4 w-4" />;
-    default:
-      return null;
-  }
-}
 
 const SettingsPage = () => {
   const { pathname } = useLocation();
@@ -54,7 +37,7 @@ const SettingsPage = () => {
                 }
                 end
               >
-                <TabIcon tab={tab.name} />
+                <tab.icon />
                 <span className="text-neutral-900 capitalize">
                   {getTabTitle(tab.name)}
                 </span>

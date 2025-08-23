@@ -15,18 +15,11 @@ import {
   Switch,
   Form,
 } from "@skopio/ui";
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
 import z from "zod/v4";
 import HotkeyField from "../HotkeyField";
-const AFK_SECONDS = {
-  "30s": 30,
-  "1m": 60,
-  "2m": 120,
-  "3m": 180,
-  "5m": 300,
-  "10m": 600,
-} as const;
+import { AFK, AFK_KEYS, AFK_SECONDS } from "../../../utils/constants";
 
 const settingsSchema = z.object({
   launchOnStartup: z.boolean().default(false),
@@ -37,13 +30,12 @@ const settingsSchema = z.object({
     .refine((s) => /\+/.test(s), {
       message: "Shortcut must be a key combination (e.g., Ctrl+Shift+S)",
     }),
-  afkSensitivity: z.enum(["30s", "1m", "2m", "3m", "5m", "10m"]).default("1m"),
+  afkSensitivity: z.enum(AFK_KEYS).default("1m"),
 });
 
 type GeneralSettingsValues = z.infer<typeof settingsSchema>;
 
 async function saveSettings(values: GeneralSettingsValues) {
-  // TODO: replace with Tauri invoke / your settings store
   console.log("Auto-saved:", {
     ...values,
     afkSeconds: AFK_SECONDS[values.afkSensitivity],
@@ -67,27 +59,20 @@ const General = () => {
   const latestValuesRef = useRef<GeneralSettingsValues>(form.getValues());
 
   useEffect(() => {
-    // subscribe to ALL changes; store latest values
     const sub = form.watch((values) => {
       latestValuesRef.current = values as GeneralSettingsValues;
 
-      // debounce
       if (timerRef.current) window.clearTimeout(timerRef.current);
       timerRef.current = window.setTimeout(async () => {
-        // Validate all fields
         const valid = await form.trigger(undefined, { shouldFocus: false });
         if (!valid) return;
-
-        // Avoid re-saving identical values
         const snapshot = JSON.stringify(latestValuesRef.current);
         if (snapshot === lastSavedRef.current) return;
 
         await saveSettings(latestValuesRef.current);
 
-        // Mark current state as the new baseline
         lastSavedRef.current = snapshot;
 
-        // Clear dirty flags without changing what the user sees
         form.reset(latestValuesRef.current, {
           keepValues: true,
           keepDirty: false,
@@ -101,19 +86,6 @@ const General = () => {
       sub.unsubscribe();
     };
   }, [form]);
-
-  const afkItems = useMemo(
-    () =>
-      [
-        { key: "30s", label: "30 seconds" },
-        { key: "1m", label: "1 minute" },
-        { key: "2m", label: "2 minutes" },
-        { key: "3m", label: "3 minutes" },
-        { key: "5m", label: "5 minutes" },
-        { key: "10m", label: "10 minutes" },
-      ] as const,
-    [],
-  );
 
   return (
     <div className="mx-auto w-full max-w-2xl p-2">
@@ -152,8 +124,7 @@ const General = () => {
               <FormItem>
                 <FormLabel>Global shortcut</FormLabel>
                 <FormDescription>
-                  Choose a key combination to toggle Skopio or open the command
-                  palette.
+                  Choose a key combination to toggle Skopio.
                 </FormDescription>
                 <FormControl>
                   <HotkeyField
@@ -184,7 +155,7 @@ const General = () => {
                       <SelectValue placeholder="Select timeout" />
                     </SelectTrigger>
                     <SelectContent>
-                      {afkItems.map(({ key, label }) => (
+                      {AFK.map(([key, label]) => (
                         <SelectItem key={key} value={key}>
                           {label}
                         </SelectItem>

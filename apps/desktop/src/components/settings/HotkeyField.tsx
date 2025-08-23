@@ -1,27 +1,16 @@
 import { useEffect, useRef, useState } from "react";
 import Kbd from "./kbd";
 import { cn } from "@skopio/ui";
+import { baseKeyFromEvent } from "../../utils/hotkey";
 
-const MODS: Record<string, string> = {
-  Meta: "⌘",
-  Control: "Ctrl",
-  Alt: "⌥",
-  Shift: "⇧",
-};
+enum Mods {
+  Meta = "⌘",
+  Control = "Ctrl",
+  Alt = "⌥",
+  Shift = "⇧",
+}
 
-const formatCombo = (parts: string[]): string => {
-  return parts.join("+");
-};
-
-const parseKeyForDisplay = (key: string) => {
-  if (key === " ") return "Space";
-  if (key === "ArrowUp") return "↑";
-  if (key === "ArrowDown") return "↓";
-  if (key === "ArrowLeft") return "←";
-  if (key === "ArrowRight") return "→";
-  if (key.length === 1) return key.toUpperCase();
-  return key;
-};
+const formatCombo = (parts: string[]): string => parts.join("+");
 
 const HotkeyField: React.FC<{
   value?: string;
@@ -54,10 +43,10 @@ const HotkeyField: React.FC<{
       e.stopPropagation();
 
       const parts: string[] = [];
-      if (e.metaKey) parts.push(MODS.Meta);
-      if (e.ctrlKey) parts.push(MODS.Control);
-      if (e.altKey) parts.push(MODS.Alt);
-      if (e.shiftKey) parts.push(MODS.Shift);
+      if (e.metaKey) parts.push(Mods.Meta);
+      if (e.ctrlKey) parts.push(Mods.Control);
+      if (e.altKey) parts.push(Mods.Alt);
+      if (e.shiftKey) parts.push(Mods.Shift);
 
       const isPureMod =
         e.key === "Meta" ||
@@ -65,8 +54,11 @@ const HotkeyField: React.FC<{
         e.key === "Alt" ||
         e.key === "Shift";
 
+      const base = baseKeyFromEvent(e);
+      if (!base) return;
+
       if (!isPureMod) {
-        parts.push(parseKeyForDisplay(e.key));
+        parts.push(base);
         const combo = formatCombo(parts);
         onChange?.(combo);
         setRecording(false);

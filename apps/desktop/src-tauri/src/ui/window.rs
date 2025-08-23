@@ -59,9 +59,9 @@ impl WindowKind {
     }
 
     fn build<R: Runtime>(self, app: &AppHandle<R>) -> tauri::Result<WebviewWindow<R>> {
+        let position = Position::from(LogicalPosition::new(20.0, 15.0));
         match self {
             WindowKind::Main => {
-                let position = Position::from(LogicalPosition::new(20.0, 15.0));
                 let url = WebviewUrl::App(self.default_route().into());
                 self.base_builder(app, url)
                     .inner_size(1600.0, 900.0)
@@ -77,6 +77,7 @@ impl WindowKind {
                     .resizable(true)
                     .inner_size(800.0, 600.0)
                     .min_inner_size(800.0, 600.0)
+                    .traffic_light_position(position)
                     .build()
             }
             WindowKind::Notification => {
