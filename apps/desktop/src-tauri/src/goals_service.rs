@@ -61,8 +61,6 @@ impl GoalService {
     pub async fn check_goals(&self, app: &AppHandle) -> anyhow::Result<()> {
         let goals = fetch_all_goals(&self.db).await?;
         for goal in goals {
-            debug!("Evaluating goal: {:?}", goal.name);
-
             if is_today_excluded(&goal.excluded_days) {
                 debug!("Goal {} is excluded today", goal.id);
                 continue;

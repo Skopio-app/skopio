@@ -4,6 +4,7 @@ import "./index.css";
 import { RouterProvider } from "react-router";
 import routes from "./routes.tsx";
 import { registerBuiltinExtensions } from "./extensions/registerBuiltinExtensions.ts";
+import { initializeGlobalShortcut } from "./utils/shortcut.ts";
 
 document.addEventListener("DOMContentLoaded", () => {
   const dragRegionDiv = document.createElement("div");
@@ -12,6 +13,7 @@ document.addEventListener("DOMContentLoaded", () => {
   document.documentElement.insertBefore(dragRegionDiv, document.body);
 });
 
+initializeGlobalShortcut();
 registerBuiltinExtensions();
 createRoot(document.getElementById("root")!).render(
   <StrictMode>

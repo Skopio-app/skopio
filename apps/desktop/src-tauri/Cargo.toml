@@ -35,6 +35,7 @@ console-subscriber = "0.4.1"
 reqwest = { workspace = true, features = ["json", "rustls-tls"] }
 tauri-plugin-dialog = "2.0.0"
 tauri-plugin-autostart = "2.5.0"
+tauri-plugin-global-shortcut = "2.3.0"
 
 specta = { workspace = true, features = ["chrono"] }
 specta-typescript = { workspace = true }

@@ -98,3 +98,83 @@ export const baseKeyFromEvent = (e: KeyboardEvent): string | null => {
   if (e.key && e.key.length === 1) return e.key.toUpperCase();
   return null;
 };
+
+const MOD_MAP: Record<string, string> = {
+  "⌘": "CommandOrControl",
+  Ctrl: "Control",
+  "⌥": "Alt",
+  "⇧": "Shift",
+};
+
+const KEY_MAP: Record<string, string> = {
+  "↑": "Up",
+  "↓": "Down",
+  "←": "Left",
+  "→": "Right",
+  Esc: "Escape",
+  Space: "Space",
+  Enter: "Enter",
+  Backspace: "Backspace",
+  Delete: "Delete",
+  Tab: "Tab",
+};
+
+export const uiComboToAccelerator = (input: string): string => {
+  const parts = input
+    .split("+")
+    .map((p) => p.trim())
+    .filter(Boolean);
+  const mods: string[] = [];
+  let key = "";
+
+  for (const p of parts) {
+    if (MOD_MAP[p]) {
+      mods.push(MOD_MAP[p]);
+    } else if (KEY_MAP[p]) {
+      key = KEY_MAP[p];
+    } else {
+      key = p.length === 1 ? p.toUpperCase() : p;
+    }
+  }
+
+  const accel = [...mods, key].filter(Boolean).join("+");
+  return accel;
+};
+
+const REV_MOD: Record<string, string> = {
+  CommandOrControl: "⌘",
+  Control: "Ctrl",
+  Alt: "⌥",
+  Option: "⌥",
+  Shift: "⇧",
+};
+
+const REV_KEY: Record<string, string> = {
+  Up: "↑",
+  Down: "↓",
+  Left: "←",
+  Right: "→",
+  Escape: "Esc",
+  Space: "Space",
+  Enter: "Enter",
+  Backspace: "Backspace",
+  Delete: "Delete",
+  Tab: "Tab",
+};
+
+export const acceleratorToUI = (accel: string): string => {
+  if (!accel) return "";
+  const parts = accel
+    .split("+")
+    .map((p) => p.trim())
+    .filter(Boolean);
+  const mods: string[] = [];
+  let key = "";
+
+  for (const p of parts) {
+    if (REV_MOD[p]) mods.push(REV_MOD[p]);
+    else if (REV_KEY[p]) key = REV_KEY[p];
+    else key = p.length === 1 ? p.toUpperCase() : p;
+  }
+  return [...mods, key].filter(Boolean).join("+");
+};

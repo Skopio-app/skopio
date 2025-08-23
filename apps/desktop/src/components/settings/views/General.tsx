@@ -21,6 +21,7 @@ import z from "zod/v4";
 import HotkeyField from "../HotkeyField";
 import { AFK, AFK_KEYS, AFK_SECONDS } from "../../../utils/constants";
 import { useAutostart } from "../../../hooks/useAutostart";
+import { useGlobalShortcut } from "../../../hooks/useGlobalShortcut";
 
 const settingsSchema = z.object({
   launchOnStartup: z.boolean().default(false),
@@ -50,11 +51,19 @@ const General = () => {
     setAutostart,
   } = useAutostart();
 
+  const {
+    shortcut,
+    setAndPersist,
+    loading: hotkeyLoading,
+    busy,
+    error: hotkeyError,
+  } = useGlobalShortcut();
+
   const form = useForm<GeneralSettingsValues>({
     resolver: zodResolver(settingsSchema),
     defaultValues: {
       launchOnStartup: false,
-      globalShortcut: "⌘+Shift+S",
+      globalShortcut: shortcut,
       afkSensitivity: "1m",
     },
     mode: "onChange",
@@ -76,6 +85,28 @@ const General = () => {
   const timerRef = useRef<number | null>(null);
   const lastSavedRef = useRef<string>(JSON.stringify(form.getValues()));
   const latestValuesRef = useRef<GeneralSettingsValues>(form.getValues());
+  const didHydrateShortcut = useRef(false);
+  useEffect(() => {
+    if (!didHydrateShortcut.current && !hotkeyLoading) {
+      didHydrateShortcut.current = true;
+      form.setValue("globalShortcut", shortcut || "", {
+        shouldDirty: false,
+        shouldTouch: false,
+        shouldValidate: true,
+      });
+    }
+  }, [hotkeyLoading, shortcut, form]);
+
+  // When the RHF field changes, push to hook (debounced register + save)
+  useEffect(() => {
+    const sub = form.watch((v, info) => {
+      if (info.name === "globalShortcut") {
+        const next = (v as GeneralSettingsValues).globalShortcut;
+        setAndPersist(next);
+      }
+    });
+    return () => sub.unsubscribe();
+  }, [form, setAndPersist]);
 
   useEffect(() => {
     const sub = form.watch((values) => {
@@ -152,11 +183,16 @@ const General = () => {
                 <FormControl>
                   <HotkeyField
                     value={field.value}
-                    onChange={field.onChange}
+                    onChange={(val) => field.onChange(val)}
                     placeholder="Click and press keys (e.g., ⌘ + Shift + S)"
                   />
                 </FormControl>
-                <FormMessage />
+                {hotkeyError && <FormMessage>{hotkeyError}</FormMessage>}
+                {(hotkeyLoading || busy) && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Updating shortcut…
+                  </p>
+                )}
               </FormItem>
             )}
           />

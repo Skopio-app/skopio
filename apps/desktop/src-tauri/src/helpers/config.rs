@@ -16,6 +16,7 @@ pub struct AppConfig {
     pub afk_timeout: u64,
     pub flush_interval: u64,
     pub sync_interval: u64,
+    pub global_shortcut: String,
 }
 
 impl Default for AppConfig {
@@ -26,6 +27,7 @@ impl Default for AppConfig {
             afk_timeout: 120,
             flush_interval: 120,
             sync_interval: 180,
+            global_shortcut: String::from("CommandOrControl+S"),
         }
     }
 }
@@ -141,7 +143,7 @@ impl AppConfig {
 #[tauri::command]
 #[specta::specta]
 pub async fn get_config<R: Runtime>(app: AppHandle<R>) -> AppConfig {
-    let config_store = app.state::<Arc<ConfigStore>>();
+    let config_store = app.state::<ConfigStore>();
     config_store.get().await
 }
 
@@ -151,7 +153,7 @@ pub async fn set_heartbeat_interval<R: Runtime>(
     interval: u64,
     app: AppHandle<R>,
 ) -> Result<(), String> {
-    let config_store = app.state::<Arc<ConfigStore>>();
+    let config_store = app.state::<ConfigStore>();
     config_store
         .update(&app, |config| {
             config.heartbeat_interval = interval;
@@ -163,7 +165,7 @@ pub async fn set_heartbeat_interval<R: Runtime>(
 #[tauri::command]
 #[specta::specta]
 pub async fn set_theme<R: Runtime>(theme: Theme, app: AppHandle<R>) -> Result<(), String> {
-    let config_store = app.state::<Arc<ConfigStore>>();
+    let config_store = app.state::<ConfigStore>();
     config_store
         .update(&app, |config| {
             config.theme = theme;
@@ -175,10 +177,25 @@ pub async fn set_theme<R: Runtime>(theme: Theme, app: AppHandle<R>) -> Result<()
 #[tauri::command]
 #[specta::specta]
 pub async fn set_afk_timeout<R: Runtime>(timeout: u64, app: AppHandle<R>) -> Result<(), String> {
-    let config_store = app.state::<Arc<ConfigStore>>();
+    let config_store = app.state::<ConfigStore>();
     config_store
         .update(&app, |config| {
             config.afk_timeout = timeout;
+        })
+        .await
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn set_global_shortcut<R: Runtime>(
+    shortcut: String,
+    app: AppHandle<R>,
+) -> Result<(), String> {
+    let config_store = app.state::<ConfigStore>();
+    config_store
+        .update(&app, |config| {
+            config.global_shortcut = shortcut;
         })
         .await
         .map_err(|e| e.to_string())

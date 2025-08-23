@@ -18,6 +18,9 @@ export const commands = {
   async setHeartbeatInterval(interval: number): Promise<null> {
     return await TAURI_INVOKE("set_heartbeat_interval", { interval });
   },
+  async setGlobalShortcut(shortcut: string): Promise<null> {
+    return await TAURI_INVOKE("set_global_shortcut", { shortcut });
+  },
   async fetchBucketedSummary(
     query: BucketSummaryInput,
   ): Promise<BucketTimeSummary[]> {
@@ -85,6 +88,7 @@ export type AppConfig = {
   afk_timeout: number;
   flush_interval: number;
   sync_interval: number;
+  global_shortcut: string;
 };
 /**
  * Query input for bucketed summaries (based on a preset time range)

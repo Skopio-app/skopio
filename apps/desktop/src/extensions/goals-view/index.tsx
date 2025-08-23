@@ -15,7 +15,7 @@ const GoalsView = () => {
 
   if (loading) {
     return (
-      <div className="h-[220px] w-full flex items-center justify-center text-sm text-gray-500">
+      <div className="h-[220px] w-full flex items-center justify-center text-sm text-gray-500 animate-pulse">
         Loading...
       </div>
     );

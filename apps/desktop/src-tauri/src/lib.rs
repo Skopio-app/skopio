@@ -72,14 +72,14 @@ pub async fn run() {
                 )?;
             }
 
-            app_handle.show_window(WindowKind::Main)?;
-
             let app_handle_clone = app_handle.clone();
             tauri::async_runtime::spawn(async move {
                 if let Err(e) = setup_trackers(&app_handle_clone).await {
                     error!("Failed async setup: {}", e);
                 }
             });
+
+            app_handle.show_window(WindowKind::Main)?;
 
             init_tray(app)?;
 
@@ -120,8 +120,9 @@ pub async fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_autostart::init(
             tauri_plugin_autostart::MacosLauncher::LaunchAgent,
-            Some(vec!["--flag1", "--flag2"]),
+            None,
         ))
+        .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .run(tauri::generate_context!())
         .expect("Error while running Tauri application");
 }
@@ -145,7 +146,7 @@ async fn setup_trackers(app_handle: &AppHandle) -> Result<(), anyhow::Error> {
         }
     };
 
-    app_handle.manage(db.clone());
+    app_handle.manage::<Arc<DBContext>>(db.clone());
 
     let raw_service = Arc::new(DBService::new(Arc::clone(&db)));
     let sync_interval_rx = config_store.subscribe_sync_interval();
@@ -233,6 +234,7 @@ fn make_specta_builder<R: Runtime>() -> tauri_specta::Builder<R> {
             crate::helpers::config::set_theme::<tauri::Wry>,
             crate::helpers::config::set_afk_timeout::<tauri::Wry>,
             crate::helpers::config::set_heartbeat_interval::<tauri::Wry>,
+            crate::helpers::config::set_global_shortcut::<tauri::Wry>,
             crate::network::summaries::fetch_bucketed_summary,
             crate::network::summaries::fetch_total_time,
             crate::network::summaries::fetch_range_summary,

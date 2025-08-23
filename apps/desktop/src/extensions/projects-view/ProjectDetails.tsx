@@ -123,8 +123,8 @@ const ProjectDetails = () => {
   return (
     <div className="p-4 space-y-6 mt-2">
       <Breadcrumb>
-        <BreadcrumbList className="text-lg font-regular text-neutral-600">
-          <BreadcrumbItem className="hover:text-neutral-950">
+        <BreadcrumbList className="text-lg">
+          <BreadcrumbItem>
             <BreadcrumbLink href="/">Projects</BreadcrumbLink>
           </BreadcrumbItem>
           <BreadcrumbSeparator />
