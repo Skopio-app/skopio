@@ -19,7 +19,7 @@ import { useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
 import z from "zod/v4";
 import HotkeyField from "../HotkeyField";
-import { AFK, AFK_KEYS, AFK_SECONDS } from "../../../utils/constants";
+import { AFK, AFK_KEYS } from "../../../utils/constants";
 import { useAutostart } from "../../../hooks/useAutostart";
 import { useGlobalShortcut } from "../../../hooks/useGlobalShortcut";
 
@@ -36,13 +36,6 @@ const settingsSchema = z.object({
 });
 
 type GeneralSettingsValues = z.infer<typeof settingsSchema>;
-
-async function saveSettings(values: GeneralSettingsValues) {
-  console.log("Auto-saved:", {
-    ...values,
-    afkSeconds: AFK_SECONDS[values.afkSensitivity],
-  });
-}
 
 const General = () => {
   const {
@@ -70,72 +63,64 @@ const General = () => {
     reValidateMode: "onChange",
   });
 
-  const didSyncRef = useRef(false);
+  const hydratedRef = useRef(false);
   useEffect(() => {
-    if (!didSyncRef.current && autoLoading === false) {
-      didSyncRef.current = true;
-      form.setValue("launchOnStartup", autoEnabled, {
-        shouldDirty: false,
-        shouldTouch: false,
-        shouldValidate: true,
-      });
-    }
-  }, [autoLoading, autoEnabled, form]);
+    const ready = !autoLoading && !hotkeyLoading;
+    if (!ready || hydratedRef.current) return;
 
-  const timerRef = useRef<number | null>(null);
-  const lastSavedRef = useRef<string>(JSON.stringify(form.getValues()));
-  const latestValuesRef = useRef<GeneralSettingsValues>(form.getValues());
-  const didHydrateShortcut = useRef(false);
-  useEffect(() => {
-    if (!didHydrateShortcut.current && !hotkeyLoading) {
-      didHydrateShortcut.current = true;
-      form.setValue("globalShortcut", shortcut || "", {
-        shouldDirty: false,
-        shouldTouch: false,
-        shouldValidate: true,
-      });
-    }
-  }, [hotkeyLoading, shortcut, form]);
+    hydratedRef.current = true;
+    form.reset(
+      {
+        launchOnStartup: autoEnabled,
+        globalShortcut: shortcut || "",
+        afkSensitivity: form.getValues("afkSensitivity") || "1m",
+      },
+      { keepDirty: false, keepTouched: true },
+    );
+  }, [autoLoading, hotkeyLoading, autoEnabled, shortcut, form]);
 
-  // When the RHF field changes, push to hook (debounced register + save)
-  useEffect(() => {
-    const sub = form.watch((v, info) => {
-      if (info.name === "globalShortcut") {
-        const next = (v as GeneralSettingsValues).globalShortcut;
-        setAndPersist(next);
-      }
-    });
-    return () => sub.unsubscribe();
-  }, [form, setAndPersist]);
+  const saveTimer = useRef<number | null>(null);
+  const shortcutTimer = useRef<number | null>(null);
+  const lastSavedJSON = useRef<string>(JSON.stringify(form.getValues()));
+  const lastShortcut = useRef<string>("");
 
   useEffect(() => {
-    const sub = form.watch((values) => {
-      latestValuesRef.current = values as GeneralSettingsValues;
+    const sub = form.watch((values, info) => {
+      const v = values as GeneralSettingsValues;
 
-      if (timerRef.current) window.clearTimeout(timerRef.current);
-      timerRef.current = window.setTimeout(async () => {
-        const valid = await form.trigger(undefined, { shouldFocus: false });
-        if (!valid) return;
-        const snapshot = JSON.stringify(latestValuesRef.current);
-        if (snapshot === lastSavedRef.current) return;
+      if (saveTimer.current) window.clearTimeout(saveTimer.current);
+      saveTimer.current = window.setTimeout(async () => {
+        const ok = await form.trigger(undefined, { shouldFocus: false });
+        if (!ok) return;
+        const snap = JSON.stringify(v);
+        if (snap === lastSavedJSON.current) return;
+        lastSavedJSON.current = snap;
 
-        await saveSettings(latestValuesRef.current);
-
-        lastSavedRef.current = snapshot;
-
-        form.reset(latestValuesRef.current, {
+        form.reset(v, {
           keepValues: true,
           keepDirty: false,
           keepTouched: true,
         });
-      }, 300) as unknown as number;
+      }, 300) as number;
+
+      if (info.name === "globalShortcut") {
+        const next = v.globalShortcut || "";
+        if (next !== lastShortcut.current) {
+          if (shortcutTimer.current) window.clearTimeout(shortcutTimer.current);
+          shortcutTimer.current = window.setTimeout(async () => {
+            await setAndPersist(next);
+            lastShortcut.current = next;
+          }, 250) as number;
+        }
+      }
     });
 
     return () => {
-      if (timerRef.current) window.clearTimeout(timerRef.current);
       sub.unsubscribe();
+      if (saveTimer.current) window.clearTimeout(saveTimer.current);
+      if (shortcutTimer.current) window.clearTimeout(shortcutTimer.current);
     };
-  }, [form]);
+  }, [form, setAndPersist]);
 
   return (
     <div className="mx-auto w-full max-w-2xl p-2">
@@ -178,12 +163,12 @@ const General = () => {
               <FormItem>
                 <FormLabel>Global shortcut</FormLabel>
                 <FormDescription>
-                  Choose a key combination to toggle Skopio.
+                  Choose a key combination to bring Skopio into view.
                 </FormDescription>
                 <FormControl>
                   <HotkeyField
                     value={field.value}
-                    onChange={(val) => field.onChange(val)}
+                    onChange={field.onChange}
                     placeholder="Click and press keys (e.g., ⌘ + Shift + S)"
                   />
                 </FormControl>

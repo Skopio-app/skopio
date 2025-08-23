@@ -8,8 +8,11 @@
 // } from "@skopio/ui";
 import { Outlet } from "react-router";
 import { Toaster } from "sonner";
+import { useGlobalShortcutListener } from "./utils/shortcut";
 
 function App() {
+  useGlobalShortcutListener();
+
   return (
     <>
       <Toaster richColors />

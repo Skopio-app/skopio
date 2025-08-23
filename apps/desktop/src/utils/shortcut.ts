@@ -6,6 +6,8 @@ import {
   unregister as unregisterShortcut,
 } from "@tauri-apps/plugin-global-shortcut";
 import { emit } from "@tauri-apps/api/event";
+import { useEffect } from "react";
+import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 
 export const SHORTCUT_EVENT = "global-shortcut";
 
@@ -34,7 +36,7 @@ export const focusApp = async () => {
     await main.setFocus();
     await main.unminimize();
   } catch (e) {
-    console.error("Focus app failed: ", e);
+    console.error("Focusing app failed: ", e);
   }
 };
 
@@ -83,6 +85,28 @@ export const initializeGlobalShortcut = async (): Promise<void> => {
       });
     }
   } catch (e) {
+    // error seems to appear even though the shortcut is initialized successfully
     console.error("Failed to initialize global shortcut: ", e);
   }
+};
+
+export const useGlobalShortcutListener = () => {
+  useEffect(() => {
+    let unlisten: UnlistenFn | null = null;
+
+    (async () => {
+      try {
+        await initializeGlobalShortcut();
+        unlisten = await listen(SHORTCUT_EVENT, async () => {
+          await focusApp();
+        });
+      } catch (e) {
+        console.error("Failed to set up global shortcut listener: ", e);
+      }
+    })();
+
+    return () => {
+      if (unlisten) unlisten();
+    };
+  }, []);
 };

@@ -99,25 +99,31 @@ export const baseKeyFromEvent = (e: KeyboardEvent): string | null => {
   return null;
 };
 
-const MOD_MAP: Record<string, string> = {
-  "⌘": "CommandOrControl",
-  Ctrl: "Control",
-  "⌥": "Alt",
-  "⇧": "Shift",
-};
+const TOKEN_PAIRS = [
+  ["⌘", "CommandOrControl"],
+  ["Ctrl", "Control"],
+  ["⌥", "Alt"],
+  ["⇧", "Shift"],
+  ["↑", "Up"],
+  ["↓", "Down"],
+  ["←", "Left"],
+  ["→", "Right"],
+  ["Esc", "Escape"],
+  ["Space", "Space"],
+  ["Enter", "Enter"],
+  ["Backspace", "Backspace"],
+  ["Delete", "Delete"],
+  ["Tab", "Tab"],
+  ["⌘", "Command"],
+  ["⌥", "Option"],
+] as const satisfies readonly (readonly [string, string])[];
 
-const KEY_MAP: Record<string, string> = {
-  "↑": "Up",
-  "↓": "Down",
-  "←": "Left",
-  "→": "Right",
-  Esc: "Escape",
-  Space: "Space",
-  Enter: "Enter",
-  Backspace: "Backspace",
-  Delete: "Delete",
-  Tab: "Tab",
-};
+export const UI_TO_ACCEL: Record<string, string> = {};
+export const ACCEL_TO_UI: Record<string, string> = {};
+for (const [ui, accel] of TOKEN_PAIRS) {
+  if (!(ui in UI_TO_ACCEL)) UI_TO_ACCEL[ui] = accel;
+  ACCEL_TO_UI[accel] = ui;
+}
 
 export const uiComboToAccelerator = (input: string): string => {
   const parts = input
@@ -128,38 +134,12 @@ export const uiComboToAccelerator = (input: string): string => {
   let key = "";
 
   for (const p of parts) {
-    if (MOD_MAP[p]) {
-      mods.push(MOD_MAP[p]);
-    } else if (KEY_MAP[p]) {
-      key = KEY_MAP[p];
-    } else {
-      key = p.length === 1 ? p.toUpperCase() : p;
-    }
+    if (UI_TO_ACCEL[p]) mods.push(UI_TO_ACCEL[p]);
+    else key = p.length === 1 ? p.toUpperCase() : p;
   }
 
   const accel = [...mods, key].filter(Boolean).join("+");
   return accel;
-};
-
-const REV_MOD: Record<string, string> = {
-  CommandOrControl: "⌘",
-  Control: "Ctrl",
-  Alt: "⌥",
-  Option: "⌥",
-  Shift: "⇧",
-};
-
-const REV_KEY: Record<string, string> = {
-  Up: "↑",
-  Down: "↓",
-  Left: "←",
-  Right: "→",
-  Escape: "Esc",
-  Space: "Space",
-  Enter: "Enter",
-  Backspace: "Backspace",
-  Delete: "Delete",
-  Tab: "Tab",
 };
 
 export const acceleratorToUI = (accel: string): string => {
@@ -172,8 +152,7 @@ export const acceleratorToUI = (accel: string): string => {
   let key = "";
 
   for (const p of parts) {
-    if (REV_MOD[p]) mods.push(REV_MOD[p]);
-    else if (REV_KEY[p]) key = REV_KEY[p];
+    if (ACCEL_TO_UI[p]) mods.push(ACCEL_TO_UI[p]);
     else key = p.length === 1 ? p.toUpperCase() : p;
   }
   return [...mods, key].filter(Boolean).join("+");
