@@ -108,7 +108,7 @@ const General = () => {
         if (next !== lastShortcut.current) {
           if (shortcutTimer.current) window.clearTimeout(shortcutTimer.current);
           shortcutTimer.current = window.setTimeout(async () => {
-            await setAndPersist(next);
+            setAndPersist(next);
             lastShortcut.current = next;
           }, 250) as number;
         }

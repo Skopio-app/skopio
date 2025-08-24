@@ -6,10 +6,80 @@ import {
   unregister as unregisterShortcut,
 } from "@tauri-apps/plugin-global-shortcut";
 import { emit } from "@tauri-apps/api/event";
-import { useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
 
 export const SHORTCUT_EVENT = "global-shortcut";
+
+export const goBack = () => window.history.back();
+export const goForward = () => window.history.forward();
+export const reloadWindow = () => window.location.reload();
+
+const isEditableTarget = (target: EventTarget | null): boolean => {
+  const el = target as HTMLElement | null;
+  if (!el) return false;
+  const tag = el.tagName.toLowerCase();
+  if (
+    tag === "input" ||
+    tag === "textarea" ||
+    (el as HTMLInputElement).isContentEditable
+  )
+    return true;
+  return false;
+};
+
+export const useHistoryControls = () => {
+  const read = () => {
+    const idx =
+      (window.history.state && (window.history.state as any).idx) ?? 0;
+    const len = window.history.length;
+    return { idx, len };
+  };
+
+  const [{ idx, len }, setState] = useState(read);
+
+  useEffect(() => {
+    const push = window.history.pushState;
+    const replace = window.history.replaceState;
+
+    if (!(window as any).__skopio_history_patched) {
+      (window as any).__skopio_history_patched = true;
+      window.history.pushState = function (...args) {
+        const ret = push.apply(this, args);
+        window.dispatchEvent(new Event("skopio:pushstate"));
+        return ret;
+      };
+      window.history.replaceState = function (...args) {
+        const ret = replace.apply(this, args);
+        window.dispatchEvent(new Event("skopio:replacestate"));
+        return ret;
+      };
+    }
+
+    const update = () => setState(read());
+    window.addEventListener("popstate", update);
+    window.addEventListener("skopio:pushstate", update);
+    window.addEventListener("skopio:replacestate", update);
+
+    update();
+
+    return () => {
+      window.removeEventListener("popstate", update);
+      window.removeEventListener("skopio:pushstate", update);
+      window.removeEventListener("skopio:replacestate", update);
+    };
+  }, []);
+
+  return useMemo(
+    () => ({
+      canGoBack: idx > 0,
+      canGoForward: idx < len - 1,
+      idx,
+      len,
+    }),
+    [idx, len],
+  );
+};
 
 export const loadShortcut = async (): Promise<string> => {
   try {
@@ -93,6 +163,49 @@ export const initializeGlobalShortcut = async (): Promise<void> => {
 export const useGlobalShortcutListener = () => {
   useEffect(() => {
     let unlisten: UnlistenFn | null = null;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (isEditableTarget(e.target)) return;
+
+      const key = e.key;
+      const meta = e.metaKey;
+      const ctrl = e.ctrlKey;
+      const alt = e.altKey;
+      const code = e.code;
+
+      if (meta && key === "[") {
+        e.preventDefault();
+        goBack();
+        return;
+      }
+      if (meta && key === "]") {
+        e.preventDefault();
+        goForward();
+        return;
+      }
+      if (meta && (key === "r" || key === "R" || code === "KeyR")) {
+        e.preventDefault();
+        reloadWindow();
+        return;
+      }
+
+      if (alt && key === "ArrowLeft") {
+        e.preventDefault();
+        goBack();
+        return;
+      }
+      if (alt && key === "ArrowRight") {
+        e.preventDefault();
+        goForward();
+        return;
+      }
+      if (ctrl && (key === "r" || key === "R")) {
+        e.preventDefault();
+        reloadWindow();
+        return;
+      }
+    };
+
+    window.addEventListener("keydown", onKeyDown, { capture: true });
 
     (async () => {
       try {
@@ -106,6 +219,9 @@ export const useGlobalShortcutListener = () => {
     })();
 
     return () => {
+      window.removeEventListener("keydown", onKeyDown, {
+        capture: true,
+      } as any);
       if (unlisten) unlisten();
     };
   }, []);
