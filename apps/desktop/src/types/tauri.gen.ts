@@ -84,11 +84,11 @@ export const commands = {
 export type App = { id: string; name: string };
 export type AppConfig = {
   theme: Theme;
-  heartbeat_interval: number;
-  afk_timeout: number;
-  flush_interval: number;
-  sync_interval: number;
-  global_shortcut: string;
+  heartbeatInterval: number;
+  afkTimeout: number;
+  flushInterval: number;
+  syncInterval: number;
+  globalShortcut: string;
 };
 /**
  * Query input for bucketed summaries (based on a preset time range)

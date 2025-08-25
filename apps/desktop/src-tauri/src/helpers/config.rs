@@ -10,6 +10,7 @@ use tauri::{AppHandle, Manager, Runtime};
 use tokio::sync::{watch, RwLock};
 
 #[derive(Debug, Serialize, Deserialize, Clone, specta::Type)]
+#[serde(rename_all = "camelCase")]
 pub struct AppConfig {
     pub theme: Theme,
     pub heartbeat_interval: u64,

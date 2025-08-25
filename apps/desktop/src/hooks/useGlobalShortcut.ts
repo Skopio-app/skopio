@@ -29,14 +29,14 @@ export const useGlobalShortcut = () => {
     };
   }, []);
 
-  const setAndPersist = useCallback((nextUI: string) => {
+  const saveShorcut = useCallback((text: string) => {
     setError(null);
-    setShortcut(nextUI);
+    setShortcut(text);
     if (debounceRef.current) window.clearTimeout(debounceRef.current);
     debounceRef.current = window.setTimeout(async () => {
       setBusy(true);
       try {
-        const accel = uiComboToAccelerator(nextUI);
+        const accel = uiComboToAccelerator(text);
         await updateGlobalShortcut(accel);
       } catch (e) {
         setError((e as Error)?.message ?? "Failed to update global shortcut");
@@ -46,5 +46,5 @@ export const useGlobalShortcut = () => {
     }, 250) as number;
   }, []);
 
-  return { shortcut, setAndPersist, loading, busy, error };
+  return { shortcut, saveShorcut, loading, busy, error };
 };

@@ -83,7 +83,7 @@ export const useHistoryControls = () => {
 
 export const loadShortcut = async (): Promise<string> => {
   try {
-    const shortcut = (await commands.getConfig()).global_shortcut;
+    const shortcut = (await commands.getConfig()).globalShortcut;
     return shortcut;
   } catch (e) {
     console.error("Failed to load shortcut: ", e);
@@ -163,7 +163,7 @@ export const initializeGlobalShortcut = async (): Promise<void> => {
 export const useGlobalShortcutListener = () => {
   useEffect(() => {
     let unlisten: UnlistenFn | null = null;
-    const onKeyDown = (e: KeyboardEvent) => {
+    const onKeyDown = async (e: KeyboardEvent) => {
       if (isEditableTarget(e.target)) return;
 
       const key = e.key;
@@ -180,6 +180,11 @@ export const useGlobalShortcutListener = () => {
       if (meta && key === "]") {
         e.preventDefault();
         goForward();
+        return;
+      }
+      if (meta && key === ",") {
+        e.preventDefault();
+        await commands.showSettingsWindow();
         return;
       }
       if (meta && (key === "r" || key === "R" || code === "KeyR")) {

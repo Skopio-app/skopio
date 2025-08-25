@@ -46,10 +46,10 @@ const General = () => {
 
   const {
     shortcut,
-    setAndPersist,
+    saveShorcut,
     loading: hotkeyLoading,
     busy,
-    error: hotkeyError,
+    // error: hotkeyError,
   } = useGlobalShortcut();
 
   const form = useForm<GeneralSettingsValues>({
@@ -108,7 +108,11 @@ const General = () => {
         if (next !== lastShortcut.current) {
           if (shortcutTimer.current) window.clearTimeout(shortcutTimer.current);
           shortcutTimer.current = window.setTimeout(async () => {
-            setAndPersist(next);
+            const ok = await form.trigger("globalShortcut", {
+              shouldFocus: false,
+            });
+            if (!ok) return;
+            saveShorcut(next);
             lastShortcut.current = next;
           }, 250) as number;
         }
@@ -120,7 +124,7 @@ const General = () => {
       if (saveTimer.current) window.clearTimeout(saveTimer.current);
       if (shortcutTimer.current) window.clearTimeout(shortcutTimer.current);
     };
-  }, [form, setAndPersist]);
+  }, [form, saveShorcut]);
 
   return (
     <div className="mx-auto w-full max-w-2xl p-2">
@@ -172,7 +176,7 @@ const General = () => {
                     placeholder="Click and press keys (e.g., ⌘ + Shift + S)"
                   />
                 </FormControl>
-                {hotkeyError && <FormMessage>{hotkeyError}</FormMessage>}
+                <FormMessage />
                 {(hotkeyLoading || busy) && (
                   <p className="text-xs text-muted-foreground mt-1">
                     Updating shortcut…
