@@ -19,9 +19,10 @@ import { useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
 import z from "zod/v4";
 import HotkeyField from "../HotkeyField";
-import { AFK, AFK_KEYS } from "../../../utils/constants";
+import { AFK, AFK_KEYS, AFK_SECONDS } from "../../../utils/constants";
 import { useAutostart } from "../../../hooks/useAutostart";
 import { useGlobalShortcut } from "../../../hooks/useGlobalShortcut";
+import { commands } from "../../../types/tauri.gen";
 
 const settingsSchema = z.object({
   launchOnStartup: z.boolean().default(false),
@@ -64,25 +65,32 @@ const General = () => {
   });
 
   const hydratedRef = useRef(false);
+  const saveTimer = useRef<number | null>(null);
+  const shortcutTimer = useRef<number | null>(null);
+  const afkTimer = useRef<number | null>(null);
+  const lastAfk = useRef<string>("");
+  const lastSavedJSON = useRef<string>(JSON.stringify(form.getValues()));
+  const lastShortcut = useRef<string>("");
+
   useEffect(() => {
     const ready = !autoLoading && !hotkeyLoading;
     if (!ready || hydratedRef.current) return;
 
     hydratedRef.current = true;
+    const initialAfk = form.getValues("afkSensitivity") || "1m";
     form.reset(
       {
         launchOnStartup: autoEnabled,
         globalShortcut: shortcut || "",
-        afkSensitivity: form.getValues("afkSensitivity") || "1m",
+        afkSensitivity: initialAfk,
       },
       { keepDirty: false, keepTouched: true },
     );
-  }, [autoLoading, hotkeyLoading, autoEnabled, shortcut, form]);
 
-  const saveTimer = useRef<number | null>(null);
-  const shortcutTimer = useRef<number | null>(null);
-  const lastSavedJSON = useRef<string>(JSON.stringify(form.getValues()));
-  const lastShortcut = useRef<string>("");
+    lastShortcut.current = shortcut || "";
+    lastSavedJSON.current = JSON.stringify(form.getValues());
+    lastAfk.current = initialAfk;
+  }, [autoLoading, hotkeyLoading, autoEnabled, shortcut, form]);
 
   useEffect(() => {
     const sub = form.watch((values, info) => {
@@ -117,12 +125,34 @@ const General = () => {
           }, 250) as number;
         }
       }
+
+      if (info.name === "afkSensitivity") {
+        const nextKey = v.afkSensitivity;
+        if (nextKey !== lastAfk.current) {
+          if (afkTimer.current) window.clearTimeout(afkTimer.current);
+          afkTimer.current = window.setTimeout(async () => {
+            const ok = await form.trigger("afkSensitivity", {
+              shouldFocus: false,
+            });
+            if (!ok) return;
+
+            const seconds = AFK_SECONDS[nextKey];
+            try {
+              await commands.setAfkTimeout(seconds);
+              lastAfk.current = nextKey;
+            } catch (e) {
+              console.error("Failed to set AFK timeout: ", e);
+            }
+          }, 250) as number;
+        }
+      }
     });
 
     return () => {
       sub.unsubscribe();
       if (saveTimer.current) window.clearTimeout(saveTimer.current);
       if (shortcutTimer.current) window.clearTimeout(shortcutTimer.current);
+      if (afkTimer.current) window.clearTimeout(afkTimer.current);
     };
   }, [form, saveShorcut]);
 

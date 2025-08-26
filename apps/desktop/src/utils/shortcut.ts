@@ -184,7 +184,7 @@ export const useGlobalShortcutListener = () => {
       }
       if (meta && key === ",") {
         e.preventDefault();
-        await commands.showSettingsWindow();
+        await commands.showWindow("settings");
         return;
       }
       if (meta && (key === "r" || key === "R" || code === "KeyR")) {

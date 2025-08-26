@@ -7,7 +7,8 @@ use tauri::{
 };
 use url::{ParseError, Url};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Deserialize, Clone, Copy, PartialEq, Eq, specta::Type)]
+#[serde(rename_all = "camelCase")]
 pub enum WindowKind {
     Main,
     Settings,
@@ -207,8 +208,14 @@ pub fn dismiss_notification_window<R: Runtime>(app: AppHandle<R>) -> Result<(), 
 
 #[tauri::command]
 #[specta::specta]
-pub fn show_settings_window<R: Runtime>(app: AppHandle<R>) -> Result<(), String> {
-    app.show_window(WindowKind::Settings)
+pub fn show_window<R: Runtime>(app: AppHandle<R>, kind: WindowKind) -> Result<(), String> {
+    app.show_window(kind)
         .map_err(|e| format!("Error showing settings window: {e}"))?;
     Ok(())
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn open_devtools<R: Runtime>(window: tauri::WebviewWindow<R>) {
+    window.open_devtools();
 }

@@ -43,7 +43,7 @@ const DashboardLayout = () => {
             className="h-5 w-5 hover:bg-neutral-200"
             variant="ghost"
             size="icon"
-            onClick={async () => await commands.showSettingsWindow()}
+            onClick={async () => await commands.showWindow("settings")}
           >
             <Cog />
           </Button>

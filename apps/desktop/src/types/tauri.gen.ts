@@ -70,8 +70,11 @@ export const commands = {
   async dismissNotificationWindow(): Promise<null> {
     return await TAURI_INVOKE("dismiss_notification_window");
   },
-  async showSettingsWindow(): Promise<null> {
-    return await TAURI_INVOKE("show_settings_window");
+  async showWindow(kind: WindowKind): Promise<null> {
+    return await TAURI_INVOKE("show_window", { kind });
+  },
+  async openDevtools(): Promise<void> {
+    await TAURI_INVOKE("open_devtools");
   },
 };
 
@@ -376,6 +379,7 @@ export type TimeRangePreset =
       };
     };
 export type TimeSpan = "day" | "week" | "month" | "year";
+export type WindowKind = "main" | "settings" | "notification";
 
 /** tauri-specta globals **/
 

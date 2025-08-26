@@ -14,6 +14,8 @@ import {
   useGlobalShortcutListener,
   useHistoryControls,
 } from "./utils/shortcut";
+import { isDev } from "./utils/environment";
+import { commands } from "./types/tauri.gen";
 
 function App() {
   useGlobalShortcutListener();
@@ -39,6 +41,17 @@ function App() {
           <ContextMenuItem inset onClick={reloadWindow}>
             Reload
             <ContextMenuShortcut>⌘R</ContextMenuShortcut>
+          </ContextMenuItem>
+          <ContextMenuItem
+            inset
+            disabled={!isDev()}
+            onClick={() => {
+              if (isDev()) {
+                commands.openDevtools();
+              }
+            }}
+          >
+            Inspect Element
           </ContextMenuItem>
         </ContextMenuContent>
       </ContextMenu>
