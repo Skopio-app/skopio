@@ -40,7 +40,7 @@ function App() {
           </ContextMenuItem>
           <ContextMenuItem inset onClick={reloadWindow}>
             Reload
-            <ContextMenuShortcut>⌘R</ContextMenuShortcut>
+            <ContextMenuShortcut>⌘⇧R</ContextMenuShortcut>
           </ContextMenuItem>
           <ContextMenuItem
             inset

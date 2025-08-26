@@ -15,8 +15,8 @@ export const commands = {
   async setAfkTimeout(timeout: number): Promise<null> {
     return await TAURI_INVOKE("set_afk_timeout", { timeout });
   },
-  async setHeartbeatInterval(interval: number): Promise<null> {
-    return await TAURI_INVOKE("set_heartbeat_interval", { interval });
+  async setTrackedApps(apps: string[]): Promise<null> {
+    return await TAURI_INVOKE("set_tracked_apps", { apps });
   },
   async setGlobalShortcut(shortcut: string): Promise<null> {
     return await TAURI_INVOKE("set_global_shortcut", { shortcut });
@@ -76,6 +76,9 @@ export const commands = {
   async openDevtools(): Promise<void> {
     await TAURI_INVOKE("open_devtools");
   },
+  async getOpenApps(): Promise<AppInfo[]> {
+    return await TAURI_INVOKE("get_open_apps");
+  },
 };
 
 /** user-defined events **/
@@ -92,6 +95,16 @@ export type AppConfig = {
   flushInterval: number;
   syncInterval: number;
   globalShortcut: string;
+  trackedApps: string[];
+};
+export type AppInfo = {
+  app_name: string;
+  bundle_id: string;
+  /**
+   * Executable path
+   */
+  path: string;
+  pid: number;
 };
 /**
  * Query input for bucketed summaries (based on a preset time range)

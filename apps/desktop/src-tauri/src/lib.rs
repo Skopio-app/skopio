@@ -233,7 +233,7 @@ fn make_specta_builder<R: Runtime>() -> tauri_specta::Builder<R> {
             crate::helpers::config::get_config::<tauri::Wry>,
             crate::helpers::config::set_theme::<tauri::Wry>,
             crate::helpers::config::set_afk_timeout::<tauri::Wry>,
-            crate::helpers::config::set_heartbeat_interval::<tauri::Wry>,
+            crate::helpers::config::set_tracked_apps::<tauri::Wry>,
             crate::helpers::config::set_global_shortcut::<tauri::Wry>,
             crate::network::summaries::fetch_bucketed_summary,
             crate::network::summaries::fetch_total_time,
@@ -252,6 +252,7 @@ fn make_specta_builder<R: Runtime>() -> tauri_specta::Builder<R> {
             crate::ui::window::dismiss_notification_window::<tauri::Wry>,
             crate::ui::window::show_window::<tauri::Wry>,
             crate::ui::window::open_devtools::<tauri::Wry>,
+            crate::trackers::window_tracker::get_open_apps,
         ])
         .error_handling(tauri_specta::ErrorHandlingMode::Throw)
         .typ::<NotificationPayload>();

@@ -14,8 +14,9 @@ import {
   Separator,
   Switch,
   Form,
+  ChipSelector,
 } from "@skopio/ui";
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useForm } from "react-hook-form";
 import z from "zod/v4";
 import HotkeyField from "../HotkeyField";
@@ -34,9 +35,11 @@ const settingsSchema = z.object({
       message: "Shortcut must be a key combination (e.g., Ctrl+Shift+S)",
     }),
   afkSensitivity: z.enum(AFK_KEYS).default("1m"),
+  trackedApps: z.array(z.string()).default([]),
 });
 
 type GeneralSettingsValues = z.infer<typeof settingsSchema>;
+type AppInfo = Awaited<ReturnType<typeof commands.getOpenApps>>[number];
 
 const General = () => {
   const {
@@ -53,6 +56,13 @@ const General = () => {
     // error: hotkeyError,
   } = useGlobalShortcut();
 
+  const [openApps, setOpenApps] = useState<AppInfo[]>([]);
+  const byBundleId = useMemo(() => {
+    const m = new Map<string, AppInfo>();
+    for (const a of openApps) m.set(a.bundle_id, a);
+    return m;
+  }, [openApps]);
+
   const form = useForm<GeneralSettingsValues>({
     resolver: zodResolver(settingsSchema),
     defaultValues: {
@@ -68,28 +78,47 @@ const General = () => {
   const saveTimer = useRef<number | null>(null);
   const shortcutTimer = useRef<number | null>(null);
   const afkTimer = useRef<number | null>(null);
+  const trackedTimer = useRef<number | null>(null);
+
   const lastAfk = useRef<string>("");
   const lastSavedJSON = useRef<string>(JSON.stringify(form.getValues()));
   const lastShortcut = useRef<string>("");
+  const lastTrackedJSON = useRef<string>("[]");
 
   useEffect(() => {
     const ready = !autoLoading && !hotkeyLoading;
     if (!ready || hydratedRef.current) return;
 
-    hydratedRef.current = true;
-    const initialAfk = form.getValues("afkSensitivity") || "1m";
-    form.reset(
-      {
-        launchOnStartup: autoEnabled,
-        globalShortcut: shortcut || "",
-        afkSensitivity: initialAfk,
-      },
-      { keepDirty: false, keepTouched: true },
-    );
+    (async () => {
+      try {
+        const [tracked, open] = await Promise.all([
+          (await commands.getConfig()).trackedApps,
+          commands.getOpenApps().catch(() => [] as AppInfo[]),
+        ]);
 
-    lastShortcut.current = shortcut || "";
-    lastSavedJSON.current = JSON.stringify(form.getValues());
-    lastAfk.current = initialAfk;
+        const initialAfk = form.getValues("afkSensitivity") || "1m";
+
+        form.reset(
+          {
+            launchOnStartup: autoEnabled,
+            globalShortcut: shortcut || "",
+            afkSensitivity: initialAfk,
+            trackedApps: tracked ?? [],
+          },
+          { keepDirty: false, keepTouched: true },
+        );
+
+        setOpenApps(open ?? []);
+
+        lastShortcut.current = shortcut || "";
+        lastSavedJSON.current = JSON.stringify(form.getValues());
+        lastAfk.current = initialAfk;
+        lastTrackedJSON.current = JSON.stringify(tracked ?? []);
+        hydratedRef.current = true;
+      } catch (e) {
+        console.error("Hydration failed: ", e);
+      }
+    })();
   }, [autoLoading, hotkeyLoading, autoEnabled, shortcut, form]);
 
   useEffect(() => {
@@ -146,6 +175,27 @@ const General = () => {
           }, 250) as number;
         }
       }
+
+      if (info.name === "trackedApps") {
+        const nextList = v.trackedApps ?? [];
+        const nextSnap = JSON.stringify(nextList.slice().sort());
+        if (nextSnap !== lastTrackedJSON.current) {
+          if (trackedTimer.current) window.clearTimeout(trackedTimer.current);
+          trackedTimer.current = window.setTimeout(async () => {
+            const ok = await form.trigger("trackedApps", {
+              shouldFocus: false,
+            });
+            if (!ok) return;
+
+            try {
+              await commands.setTrackedApps(nextList);
+              lastTrackedJSON.current = nextSnap;
+            } catch (e) {
+              console.error("Failed to save tracked apps: ", e);
+            }
+          }, 250) as number;
+        }
+      }
     });
 
     return () => {
@@ -153,8 +203,19 @@ const General = () => {
       if (saveTimer.current) window.clearTimeout(saveTimer.current);
       if (shortcutTimer.current) window.clearTimeout(shortcutTimer.current);
       if (afkTimer.current) window.clearTimeout(afkTimer.current);
+      if (trackedTimer.current) window.clearTimeout(trackedTimer.current);
     };
   }, [form, saveShorcut]);
+
+  const selectedAppInfos = useMemo(() => {
+    const ids = form.getValues("trackedApps") ?? [];
+    return ids.map((id) => byBundleId.get(id)).filter(Boolean) as AppInfo[];
+  }, [byBundleId, form]);
+
+  const labelFor = (a: { app_name?: string; bundle_id: string }) =>
+    a.app_name?.trim() || a.bundle_id;
+
+  const allOptions = openApps;
 
   return (
     <div className="mx-auto w-full max-w-2xl p-2">
@@ -242,6 +303,50 @@ const General = () => {
                   </Select>
                 </FormControl>
                 <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <Separator />
+
+          <FormField
+            control={form.control}
+            name="trackedApps"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Tracked apps</FormLabel>
+                <FormDescription>
+                  Pick which currently open apps Skopio should track
+                </FormDescription>
+                <FormControl>
+                  <ChipSelector<AppInfo>
+                    values={
+                      // use selected infos if we have them; otherwise render chips by IDs with fallbacks
+                      selectedAppInfos.length
+                        ? selectedAppInfos
+                        : (field.value ?? []).map((id) => ({
+                            app_name: id,
+                            bundle_id: id,
+                            path: "",
+                            pid: 0,
+                          }))
+                    }
+                    options={allOptions}
+                    getLabel={(a) => labelFor(a)}
+                    onToggle={(app) => {
+                      const id = app.bundle_id;
+                      const curr = new Set(field.value ?? []);
+                      if (curr.has(id)) curr.delete(id);
+                      else curr.add(id);
+                      field.onChange(Array.from(curr));
+                    }}
+                    onRemove={(app) => {
+                      const id = app.bundle_id;
+                      const next = (field.value ?? []).filter((x) => x !== id);
+                      field.onChange(next);
+                    }}
+                  />
+                </FormControl>
               </FormItem>
             )}
           />

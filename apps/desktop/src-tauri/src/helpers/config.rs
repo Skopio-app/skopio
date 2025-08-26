@@ -6,10 +6,18 @@ use std::{
 };
 
 use serde::{Deserialize, Serialize};
+use specta::Type;
 use tauri::{AppHandle, Manager, Runtime};
 use tokio::sync::{watch, RwLock};
 
-#[derive(Debug, Serialize, Deserialize, Clone, specta::Type)]
+#[derive(Debug, Serialize, Deserialize, Clone, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct TrackedApp {
+    pub name: String,
+    pub bundle_id: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, Type)]
 #[serde(rename_all = "camelCase")]
 pub struct AppConfig {
     pub theme: Theme,
@@ -18,6 +26,7 @@ pub struct AppConfig {
     pub flush_interval: u64,
     pub sync_interval: u64,
     pub global_shortcut: String,
+    pub tracked_apps: Vec<TrackedApp>,
 }
 
 impl Default for AppConfig {
@@ -29,6 +38,7 @@ impl Default for AppConfig {
             flush_interval: 120,
             sync_interval: 180,
             global_shortcut: String::from("CommandOrControl+S"),
+            tracked_apps: vec![],
         }
     }
 }
@@ -150,21 +160,6 @@ pub async fn get_config<R: Runtime>(app: AppHandle<R>) -> AppConfig {
 
 #[tauri::command]
 #[specta::specta]
-pub async fn set_heartbeat_interval<R: Runtime>(
-    interval: u64,
-    app: AppHandle<R>,
-) -> Result<(), String> {
-    let config_store = app.state::<ConfigStore>();
-    config_store
-        .update(&app, |config| {
-            config.heartbeat_interval = interval;
-        })
-        .await
-        .map_err(|e| e.to_string())
-}
-
-#[tauri::command]
-#[specta::specta]
 pub async fn set_theme<R: Runtime>(theme: Theme, app: AppHandle<R>) -> Result<(), String> {
     let config_store = app.state::<ConfigStore>();
     config_store
@@ -197,6 +192,21 @@ pub async fn set_global_shortcut<R: Runtime>(
     config_store
         .update(&app, |config| {
             config.global_shortcut = shortcut;
+        })
+        .await
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn set_tracked_apps<R: Runtime>(
+    apps: Vec<TrackedApp>,
+    app: AppHandle<R>,
+) -> Result<(), String> {
+    let config_store = app.state::<ConfigStore>();
+    config_store
+        .update(&app, |config| {
+            config.tracked_apps = apps;
         })
         .await
         .map_err(|e| e.to_string())

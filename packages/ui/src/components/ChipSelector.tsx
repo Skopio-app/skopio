@@ -23,7 +23,7 @@ export function ChipSelector<T>({
           {values.map((item) => (
             <span
               key={getLabel(item)}
-              className="flex getLas-center gap-1 px-2 py-1 bg-gray-200 rounded whitespace-nowrap"
+              className="flex items-center gap-1 px-2 py-1 bg-gray-200 rounded whitespace-nowrap"
               onClick={(e) => {
                 e.stopPropagation();
                 onRemove(item);
