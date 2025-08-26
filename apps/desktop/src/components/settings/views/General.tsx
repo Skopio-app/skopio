@@ -310,11 +310,10 @@ const General = () => {
                   Pick which currently open apps Skopio should track
                 </FormDescription>
                 <FormControl>
-                  <ChipSelector<TrackedApp, TrackedApp>
+                  <ChipSelector<TrackedApp>
                     values={watchedTracked}
                     options={openApps}
-                    getValueKey={(a) => a.bundleId}
-                    getOptionKey={(a) => a.bundleId}
+                    getKey={(a) => a.bundleId}
                     renderChip={(a) => (
                       <span className="flex items-center gap-1">
                         <span className="truncate max-w-[10rem]">{a.name}</span>

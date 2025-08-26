@@ -317,7 +317,7 @@ const GoalDialog: React.FC<GoalDialogProps> = ({
               </Button>
               <span>in</span>
               {(useApps || useCategories) && (
-                <ChipSelector
+                <ChipSelector<App | Category>
                   values={
                     useApps
                       ? allApps.filter((app) => selectedApps.includes(app.name))
@@ -326,14 +326,33 @@ const GoalDialog: React.FC<GoalDialogProps> = ({
                         )
                   }
                   options={useApps ? allApps : allCategories}
-                  getLabel={(item) => item.name}
+                  getKey={(item) => item.id}
+                  renderChip={(item) => (
+                    <span className="flex items-center gap-1">
+                      <span className="truncate max-w-[10rem]">
+                        {item.name}
+                      </span>
+                    </span>
+                  )}
+                  renderOption={(item) => (
+                    <div className="flex items-center gap-2">
+                      <span className="truncate">{item.name}</span>
+                    </div>
+                  )}
                   onToggle={(option) => {
                     const field = useApps ? "apps" : "categories";
                     const selected = useApps
                       ? selectedApps
                       : selectedCategories;
                     if (!selected.includes(option.name)) {
-                      setValue(field, [...selected, option.name]);
+                      setValue(
+                        field as "apps" | "categories",
+                        [...selected, option.name],
+                        {
+                          shouldValidate: true,
+                          shouldDirty: true,
+                        },
+                      );
                     }
                   }}
                   onRemove={(item) => {
@@ -342,8 +361,9 @@ const GoalDialog: React.FC<GoalDialogProps> = ({
                       ? selectedApps
                       : selectedCategories;
                     setValue(
-                      field,
+                      field as "apps" | "categories",
                       selected.filter((name) => name !== item.name),
+                      { shouldValidate: true, shouldDirty: true },
                     );
                   }}
                 />
@@ -365,22 +385,26 @@ const GoalDialog: React.FC<GoalDialogProps> = ({
             {timeSpan === "day" && (
               <div>
                 <p className="mb-2 font-medium">except for</p>
-                <ChipSelector
+                <ChipSelector<string>
                   options={dayOptions}
                   values={excludedDays}
-                  getLabel={(item) => item}
+                  getKey={(d) => d}
+                  renderChip={(d) => <span className="capitalize">{d}</span>}
+                  renderOption={(d) => <span className="capitalize">{d}</span>}
                   onToggle={(value) =>
                     setValue(
                       "excludedDays",
                       excludedDays.includes(value)
                         ? excludedDays.filter((day) => day !== value)
                         : [...excludedDays, value],
+                      { shouldValidate: true, shouldDirty: true },
                     )
                   }
                   onRemove={(value) =>
                     setValue(
                       "excludedDays",
                       excludedDays.filter((day) => day !== value),
+                      { shouldValidate: true, shouldDirty: true },
                     )
                   }
                 />

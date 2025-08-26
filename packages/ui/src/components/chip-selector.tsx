@@ -4,31 +4,28 @@ import { cn } from "../utils/cn";
 
 type KeyLike = string | number;
 
-interface ChipSelectorProps<TValue, TOption> {
-  values: TValue[];
-  options: TOption[];
-  /** Unique, stable key for each selected value */
-  getValueKey: (val: TValue) => KeyLike;
-  /** Unique, stable key for each option */
-  getOptionKey: (opt: TOption) => KeyLike;
+interface ChipSelectorProps<T> {
+  values: T[];
+  options: T[];
+  /** Unique, stable key for each item */
+  getKey: (opt: T) => KeyLike;
   /** Render how each selected chip looks */
-  renderChip: (val: TValue) => React.ReactNode;
+  renderChip: (val: T) => React.ReactNode;
   /** Render how each option in the dropdown looks */
-  renderOption: (val: TOption) => React.ReactNode;
+  renderOption: (val: T) => React.ReactNode;
   /** Called when an option is picked */
-  onToggle: (val: TOption) => void;
-  onRemove: (val: TValue) => void;
+  onToggle: (val: T) => void;
+  onRemove: (val: T) => void;
   placeholder?: React.ReactNode;
   className?: string;
   menuClassName?: string;
   itemClassName?: string;
 }
 
-export function ChipSelector<TValue, TOption>({
+export function ChipSelector<T>({
   values,
   options,
-  getValueKey,
-  getOptionKey,
+  getKey,
   renderChip,
   renderOption,
   onToggle,
@@ -39,7 +36,7 @@ export function ChipSelector<TValue, TOption>({
   className,
   menuClassName,
   itemClassName,
-}: ChipSelectorProps<TValue, TOption>) {
+}: ChipSelectorProps<T>) {
   return (
     <DropDownMenu.Root modal={false}>
       <DropDownMenu.Trigger asChild>
@@ -52,7 +49,7 @@ export function ChipSelector<TValue, TOption>({
           {values.length === 0
             ? placeholder
             : values.map((item) => {
-                const k = getValueKey(item);
+                const k = getKey(item);
                 return (
                   <span
                     key={k}
@@ -79,7 +76,7 @@ export function ChipSelector<TValue, TOption>({
         )}
       >
         {options.map((option) => {
-          const k = getOptionKey(option);
+          const k = getKey(option);
           return (
             <DropDownMenu.Item
               key={k}
