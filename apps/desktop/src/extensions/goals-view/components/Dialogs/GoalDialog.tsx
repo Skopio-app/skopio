@@ -33,6 +33,8 @@ const daySchema = z.enum([
   "sunday",
 ]);
 
+export type Day = z.infer<typeof daySchema>;
+
 const goalFormSchema = z
   .object({
     hours: z
@@ -385,7 +387,7 @@ const GoalDialog: React.FC<GoalDialogProps> = ({
             {timeSpan === "day" && (
               <div>
                 <p className="mb-2 font-medium">except for</p>
-                <ChipSelector<string>
+                <ChipSelector<Day>
                   options={dayOptions}
                   values={excludedDays}
                   getKey={(d) => d}

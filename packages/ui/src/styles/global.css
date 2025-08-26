@@ -7,7 +7,7 @@
   --color-input: var(--input);
   --color-ring: var(--ring);
   --color-muted: var(--muted);
-  --color-muted-foregorund: var(--muted-foreground);
+  --color-muted-foreground: var(--muted-foreground);
 
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
