@@ -16,14 +16,20 @@ import {
   Form,
   ChipSelector,
 } from "@skopio/ui";
-import { useEffect, useMemo, useRef, useState } from "react";
-import { useForm } from "react-hook-form";
+import { useEffect, useRef } from "react";
+import { useForm, useWatch } from "react-hook-form";
 import z from "zod/v4";
 import HotkeyField from "../HotkeyField";
 import { AFK, AFK_KEYS, AFK_SECONDS } from "../../../utils/constants";
 import { useAutostart } from "../../../hooks/useAutostart";
 import { useGlobalShortcut } from "../../../hooks/useGlobalShortcut";
-import { commands } from "../../../types/tauri.gen";
+import { commands, TrackedApp } from "../../../types/tauri.gen";
+import { useOpenApps } from "../../../hooks/useOpenApps";
+
+const TrackedAppSchema = z.object({
+  name: z.string(),
+  bundleId: z.string(),
+});
 
 const settingsSchema = z.object({
   launchOnStartup: z.boolean().default(false),
@@ -35,11 +41,10 @@ const settingsSchema = z.object({
       message: "Shortcut must be a key combination (e.g., Ctrl+Shift+S)",
     }),
   afkSensitivity: z.enum(AFK_KEYS).default("1m"),
-  trackedApps: z.array(z.string()).default([]),
+  trackedApps: z.array(TrackedAppSchema).default([]),
 });
 
 type GeneralSettingsValues = z.infer<typeof settingsSchema>;
-type AppInfo = Awaited<ReturnType<typeof commands.getOpenApps>>[number];
 
 const General = () => {
   const {
@@ -56,12 +61,7 @@ const General = () => {
     // error: hotkeyError,
   } = useGlobalShortcut();
 
-  const [openApps, setOpenApps] = useState<AppInfo[]>([]);
-  const byBundleId = useMemo(() => {
-    const m = new Map<string, AppInfo>();
-    for (const a of openApps) m.set(a.bundle_id, a);
-    return m;
-  }, [openApps]);
+  const { apps: openApps } = useOpenApps();
 
   const form = useForm<GeneralSettingsValues>({
     resolver: zodResolver(settingsSchema),
@@ -69,6 +69,7 @@ const General = () => {
       launchOnStartup: false,
       globalShortcut: shortcut,
       afkSensitivity: "1m",
+      trackedApps: [],
     },
     mode: "onChange",
     reValidateMode: "onChange",
@@ -91,11 +92,7 @@ const General = () => {
 
     (async () => {
       try {
-        const [tracked, open] = await Promise.all([
-          (await commands.getConfig()).trackedApps,
-          commands.getOpenApps().catch(() => [] as AppInfo[]),
-        ]);
-
+        const tracked = (await commands.getConfig()).trackedApps ?? [];
         const initialAfk = form.getValues("afkSensitivity") || "1m";
 
         form.reset(
@@ -103,17 +100,15 @@ const General = () => {
             launchOnStartup: autoEnabled,
             globalShortcut: shortcut || "",
             afkSensitivity: initialAfk,
-            trackedApps: tracked ?? [],
+            trackedApps: tracked,
           },
           { keepDirty: false, keepTouched: true },
         );
 
-        setOpenApps(open ?? []);
-
         lastShortcut.current = shortcut || "";
         lastSavedJSON.current = JSON.stringify(form.getValues());
         lastAfk.current = initialAfk;
-        lastTrackedJSON.current = JSON.stringify(tracked ?? []);
+        lastTrackedJSON.current = JSON.stringify([...tracked].sort());
         hydratedRef.current = true;
       } catch (e) {
         console.error("Hydration failed: ", e);
@@ -178,7 +173,7 @@ const General = () => {
 
       if (info.name === "trackedApps") {
         const nextList = v.trackedApps ?? [];
-        const nextSnap = JSON.stringify(nextList.slice().sort());
+        const nextSnap = JSON.stringify([...nextList].sort());
         if (nextSnap !== lastTrackedJSON.current) {
           if (trackedTimer.current) window.clearTimeout(trackedTimer.current);
           trackedTimer.current = window.setTimeout(async () => {
@@ -207,15 +202,11 @@ const General = () => {
     };
   }, [form, saveShorcut]);
 
-  const selectedAppInfos = useMemo(() => {
-    const ids = form.getValues("trackedApps") ?? [];
-    return ids.map((id) => byBundleId.get(id)).filter(Boolean) as AppInfo[];
-  }, [byBundleId, form]);
-
-  const labelFor = (a: { app_name?: string; bundle_id: string }) =>
-    a.app_name?.trim() || a.bundle_id;
-
-  const allOptions = openApps;
+  const watchedTracked =
+    useWatch<GeneralSettingsValues>({
+      control: form.control,
+      name: "trackedApps",
+    }) ?? [];
 
   return (
     <div className="mx-auto w-full max-w-2xl p-2">
@@ -319,30 +310,39 @@ const General = () => {
                   Pick which currently open apps Skopio should track
                 </FormDescription>
                 <FormControl>
-                  <ChipSelector<AppInfo>
-                    values={
-                      // use selected infos if we have them; otherwise render chips by IDs with fallbacks
-                      selectedAppInfos.length
-                        ? selectedAppInfos
-                        : (field.value ?? []).map((id) => ({
-                            app_name: id,
-                            bundle_id: id,
-                            path: "",
-                            pid: 0,
-                          }))
-                    }
-                    options={allOptions}
-                    getLabel={(a) => labelFor(a)}
+                  <ChipSelector<TrackedApp, TrackedApp>
+                    values={watchedTracked}
+                    options={openApps}
+                    getValueKey={(a) => a.bundleId}
+                    getOptionKey={(a) => a.bundleId}
+                    renderChip={(a) => (
+                      <span className="flex items-center gap-1">
+                        <span className="truncate max-w-[10rem]">{a.name}</span>
+                      </span>
+                    )}
+                    renderOption={(a) => (
+                      <div className="flex items-center gap-2">
+                        <span className="truncate">{a.name}</span>
+                      </div>
+                    )}
                     onToggle={(app) => {
-                      const id = app.bundle_id;
-                      const curr = new Set(field.value ?? []);
-                      if (curr.has(id)) curr.delete(id);
-                      else curr.add(id);
-                      field.onChange(Array.from(curr));
+                      const curr = new Map(
+                        (field.value ?? []).map((t) => [t.bundleId, t]),
+                      );
+                      if (curr.has(app.bundleId)) {
+                        curr.delete(app.bundleId);
+                      } else {
+                        curr.set(app.bundleId, {
+                          name: app.name,
+                          bundleId: app.bundleId,
+                        });
+                      }
+                      field.onChange(Array.from(curr.values()));
                     }}
                     onRemove={(app) => {
-                      const id = app.bundle_id;
-                      const next = (field.value ?? []).filter((x) => x !== id);
+                      const next = (field.value ?? []).filter(
+                        (t) => t.bundleId !== app.bundleId,
+                      );
                       field.onChange(next);
                     }}
                   />

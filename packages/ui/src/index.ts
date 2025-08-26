@@ -11,7 +11,7 @@ export * from "./components/dialog";
 export * from "./components/calendar";
 export * from "./components/switch";
 export * from "./components/label";
-export * from "./components/ChipSelector";
+export * from "./components/chip-selector";
 export * from "./components/card";
 export * from "./components/hotkey";
 export * from "./components/pagination";

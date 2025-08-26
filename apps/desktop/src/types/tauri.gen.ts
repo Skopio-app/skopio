@@ -15,7 +15,7 @@ export const commands = {
   async setAfkTimeout(timeout: number): Promise<null> {
     return await TAURI_INVOKE("set_afk_timeout", { timeout });
   },
-  async setTrackedApps(apps: string[]): Promise<null> {
+  async setTrackedApps(apps: TrackedApp[]): Promise<null> {
     return await TAURI_INVOKE("set_tracked_apps", { apps });
   },
   async setGlobalShortcut(shortcut: string): Promise<null> {
@@ -76,7 +76,7 @@ export const commands = {
   async openDevtools(): Promise<void> {
     await TAURI_INVOKE("open_devtools");
   },
-  async getOpenApps(): Promise<AppInfo[]> {
+  async getOpenApps(): Promise<TrackedApp[]> {
     return await TAURI_INVOKE("get_open_apps");
   },
 };
@@ -95,16 +95,7 @@ export type AppConfig = {
   flushInterval: number;
   syncInterval: number;
   globalShortcut: string;
-  trackedApps: string[];
-};
-export type AppInfo = {
-  app_name: string;
-  bundle_id: string;
-  /**
-   * Executable path
-   */
-  path: string;
-  pid: number;
+  trackedApps: TrackedApp[];
 };
 /**
  * Query input for bucketed summaries (based on a preset time range)
@@ -392,6 +383,7 @@ export type TimeRangePreset =
       };
     };
 export type TimeSpan = "day" | "week" | "month" | "year";
+export type TrackedApp = { name: string; bundleId: string };
 export type WindowKind = "main" | "settings" | "notification";
 
 /** tauri-specta globals **/

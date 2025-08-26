@@ -6,12 +6,15 @@ use log::{debug, info, warn};
 use objc2::msg_send;
 use objc2::rc::{autoreleasepool, Retained};
 use objc2::runtime::{AnyClass, AnyObject};
-use serde::{Deserialize, Serialize};
+use objc2_app_kit::{NSApplicationActivationPolicy, NSRunningApplication, NSWorkspace};
+use objc2_foundation::{NSArray, NSString};
 use std::os::raw::c_void;
 use std::ptr;
 use std::sync::Arc;
 use tokio::sync::{watch, Notify};
 use tokio::time::{interval, Duration};
+
+use crate::helpers::config::TrackedApp;
 
 #[link(name = "ApplicationServices", kind = "framework")]
 extern "C" {
@@ -32,15 +35,6 @@ pub struct Window {
     pub bundle_id: Arc<str>,
     /// Refers to the executable path of the app binary
     pub path: Arc<str>,
-}
-
-#[derive(Debug, Serialize, Deserialize, PartialEq, Clone, specta::Type)]
-pub struct AppInfo {
-    pub app_name: String,
-    pub bundle_id: String,
-    /// Executable path
-    pub path: String,
-    pub pid: i32,
 }
 
 #[derive(Clone)]
@@ -240,61 +234,30 @@ impl WindowTracker {
         })
     }
 
-    pub fn list_open_apps() -> Vec<AppInfo> {
+    pub fn list_open_apps() -> Vec<TrackedApp> {
         autoreleasepool(|_| unsafe {
-            let mut out = Vec::new();
+            let ws: Retained<NSWorkspace> = NSWorkspace::sharedWorkspace();
 
-            let class_name = c"NSWorkspace";
-            let workspace_class = match AnyClass::get(class_name) {
-                Some(cls) => cls,
-                None => {
-                    warn!("NSWorkspace class not found");
-                    return out;
-                }
-            };
-            let workspace: Retained<AnyObject> = msg_send![workspace_class, sharedWorkspace];
-            let running: *mut AnyObject = msg_send![&*workspace, runningApplications];
-            if running.is_null() {
-                warn!("runningApplications returned null");
-                return out;
-            }
+            let running: Retained<NSArray<NSRunningApplication>> = ws.runningApplications();
+            let len = running.len();
 
-            #[allow(non_snake_case)]
-            let count: usize = {
-                let c: usize = msg_send![running, count];
-                c
-            };
+            let mut out = Vec::with_capacity(len);
 
-            for i in 0..count {
-                let app: *mut AnyObject = msg_send![running, objectAtIndex: i as u64];
-                if app.is_null() {
-                    continue;
-                }
-                let app = &*app;
-                let app_name = nsstring_to_string(msg_send![app, localizedName]);
-                let bundle_id = nsstring_to_string(msg_send![app, bundleIdentifier]);
-
-                let path = {
-                    let url: *mut AnyObject = msg_send![app, executableURL];
-                    if url.is_null() {
-                        String::from("unknown")
-                    } else {
-                        nsstring_to_string(msg_send![url, path])
-                    }
-                };
-
-                let pid: i32 = msg_send![app, processIdentifier];
-                let policy: i64 = msg_send![app, activationPolicy]; // 0=Regular, 1=Accessory, 2=Prohibited
-                if policy == 1 || policy == 2 {
+            for i in 0..len {
+                let app: Retained<NSRunningApplication> = running.objectAtIndex(i);
+                let policy = app.activationPolicy();
+                if policy == NSApplicationActivationPolicy::Accessory
+                    || policy == NSApplicationActivationPolicy::Prohibited
+                {
                     continue;
                 }
 
-                out.push(AppInfo {
-                    app_name,
-                    bundle_id,
-                    path,
-                    pid,
-                });
+                let name =
+                    nsstring_to_string(app.localizedName()).unwrap_or_else(|| "unknown".into());
+                let bundle_id =
+                    nsstring_to_string(app.bundleIdentifier()).unwrap_or_else(|| "unknown".into());
+
+                out.push(TrackedApp { name, bundle_id });
             }
             out
         })
@@ -309,22 +272,12 @@ impl WindowTracker {
     }
 }
 
-unsafe fn nsstring_to_string(nsstring: *const AnyObject) -> String {
-    if nsstring.is_null() {
-        return String::from("unknown");
-    }
-    let c_str: *const i8 = msg_send![nsstring, UTF8String];
-    if c_str.is_null() {
-        String::from("unknown")
-    } else {
-        std::ffi::CStr::from_ptr(c_str)
-            .to_string_lossy()
-            .into_owned()
-    }
+unsafe fn nsstring_to_string(ns: Option<Retained<NSString>>) -> Option<String> {
+    ns.map(|s| s.to_string())
 }
 
 #[tauri::command]
 #[specta::specta]
-pub fn get_open_apps() -> Vec<AppInfo> {
+pub fn get_open_apps() -> Vec<TrackedApp> {
     WindowTracker::list_open_apps()
 }
