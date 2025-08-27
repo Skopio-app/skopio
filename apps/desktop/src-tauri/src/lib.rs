@@ -252,7 +252,7 @@ fn make_specta_builder<R: Runtime>() -> tauri_specta::Builder<R> {
             crate::ui::window::dismiss_notification_window::<tauri::Wry>,
             crate::ui::window::show_window::<tauri::Wry>,
             crate::ui::window::open_devtools::<tauri::Wry>,
-            crate::trackers::window_tracker::get_open_apps,
+            crate::monitored_app::get_open_apps,
         ])
         .error_handling(tauri_specta::ErrorHandlingMode::Throw)
         .typ::<NotificationPayload>();

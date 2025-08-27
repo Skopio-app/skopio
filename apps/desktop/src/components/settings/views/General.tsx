@@ -23,7 +23,7 @@ import HotkeyField from "../HotkeyField";
 import { AFK, AFK_KEYS, AFK_SECONDS } from "../../../utils/constants";
 import { useAutostart } from "../../../hooks/useAutostart";
 import { useGlobalShortcut } from "../../../hooks/useGlobalShortcut";
-import { commands, TrackedApp } from "../../../types/tauri.gen";
+import { commands, OpenApp, TrackedApp } from "../../../types/tauri.gen";
 import { useOpenApps } from "../../../hooks/useOpenApps";
 
 const TrackedAppSchema = z.object({
@@ -63,7 +63,7 @@ const General = () => {
 
   const { apps: openApps } = useOpenApps();
 
-  const form = useForm<GeneralSettingsValues>({
+  const form = useForm({
     resolver: zodResolver(settingsSchema),
     defaultValues: {
       launchOnStartup: false,
@@ -82,7 +82,7 @@ const General = () => {
   const trackedTimer = useRef<number | null>(null);
 
   const lastAfk = useRef<string>("");
-  const lastSavedJSON = useRef<string>(JSON.stringify(form.getValues()));
+  const lastSaved = useRef<boolean>(false);
   const lastShortcut = useRef<string>("");
   const lastTrackedJSON = useRef<string>("[]");
 
@@ -106,7 +106,7 @@ const General = () => {
         );
 
         lastShortcut.current = shortcut || "";
-        lastSavedJSON.current = JSON.stringify(form.getValues());
+        lastSaved.current = autoEnabled;
         lastAfk.current = initialAfk;
         lastTrackedJSON.current = JSON.stringify([...tracked].sort());
         hydratedRef.current = true;
@@ -122,11 +122,13 @@ const General = () => {
 
       if (saveTimer.current) window.clearTimeout(saveTimer.current);
       saveTimer.current = window.setTimeout(async () => {
-        const ok = await form.trigger(undefined, { shouldFocus: false });
+        const ok = await form.trigger("launchOnStartup", {
+          shouldFocus: false,
+        });
         if (!ok) return;
-        const snap = JSON.stringify(v);
-        if (snap === lastSavedJSON.current) return;
-        lastSavedJSON.current = snap;
+        const snap = v.launchOnStartup;
+        if (snap === lastSaved.current) return;
+        lastSaved.current = snap;
 
         form.reset(v, {
           keepValues: true,
@@ -136,7 +138,7 @@ const General = () => {
       }, 300) as number;
 
       if (info.name === "globalShortcut") {
-        const next = v.globalShortcut || "";
+        const next = v.globalShortcut;
         if (next !== lastShortcut.current) {
           if (shortcutTimer.current) window.clearTimeout(shortcutTimer.current);
           shortcutTimer.current = window.setTimeout(async () => {
@@ -172,7 +174,7 @@ const General = () => {
       }
 
       if (info.name === "trackedApps") {
-        const nextList = v.trackedApps ?? [];
+        const nextList = v.trackedApps;
         const nextSnap = JSON.stringify([...nextList].sort());
         if (nextSnap !== lastTrackedJSON.current) {
           if (trackedTimer.current) window.clearTimeout(trackedTimer.current);
@@ -202,11 +204,10 @@ const General = () => {
     };
   }, [form, saveShorcut]);
 
-  const watchedTracked =
-    useWatch<GeneralSettingsValues>({
-      control: form.control,
-      name: "trackedApps",
-    }) ?? [];
+  const watchedTracked = useWatch<GeneralSettingsValues>({
+    control: form.control,
+    name: "trackedApps",
+  });
 
   return (
     <div className="mx-auto w-full max-w-2xl p-2">
@@ -310,31 +311,33 @@ const General = () => {
                   Pick which currently open apps Skopio should track
                 </FormDescription>
                 <FormControl>
-                  <ChipSelector<TrackedApp>
+                  <ChipSelector<TrackedApp, OpenApp>
                     values={watchedTracked}
                     options={openApps}
-                    getKey={(a) => a.bundleId}
+                    getValueKey={(a) => a.bundleId}
+                    getOptionKey={(o) => o.app.bundleId}
+                    disabled={(o) => Boolean(o.blockReason)}
+                    reason={(o) => o.blockReason}
                     renderChip={(a) => (
                       <span className="flex items-center gap-1">
                         <span className="truncate max-w-[10rem]">{a.name}</span>
                       </span>
                     )}
-                    renderOption={(a) => (
+                    renderOption={(o) => (
                       <div className="flex items-center gap-2">
-                        <span className="truncate">{a.name}</span>
+                        <span className="truncate">{o.app.name}</span>
                       </div>
                     )}
-                    onToggle={(app) => {
+                    onToggle={(open) => {
+                      if (open.blockReason) return;
                       const curr = new Map(
                         (field.value ?? []).map((t) => [t.bundleId, t]),
                       );
-                      if (curr.has(app.bundleId)) {
-                        curr.delete(app.bundleId);
+                      const id = open.app.bundleId;
+                      if (curr.has(id)) {
+                        curr.delete(id);
                       } else {
-                        curr.set(app.bundleId, {
-                          name: app.name,
-                          bundleId: app.bundleId,
-                        });
+                        curr.set(id, { name: open.app.name, bundleId: id });
                       }
                       field.onChange(Array.from(curr.values()));
                     }}

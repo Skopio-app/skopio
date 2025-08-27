@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
-import { TrackedApp, commands } from "../types/tauri.gen";
+import { OpenApp, commands } from "../types/tauri.gen";
 
 export const useOpenApps = () => {
-  const [apps, setApps] = useState<TrackedApp[]>([]);
+  const [apps, setApps] = useState<OpenApp[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<unknown>(null);
 
@@ -11,8 +11,8 @@ export const useOpenApps = () => {
     (async () => {
       try {
         setLoading(true);
-        const res = await commands.getOpenApps();
-        if (!cancelled) setApps(res ?? []);
+        const apps = await commands.getOpenApps();
+        if (!cancelled) setApps(apps ?? []);
       } catch (e) {
         setError(e);
       } finally {

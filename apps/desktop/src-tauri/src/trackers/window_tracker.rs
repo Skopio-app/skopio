@@ -275,9 +275,3 @@ impl WindowTracker {
 unsafe fn nsstring_to_string(ns: Option<Retained<NSString>>) -> Option<String> {
     ns.map(|s| s.to_string())
 }
-
-#[tauri::command]
-#[specta::specta]
-pub fn get_open_apps() -> Vec<TrackedApp> {
-    WindowTracker::list_open_apps()
-}

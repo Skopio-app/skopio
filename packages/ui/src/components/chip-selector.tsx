@@ -4,40 +4,49 @@ import { cn } from "../utils/cn";
 
 type KeyLike = string | number;
 
-interface ChipSelectorProps<T> {
-  values: T[];
-  options: T[];
-  /** Unique, stable key for each item */
-  getKey: (opt: T) => KeyLike;
+interface ChipSelectorProps<V, O = V> {
+  values: V[];
+  options: O[];
+  /** Unique, stable key for each value */
+  getValueKey: (opt: V) => KeyLike;
+  /** Unique, stable key for each option */
+  getOptionKey: (opt: O) => KeyLike;
   /** Render how each selected chip looks */
-  renderChip: (val: T) => React.ReactNode;
+  renderChip: (val: V) => React.ReactNode;
   /** Render how each option in the dropdown looks */
-  renderOption: (val: T) => React.ReactNode;
+  renderOption: (val: O) => React.ReactNode;
   /** Called when an option is picked */
-  onToggle: (val: T) => void;
-  onRemove: (val: T) => void;
+  onToggle: (val: O) => void;
+  onRemove: (val: V) => void;
+
+  disabled?: (opt: O) => boolean;
+  reason?: (opt: O) => React.ReactNode;
+
   placeholder?: React.ReactNode;
   className?: string;
   menuClassName?: string;
   itemClassName?: string;
 }
 
-export function ChipSelector<T>({
+export function ChipSelector<V, O = V>({
   values,
   options,
-  getKey,
+  getValueKey,
+  getOptionKey,
   renderChip,
   renderOption,
   onToggle,
   onRemove,
+  disabled,
+  reason,
   placeholder = (
     <span className="text-sm text-muted-foregorund">Select...</span>
   ),
   className,
   menuClassName,
   itemClassName,
-}: ChipSelectorProps<T>) {
-  const selectedKeys = new Set<KeyLike>(values.map(getKey));
+}: ChipSelectorProps<V, O>) {
+  const selectedKeys = new Set<KeyLike>(values.map(getValueKey));
   return (
     <DropDownMenu.Root modal={false}>
       <DropDownMenu.Trigger asChild>
@@ -50,7 +59,7 @@ export function ChipSelector<T>({
           {values.length === 0
             ? placeholder
             : values.map((item) => {
-                const k = getKey(item);
+                const k = getValueKey(item);
                 return (
                   <span
                     key={k}
@@ -77,25 +86,42 @@ export function ChipSelector<T>({
         )}
       >
         {options.map((option) => {
-          const k = getKey(option);
+          const k = getOptionKey(option);
           const checked = selectedKeys.has(k);
+          const isDisabled = disabled?.(option) ?? false;
+          const disabledReason = isDisabled ? reason?.(option) : null;
+
           return (
             <DropDownMenu.CheckboxItem
               key={k}
               checked={checked}
-              onCheckedChange={() => onToggle(option)}
+              onCheckedChange={() => {
+                if (!isDisabled) onToggle(option);
+              }}
               className={cn(
-                "relative flex cursor-pointer select-non items-center gap-2 rounded px-2 py-2 outline-none hover:bg-accent focus:bg-accent",
+                "relative flex cursor-pointer select-non items-center gap-2 rounded px-2 py-2 outline-none",
+                isDisabled
+                  ? "cursor-not-allowed opacity-80 text-muted-foreground"
+                  : "cursor-pointer hover:bg-accent focus:bg-accent",
                 itemClassName,
               )}
             >
-              <span className="flex min-w-0 items-center gap-2">
-                {renderOption(option)}
+              <span className="flex flex-col min-w-0 items-start gap-1">
+                <span className="flex min-w-0 items-center gap-2">
+                  {renderOption(option)}
+                </span>
+                {reason ? (
+                  <span className="text-xs leading-snug text-muted-foreground">
+                    {disabledReason}
+                  </span>
+                ) : null}
               </span>
 
-              <DropDownMenu.ItemIndicator className="ml-auto">
-                <Check className="h-4 w-4" aria-hidden />
-              </DropDownMenu.ItemIndicator>
+              {!isDisabled && (
+                <DropDownMenu.ItemIndicator className="ml-auto">
+                  <Check className="h-4 w-4" aria-hidden />
+                </DropDownMenu.ItemIndicator>
+              )}
             </DropDownMenu.CheckboxItem>
           );
         })}

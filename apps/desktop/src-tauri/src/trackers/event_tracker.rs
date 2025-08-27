@@ -63,7 +63,7 @@ impl EventTracker {
             .parse::<MonitoredApp>()
             .unwrap_or(MonitoredApp::Unknown);
 
-        if IGNORED_APPS.contains(&bundle_id) {
+        if IGNORED_APPS.contains_key(&bundle_id) {
             return;
         }
 

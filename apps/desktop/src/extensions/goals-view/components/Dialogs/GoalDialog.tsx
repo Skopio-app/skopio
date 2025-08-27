@@ -328,7 +328,8 @@ const GoalDialog: React.FC<GoalDialogProps> = ({
                         )
                   }
                   options={useApps ? allApps : allCategories}
-                  getKey={(item) => item.id}
+                  getValueKey={(item) => item.id}
+                  getOptionKey={(item) => item.id}
                   renderChip={(item) => (
                     <span className="flex items-center gap-1">
                       <span className="truncate max-w-[10rem]">
@@ -387,10 +388,11 @@ const GoalDialog: React.FC<GoalDialogProps> = ({
             {timeSpan === "day" && (
               <div>
                 <p className="mb-2 font-medium">except for</p>
-                <ChipSelector<Day>
+                <ChipSelector<Day, Day>
                   options={dayOptions}
                   values={excludedDays}
-                  getKey={(d) => d}
+                  getValueKey={(d) => d}
+                  getOptionKey={(d) => d}
                   renderChip={(d) => <span className="capitalize">{d}</span>}
                   renderOption={(d) => <span className="capitalize">{d}</span>}
                   onToggle={(value) =>

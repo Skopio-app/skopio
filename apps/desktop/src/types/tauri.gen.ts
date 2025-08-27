@@ -76,7 +76,7 @@ export const commands = {
   async openDevtools(): Promise<void> {
     await TAURI_INVOKE("open_devtools");
   },
-  async getOpenApps(): Promise<TrackedApp[]> {
+  async getOpenApps(): Promise<OpenApp[]> {
     return await TAURI_INVOKE("get_open_apps");
   },
 };
@@ -262,6 +262,7 @@ export type NotificationPayload = {
   message: string | null;
   soundFile: string | null;
 };
+export type OpenApp = { app: TrackedApp; blockReason: string | null };
 export type PaginatedProjects = {
   data: Project[];
   totalPages: number | null;
