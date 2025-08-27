@@ -6,8 +6,8 @@ use std::sync::Arc;
 use sync_service::BufferedTrackingService;
 use tauri::{AppHandle, Manager, Runtime};
 use trackers::{
-    afk_tracker::AFKTracker, event_tracker::EventTracker, heartbeat_tracker::HeartbeatTracker,
-    keyboard_tracker::KeyboardTracker, mouse_tracker::MouseTracker, window_tracker::WindowTracker,
+    afk_tracker::AFKTracker, event_tracker::EventTracker, keyboard_tracker::KeyboardTracker,
+    mouse_tracker::MouseTracker, window_tracker::WindowTracker,
 };
 use tracking_service::{DBService, TrackingService};
 
@@ -177,15 +177,17 @@ async fn setup_trackers(app_handle: &AppHandle) -> Result<(), anyhow::Error> {
     ));
     app_handle.manage(Arc::clone(&afk_tracker));
 
-    let hb_interval_rx = config_store.subscribe_heartbeat_interval();
-    let heartbeat_tracker = Arc::new(HeartbeatTracker::new(
-        hb_interval_rx,
-        Arc::clone(&service_trait),
-    ));
+    // let hb_interval_rx = config_store.subscribe_heartbeat_interval();
+    // let heartbeat_tracker = Arc::new(HeartbeatTracker::new(
+    //     hb_interval_rx,
+    //     Arc::clone(&service_trait),
+    // ));
+    let tracked_apps_rx = config_store.subscribe_tracked_apps();
     let event_tracker = Arc::new(EventTracker::new(
         Arc::clone(&cursor_tracker),
         Arc::clone(&keyboard_tracker),
         Arc::clone(&service_trait),
+        tracked_apps_rx,
     ));
     app_handle.manage(Arc::clone(&event_tracker));
 
@@ -193,7 +195,7 @@ async fn setup_trackers(app_handle: &AppHandle) -> Result<(), anyhow::Error> {
     window_tracker_ref.start_tracking();
 
     let event_window_rx = window_tracker.subscribe();
-    let heartbeat_window_rx = window_tracker.subscribe();
+    // let heartbeat_window_rx = window_tracker.subscribe();
 
     cursor_tracker.start_tracking();
 
@@ -214,15 +216,15 @@ async fn setup_trackers(app_handle: &AppHandle) -> Result<(), anyhow::Error> {
         }
     });
 
-    tokio::spawn({
-        let cursor_tracker = Arc::clone(&cursor_tracker);
-        let cursor_rx = cursor_tracker.subscribe();
-        async move {
-            heartbeat_tracker
-                .start_tracking(cursor_rx, heartbeat_window_rx)
-                .await;
-        }
-    });
+    // tokio::spawn({
+    //     let cursor_tracker = Arc::clone(&cursor_tracker);
+    //     let cursor_rx = cursor_tracker.subscribe();
+    //     async move {
+    //         heartbeat_tracker
+    //             .start_tracking(cursor_rx, heartbeat_window_rx)
+    //             .await;
+    //     }
+    // });
 
     Ok(())
 }

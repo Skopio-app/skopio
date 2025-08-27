@@ -61,10 +61,11 @@ fn get_config_name() -> String {
 #[derive(Clone)]
 pub struct ConfigStore {
     inner: Arc<RwLock<AppConfig>>,
-    pub heartbeat_interval: watch::Sender<u64>,
+    // pub heartbeat_interval: watch::Sender<u64>,
     pub afk_timeout: watch::Sender<u64>,
     pub flush_interval: watch::Sender<u64>,
     pub sync_interval: watch::Sender<u64>,
+    pub tracked_apps: watch::Sender<Vec<TrackedApp>>,
 }
 
 impl ConfigStore {
@@ -79,17 +80,19 @@ impl ConfigStore {
             default
         };
 
-        let (hb_tx, _) = watch::channel(config.heartbeat_interval);
+        // let (hb_tx, _) = watch::channel(config.heartbeat_interval);
         let (afk_tx, _) = watch::channel(config.afk_timeout);
         let (flush_tx, _) = watch::channel(config.flush_interval);
         let (sync_tx, _) = watch::channel(config.sync_interval);
+        let (tracked_tx, _) = watch::channel(config.tracked_apps.clone());
 
         Ok(Self {
             inner: Arc::new(RwLock::new(config)),
-            heartbeat_interval: hb_tx,
+            // heartbeat_interval: hb_tx,
             afk_timeout: afk_tx,
             flush_interval: flush_tx,
             sync_interval: sync_tx,
+            tracked_apps: tracked_tx,
         })
     }
 
@@ -113,17 +116,18 @@ impl ConfigStore {
         updater(&mut guard);
         guard.save(handle)?;
 
-        let _ = self.heartbeat_interval.send(guard.heartbeat_interval);
+        // let _ = self.heartbeat_interval.send(guard.heartbeat_interval);
         let _ = self.afk_timeout.send(guard.afk_timeout);
         let _ = self.flush_interval.send(guard.flush_interval);
         let _ = self.sync_interval.send(guard.sync_interval);
+        let _ = self.tracked_apps.send(guard.tracked_apps.clone());
 
         Ok(())
     }
 
-    pub fn subscribe_heartbeat_interval(&self) -> watch::Receiver<u64> {
-        self.heartbeat_interval.subscribe()
-    }
+    // pub fn subscribe_heartbeat_interval(&self) -> watch::Receiver<u64> {
+    //     self.heartbeat_interval.subscribe()
+    // }
 
     pub fn subscribe_afk_timeout(&self) -> watch::Receiver<u64> {
         self.afk_timeout.subscribe()
@@ -135,6 +139,10 @@ impl ConfigStore {
 
     pub fn subscribe_sync_interval(&self) -> watch::Receiver<u64> {
         self.sync_interval.subscribe()
+    }
+
+    pub fn subscribe_tracked_apps(&self) -> watch::Receiver<Vec<TrackedApp>> {
+        self.tracked_apps.subscribe()
     }
 }
 
