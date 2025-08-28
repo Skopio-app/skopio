@@ -5,7 +5,7 @@ use crate::tracking_service::TrackingService;
 use chrono::{DateTime, Utc};
 use common::git::find_git_branch;
 use db::desktop::events::Event as DBEvent;
-use log::{debug, error, info};
+use log::{error, info};
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::sync::Arc;
@@ -82,7 +82,6 @@ impl EventTracker {
 
         {
             let allowed = self.allowed_ids.read().await;
-            debug!("The allowed apps: {:?}", allowed);
             if !allowed.contains(app_bundle_id) {
                 return;
             }
@@ -180,9 +179,7 @@ impl EventTracker {
 
                 tokio::select! {
                     changed = tracked_rx.changed() => {
-                        if changed.is_err() {
-                            // sender dropped; keep old set
-                        } else {
+                        if changed.is_ok() {
                             let latest = tracked_rx.borrow().clone();
                             let mut w = allowed_ids.write().await;
                             w.clear();

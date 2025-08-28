@@ -111,7 +111,7 @@ export function ChipSelector<V, O = V>({
                   {renderOption(option)}
                 </span>
                 {reason ? (
-                  <span className="text-xs leading-snug text-muted-foreground">
+                  <span className="text-xs leading-snug text-red-500">
                     {disabledReason}
                   </span>
                 ) : null}
