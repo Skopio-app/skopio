@@ -34,8 +34,6 @@ export const PermissionCard: React.FC<PermissionCardProps> = ({
   onGrant,
   loading = false,
   error = null,
-  actionsRight,
-  grantLabel,
   className,
 }) => {
   const showGrant = status !== "granted";
@@ -43,8 +41,7 @@ export const PermissionCard: React.FC<PermissionCardProps> = ({
   return (
     <div
       className={cn(
-        "flex w-full items-center gap-4 rounded-xl border bg-card p-4 shadow-sm",
-        "border-border/60 dark:border-border/40",
+        "flex w-full items-center gap-4 rounded-xl border border-neutral-400/60 bg-muted/70 p-4 shadow-sm transition-shadow",
         className,
       )}
     >
@@ -55,7 +52,7 @@ export const PermissionCard: React.FC<PermissionCardProps> = ({
       <div className="flex flex-1 items-center justify-between gap-4">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
-            <h3 className="text-base font-semibold leading-tight">{title}</h3>
+            <h3 className="text-sm font-semibold leading-tight">{title}</h3>
             <span
               className={cn(
                 "rounded-full px-2 py-0.5 text-xs",
@@ -71,7 +68,7 @@ export const PermissionCard: React.FC<PermissionCardProps> = ({
           </div>
 
           {description ? (
-            <p className="mt-1 text-sm text-muted-foreground">{description}</p>
+            <p className="mt-1 text-xs text-muted-foreground">{description}</p>
           ) : null}
 
           {error ? (
@@ -81,11 +78,11 @@ export const PermissionCard: React.FC<PermissionCardProps> = ({
           ) : null}
         </div>
 
-        <div className="flex flex-col items-center justify-center gap-2">
-          {actionsRight}
+        <div className="items-center justify-center gap-2">
+          {/* {actionsRight} */}
           {showGrant ? (
             <Button variant="outline" onClick={onGrant} disabled={loading}>
-              {loading ? "Working..." : grantLabel}
+              Grant Access
             </Button>
           ) : null}
         </div>

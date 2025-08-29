@@ -1,7 +1,7 @@
-use crate::helpers::config::TrackedApp;
 use crate::monitored_app::{resolve_app_details, Category, Entity, MonitoredApp, IGNORED_APPS};
 use crate::trackers::SOURCE;
 use crate::tracking_service::TrackingService;
+use crate::utils::config::TrackedApp;
 use chrono::{DateTime, Utc};
 use common::git::find_git_branch;
 use db::desktop::events::Event as DBEvent;

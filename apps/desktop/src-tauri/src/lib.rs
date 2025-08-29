@@ -1,6 +1,5 @@
 use chrono::Local;
 use db::DBContext;
-use helpers::{config::ConfigStore, db::get_db_path};
 use log::error;
 use std::sync::Arc;
 use sync_service::BufferedTrackingService;
@@ -10,6 +9,7 @@ use trackers::{
     mouse_tracker::MouseTracker, window_tracker::WindowTracker,
 };
 use tracking_service::{DBService, TrackingService};
+use utils::{config::ConfigStore, db::get_db_path};
 
 use crate::{
     goals_service::GoalService,
@@ -20,13 +20,13 @@ use crate::{
 };
 
 mod goals_service;
-mod helpers;
 mod monitored_app;
 mod network;
 mod sync_service;
 mod trackers;
 mod tracking_service;
 mod ui;
+mod utils;
 
 #[tokio::main]
 pub async fn run() {
@@ -232,11 +232,15 @@ async fn setup_trackers(app_handle: &AppHandle) -> Result<(), anyhow::Error> {
 fn make_specta_builder<R: Runtime>() -> tauri_specta::Builder<R> {
     let builder = tauri_specta::Builder::<R>::new()
         .commands(tauri_specta::collect_commands![
-            crate::helpers::config::get_config::<tauri::Wry>,
-            crate::helpers::config::set_theme::<tauri::Wry>,
-            crate::helpers::config::set_afk_timeout::<tauri::Wry>,
-            crate::helpers::config::set_tracked_apps::<tauri::Wry>,
-            crate::helpers::config::set_global_shortcut::<tauri::Wry>,
+            crate::utils::config::get_config::<tauri::Wry>,
+            crate::utils::config::set_theme::<tauri::Wry>,
+            crate::utils::config::set_afk_timeout::<tauri::Wry>,
+            crate::utils::config::set_tracked_apps::<tauri::Wry>,
+            crate::utils::config::set_global_shortcut::<tauri::Wry>,
+            crate::utils::permissions::get_permissions,
+            crate::utils::permissions::request_accessibility_permission,
+            crate::utils::permissions::request_input_monitoring_permission,
+            crate::utils::permissions::open_permission_settings,
             crate::network::summaries::fetch_bucketed_summary,
             crate::network::summaries::fetch_total_time,
             crate::network::summaries::fetch_range_summary,

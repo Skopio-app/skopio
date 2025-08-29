@@ -21,6 +21,18 @@ export const commands = {
   async setGlobalShortcut(shortcut: string): Promise<null> {
     return await TAURI_INVOKE("set_global_shortcut", { shortcut });
   },
+  async getPermissions(): Promise<PermissionSummary> {
+    return await TAURI_INVOKE("get_permissions");
+  },
+  async requestAccessibilityPermission(): Promise<PermissionStatus> {
+    return await TAURI_INVOKE("request_accessibility_permission");
+  },
+  async requestInputMonitoringPermission(): Promise<PermissionStatus> {
+    return await TAURI_INVOKE("request_input_monitoring_permission");
+  },
+  async openPermissionSettings(kind: string): Promise<null> {
+    return await TAURI_INVOKE("open_permission_settings", { kind });
+  },
   async fetchBucketedSummary(
     query: BucketSummaryInput,
   ): Promise<BucketTimeSummary[]> {
@@ -269,6 +281,14 @@ export type PaginatedProjects = {
   cursors: (string | null)[];
 };
 export type PaginationQuery = { after: string | null; limit: number | null };
+/**
+ * Normalized status for a permission check.
+ */
+export type PermissionStatus = "Granted" | "DeniedOrNotDetermined";
+export type PermissionSummary = {
+  accessibility: PermissionStatus;
+  inputMonitoring: PermissionStatus;
+};
 export type Project = { id: string; name: string; root_path: string | null };
 export type ProjectQuery = { id: string };
 export type ProjectSearchQuery = { name: string; limit: number };

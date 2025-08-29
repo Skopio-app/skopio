@@ -16,6 +16,7 @@ import {
 } from "./utils/shortcut";
 import { isDev } from "./utils/environment";
 import { commands } from "./types/tauri.gen";
+import PermissionsDialog from "./components/settings/PermissionsDialog";
 
 function App() {
   useGlobalShortcutListener();
@@ -24,6 +25,7 @@ function App() {
   return (
     <>
       <Toaster richColors />
+      <PermissionsDialog />
       <ContextMenu>
         <ContextMenuTrigger className="block min-h-screen w-full">
           <Outlet />

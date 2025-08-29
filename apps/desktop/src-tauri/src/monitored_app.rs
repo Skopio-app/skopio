@@ -9,11 +9,11 @@ use serde::{Deserialize, Serialize};
 use strum_macros::{Display, EnumString};
 
 use crate::{
-    helpers::{
+    trackers::window_tracker::WindowTracker,
+    utils::{
         app::{get_browser_active_tab, get_xcode_project_details, run_osascript},
         config::TrackedApp,
     },
-    trackers::window_tracker::WindowTracker,
 };
 
 static BROWSER_APPS: LazyLock<HashSet<MonitoredApp>> = LazyLock::new(|| {

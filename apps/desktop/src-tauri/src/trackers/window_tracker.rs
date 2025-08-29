@@ -14,7 +14,7 @@ use std::sync::Arc;
 use tokio::sync::{watch, Notify};
 use tokio::time::{interval, Duration};
 
-use crate::helpers::config::TrackedApp;
+use crate::utils::config::TrackedApp;
 
 #[link(name = "ApplicationServices", kind = "framework")]
 extern "C" {
