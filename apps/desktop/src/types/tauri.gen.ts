@@ -30,7 +30,7 @@ export const commands = {
   async requestInputMonitoringPermission(): Promise<PermissionStatus> {
     return await TAURI_INVOKE("request_input_monitoring_permission");
   },
-  async openPermissionSettings(kind: string): Promise<null> {
+  async openPermissionSettings(kind: PermissionKind): Promise<null> {
     return await TAURI_INVOKE("open_permission_settings", { kind });
   },
   async fetchBucketedSummary(
@@ -281,10 +281,11 @@ export type PaginatedProjects = {
   cursors: (string | null)[];
 };
 export type PaginationQuery = { after: string | null; limit: number | null };
+export type PermissionKind = "accessibility" | "inputMonitoring";
 /**
  * Normalized status for a permission check.
  */
-export type PermissionStatus = "Granted" | "DeniedOrNotDetermined";
+export type PermissionStatus = "granted" | "deniedOrNotDetermined";
 export type PermissionSummary = {
   accessibility: PermissionStatus;
   inputMonitoring: PermissionStatus;

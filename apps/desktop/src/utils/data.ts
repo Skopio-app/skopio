@@ -1,3 +1,5 @@
+import { PermissionStatus } from "../types/tauri.gen";
+
 export const getEntityName = (
   fullPath: string,
   metadata: string | null,
@@ -7,3 +9,5 @@ export const getEntityName = (
   }
   return fullPath;
 };
+
+export const isGranted = (s: PermissionStatus) => s === "granted";

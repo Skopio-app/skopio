@@ -1,6 +1,6 @@
 import { Button, cn } from "@skopio/ui";
 
-type PermissionState = "granted" | "denied" | "unknown";
+type PermissionState = "granted" | "denied";
 
 export interface PermissionCardProps {
   icon: React.ReactNode;
@@ -10,8 +10,6 @@ export interface PermissionCardProps {
   onGrant: () => Promise<void> | void;
   loading?: boolean;
   error?: string | null;
-  actionsRight?: React.ReactNode;
-  grantLabel?: string;
   className?: string;
 }
 
@@ -21,8 +19,6 @@ const badgeClass = (status: PermissionState) => {
       return "bg-green-600/10 text-green-700 dark:text-green-400 border border-green-600/20";
     case "denied":
       return "bg-red-600/10 text-red-700 dark:text-400 border-red-600/20";
-    case "unknown":
-      return "bg-amber-500/10 text-amber-700 dark:text-amber-300 border border-amber-500/20";
   }
 };
 
@@ -79,7 +75,6 @@ export const PermissionCard: React.FC<PermissionCardProps> = ({
         </div>
 
         <div className="items-center justify-center gap-2">
-          {/* {actionsRight} */}
           {showGrant ? (
             <Button variant="outline" onClick={onGrant} disabled={loading}>
               Grant Access

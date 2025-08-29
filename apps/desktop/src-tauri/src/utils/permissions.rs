@@ -3,7 +3,7 @@
 use core_foundation::{
     base::TCFType, boolean::CFBoolean, dictionary::CFDictionary, string::CFString,
 };
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use specta::Type;
 use std::ffi::c_void;
 
@@ -20,9 +20,17 @@ extern "C" {
 
 /// Normalized status for a permission check.
 #[derive(Debug, Serialize, Clone, Copy, PartialEq, Eq, Type)]
+#[serde(rename_all = "camelCase")]
 pub enum PermissionStatus {
     Granted,
     DeniedOrNotDetermined,
+}
+
+#[derive(Debug, Serialize, Deserialize, Type)]
+#[serde(rename_all = "camelCase")]
+pub enum PermissionKind {
+    Accessibility,
+    InputMonitoring,
 }
 
 impl PermissionStatus {
@@ -93,15 +101,14 @@ pub async fn request_input_monitoring_permission() -> PermissionStatus {
 
 #[tauri::command]
 #[specta::specta]
-pub async fn open_permission_settings(kind: String) -> Result<(), String> {
-    let url = match kind.as_str() {
-        "accessibility" => {
+pub async fn open_permission_settings(kind: PermissionKind) -> Result<(), String> {
+    let url = match kind {
+        PermissionKind::Accessibility => {
             "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility"
         }
-        "inputMonitoring" => {
+        PermissionKind::InputMonitoring => {
             "x-apple.systempreferences:com.apple.preference.security?Privacy_ListenEvent"
         }
-        _ => return Err("Unsupported permission kind".into()),
     };
     std::process::Command::new("open")
         .arg(url)
