@@ -15,8 +15,8 @@ use tauri::{
 };
 use tokio::sync::Mutex;
 
-use crate::helpers::time::format_duration;
 use crate::network::summaries::fetch_total_time;
+use crate::utils::time::format_duration;
 
 static FONT: LazyLock<Font> = LazyLock::new(|| {
     let font_data = include_bytes!("../../fonts/RobotoMono-Regular.ttf");
@@ -48,6 +48,7 @@ fn generate_text_icon(app_handle: AppHandle, time_string: String) -> Result<Vec<
 
     let text_color = Rgba::new(255u8, 255u8, 255u8, 255u8);
     let box_color = Rgba::new(3u8, 7u8, 21u8, 0u8);
+    let bg_color = Rgba::new(60u8, 60u8, 60u8, 200u8);
 
     let mut img = Image::new(width, height, Rgba::new(0, 0, 0, 0));
 
@@ -59,8 +60,13 @@ fn generate_text_icon(app_handle: AppHandle, time_string: String) -> Result<Vec<
     let text_bg_rect = Rectangle::<Rgba>::at(0, 0)
         .with_size(width, height)
         .with_fill(box_color);
-    img.draw(&text_bg_rect);
 
+    let bg_rect = Rectangle::<Rgba>::at(0, 0)
+        .with_size(width, height)
+        .with_fill(bg_color);
+
+    img.draw(&text_bg_rect);
+    img.draw(&bg_rect);
     img.draw(&layout);
 
     let mut png_bytes: Vec<u8> = Vec::new();
@@ -135,7 +141,7 @@ pub fn init_tray(app: &mut App) -> tauri::Result<()> {
 
                 let time_secs = fetch_total_time(query).await.unwrap();
 
-                let time = format_duration(time_secs as u64);
+                let time = format_duration(time_secs);
 
                 if let Ok(icon_bytes) = generate_text_icon(app_handle.clone(), time) {
                     if let Ok(new_icon) = tauri::image::Image::from_bytes(&icon_bytes) {

@@ -15,8 +15,23 @@ export const commands = {
   async setAfkTimeout(timeout: number): Promise<null> {
     return await TAURI_INVOKE("set_afk_timeout", { timeout });
   },
-  async setHeartbeatInterval(interval: number): Promise<null> {
-    return await TAURI_INVOKE("set_heartbeat_interval", { interval });
+  async setTrackedApps(apps: TrackedApp[]): Promise<null> {
+    return await TAURI_INVOKE("set_tracked_apps", { apps });
+  },
+  async setGlobalShortcut(shortcut: string): Promise<null> {
+    return await TAURI_INVOKE("set_global_shortcut", { shortcut });
+  },
+  async getPermissions(): Promise<PermissionSummary> {
+    return await TAURI_INVOKE("get_permissions");
+  },
+  async requestAccessibilityPermission(): Promise<PermissionStatus> {
+    return await TAURI_INVOKE("request_accessibility_permission");
+  },
+  async requestInputMonitoringPermission(): Promise<PermissionStatus> {
+    return await TAURI_INVOKE("request_input_monitoring_permission");
+  },
+  async openPermissionSettings(kind: PermissionKind): Promise<null> {
+    return await TAURI_INVOKE("open_permission_settings", { kind });
   },
   async fetchBucketedSummary(
     query: BucketSummaryInput,
@@ -67,6 +82,15 @@ export const commands = {
   async dismissNotificationWindow(): Promise<null> {
     return await TAURI_INVOKE("dismiss_notification_window");
   },
+  async showWindow(kind: WindowKind): Promise<null> {
+    return await TAURI_INVOKE("show_window", { kind });
+  },
+  async openDevtools(): Promise<void> {
+    await TAURI_INVOKE("open_devtools");
+  },
+  async getOpenApps(): Promise<OpenApp[]> {
+    return await TAURI_INVOKE("get_open_apps");
+  },
 };
 
 /** user-defined events **/
@@ -78,10 +102,12 @@ export const commands = {
 export type App = { id: string; name: string };
 export type AppConfig = {
   theme: Theme;
-  heartbeat_interval: number;
-  afk_timeout: number;
-  flush_interval: number;
-  sync_interval: number;
+  heartbeatInterval: number;
+  afkTimeout: number;
+  flushInterval: number;
+  syncInterval: number;
+  globalShortcut: string;
+  trackedApps: TrackedApp[];
 };
 /**
  * Query input for bucketed summaries (based on a preset time range)
@@ -248,12 +274,22 @@ export type NotificationPayload = {
   message: string | null;
   soundFile: string | null;
 };
+export type OpenApp = { app: TrackedApp; blockReason: string | null };
 export type PaginatedProjects = {
   data: Project[];
   totalPages: number | null;
   cursors: (string | null)[];
 };
 export type PaginationQuery = { after: string | null; limit: number | null };
+export type PermissionKind = "accessibility" | "inputMonitoring";
+/**
+ * Normalized status for a permission check.
+ */
+export type PermissionStatus = "granted" | "deniedOrNotDetermined";
+export type PermissionSummary = {
+  accessibility: PermissionStatus;
+  inputMonitoring: PermissionStatus;
+};
 export type Project = { id: string; name: string; root_path: string | null };
 export type ProjectQuery = { id: string };
 export type ProjectSearchQuery = { name: string; limit: number };
@@ -369,6 +405,8 @@ export type TimeRangePreset =
       };
     };
 export type TimeSpan = "day" | "week" | "month" | "year";
+export type TrackedApp = { name: string; bundleId: string };
+export type WindowKind = "main" | "settings" | "notification";
 
 /** tauri-specta globals **/
 

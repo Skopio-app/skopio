@@ -21,7 +21,7 @@ use tokio::{sync::broadcast, task::JoinHandle};
 
 use crate::{
     network::summaries::fetch_total_time,
-    ui::notification::{create_notification_window, NotificationPayload},
+    ui::window::{NotificationPayload, WindowExt},
 };
 
 #[derive(Clone)]
@@ -61,8 +61,6 @@ impl GoalService {
     pub async fn check_goals(&self, app: &AppHandle) -> anyhow::Result<()> {
         let goals = fetch_all_goals(&self.db).await?;
         for goal in goals {
-            debug!("Evaluating goal: {:?}", goal.name);
-
             if is_today_excluded(&goal.excluded_days) {
                 debug!("Goal {} is excluded today", goal.id);
                 continue;
@@ -94,7 +92,7 @@ impl GoalService {
                 sound_file: Some("goal_success.mp3".to_string()),
             };
 
-            let _ = create_notification_window(app, payload);
+            app.show_notification(payload)?;
 
             insert_shown_goal_notification(&self.db, goal.id, &goal.time_span, &period_key).await?;
         }

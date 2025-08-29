@@ -1,7 +1,7 @@
 use std::{panic, process::Command};
 
 use common::language::detect_language;
-use log::{debug, error, warn};
+use log::{error, warn};
 use url::{Position, Url};
 
 use crate::monitored_app::MonitoredApp;
@@ -72,7 +72,6 @@ pub fn get_browser_active_tab(bundle_id: &MonitoredApp) -> (String, String, Stri
         );
     }
 
-    debug!("The output: {}", output);
     let parts: Vec<&str> = output.split("||").collect();
     let url = parts.first().unwrap_or(&"unknown").trim();
     let url_path = Url::parse(url)

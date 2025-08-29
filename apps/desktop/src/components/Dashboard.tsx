@@ -1,4 +1,5 @@
 import {
+  Button,
   cn,
   Sidebar,
   SidebarContent,
@@ -16,6 +17,8 @@ import {
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { builtinExtensionRegistry } from "../extensions/registry";
 import { LAST_ACTIVE_TAB } from "../utils/constants";
+import { Cog } from "lucide-react";
+import { commands } from "../types/tauri.gen";
 
 const DashboardLayout = () => {
   const navigate = useNavigate();
@@ -26,19 +29,31 @@ const DashboardLayout = () => {
   return (
     <SidebarProvider className="bg-muted relative">
       <div
+        data-tauri-drag-region
         className={cn(
           "fixed left-0 top-0 z-40 flex h-[20px] w-full items-center",
-          "bg-background select-none px-4",
+          "bg-transparent select-none px-4",
         )}
       >
         <div className="w-[64px] h-full" />
 
-        <div className="absolute left-[90px] top-[6px]">
-          <SidebarTrigger className="w-5 h-5 cursor-pointer" />
+        <div className="absolute left-[90px] top-[6px] flex flex-row space-x-3">
+          <SidebarTrigger className="w-5 h-5 cursor-pointer hover:bg-neutral-200" />
+          <Button
+            className="h-5 w-5 hover:bg-neutral-200"
+            variant="ghost"
+            size="icon"
+            onClick={async () => await commands.showWindow("settings")}
+          >
+            <Cog />
+          </Button>
         </div>
       </div>
 
-      <Sidebar collapsible="offcanvas" className="pt-[10px] bg-transparent">
+      <Sidebar
+        collapsible="offcanvas"
+        className="pt-[10px] border-border bg-neutral-50"
+      >
         <SidebarHeader />
         <SidebarContent>
           <SidebarGroup>
@@ -48,6 +63,10 @@ const DashboardLayout = () => {
                 {tabExtensions.map((ext) => (
                   <SidebarMenuItem key={ext.manifest.id}>
                     <SidebarMenuButton
+                      tooltip={{
+                        children: ext.manifest.description,
+                        hidden: true,
+                      }}
                       isActive={location.pathname === "/tab/" + ext.manifest.id}
                       onClick={() => {
                         localStorage.setItem(LAST_ACTIVE_TAB, ext.manifest.id);

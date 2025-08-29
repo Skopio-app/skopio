@@ -6,16 +6,27 @@ use std::{
 };
 
 use serde::{Deserialize, Serialize};
+use specta::Type;
 use tauri::{AppHandle, Manager, Runtime};
 use tokio::sync::{watch, RwLock};
 
-#[derive(Debug, Serialize, Deserialize, Clone, specta::Type)]
+#[derive(Debug, Serialize, Deserialize, Clone, Type)]
+#[serde(rename_all = "camelCase")]
+pub struct TrackedApp {
+    pub name: String,
+    pub bundle_id: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, Type)]
+#[serde(rename_all = "camelCase")]
 pub struct AppConfig {
     pub theme: Theme,
     pub heartbeat_interval: u64,
     pub afk_timeout: u64,
     pub flush_interval: u64,
     pub sync_interval: u64,
+    pub global_shortcut: String,
+    pub tracked_apps: Vec<TrackedApp>,
 }
 
 impl Default for AppConfig {
@@ -26,6 +37,8 @@ impl Default for AppConfig {
             afk_timeout: 120,
             flush_interval: 120,
             sync_interval: 180,
+            global_shortcut: String::from("CommandOrControl+S"),
+            tracked_apps: vec![],
         }
     }
 }
@@ -48,10 +61,11 @@ fn get_config_name() -> String {
 #[derive(Clone)]
 pub struct ConfigStore {
     inner: Arc<RwLock<AppConfig>>,
-    pub heartbeat_interval: watch::Sender<u64>,
+    // pub heartbeat_interval: watch::Sender<u64>,
     pub afk_timeout: watch::Sender<u64>,
     pub flush_interval: watch::Sender<u64>,
     pub sync_interval: watch::Sender<u64>,
+    pub tracked_apps: watch::Sender<Vec<TrackedApp>>,
 }
 
 impl ConfigStore {
@@ -66,17 +80,19 @@ impl ConfigStore {
             default
         };
 
-        let (hb_tx, _) = watch::channel(config.heartbeat_interval);
+        // let (hb_tx, _) = watch::channel(config.heartbeat_interval);
         let (afk_tx, _) = watch::channel(config.afk_timeout);
         let (flush_tx, _) = watch::channel(config.flush_interval);
         let (sync_tx, _) = watch::channel(config.sync_interval);
+        let (tracked_tx, _) = watch::channel(config.tracked_apps.clone());
 
         Ok(Self {
             inner: Arc::new(RwLock::new(config)),
-            heartbeat_interval: hb_tx,
+            // heartbeat_interval: hb_tx,
             afk_timeout: afk_tx,
             flush_interval: flush_tx,
             sync_interval: sync_tx,
+            tracked_apps: tracked_tx,
         })
     }
 
@@ -100,17 +116,18 @@ impl ConfigStore {
         updater(&mut guard);
         guard.save(handle)?;
 
-        let _ = self.heartbeat_interval.send(guard.heartbeat_interval);
+        // let _ = self.heartbeat_interval.send(guard.heartbeat_interval);
         let _ = self.afk_timeout.send(guard.afk_timeout);
         let _ = self.flush_interval.send(guard.flush_interval);
         let _ = self.sync_interval.send(guard.sync_interval);
+        let _ = self.tracked_apps.send(guard.tracked_apps.clone());
 
         Ok(())
     }
 
-    pub fn subscribe_heartbeat_interval(&self) -> watch::Receiver<u64> {
-        self.heartbeat_interval.subscribe()
-    }
+    // pub fn subscribe_heartbeat_interval(&self) -> watch::Receiver<u64> {
+    //     self.heartbeat_interval.subscribe()
+    // }
 
     pub fn subscribe_afk_timeout(&self) -> watch::Receiver<u64> {
         self.afk_timeout.subscribe()
@@ -122,6 +139,10 @@ impl ConfigStore {
 
     pub fn subscribe_sync_interval(&self) -> watch::Receiver<u64> {
         self.sync_interval.subscribe()
+    }
+
+    pub fn subscribe_tracked_apps(&self) -> watch::Receiver<Vec<TrackedApp>> {
+        self.tracked_apps.subscribe()
     }
 }
 
@@ -141,29 +162,14 @@ impl AppConfig {
 #[tauri::command]
 #[specta::specta]
 pub async fn get_config<R: Runtime>(app: AppHandle<R>) -> AppConfig {
-    let config_store = app.state::<Arc<ConfigStore>>();
+    let config_store = app.state::<ConfigStore>();
     config_store.get().await
 }
 
 #[tauri::command]
 #[specta::specta]
-pub async fn set_heartbeat_interval<R: Runtime>(
-    interval: u64,
-    app: AppHandle<R>,
-) -> Result<(), String> {
-    let config_store = app.state::<Arc<ConfigStore>>();
-    config_store
-        .update(&app, |config| {
-            config.heartbeat_interval = interval;
-        })
-        .await
-        .map_err(|e| e.to_string())
-}
-
-#[tauri::command]
-#[specta::specta]
 pub async fn set_theme<R: Runtime>(theme: Theme, app: AppHandle<R>) -> Result<(), String> {
-    let config_store = app.state::<Arc<ConfigStore>>();
+    let config_store = app.state::<ConfigStore>();
     config_store
         .update(&app, |config| {
             config.theme = theme;
@@ -175,10 +181,40 @@ pub async fn set_theme<R: Runtime>(theme: Theme, app: AppHandle<R>) -> Result<()
 #[tauri::command]
 #[specta::specta]
 pub async fn set_afk_timeout<R: Runtime>(timeout: u64, app: AppHandle<R>) -> Result<(), String> {
-    let config_store = app.state::<Arc<ConfigStore>>();
+    let config_store = app.state::<ConfigStore>();
     config_store
         .update(&app, |config| {
             config.afk_timeout = timeout;
+        })
+        .await
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn set_global_shortcut<R: Runtime>(
+    shortcut: String,
+    app: AppHandle<R>,
+) -> Result<(), String> {
+    let config_store = app.state::<ConfigStore>();
+    config_store
+        .update(&app, |config| {
+            config.global_shortcut = shortcut;
+        })
+        .await
+        .map_err(|e| e.to_string())
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn set_tracked_apps<R: Runtime>(
+    apps: Vec<TrackedApp>,
+    app: AppHandle<R>,
+) -> Result<(), String> {
+    let config_store = app.state::<ConfigStore>();
+    config_store
+        .update(&app, |config| {
+            config.tracked_apps = apps;
         })
         .await
         .map_err(|e| e.to_string())

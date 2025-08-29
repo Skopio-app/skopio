@@ -1,10 +1,20 @@
-use std::{collections::HashSet, sync::LazyLock};
+use std::{
+    collections::{HashMap, HashSet},
+    str::FromStr,
+    sync::LazyLock,
+};
 
 use common::language::detect_language;
 use serde::{Deserialize, Serialize};
 use strum_macros::{Display, EnumString};
 
-use crate::helpers::app::{get_browser_active_tab, get_xcode_project_details, run_osascript};
+use crate::{
+    trackers::window_tracker::WindowTracker,
+    utils::{
+        app::{get_browser_active_tab, get_xcode_project_details, run_osascript},
+        config::TrackedApp,
+    },
+};
 
 static BROWSER_APPS: LazyLock<HashSet<MonitoredApp>> = LazyLock::new(|| {
     HashSet::from([
@@ -42,8 +52,12 @@ static LEARNING_URLS: LazyLock<HashSet<&'static str>> = LazyLock::new(|| {
     ])
 });
 
-pub static IGNORED_APPS: LazyLock<HashSet<MonitoredApp>> =
-    LazyLock::new(|| HashSet::from([MonitoredApp::Code]));
+pub static IGNORED_APPS: LazyLock<HashMap<MonitoredApp, &'static str>> = LazyLock::new(|| {
+    HashMap::from([(
+        MonitoredApp::Code,
+        "An editor extension for Code is available to capture more accurate data",
+    )])
+});
 
 static CODING_URLS: LazyLock<HashSet<&'static str>> = LazyLock::new(|| {
     HashSet::from([
@@ -141,6 +155,13 @@ pub enum Entity {
     Url,
 }
 
+#[derive(Debug, Serialize, Deserialize, specta::Type)]
+#[serde(rename_all = "camelCase")]
+pub struct OpenApp {
+    app: TrackedApp,
+    block_reason: Option<String>,
+}
+
 fn get_entity_for_app(app: &MonitoredApp) -> Entity {
     if BROWSER_APPS.contains(app) {
         Entity::Url
@@ -176,7 +197,7 @@ fn get_browser_category(url: &str) -> Category {
     {
         return Category::Coding;
     }
-    Category::Other
+    Category::Browsing
 }
 
 fn get_xcode_category(entity: &str) -> Category {
@@ -196,7 +217,7 @@ fn get_xcode_category(entity: &str) -> Category {
         return Category::WritingDocs;
     }
 
-    Category::Other
+    Category::Coding
 }
 
 fn is_documentation_entity(entity_path: &str) -> bool {
@@ -275,4 +296,25 @@ pub fn resolve_app_details(
             get_category_for_app(app, None, None),
         ),
     }
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn get_open_apps() -> Vec<OpenApp> {
+    WindowTracker::list_open_apps()
+        .into_iter()
+        .map(|info| {
+            let monitored =
+                MonitoredApp::from_str(&info.bundle_id).unwrap_or(MonitoredApp::Unknown);
+            let block_reason = IGNORED_APPS.get(&monitored).map(|&s| s.to_string());
+
+            OpenApp {
+                app: TrackedApp {
+                    name: info.name,
+                    bundle_id: info.bundle_id,
+                },
+                block_reason,
+            }
+        })
+        .collect()
 }

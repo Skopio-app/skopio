@@ -10,18 +10,18 @@ rust-version.workspace = true
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [lib]
-name = "desktop_lib"
+name = "skopio_desktop_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]
-tauri-build = { version = "2.0.2", features = [] }
+tauri-build = { version = "2.4.0", features = [] }
 
 [dependencies]
 serde_json = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
 log = { workspace = true }
-tauri = { version = "2.1.0", features = [ "protocol-asset", "macos-private-api", "tray-icon", "image-png"] }
-tauri-plugin-log = "2.0.0-rc"
+tauri = { version = "2.8.2", features = [ "protocol-asset", "macos-private-api", "tray-icon", "image-png"] }
+tauri-plugin-log = "2.6.0"
 chrono = { workspace = true, features = ["serde"] }
 tokio = { workspace = true, features = ["full", "tracing"] }
 strum_macros = "0.27.1"
@@ -32,8 +32,10 @@ percent-encoding = { workspace = true }
 async-trait = { workspace = true }
 url = "2.5.4"
 console-subscriber = "0.4.1"
-reqwest = { workspace = true, features = ["json", "rustls-tls"] }
+reqwest = { workspace = true, default-features = false, features = ["json", "rustls-tls"] }
 tauri-plugin-dialog = "2.0.0"
+tauri-plugin-autostart = "2.5.0"
+tauri-plugin-global-shortcut = "2.3.0"
 
 specta = { workspace = true, features = ["chrono"] }
 specta-typescript = { workspace = true }
@@ -45,7 +47,7 @@ db = { path = "../../../crates/db", features = ["desktop"] }
 common = { path = "../../../crates/common" }
 
 [target.'cfg(target_os = "macos")'.dependencies]
-core-foundation = "0.10.0"
+core-foundation = "0.10.1"
 objc2 = "0.6.0"
 core-graphics = "0.24.0"
 objc2-foundation = { version = "0.3.1", features = [

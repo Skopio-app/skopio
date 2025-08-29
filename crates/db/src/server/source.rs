@@ -14,7 +14,7 @@ impl Source {
             return Ok(id);
         }
 
-        let id = uuid::Uuid::now_v7();
+        let id = Uuid::now_v7();
         let result = sqlx::query!(
             "INSERT INTO sources (id, name) VALUES (?, ?) RETURNING id",
             id,

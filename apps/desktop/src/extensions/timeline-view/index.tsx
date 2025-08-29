@@ -168,7 +168,7 @@ const TimelineExtension = () => {
         <Popover>
           <PopoverTrigger asChild>
             <Button
-              variant="outline"
+              variant="secondary"
               id="date-to"
               className="w-30 justify-between font-normal"
             >
@@ -194,7 +194,7 @@ const TimelineExtension = () => {
           </PopoverContent>
         </Popover>
         <Button
-          variant="outline"
+          variant="secondary"
           onClick={handleApplyCustomRange}
           className="px-4 py-2 rounded font-medium border"
         >

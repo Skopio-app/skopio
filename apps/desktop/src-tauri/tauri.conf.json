@@ -10,17 +10,7 @@
     "beforeBuildCommand": "yarn build"
   },
   "app": {
-    "windows": [
-      {
-        "title": "Skopio",
-        "width": 1600,
-        "height": 900,
-        "resizable": true,
-        "fullscreen": false,
-        "decorations": true,
-        "hiddenTitle": true
-      }
-    ],
+    "windows": [],
     "macOSPrivateApi": true,
     "security": {
       "csp": null,

@@ -74,7 +74,7 @@ const WidgetCard = React.forwardRef<HTMLDivElement, WidgetCardProps>(
                 <PopoverContent
                   align="end"
                   sideOffset={8}
-                  className="w-auto rounded-lg border bg-white p-4 shadow-xl"
+                  className="w-auto rounded-lg border p-4 shadow-xl"
                 >
                   {settingsContent}
                 </PopoverContent>

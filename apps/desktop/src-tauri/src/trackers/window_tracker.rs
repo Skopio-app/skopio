@@ -6,11 +6,15 @@ use log::{debug, info, warn};
 use objc2::msg_send;
 use objc2::rc::{autoreleasepool, Retained};
 use objc2::runtime::{AnyClass, AnyObject};
+use objc2_app_kit::{NSApplicationActivationPolicy, NSRunningApplication, NSWorkspace};
+use objc2_foundation::{NSArray, NSString};
 use std::os::raw::c_void;
 use std::ptr;
 use std::sync::Arc;
 use tokio::sync::{watch, Notify};
 use tokio::time::{interval, Duration};
+
+use crate::utils::config::TrackedApp;
 
 #[link(name = "ApplicationServices", kind = "framework")]
 extern "C" {
@@ -230,6 +234,35 @@ impl WindowTracker {
         })
     }
 
+    pub fn list_open_apps() -> Vec<TrackedApp> {
+        autoreleasepool(|_| unsafe {
+            let ws: Retained<NSWorkspace> = NSWorkspace::sharedWorkspace();
+
+            let running: Retained<NSArray<NSRunningApplication>> = ws.runningApplications();
+            let len = running.len();
+
+            let mut out = Vec::with_capacity(len);
+
+            for i in 0..len {
+                let app: Retained<NSRunningApplication> = running.objectAtIndex(i);
+                let policy = app.activationPolicy();
+                if policy == NSApplicationActivationPolicy::Accessory
+                    || policy == NSApplicationActivationPolicy::Prohibited
+                {
+                    continue;
+                }
+
+                let name =
+                    nsstring_to_string(app.localizedName()).unwrap_or_else(|| "unknown".into());
+                let bundle_id =
+                    nsstring_to_string(app.bundleIdentifier()).unwrap_or_else(|| "unknown".into());
+
+                out.push(TrackedApp { name, bundle_id });
+            }
+            out
+        })
+    }
+
     pub fn subscribe(&self) -> watch::Receiver<Option<Window>> {
         self.rx.clone()
     }
@@ -237,4 +270,8 @@ impl WindowTracker {
     pub fn stop_tracking(&self) {
         self.shutdown.notify_one();
     }
+}
+
+unsafe fn nsstring_to_string(ns: Option<Retained<NSString>>) -> Option<String> {
+    ns.map(|s| s.to_string())
 }

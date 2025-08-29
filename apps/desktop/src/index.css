@@ -17,3 +17,16 @@ body,
 .scroll-hidden::-webkit-scrollbar {
   display: none;
 }
+
+/* https://github.com/tauri-apps/tauri/issues/4316#issuecomment-2408445483 */
+
+.draggable-state {
+  width: 100%;
+  height: 1.75rem;
+  position: fixed;
+  user-select: none;
+  display: flex;
+  justify-content: flex-end;
+  top: 0;
+  left: 0;
+}
