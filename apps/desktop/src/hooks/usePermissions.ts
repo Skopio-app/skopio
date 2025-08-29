@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useState } from "react";
-import { commands, PermissionSummary } from "../types/tauri.gen";
+import {
+  commands,
+  PermissionKind,
+  PermissionSummary,
+} from "../types/tauri.gen";
 
 export const usePermissions = () => {
   const [summary, setSummary] = useState<PermissionSummary | null>(null);
   const [loading, setLoading] = useState(true);
-  const [busy, setBusy] = useState<null | "accessibility" | "inputMonitoring">(
-    null,
-  );
+  const [busy, setBusy] = useState<null | PermissionKind>(null);
   const [error, setError] = useState<string | null>(null);
 
   const check = useCallback(async () => {
