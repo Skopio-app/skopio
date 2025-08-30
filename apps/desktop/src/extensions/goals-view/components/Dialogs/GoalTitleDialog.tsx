@@ -2,7 +2,7 @@ import * as Dialog from "@radix-ui/react-dialog";
 import { Button, Input } from "@skopio/ui";
 import { X } from "lucide-react";
 import { z } from "zod";
-import { GoalUpdateInput } from "../../../../types/tauri.gen";
+import { GoalUpdateInput } from "@/types/tauri.gen";
 import { useGoalStore } from "../../stores/useGoalStore";
 import { FieldErrors, useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";

@@ -9,7 +9,7 @@ import {
   Skeleton,
 } from "@skopio/ui";
 import { useEffect, useState } from "react";
-import { commands, PaginatedProjects, Project } from "../../types/tauri.gen";
+import { commands, PaginatedProjects, Project } from "@/types/tauri.gen";
 import { useNavigate, useParams } from "react-router";
 import { SearchIcon } from "lucide-react";
 import z from "zod/v4";

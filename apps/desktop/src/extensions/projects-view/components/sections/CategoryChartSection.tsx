@@ -1,7 +1,7 @@
 import ChartContainer from "../ChartContainer";
-import StackedBarChart from "../../../../components/StackedBarChart";
+import StackedBarChart from "@/components/StackedBarChart";
 import { useProjectSummaryData } from "../../hooks/useProjectSummaryData";
-import { Group } from "../../../../types/tauri.gen";
+import { Group } from "@/types/tauri.gen";
 
 const CategoryChartSection = () => {
   const options = { group_by: "category" as Group, mode: "bar" as const };

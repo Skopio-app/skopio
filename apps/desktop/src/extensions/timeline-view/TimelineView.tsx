@@ -11,9 +11,9 @@ import {
 } from "date-fns";
 
 import "vis-timeline/styles/vis-timeline-graph2d.css";
-import { formatDuration } from "../../utils/time";
-import { EventGroup, FullEvent } from "../../types/tauri.gen";
-import { getEntityName } from "../../utils/data";
+import { formatDuration } from "@/utils/time";
+import { EventGroup, FullEvent } from "@/types/tauri.gen";
+import { getEntityName } from "@/utils/data";
 
 interface TimelineViewProps {
   durationMinutes: number;

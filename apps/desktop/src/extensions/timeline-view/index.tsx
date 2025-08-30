@@ -14,7 +14,7 @@ import {
   ToggleGroup,
   ToggleGroupItem,
 } from "@skopio/ui";
-import { Group } from "../../types/tauri.gen";
+import { Group } from "@/types/tauri.gen";
 import { TimelineView } from "./TimelineView";
 import {
   addDays,
@@ -23,7 +23,7 @@ import {
   isValid as isValidDate,
   subDays,
 } from "date-fns";
-import SkeletonChart from "../../components/SkeletonChart";
+import SkeletonChart from "@/components/SkeletonChart";
 import { toast } from "sonner";
 import { useEventFetcher } from "./hooks/useEventFetcher";
 

@@ -1,10 +1,5 @@
 import { create } from "zustand";
-import {
-  commands,
-  Goal,
-  GoalInput,
-  GoalUpdateInput,
-} from "../../../types/tauri.gen";
+import { commands, Goal, GoalInput, GoalUpdateInput } from "@/types/tauri.gen";
 import { toast } from "sonner";
 
 interface GoalStore {

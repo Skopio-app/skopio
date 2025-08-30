@@ -1,6 +1,6 @@
-import { Group } from "../../../../types/tauri.gen";
+import { Group } from "@/types/tauri.gen";
 import ChartContainer from "../ChartContainer";
-import CustomPieChart from "../../../../components/CustomPieChart";
+import CustomPieChart from "@/components/CustomPieChart";
 import { useProjectSummaryData } from "../../hooks/useProjectSummaryData";
 
 const AppPieChartSection = () => {

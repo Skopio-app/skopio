@@ -19,12 +19,12 @@ import {
 import { useEffect, useRef } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import z from "zod/v4";
-import HotkeyField from "../HotkeyField";
-import { AFK, AFK_KEYS, AFK_SECONDS } from "../../../utils/constants";
-import { useAutostart } from "../../../hooks/useAutostart";
-import { useGlobalShortcut } from "../../../hooks/useGlobalShortcut";
-import { commands, OpenApp, TrackedApp } from "../../../types/tauri.gen";
-import { useOpenApps } from "../../../hooks/useOpenApps";
+import HotkeyField from "@/components/settings/HotkeyField";
+import { AFK, AFK_KEYS, AFK_SECONDS } from "@/utils/constants";
+import { useAutostart } from "@/hooks/useAutostart";
+import { useGlobalShortcut } from "@/hooks/useGlobalShortcut";
+import { commands, OpenApp, TrackedApp } from "@/types/tauri.gen";
+import { useOpenApps } from "@/hooks/useOpenApps";
 
 const TrackedAppSchema = z.object({
   name: z.string(),

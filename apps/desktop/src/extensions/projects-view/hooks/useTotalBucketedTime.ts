@@ -1,5 +1,5 @@
 import { startTransition, useEffect, useState } from "react";
-import { BucketSummaryInput, commands } from "../../../types/tauri.gen";
+import { BucketSummaryInput, commands } from "@/types/tauri.gen";
 import { usePresetFilter } from "../stores/usePresetFilter";
 
 export const useTotalBucketedTime = (

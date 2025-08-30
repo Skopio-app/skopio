@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
 import TextSectionItem from "./TextSectionItem";
-import { commands, InsightQueryPayload } from "../../../types/tauri.gen";
+import { commands, InsightQueryPayload } from "@/types/tauri.gen";
 import { useYearFilter } from "../stores/useYearFilter";
 import { toast } from "sonner";
 import { format } from "date-fns";
-import { formatDuration } from "../../../utils/time";
+import { formatDuration } from "@/utils/time";
 
 const MostActiveDaySection = () => {
   const [loading, setLoading] = useState(true);

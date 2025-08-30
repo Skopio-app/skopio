@@ -1,7 +1,7 @@
 import WidgetCard from "../components/WidgetCard";
 import { useSummaryData } from "../hooks/useSummaryData";
-import StackedBarChart from "../../../components/StackedBarChart";
-import { Group } from "../../../types/tauri.gen";
+import StackedBarChart from "@/components/StackedBarChart";
+import { Group } from "@/types/tauri.gen";
 import { useMemo } from "react";
 import { usePersistentTopN } from "../hooks/usePersistentTopN";
 import SettingsContent, { MIN_TOP_N } from "../components/SettingsContent";

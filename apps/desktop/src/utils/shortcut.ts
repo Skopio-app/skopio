@@ -193,6 +193,7 @@ export const useGlobalShortcutListener = () => {
         return;
       }
 
+      // Windows specific
       if (alt && key === "ArrowLeft") {
         e.preventDefault();
         goBack();

@@ -4,14 +4,10 @@ import {
   BucketTimeSummary,
   commands,
   Group,
-} from "../../../types/tauri.gen";
+} from "@/types/tauri.gen";
 import { usePresetFilter } from "../stores/usePresetFilter";
-import {
-  BarChartData,
-  LineChartData,
-  PieChartData,
-} from "../../../types/chart";
-import { getEntityName } from "../../../utils/data";
+import { BarChartData, LineChartData, PieChartData } from "@/types/chart";
+import { getEntityName } from "@/utils/data";
 
 export interface UseSummaryOptions {
   group_by?: Group;

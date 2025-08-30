@@ -1,5 +1,5 @@
 import { Skeleton } from "@skopio/ui";
-import { formatDuration } from "../../../utils/time";
+import { formatDuration } from "@/utils/time";
 
 interface ItemsListProps {
   title: string;

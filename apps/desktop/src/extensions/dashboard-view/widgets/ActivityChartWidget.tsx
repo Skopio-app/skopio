@@ -1,9 +1,9 @@
 import { useMemo } from "react";
 import WidgetCard from "../components/WidgetCard";
-import { TimeRangePreset } from "../../../types/tauri.gen";
+import { TimeRangePreset } from "@/types/tauri.gen";
 import { endOfYear, startOfYear } from "date-fns";
 import { useSummaryData } from "../hooks/useSummaryData";
-import CalendarChart from "../../../components/CalendarChart";
+import CalendarChart from "@/components/CalendarChart";
 
 const getYearPreset = (): TimeRangePreset => ({
   custom: {

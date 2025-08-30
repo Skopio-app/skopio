@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import TextSectionItem from "./TextSectionItem";
 import { useYearFilter } from "../stores/useYearFilter";
-import { commands, InsightQueryPayload } from "../../../types/tauri.gen";
+import { commands, InsightQueryPayload } from "@/types/tauri.gen";
 import { toast } from "sonner";
 
 const DailyAverageSection = () => {

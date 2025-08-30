@@ -1,4 +1,4 @@
-import { Group } from "../../../../types/tauri.gen";
+import { Group } from "@/types/tauri.gen";
 import ItemsList from "../ItemsList";
 import { useProjectSummaryData } from "../../hooks/useProjectSummaryData";
 

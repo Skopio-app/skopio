@@ -1,4 +1,4 @@
-import { PermissionRow } from "../PermissionRow";
+import { PermissionRow } from "@/components/settings/PermissionRow";
 
 const Permission = () => {
   return (

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useSearchParams } from "react-router";
-import { commands, Project, ProjectQuery } from "../../types/tauri.gen";
+import { commands, Project, ProjectQuery } from "@/types/tauri.gen";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -14,10 +14,10 @@ import {
   DateRangeType,
   getRangeDates,
   mapRangeToPreset,
-} from "../../utils/time";
+} from "@/utils/time";
 import { addDays, startOfDay } from "date-fns";
-import { formatDuration } from "../../utils/time";
-import RangeSelectionDialog from "../../components/RangeSelectionDialog";
+import { formatDuration } from "@/utils/time";
+import RangeSelectionDialog from "@/components/RangeSelectionDialog";
 import { usePresetFilter } from "./stores/usePresetFilter";
 import BranchSelectionDialog from "./components/BranchSelectionDialog";
 import { useTotalBucketedTime } from "./hooks/useTotalBucketedTime";

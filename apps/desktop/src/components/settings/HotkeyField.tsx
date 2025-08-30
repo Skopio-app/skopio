@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import Kbd from "./kbd";
+import Kbd from "@/components/settings/kbd";
 import { cn, Popover, PopoverContent, PopoverTrigger } from "@skopio/ui";
-import { baseKeyFromEvent } from "../../utils/hotkey";
+import { baseKeyFromEvent } from "@/utils/hotkey";
 import { Check } from "lucide-react";
 
 enum Mods {

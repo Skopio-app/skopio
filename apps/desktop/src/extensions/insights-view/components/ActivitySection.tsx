@@ -1,12 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
-import CalendarChart from "../../../components/CalendarChart";
+import CalendarChart from "@/components/CalendarChart";
 import SectionContainer from "./SectionContainer";
-import { CalendarChartData } from "../../../types/chart";
-import {
-  BucketSummaryInput,
-  commands,
-  TimeBucket,
-} from "../../../types/tauri.gen";
+import { CalendarChartData } from "@/types/chart";
+import { BucketSummaryInput, commands, TimeBucket } from "@/types/tauri.gen";
 import { endOfYear, startOfYear } from "date-fns";
 import { useYearFilter } from "../stores/useYearFilter";
 import { toast } from "sonner";

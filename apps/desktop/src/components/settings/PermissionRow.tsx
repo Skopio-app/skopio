@@ -1,9 +1,9 @@
 import { Keyboard, PersonStanding } from "lucide-react";
 import type { ReactNode } from "react";
-import { usePermissions } from "../../hooks/usePermissions";
-import { PermissionCard } from "./PermissionCard";
-import { PermissionKind } from "../../types/tauri.gen";
-import { isGranted } from "../../utils/data";
+import { usePermissions } from "@/hooks/usePermissions";
+import { PermissionCard } from "@/components/settings/PermissionCard";
+import { PermissionKind } from "@/types/tauri.gen";
+import { isGranted } from "@/utils/data";
 
 type PermissionMeta = {
   title: string;

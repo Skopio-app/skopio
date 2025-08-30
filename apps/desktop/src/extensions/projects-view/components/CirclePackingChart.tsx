@@ -2,7 +2,7 @@ import {
   CirclePackingCustomLayerProps,
   ResponsiveCirclePacking,
 } from "@nivo/circle-packing";
-import { formatDuration } from "../../../utils/time";
+import { formatDuration } from "@/utils/time";
 import { useState } from "react";
 
 type CirclePackingNode =

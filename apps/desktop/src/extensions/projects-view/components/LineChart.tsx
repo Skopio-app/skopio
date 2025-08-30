@@ -1,6 +1,6 @@
 import { PointTooltipProps, ResponsiveLine } from "@nivo/line";
-import { formatDuration } from "../../../utils/time";
-import ChartTooltipPortal from "../../../components/ChartTooltipPortal";
+import { formatDuration } from "@/utils/time";
+import ChartTooltipPortal from "@/components/ChartTooltipPortal";
 import { useEffect, useRef, useState } from "react";
 
 interface LineChartProps {

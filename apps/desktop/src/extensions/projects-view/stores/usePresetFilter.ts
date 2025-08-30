@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { TimeRangePreset } from "../../../types/tauri.gen";
+import { TimeRangePreset } from "@/types/tauri.gen";
 
 interface PresetFilterState {
   preset: TimeRangePreset;
