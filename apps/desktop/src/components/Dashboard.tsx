@@ -15,10 +15,10 @@ import {
   SidebarTrigger,
 } from "@skopio/ui";
 import { Outlet, useLocation, useNavigate } from "react-router-dom";
-import { builtinExtensionRegistry } from "../extensions/registry";
-import { LAST_ACTIVE_TAB } from "../utils/constants";
+import { builtinExtensionRegistry } from "@/extensions/registry";
+import { LAST_ACTIVE_TAB } from "@/utils/constants";
 import { Cog } from "lucide-react";
-import { commands } from "../types/tauri.gen";
+import { commands } from "@/types/tauri.gen";
 
 const DashboardLayout = () => {
   const navigate = useNavigate();

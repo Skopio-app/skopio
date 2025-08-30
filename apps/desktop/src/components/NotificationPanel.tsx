@@ -1,8 +1,8 @@
 import { Card, cn, Hotkey, Input } from "@skopio/ui";
 import { PartyPopper } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
-import { commands, NotificationPayload } from "../types/tauri.gen";
-import { isDev } from "../utils/environment";
+import { commands, NotificationPayload } from "@/types/tauri.gen";
+import { isDev } from "@/utils/environment";
 import { resolveResource } from "@tauri-apps/api/path";
 import { convertFileSrc } from "@tauri-apps/api/core";
 import confetti from "canvas-confetti";

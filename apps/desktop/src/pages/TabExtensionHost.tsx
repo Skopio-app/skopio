@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { ExtensionRegistration } from "../extensions/registry";
+import { ExtensionRegistration } from "@/extensions/registry";
 import { RPCChannel, IframeIO } from "@skopio/rpc";
 
 interface TabExtensionHostProps {

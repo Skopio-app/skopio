@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { OpenApp, commands } from "../types/tauri.gen";
+import { OpenApp, commands } from "@/types/tauri.gen";
 
 export const useOpenApps = () => {
   const [apps, setApps] = useState<OpenApp[]>([]);

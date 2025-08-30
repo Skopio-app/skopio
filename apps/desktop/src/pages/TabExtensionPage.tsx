@@ -1,6 +1,6 @@
 import { Outlet, useMatch, useParams } from "react-router";
-import { builtinExtensionRegistry } from "../extensions/registry";
-import { TabExtensionHost } from "./TabExtensionHost";
+import { builtinExtensionRegistry } from "@/extensions/registry";
+import { TabExtensionHost } from "@/pages/TabExtensionHost";
 
 const TabExtensionPage = () => {
   const { id } = useParams();

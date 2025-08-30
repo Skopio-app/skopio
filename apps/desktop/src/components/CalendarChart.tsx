@@ -1,6 +1,6 @@
 import { CalendarTooltipProps, ResponsiveCalendar } from "@nivo/calendar";
 import { format } from "date-fns";
-import { formatDuration } from "../utils/time";
+import { formatDuration } from "@/utils/time";
 
 interface CalendarChartProps {
   data: {

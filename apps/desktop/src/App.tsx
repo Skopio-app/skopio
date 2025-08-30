@@ -13,10 +13,10 @@ import {
   reloadWindow,
   useGlobalShortcutListener,
   useHistoryControls,
-} from "./utils/shortcut";
-import { isDev } from "./utils/environment";
-import { commands } from "./types/tauri.gen";
-import PermissionsDialog from "./components/settings/PermissionsDialog";
+} from "@/utils/shortcut";
+import { isDev } from "@/utils/environment";
+import { commands } from "@/types/tauri.gen";
+import PermissionsDialog from "@/components/settings/PermissionsDialog";
 
 function App() {
   useGlobalShortcutListener();
@@ -31,21 +31,30 @@ function App() {
           <Outlet />
         </ContextMenuTrigger>
 
-        <ContextMenuContent className="w-52">
-          <ContextMenuItem inset disabled={!canGoBack} onClick={goBack}>
+        <ContextMenuContent className="w-42 h-32">
+          <ContextMenuItem
+            className="text-xs"
+            disabled={!canGoBack}
+            onClick={goBack}
+          >
             Back
             <ContextMenuShortcut>⌘[</ContextMenuShortcut>
           </ContextMenuItem>
-          <ContextMenuItem inset disabled={!canGoForward} onClick={goForward}>
+          <ContextMenuItem
+            className="text-xs"
+            disabled={!canGoForward}
+            onClick={goForward}
+          >
             Forward
             <ContextMenuShortcut>⌘]</ContextMenuShortcut>
           </ContextMenuItem>
-          <ContextMenuItem inset onClick={reloadWindow}>
+          <ContextMenuItem className="text-xs" onClick={reloadWindow}>
             Reload
             <ContextMenuShortcut>⌘⇧R</ContextMenuShortcut>
           </ContextMenuItem>
           <ContextMenuItem
             inset
+            className="text-xs"
             disabled={!isDev()}
             onClick={() => {
               if (isDev()) {

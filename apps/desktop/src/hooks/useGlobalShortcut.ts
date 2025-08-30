@@ -1,11 +1,10 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import { loadShortcut, updateGlobalShortcut } from "../utils/shortcut";
-import { acceleratorToUI, uiComboToAccelerator } from "../utils/hotkey";
+import { useEffect, useRef, useState } from "react";
+import { loadShortcut, updateGlobalShortcut } from "@/utils/shortcut";
+import { acceleratorToUI, uiComboToAccelerator } from "@/utils/hotkey";
 
 export const useGlobalShortcut = () => {
   const [shortcut, setShortcut] = useState<string>("");
   const [loading, setLoading] = useState(true);
-  const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const debounceRef = useRef<number | null>(null);
   const mounted = useRef(true);
@@ -29,22 +28,22 @@ export const useGlobalShortcut = () => {
     };
   }, []);
 
-  const saveShorcut = useCallback((text: string) => {
+  const saveShorcut = (text: string) => {
     setError(null);
     setShortcut(text);
     if (debounceRef.current) window.clearTimeout(debounceRef.current);
     debounceRef.current = window.setTimeout(async () => {
-      setBusy(true);
+      setLoading(true);
       try {
         const accel = uiComboToAccelerator(text);
         await updateGlobalShortcut(accel);
       } catch (e) {
         setError((e as Error)?.message ?? "Failed to update global shortcut");
       } finally {
-        setBusy(false);
+        setLoading(false);
       }
     }, 250) as number;
-  }, []);
+  };
 
-  return { shortcut, saveShorcut, loading, busy, error };
+  return { shortcut, saveShorcut, loading, error };
 };

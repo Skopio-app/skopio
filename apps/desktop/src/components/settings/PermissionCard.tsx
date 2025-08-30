@@ -76,7 +76,12 @@ export const PermissionCard: React.FC<PermissionCardProps> = ({
 
         <div className="items-center justify-center gap-2">
           {showGrant ? (
-            <Button variant="outline" onClick={onGrant} disabled={loading}>
+            <Button
+              variant="outline"
+              className="font-normal text-xs"
+              onClick={onGrant}
+              disabled={loading}
+            >
               Grant Access
             </Button>
           ) : null}

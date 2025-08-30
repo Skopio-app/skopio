@@ -1,9 +1,9 @@
 import { ResponsiveBarCanvas } from "@nivo/bar";
 import { useRef, useState, useEffect } from "react";
 import { useOrdinalColorScale } from "@nivo/colors";
-import { useColorCache } from "../stores/useColorCache";
-import ChartTooltipPortal from "./ChartTooltipPortal";
-import { formatDuration } from "../utils/time";
+import { useColorCache } from "@/stores/useColorCache";
+import ChartTooltipPortal from "@/components/ChartTooltipPortal";
+import { formatDuration } from "@/utils/time";
 
 interface StackedBarChartProps {
   data: {

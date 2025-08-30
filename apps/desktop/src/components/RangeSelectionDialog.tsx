@@ -1,7 +1,7 @@
 import * as Dialog from "@radix-ui/react-dialog";
 import { Calendar, cn } from "@skopio/ui";
 import { XIcon } from "lucide-react";
-import { DATE_RANGE_LABELS, DateRangeType } from "../utils/time";
+import { DATE_RANGE_LABELS, DateRangeType } from "@/utils/time";
 import { addDays, startOfDay } from "date-fns";
 import { useState } from "react";
 

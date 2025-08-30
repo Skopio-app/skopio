@@ -1,9 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
-import {
-  commands,
-  PermissionKind,
-  PermissionSummary,
-} from "../types/tauri.gen";
+import { commands, PermissionKind, PermissionSummary } from "@/types/tauri.gen";
 
 export const usePermissions = () => {
   const [summary, setSummary] = useState<PermissionSummary | null>(null);

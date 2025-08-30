@@ -57,7 +57,6 @@ const General = () => {
     shortcut,
     saveShorcut,
     loading: hotkeyLoading,
-    busy,
     // error: hotkeyError,
   } = useGlobalShortcut();
 
@@ -260,7 +259,7 @@ const General = () => {
                   />
                 </FormControl>
                 <FormMessage />
-                {(hotkeyLoading || busy) && (
+                {hotkeyLoading && (
                   <p className="text-xs text-muted-foreground mt-1">
                     Updating shortcut…
                   </p>
