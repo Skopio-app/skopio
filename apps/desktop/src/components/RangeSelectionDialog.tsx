@@ -67,7 +67,9 @@ const RangeSelectionDialog: React.FC<DateRangeDialogProps> = ({
                 )}
                 onClick={() => {
                   setSelectedRange(range);
-                  setOpen(false);
+                  if (range !== DateRangeType.Custom) {
+                    setOpen(false);
+                  }
                 }}
               >
                 {range}

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
 import { Controller, useForm } from "react-hook-form";
 import { Button, Checkbox, Label, ScrollArea, Separator } from "@skopio/ui";
@@ -12,47 +12,59 @@ interface FormValues {
 
 const BranchSelectionDialog = () => {
   const [open, setOpen] = useState(false);
-  const { branches, selectedBranch } = usePresetFilter();
+  const { branches, selectedBranches } = usePresetFilter();
 
-  const defaultValues: FormValues = {
-    selectAll: !selectedBranch,
-    selectedBranches: Object.fromEntries(
-      branches.map((b) => [b, selectedBranch?.includes(b) ?? true]),
-    ),
-  };
+  const defaultValues: FormValues = useMemo(
+    () => ({
+      selectAll: !selectedBranches,
+      selectedBranches: Object.fromEntries(
+        branches.map((b) => [b, selectedBranches?.includes(b) ?? true]),
+      ),
+    }),
+    [branches, selectedBranches],
+  );
 
-  const { control, watch, setValue, handleSubmit } = useForm<FormValues>({
-    defaultValues,
-  });
+  const { control, watch, setValue, handleSubmit, reset } = useForm<FormValues>(
+    {
+      defaultValues,
+    },
+  );
 
-  const selectAll = watch("selectAll");
-  const selectedBranches = watch("selectedBranches");
+  useEffect(() => {
+    reset(defaultValues);
+  }, [defaultValues, reset]);
+
+  const selectedMap = watch("selectedBranches");
+
+  const allSelected =
+    branches.length > 0 && branches.every((b) => !!selectedMap?.[b]);
 
   const canSubmit =
-    selectAll || Object.values(selectedBranches ?? {}).some((v) => v === true);
+    allSelected || Object.values(selectedMap ?? {}).some((v) => v === true);
 
   const onSubmit = (data: FormValues) => {
-    if (data.selectAll) {
+    if (allSelected) {
+      usePresetFilter.setState({ selectedBranches: null });
       setOpen(false);
-    } else {
-      const selected = Object.entries(data.selectedBranches)
-        .filter(([, value]) => value)
-        .map(([key]) => key);
-
-      if (selected.length === 0) {
-        toast.error("Select at least one branch");
-        return;
-      }
-      usePresetFilter.setState({ selectedBranch: selected });
-      setOpen(false);
+      return;
     }
+    const selected = Object.entries(data.selectedBranches)
+      .filter(([, value]) => value)
+      .map(([key]) => key);
+
+    if (selected.length === 0) {
+      toast.error("Select at least one branch");
+      return;
+    }
+    usePresetFilter.setState({ selectedBranches: selected });
+    setOpen(false);
   };
 
   return (
     <Dialog.Root open={open} onOpenChange={setOpen}>
       <Dialog.Trigger asChild>
         <button className="underline decoration-dotted underline-offset-4 text-blue-600 hover:text-blue-800">
-          {selectedBranch?.join(", ") ?? "all"}
+          {selectedBranches?.join(", ") ?? "all"}
         </button>
       </Dialog.Trigger>
 
@@ -72,11 +84,14 @@ const BranchSelectionDialog = () => {
                   <div className="flex items-center space-x-2">
                     <Checkbox
                       id="select-all"
-                      checked={field.value}
+                      checked={allSelected}
                       onCheckedChange={(value) => {
                         field.onChange(!!value);
                         branches.forEach((b) => {
-                          setValue(`selectedBranches.${b}`, !!value);
+                          setValue(`selectedBranches.${b}`, !!value, {
+                            shouldDirty: true,
+                            shouldTouch: true,
+                          });
                         });
                       }}
                     />
@@ -100,7 +115,7 @@ const BranchSelectionDialog = () => {
                         <div className="flex items-center space-x-2">
                           <Checkbox
                             id={`branch-${branch}`}
-                            checked={field.value}
+                            checked={!!field.value}
                             onCheckedChange={(value) => field.onChange(!!value)}
                           />
                           <Label

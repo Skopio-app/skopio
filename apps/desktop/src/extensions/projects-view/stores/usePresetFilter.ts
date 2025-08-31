@@ -5,7 +5,7 @@ interface PresetFilterState {
   preset: TimeRangePreset;
   project: string;
   branches: string[];
-  selectedBranch: string[] | null;
+  selectedBranches: string[] | null;
   setPreset: (preset: TimeRangePreset) => void;
   setProject: (project: string) => void;
   setBranches: (branches: string[]) => void;
@@ -16,9 +16,9 @@ export const usePresetFilter = create<PresetFilterState>((set) => ({
   preset: "today",
   project: "",
   branches: [""],
-  selectedBranch: null,
+  selectedBranches: null,
   setPreset: (preset) => set({ preset }),
   setProject: (project) => set({ project }),
   setBranches: (branches) => set({ branches }),
-  setSelectedBranch: (selectedBranch) => set({ selectedBranch }),
+  setSelectedBranch: (selectedBranches) => set({ selectedBranches }),
 }));

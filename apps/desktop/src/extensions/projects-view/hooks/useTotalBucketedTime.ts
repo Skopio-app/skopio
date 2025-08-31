@@ -10,7 +10,7 @@ export const useTotalBucketedTime = (): {
   const [total, setTotal] = useState<number>(0);
   const [loading, setLoading] = useState<boolean>(true);
   const [hasBranchData, setHasBranchData] = useState(true);
-  const { preset, project, selectedBranch } = usePresetFilter();
+  const { preset, project, selectedBranches } = usePresetFilter();
 
   useEffect(() => {
     let cancelled = false;
@@ -23,7 +23,7 @@ export const useTotalBucketedTime = (): {
       const inputWithBranch: BucketSummaryInput = {
         ...baseInput,
         groupBy: "branch",
-        branches: selectedBranch,
+        branches: selectedBranches,
       };
 
       try {
@@ -84,7 +84,7 @@ export const useTotalBucketedTime = (): {
     return () => {
       cancelled = true;
     };
-  }, [preset, project, selectedBranch]);
+  }, [preset, project, selectedBranches]);
 
   return { total, loading, hasBranchData };
 };
