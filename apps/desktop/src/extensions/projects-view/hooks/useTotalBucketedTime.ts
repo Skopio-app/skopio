@@ -28,7 +28,6 @@ export const useTotalBucketedTime = (): {
 
       try {
         const branchData = await commands.fetchBucketedSummary(inputWithBranch);
-        console.log("The branch data: ", branchData);
         if (cancelled) return;
 
         if (branchData.length > 0) {
@@ -39,6 +38,7 @@ export const useTotalBucketedTime = (): {
             });
           }
 
+          usePresetFilter.setState({ branches: [...allKeys] });
           setHasBranchData(allKeys.size > 0);
 
           const branchTotal = branchData.reduce((sum, item) => {

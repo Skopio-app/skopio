@@ -28,6 +28,7 @@ const ProjectDetails = () => {
   const { projectId } = useParams();
   const [project, setProject] = useState<Project | null>(null);
   const [loading, setLoading] = useState(true);
+
   const {
     selectedRange,
     setSelectedRange,

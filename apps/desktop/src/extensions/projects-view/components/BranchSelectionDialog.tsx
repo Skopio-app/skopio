@@ -52,7 +52,7 @@ const BranchSelectionDialog = () => {
     <Dialog.Root open={open} onOpenChange={setOpen}>
       <Dialog.Trigger asChild>
         <button className="underline decoration-dotted underline-offset-4 text-blue-600 hover:text-blue-800">
-          {selectedBranch ?? "all"}
+          {selectedBranch?.join(", ") ?? "all"}
         </button>
       </Dialog.Trigger>
 
