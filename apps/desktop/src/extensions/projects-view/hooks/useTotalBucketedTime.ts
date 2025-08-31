@@ -2,19 +2,15 @@ import { startTransition, useEffect, useState } from "react";
 import { BucketSummaryInput, commands } from "@/types/tauri.gen";
 import { usePresetFilter } from "../stores/usePresetFilter";
 
-export const useTotalBucketedTime = (
-  selectedBranches: string[] | null,
-): {
+export const useTotalBucketedTime = (): {
   total: number;
   loading: boolean;
   hasBranchData: boolean;
-  branches: string[];
 } => {
   const [total, setTotal] = useState<number>(0);
   const [loading, setLoading] = useState<boolean>(true);
   const [hasBranchData, setHasBranchData] = useState(true);
-  const [branches, setBranches] = useState<string[]>([]);
-  const { preset, project } = usePresetFilter();
+  const { preset, project, selectedBranch } = usePresetFilter();
 
   useEffect(() => {
     let cancelled = false;
@@ -27,13 +23,12 @@ export const useTotalBucketedTime = (
       const inputWithBranch: BucketSummaryInput = {
         ...baseInput,
         groupBy: "branch",
-        ...(selectedBranches ? { branch_names: selectedBranches } : null),
+        branches: selectedBranch,
       };
 
       try {
-        setLoading(true);
-
         const branchData = await commands.fetchBucketedSummary(inputWithBranch);
+        console.log("The branch data: ", branchData);
         if (cancelled) return;
 
         if (branchData.length > 0) {
@@ -44,7 +39,6 @@ export const useTotalBucketedTime = (
             });
           }
 
-          setBranches([...allKeys]);
           setHasBranchData(allKeys.size > 0);
 
           const branchTotal = branchData.reduce((sum, item) => {
@@ -90,7 +84,7 @@ export const useTotalBucketedTime = (
     return () => {
       cancelled = true;
     };
-  }, [preset, project, selectedBranches?.join(",")]);
+  }, [preset, project, selectedBranch]);
 
-  return { total, loading, hasBranchData, branches };
+  return { total, loading, hasBranchData };
 };

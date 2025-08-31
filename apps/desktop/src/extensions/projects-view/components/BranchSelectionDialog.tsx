@@ -3,24 +3,16 @@ import * as Dialog from "@radix-ui/react-dialog";
 import { Controller, useForm } from "react-hook-form";
 import { Button, Checkbox, Label, ScrollArea, Separator } from "@skopio/ui";
 import { toast } from "sonner";
-
-interface BranchSelectionDialogProps {
-  branches: string[];
-  selectedBranch: string[] | null;
-  onSelect: (branch: string[] | null) => void;
-}
+import { usePresetFilter } from "../stores/usePresetFilter";
 
 interface FormValues {
   selectedBranches: Record<string, boolean>;
   selectAll: boolean;
 }
 
-const BranchSelectionDialog: React.FC<BranchSelectionDialogProps> = ({
-  branches,
-  selectedBranch,
-  onSelect,
-}) => {
+const BranchSelectionDialog = () => {
   const [open, setOpen] = useState(false);
+  const { branches, selectedBranch } = usePresetFilter();
 
   const defaultValues: FormValues = {
     selectAll: !selectedBranch,
@@ -41,7 +33,6 @@ const BranchSelectionDialog: React.FC<BranchSelectionDialogProps> = ({
 
   const onSubmit = (data: FormValues) => {
     if (data.selectAll) {
-      onSelect(null);
       setOpen(false);
     } else {
       const selected = Object.entries(data.selectedBranches)
@@ -52,8 +43,7 @@ const BranchSelectionDialog: React.FC<BranchSelectionDialogProps> = ({
         toast.error("Select at least one branch");
         return;
       }
-
-      onSelect(selected);
+      usePresetFilter.setState({ selectedBranch: selected });
       setOpen(false);
     }
   };

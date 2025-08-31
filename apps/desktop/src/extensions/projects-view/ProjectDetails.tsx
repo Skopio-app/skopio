@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
-import { useParams, useSearchParams } from "react-router";
+import { useEffect, useState } from "react";
+import { useParams } from "react-router";
 import { commands, Project, ProjectQuery } from "@/types/tauri.gen";
 import {
   Breadcrumb,
@@ -9,13 +9,7 @@ import {
   BreadcrumbSeparator,
   Skeleton,
 } from "@skopio/ui";
-import {
-  DATE_RANGE_LABELS,
-  DateRangeType,
-  getRangeDates,
-  mapRangeToPreset,
-} from "@/utils/time";
-import { addDays, startOfDay } from "date-fns";
+import { mapRangeToPreset } from "@/utils/time";
 import { formatDuration } from "@/utils/time";
 import RangeSelectionDialog from "@/components/RangeSelectionDialog";
 import { usePresetFilter } from "./stores/usePresetFilter";
@@ -28,62 +22,35 @@ import EntityList from "./components/sections/EntityList";
 import BranchList from "./components/sections/BranchList";
 import AppPieChartSection from "./components/sections/AppPieChartSection";
 import LanguagePieChartSection from "./components/sections/LanguagePieChartSection";
+import { useDateRangeParams } from "@/hooks/useDateRangesParams";
 
 const ProjectDetails = () => {
   const { projectId } = useParams();
   const [project, setProject] = useState<Project | null>(null);
   const [loading, setLoading] = useState(true);
-
-  const [customStart, setCustomStart] = useState<Date>(new Date());
-  const [customEnd, setCustomEnd] = useState<Date>(new Date());
-
-  const [pendingStart, setPendingStart] = useState<Date>(customStart);
-  const [pendingEnd, setPendingEnd] = useState<Date>(customEnd);
-
-  const [selectedBranches, setSelectedBranches] = useState<string[] | null>(
-    null,
-  );
-
-  const [searchParams, setSearchParams] = useSearchParams();
-  const paramRange = searchParams.get("range") as DateRangeType;
-  const [selectedRange, setSelectedRange] = useState<DateRangeType>(
-    paramRange && DATE_RANGE_LABELS.includes(paramRange)
-      ? paramRange
-      : DateRangeType.Today,
-  );
-
-  const isCustom = selectedRange === DateRangeType.Custom;
+  const {
+    selectedRange,
+    setSelectedRange,
+    isCustom,
+    pendingStart,
+    pendingEnd,
+    setPendingStart,
+    setPendingEnd,
+    setCustomStart,
+    setCustomEnd,
+    startDate,
+    endDate,
+  } = useDateRangeParams();
 
   useEffect(() => {
-    const params = new URLSearchParams(searchParams);
-    params.set("range", selectedRange);
-    setSearchParams(params, { replace: true });
-  }, [selectedRange]);
-
-  useEffect(() => {
-    if (!isCustom) return;
-    const maxEnd = addDays(startOfDay(customStart ?? 0), 30);
-    if (customEnd) {
-      if (customEnd > maxEnd) setCustomEnd(maxEnd);
+    const next = mapRangeToPreset(selectedRange, startDate, endDate);
+    const prev = usePresetFilter.getState().preset;
+    if (JSON.stringify(prev) !== JSON.stringify(next)) {
+      usePresetFilter.setState({ preset: next });
     }
-  }, [customStart, customEnd, isCustom]);
-
-  const [startDate, endDate] = useMemo(
-    () => getRangeDates(selectedRange, customStart, customEnd),
-    [selectedRange, customStart, customEnd],
-  );
-
-  useEffect(() => {
-    const newPreset = mapRangeToPreset(selectedRange, startDate, endDate);
-    usePresetFilter.setState({ preset: newPreset });
   }, [selectedRange, startDate, endDate]);
 
-  const {
-    total,
-    loading: timeLoading,
-    hasBranchData,
-    branches,
-  } = useTotalBucketedTime(selectedBranches);
+  const { total, loading: timeLoading, hasBranchData } = useTotalBucketedTime();
 
   const formattedDuration = formatDuration(total);
 
@@ -148,19 +115,11 @@ const ProjectDetails = () => {
             setCustomStart={setCustomStart}
             setCustomEnd={setCustomEnd}
             isCustom={isCustom}
-            searchParams={searchParams}
-            setSearchParams={setSearchParams}
           />{" "}
           in <span className="text-gray-900 font-semibold">{project.name}</span>{" "}
           {hasBranchData && (
             <>
-              under{" "}
-              <BranchSelectionDialog
-                branches={branches}
-                selectedBranch={selectedBranches}
-                onSelect={setSelectedBranches}
-              />{" "}
-              branches
+              under <BranchSelectionDialog /> branches
             </>
           )}
         </p>
