@@ -22,5 +22,3 @@ common = { path = "../../crates/common" }
 specta = { workspace = true }
 serde_qs = { workspace = true, features = ["axum"] }
 uuid = { workspace = true, features = ["v7", "fast-rng"] }
-hyper = "1.7.0"
-hyper-util = "0.1.16"

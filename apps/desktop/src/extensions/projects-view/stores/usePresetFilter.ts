@@ -15,7 +15,7 @@ interface PresetFilterState {
 export const usePresetFilter = create<PresetFilterState>((set) => ({
   preset: "today",
   project: "",
-  branches: [""],
+  branches: [],
   selectedBranches: null,
   setPreset: (preset) => set({ preset }),
   setProject: (project) => set({ project }),

@@ -5299,8 +5299,6 @@ dependencies = [
  "common",
  "db",
  "dirs 6.0.0",
- "hyper",
- "hyper-util",
  "serde",
  "serde_json",
  "serde_qs",

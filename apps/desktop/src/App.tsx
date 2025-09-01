@@ -52,18 +52,16 @@ function App() {
             Reload
             <ContextMenuShortcut>⌘⇧R</ContextMenuShortcut>
           </ContextMenuItem>
-          <ContextMenuItem
-            inset
-            className="text-xs"
-            disabled={!isDev()}
-            onClick={() => {
-              if (isDev()) {
-                commands.openDevtools();
-              }
-            }}
-          >
-            Inspect Element
-          </ContextMenuItem>
+          {isDev && (
+            <ContextMenuItem
+              inset
+              className="text-xs"
+              disabled={!isDev()}
+              onClick={() => commands.openDevtools()}
+            >
+              Inspect Element
+            </ContextMenuItem>
+          )}
         </ContextMenuContent>
       </ContextMenu>
     </>
