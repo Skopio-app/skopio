@@ -5294,11 +5294,14 @@ dependencies = [
 name = "server"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "axum 0.8.1",
  "chrono",
  "common",
  "db",
  "dirs 6.0.0",
+ "hyper",
+ "hyper-util",
  "serde",
  "serde_json",
  "serde_qs",
