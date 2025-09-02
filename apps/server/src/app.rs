@@ -14,7 +14,7 @@ use tokio::sync::Mutex;
 use tower_http::cors::CorsLayer;
 
 pub async fn create_app(db: Arc<Mutex<DBContext>>) -> Router {
-    Router::new()
+    let router = Router::new()
         .merge(heartbeat_routes(db.clone()))
         .merge(event_routes(db.clone()))
         .merge(afk_event_routes(db.clone()))
@@ -23,6 +23,16 @@ pub async fn create_app(db: Arc<Mutex<DBContext>>) -> Router {
         .merge(app_routes(db.clone()))
         .merge(category_routes(db.clone()))
         .merge(project_routes(db.clone()))
-        .merge(insights_routes(db.clone()))
-        .layer(CorsLayer::permissive())
+        .merge(insights_routes(db.clone()));
+
+    let dev_mode = cfg!(debug_assertions)
+        || std::env::var("SKOPIO_DEV")
+            .map(|v| v == "1")
+            .unwrap_or(false);
+
+    if dev_mode {
+        router.layer(CorsLayer::permissive())
+    } else {
+        router
+    }
 }

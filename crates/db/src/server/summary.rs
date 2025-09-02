@@ -8,7 +8,6 @@ use common::{
     },
     time::{TimeBucket, TimeRange},
 };
-use log::debug;
 
 use crate::{
     models::{BucketTimeSummary, GroupedTimeSummary},
@@ -250,10 +249,6 @@ impl SummaryQueryBuilder {
             "events.end_timestamp",
         );
 
-        debug!(
-            "The filter start: {:?}. The filter end: {:?}",
-            self.filters.start, self.filters.end
-        );
         append_all_filters(&mut query, self.filters.clone());
 
         let result = sqlx::query_scalar::<_, Option<i64>>(&query)
@@ -269,7 +264,6 @@ impl SummaryQueryBuilder {
         &self,
         db: &DBContext,
     ) -> Result<Vec<BucketTimeSummary>, DBError> {
-        debug!("The query builder: {:?}", self);
         let (group_key, inner_tbl) = group_key_info(self.filters.group_by);
 
         let time_bucket_expr = get_time_bucket_expr(self.filters.time_bucket);
@@ -301,8 +295,6 @@ impl SummaryQueryBuilder {
         append_all_filters(&mut base_query, self.filters.clone());
 
         base_query.push_str(&format!(" GROUP BY {time_bucket_expr}, {group_key}"));
-
-        debug!("The query: {}", base_query);
 
         let rows = sqlx::query_as::<_, RawBucketRow>(&base_query)
             .fetch_all(db.pool())
