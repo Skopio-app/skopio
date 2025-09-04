@@ -23,3 +23,4 @@ specta = { workspace = true }
 serde_qs = { workspace = true, features = ["axum"] }
 uuid = { workspace = true, features = ["v7", "fast-rng"] }
 anyhow.workspace = true
+thiserror.workspace = true

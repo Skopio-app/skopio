@@ -7,6 +7,7 @@ use tracing::{error, info};
 use tracing_subscriber::{fmt, EnvFilter};
 
 mod app;
+mod error;
 mod net;
 mod routes;
 mod utils;

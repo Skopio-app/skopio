@@ -1,8 +1,5 @@
-use axum::http::StatusCode;
-use axum::Json;
 use dirs::data_dir;
 use std::path::PathBuf;
-use tracing::error;
 
 fn get_db_name() -> String {
     if cfg!(debug_assertions) {
@@ -18,12 +15,4 @@ pub fn get_db_path() -> PathBuf {
         .join("com.samwahome.skopio")
         .join("server")
         .join(get_db_name())
-}
-
-pub fn error_response<E: std::fmt::Display>(err: E) -> (StatusCode, Json<String>) {
-    error!("Error: {}", err);
-    (
-        StatusCode::INTERNAL_SERVER_ERROR,
-        Json(format!("Error: {}", err)),
-    )
 }

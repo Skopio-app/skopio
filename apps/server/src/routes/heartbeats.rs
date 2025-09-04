@@ -1,6 +1,4 @@
-use crate::utils::error_response;
 use axum::extract::State;
-use axum::http::StatusCode;
 use axum::routing::post;
 use axum::{Json, Router};
 use common::models::inputs::HeartbeatInput;
@@ -15,35 +13,27 @@ use std::sync::Arc;
 use tokio::sync::Mutex;
 use tracing::debug;
 
+use crate::error::AppResult;
+
 // TODO: Investigate the need for optimizations in the for loop
 async fn handle_heartbeats(
     State(db): State<Arc<Mutex<DBContext>>>,
     Json(payload): Json<Vec<HeartbeatInput>>,
-) -> Result<Json<String>, (StatusCode, Json<String>)> {
+) -> AppResult<Json<String>> {
     let db = db.lock().await;
 
     debug!("Handling {} heartbeats", payload.len());
 
     for hb in payload {
-        let app_id = App::find_or_insert(&db, &hb.app_name)
-            .await
-            .map_err(error_response)?;
-        let project_id = ServerProject::find_or_insert(&db, &hb.project_name, &hb.project_path)
-            .await
-            .map_err(error_response)?;
-        let branch_id = Branch::find_or_insert(&db, project_id, &hb.branch_name)
-            .await
-            .map_err(error_response)?;
-        let entity_id = Entity::find_or_insert(&db, project_id, &hb.entity_name, &hb.entity_type)
-            .await
-            .map_err(error_response)?;
-        let language_id = Language::find_or_insert(&db, &hb.language_name)
-            .await
-            .map_err(error_response)?;
+        let app_id = App::find_or_insert(&db, &hb.app_name).await?;
+        let project_id =
+            ServerProject::find_or_insert(&db, &hb.project_name, &hb.project_path).await?;
+        let branch_id = Branch::find_or_insert(&db, project_id, &hb.branch_name).await?;
+        let entity_id =
+            Entity::find_or_insert(&db, project_id, &hb.entity_name, &hb.entity_type).await?;
+        let language_id = Language::find_or_insert(&db, &hb.language_name).await?;
 
-        let source_id = Source::find_or_insert(&db, &hb.source_name)
-            .await
-            .map_err(error_response)?;
+        let source_id = Source::find_or_insert(&db, &hb.source_name).await?;
 
         let id = uuid::Uuid::now_v7();
         let heartbeat = Heartbeat {
@@ -60,7 +50,7 @@ async fn handle_heartbeats(
             cursorpos: hb.cursorpos,
         };
 
-        heartbeat.create(&db).await.map_err(error_response)?;
+        heartbeat.create(&db).await?;
     }
 
     Ok(Json("Heartbeats saved".to_string()))

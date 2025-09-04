@@ -5304,6 +5304,7 @@ dependencies = [
  "serde_json",
  "serde_qs",
  "specta",
+ "thiserror 2.0.12",
  "tokio",
  "tower-http",
  "tracing",

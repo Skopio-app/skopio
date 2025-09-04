@@ -1,6 +1,5 @@
-use crate::utils::error_response;
+use crate::error::AppResult;
 use axum::extract::State;
-use axum::http::StatusCode;
 use axum::routing::{get, post};
 use axum::{Json, Router};
 use common::models::inputs::{BucketSummaryInput, EventInput};
@@ -21,35 +20,21 @@ use tracing::debug;
 async fn insert_events(
     State(db): State<Arc<Mutex<DBContext>>>,
     Json(payload): Json<Vec<EventInput>>,
-) -> Result<Json<String>, (StatusCode, Json<String>)> {
+) -> AppResult<Json<String>> {
     let db = db.lock().await;
 
     debug!("Handling {} events", payload.len());
 
     for event in payload {
-        let app_id = App::find_or_insert(&db, &event.app_name)
-            .await
-            .map_err(error_response)?;
+        let app_id = App::find_or_insert(&db, &event.app_name).await?;
         let project_id =
-            ServerProject::find_or_insert(&db, &event.project_name, &event.project_path)
-                .await
-                .map_err(error_response)?;
-        let branch_id = Branch::find_or_insert(&db, project_id, &event.branch_name)
-            .await
-            .map_err(error_response)?;
+            ServerProject::find_or_insert(&db, &event.project_name, &event.project_path).await?;
+        let branch_id = Branch::find_or_insert(&db, project_id, &event.branch_name).await?;
         let entity_id =
-            Entity::find_or_insert(&db, project_id, &event.entity_name, &event.entity_type)
-                .await
-                .map_err(error_response)?;
-        let language_id = Language::find_or_insert(&db, &event.language_name)
-            .await
-            .map_err(error_response)?;
-        let category_id = Category::find_or_insert(&db, &event.category)
-            .await
-            .map_err(error_response)?;
-        let source_id = Source::find_or_insert(&db, &event.source_name)
-            .await
-            .map_err(error_response)?;
+            Entity::find_or_insert(&db, project_id, &event.entity_name, &event.entity_type).await?;
+        let language_id = Language::find_or_insert(&db, &event.language_name).await?;
+        let category_id = Category::find_or_insert(&db, &event.category).await?;
+        let source_id = Source::find_or_insert(&db, &event.source_name).await?;
 
         let id = uuid::Uuid::now_v7();
 
@@ -66,7 +51,7 @@ async fn insert_events(
             source_id,
             end_timestamp: event.end_timestamp,
         };
-        event.create(&db).await.map_err(error_response)?;
+        event.create(&db).await?;
     }
     Ok(Json("Events saved".to_string()))
 }
@@ -74,13 +59,12 @@ async fn insert_events(
 async fn fetch_events(
     State(db): State<Arc<Mutex<DBContext>>>,
     QsQuery(payload): QsQuery<BucketSummaryInput>,
-) -> Result<Json<EventGroupResult>, (StatusCode, Json<String>)> {
+) -> AppResult<Json<EventGroupResult>> {
     let db = db.lock().await;
     let builder = SummaryQueryBuilder::from(payload);
-    match builder.fetch_event_range(&db).await {
-        Ok(result) => Ok(Json(result)),
-        Err(err) => Err(error_response(err)),
-    }
+    let result = builder.fetch_event_range(&db).await?;
+
+    Ok(Json(result))
 }
 
 pub fn event_routes(db: Arc<Mutex<DBContext>>) -> Router {

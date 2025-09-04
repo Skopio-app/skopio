@@ -1,4 +1,4 @@
-use axum::{extract::State, http::StatusCode, routing::post, Json, Router};
+use axum::{extract::State, routing::post, Json, Router};
 use common::models::inputs::AFKEventInput;
 use db::{server::afk_events::AFKEvent, DBContext};
 use std::sync::Arc;
@@ -6,12 +6,12 @@ use tokio::sync::Mutex;
 use tracing::debug;
 use uuid::Uuid;
 
-use crate::utils::error_response;
+use crate::error::AppResult;
 
 async fn handle_afk_events(
     State(db): State<Arc<Mutex<DBContext>>>,
     Json(payload): Json<Vec<AFKEventInput>>,
-) -> Result<Json<String>, (StatusCode, Json<String>)> {
+) -> AppResult<Json<String>> {
     let db = db.lock().await;
 
     debug!("Handling {} afk events", payload.len());
@@ -25,7 +25,7 @@ async fn handle_afk_events(
             duration: afk.duration,
         };
 
-        afk_event.create(&db).await.map_err(error_response)?;
+        afk_event.create(&db).await?;
     }
 
     Ok(Json("AFK events saved".to_owned()))

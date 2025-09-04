@@ -13,7 +13,7 @@ pub struct AFKEvent {
 
 impl AFKEvent {
     /// Insert an AFK event
-    pub async fn create(&self, db_context: &DBContext) -> Result<(), sqlx::Error> {
+    pub async fn create(&self, db_context: &DBContext) -> Result<(), DBError> {
         sqlx::query!(
             "
             INSERT INTO afk_events (id, afk_start, afk_end, duration)

@@ -2,7 +2,6 @@ use std::sync::Arc;
 
 use axum::{
     extract::{Query, State},
-    http::StatusCode,
     routing::get,
     Json, Router,
 };
@@ -16,16 +15,16 @@ use db::{
 };
 use tokio::sync::Mutex;
 
-use crate::utils::error_response;
+use crate::error::AppResult;
 
 pub async fn fetch_insight(
     State(db): State<Arc<Mutex<DBContext>>>,
     Query(payload): Query<InsightQueryPayload>,
-) -> Result<Json<InsightResult>, (StatusCode, Json<String>)> {
+) -> AppResult<Json<InsightResult>> {
     let db = db.lock().await;
 
     let insight_range = match &payload.insight_range {
-        Some(s) => Some(InsightRange::try_from(s.clone()).map_err(error_response)?),
+        Some(s) => Some(InsightRange::try_from(s.clone())?),
         None => None,
     };
 
@@ -37,9 +36,7 @@ pub async fn fetch_insight(
         bucket: payload.bucket,
     };
 
-    let result = Insights::execute(&db, query)
-        .await
-        .map_err(error_response)?;
+    let result = Insights::execute(&db, query).await?;
 
     Ok(Json(result))
 }
