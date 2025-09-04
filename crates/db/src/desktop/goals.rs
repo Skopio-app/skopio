@@ -3,7 +3,7 @@ use std::{collections::HashMap, str::FromStr};
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
-use crate::DBContext;
+use crate::{error::DBError, DBContext};
 
 #[derive(Serialize, Deserialize, Debug, Clone, specta::Type)]
 #[serde(rename_all = "camelCase")]
@@ -97,7 +97,7 @@ pub struct GoalUpdateInput {
     pub excluded_days: Option<Vec<String>>,
 }
 
-pub async fn fetch_all_goals(db: &DBContext) -> Result<Vec<Goal>, sqlx::Error> {
+pub async fn fetch_all_goals(db: &DBContext) -> Result<Vec<Goal>, DBError> {
     let rows = sqlx::query!(
         "
         SELECT
@@ -163,7 +163,7 @@ pub async fn fetch_all_goals(db: &DBContext) -> Result<Vec<Goal>, sqlx::Error> {
     Ok(grouped.into_values().collect())
 }
 
-pub async fn insert_goal(db: &DBContext, input: GoalInput) -> Result<(), sqlx::Error> {
+pub async fn insert_goal(db: &DBContext, input: GoalInput) -> Result<(), DBError> {
     let now = Utc::now().to_rfc3339();
     let time_span = input.time_span.to_string();
 
@@ -346,7 +346,7 @@ pub async fn modify_goal(
     Ok(())
 }
 
-pub async fn delete_goal(db: &DBContext, goal_id: i64) -> Result<(), sqlx::Error> {
+pub async fn delete_goal(db: &DBContext, goal_id: i64) -> Result<(), DBError> {
     sqlx::query!("DELETE FROM goals WHERE id = ?", goal_id)
         .execute(db.pool())
         .await?;

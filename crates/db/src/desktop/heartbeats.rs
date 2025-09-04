@@ -1,10 +1,7 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    utils::{update_synced_in, DBError},
-    DBContext,
-};
+use crate::{error::DBError, utils::update_synced_in, DBContext};
 
 #[derive(Serialize, Deserialize, Clone, Debug, sqlx::FromRow)]
 pub struct Heartbeat {
@@ -24,7 +21,7 @@ pub struct Heartbeat {
 }
 
 impl Heartbeat {
-    pub async fn insert(self, db_context: &DBContext) -> Result<(), sqlx::Error> {
+    pub async fn insert(self, db_context: &DBContext) -> Result<(), DBError> {
         sqlx::query!(
             "
             INSERT INTO heartbeats (timestamp, project_name, project_path, entity_name, entity_type, branch_name, language_name, app_name, source_name, is_write, lines, cursorpos)
@@ -102,12 +99,12 @@ impl Heartbeat {
     pub async fn mark_as_synced(
         db_context: &DBContext,
         heartbeats: &[Self],
-    ) -> Result<(), sqlx::Error> {
+    ) -> Result<(), DBError> {
         let ids: Vec<i64> = heartbeats.iter().filter_map(|h| h.id).collect();
         update_synced_in(db_context, "heartbeats", &ids).await
     }
 
-    pub async fn delete_synced(db_context: &DBContext) -> Result<(), sqlx::Error> {
+    pub async fn delete_synced(db_context: &DBContext) -> Result<(), DBError> {
         sqlx::query!(
             "DELETE FROM heartbeats
              WHERE id IN (

@@ -1,10 +1,7 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    utils::{update_synced_in, DBError},
-    DBContext,
-};
+use crate::{error::DBError, utils::update_synced_in, DBContext};
 
 #[derive(Serialize, Deserialize, Clone, Debug, sqlx::FromRow)]
 pub struct AFKEvent {
@@ -15,7 +12,7 @@ pub struct AFKEvent {
 }
 
 impl AFKEvent {
-    pub async fn insert(self, db_context: &DBContext) -> Result<(), sqlx::Error> {
+    pub async fn insert(self, db_context: &DBContext) -> Result<(), DBError> {
         sqlx::query!(
             "
             INSERT INTO afk_events (afk_start, afk_end, duration)
@@ -68,10 +65,7 @@ impl AFKEvent {
         Ok(events)
     }
 
-    pub async fn mark_as_synced(
-        db_context: &DBContext,
-        events: &[Self],
-    ) -> Result<(), sqlx::Error> {
+    pub async fn mark_as_synced(db_context: &DBContext, events: &[Self]) -> Result<(), DBError> {
         let ids: Vec<i64> = events.iter().filter_map(|afk| afk.id).collect();
         update_synced_in(db_context, "afk_events", &ids).await
     }

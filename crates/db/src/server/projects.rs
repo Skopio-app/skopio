@@ -1,4 +1,4 @@
-use crate::{utils::DBError, DBContext};
+use crate::{error::DBError, DBContext};
 use common::models::Project;
 use uuid::Uuid;
 

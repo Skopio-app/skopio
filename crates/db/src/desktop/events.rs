@@ -1,10 +1,7 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    utils::{update_synced_in, DBError},
-    DBContext,
-};
+use crate::{error::DBError, utils::update_synced_in, DBContext};
 
 #[derive(Serialize, Deserialize, Clone, Debug, sqlx::FromRow)]
 pub struct Event {
@@ -24,7 +21,7 @@ pub struct Event {
 }
 
 impl Event {
-    pub async fn insert(self, db_context: &DBContext) -> Result<(), sqlx::Error> {
+    pub async fn insert(self, db_context: &DBContext) -> Result<(), DBError> {
         sqlx::query!(
             "
             INSERT INTO events (timestamp, duration, category, app_name, entity_name, entity_type, project_name, project_path, branch_name, language_name, source_name, end_timestamp)
@@ -101,15 +98,12 @@ impl Event {
         Ok(events)
     }
 
-    pub async fn mark_as_synced(
-        db_context: &DBContext,
-        events: &[Self],
-    ) -> Result<(), sqlx::Error> {
+    pub async fn mark_as_synced(db_context: &DBContext, events: &[Self]) -> Result<(), DBError> {
         let ids: Vec<i64> = events.iter().filter_map(|e| e.id).collect();
         update_synced_in(db_context, "events", &ids).await
     }
 
-    pub async fn delete_synced(db_context: &DBContext) -> Result<(), sqlx::Error> {
+    pub async fn delete_synced(db_context: &DBContext) -> Result<(), DBError> {
         sqlx::query!(
             "DELETE FROM events
              WHERE id IN (

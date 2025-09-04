@@ -16,9 +16,8 @@ async fn handle_afk_events(
 
     debug!("Handling {} afk events", payload.len());
 
-    let id = Uuid::now_v7();
-
     for afk in payload {
+        let id = Uuid::now_v7();
         let afk_event = AFKEvent {
             id,
             afk_start: afk.afk_start,

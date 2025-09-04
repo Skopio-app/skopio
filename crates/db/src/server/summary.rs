@@ -10,6 +10,7 @@ use common::{
 };
 
 use crate::{
+    error::DBError,
     models::{BucketTimeSummary, GroupedTimeSummary},
     server::utils::{
         query::{
@@ -18,7 +19,6 @@ use crate::{
         },
         summary_filter::SummaryFilters,
     },
-    utils::DBError,
     DBContext,
 };
 

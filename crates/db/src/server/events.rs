@@ -8,13 +8,13 @@ use uuid::Uuid;
 use sqlx::Row;
 
 use crate::{
+    error::DBError,
     server::{
         summary::SummaryQueryBuilder,
         utils::query::{
             append_all_filters, append_date_range, append_standard_joins, group_key_info,
         },
     },
-    utils::DBError,
     DBContext,
 };
 

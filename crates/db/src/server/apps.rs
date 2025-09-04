@@ -1,4 +1,4 @@
-use crate::{models::App, utils::DBError, DBContext};
+use crate::{error::DBError, models::App, DBContext};
 use uuid::Uuid;
 
 impl App {

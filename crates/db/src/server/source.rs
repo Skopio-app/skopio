@@ -1,6 +1,6 @@
 use uuid::Uuid;
 
-use crate::{models::Source, utils::DBError, DBContext};
+use crate::{error::DBError, models::Source, DBContext};
 
 impl Source {
     /// Finds an existing source by name or inserts a new one, returning its ID.

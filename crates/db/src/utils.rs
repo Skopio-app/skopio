@@ -1,8 +1,6 @@
 use std::path::Path;
 
-use thiserror::Error;
-
-use crate::DBContext;
+use crate::{error::DBError, DBContext};
 
 pub fn extract_db_file_path(database_url: &str) -> std::path::PathBuf {
     let db_path = database_url.trim_start_matches("sqlite://");
@@ -14,7 +12,7 @@ pub async fn update_synced_in(
     db_context: &DBContext,
     table: &str,
     ids: &[i64],
-) -> Result<(), sqlx::Error> {
+) -> Result<(), DBError> {
     if ids.is_empty() {
         return Ok(());
     }
@@ -38,16 +36,4 @@ pub async fn update_synced_in(
     query_builder.execute(db_context.pool()).await?;
 
     Ok(())
-}
-
-#[derive(Error, Debug)]
-pub enum DBError {
-    #[error("SQLx error: {0}")]
-    Sqlx(#[from] sqlx::Error),
-
-    #[error("Timestamp parse error: {0}")]
-    Parse(#[from] chrono::ParseError),
-
-    #[error("UUID error: {0}")]
-    Uuid(#[from] uuid::Error),
 }
