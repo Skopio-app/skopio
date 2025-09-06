@@ -1,4 +1,8 @@
-use crate::app::create_app;
+use crate::{
+    app::create_app,
+    auth::{bearer_auth, AuthCfg},
+};
+use axum::middleware;
 use db::DBContext;
 use std::sync::Arc;
 use tokio::net::TcpListener;
@@ -7,6 +11,7 @@ use tracing::{error, info};
 use tracing_subscriber::{fmt, EnvFilter};
 
 mod app;
+mod auth;
 mod error;
 mod net;
 mod routes;
@@ -42,7 +47,12 @@ async fn main() {
         }
     };
 
-    let app = create_app(db.clone()).await;
+    let mut app = create_app(db.clone()).await;
+
+    let auth = AuthCfg {
+        bearer: Arc::from(""),
+    };
+    app = app.layer(middleware::from_fn_with_state(auth, bearer_auth));
 
     let dev_mode = cfg!(debug_assertions)
         || std::env::var("SKOPIO_DEV")

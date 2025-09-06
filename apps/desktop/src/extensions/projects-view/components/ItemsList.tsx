@@ -24,7 +24,7 @@ const ItemsList: React.FC<ItemsListProps> = ({ title, data, loading }) => {
               <p className="text-xs font-light w-20 text-right">
                 {formatDuration(item.value)}
               </p>
-              <p className="text-sm truncate w-160">{item.name}</p>
+              <p className="text-sm truncate">{item.name}</p>
             </div>
           ))
         ) : (

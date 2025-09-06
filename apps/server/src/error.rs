@@ -44,7 +44,7 @@ impl ServerError {
             ServerError::BadRequest(_) => StatusCode::BAD_REQUEST,
             ServerError::NotFound => StatusCode::NOT_FOUND,
             ServerError::Conflict(_) => StatusCode::CONFLICT,
-            Self::Unprocessable(_) => StatusCode::UNPROCESSABLE_ENTITY,
+            ServerError::Unprocessable(_) => StatusCode::UNPROCESSABLE_ENTITY,
             ServerError::Internal(_) => StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
