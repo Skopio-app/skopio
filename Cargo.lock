@@ -918,14 +918,18 @@ dependencies = [
 name = "common"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "chrono",
+ "dirs 6.0.0",
  "git2",
  "keyring",
  "percent-encoding",
+ "reqwest",
  "serde",
  "specta",
  "thiserror 2.0.12",
  "tokei",
+ "tokio",
  "uuid",
 ]
 

@@ -54,17 +54,12 @@ async fn main() {
     };
     app = app.layer(middleware::from_fn_with_state(auth, bearer_auth));
 
-    let dev_mode = cfg!(debug_assertions)
-        || std::env::var("SKOPIO_DEV")
-            .map(|v| v == "1")
-            .unwrap_or(false);
-
     let shutdown = async {
         let _ = tokio::signal::ctrl_c().await;
         info!("Shutdown signal received");
     };
 
-    if dev_mode {
+    if cfg!(debug_assertions) {
         let listener = TcpListener::bind("127.0.0.1:8080")
             .await
             .expect("Failed to start server");

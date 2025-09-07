@@ -1,3 +1,4 @@
+pub mod client;
 pub mod git;
 pub mod keyring;
 pub mod language;
