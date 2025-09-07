@@ -3,6 +3,7 @@ use crate::{
     auth::{bearer_auth, AuthCfg},
 };
 use axum::middleware;
+use common::keyring::Keyring;
 use db::DBContext;
 use std::sync::Arc;
 use tokio::net::TcpListener;
@@ -48,9 +49,10 @@ async fn main() {
     };
 
     let mut app = create_app(db.clone()).await;
-
+    let token =
+        Keyring::get_password("skopio", "bearer_token").unwrap_or_else(|e| Some(e.to_string()));
     let auth = AuthCfg {
-        bearer: Arc::from(""),
+        bearer: Arc::from(token.unwrap_or_default()),
     };
     app = app.layer(middleware::from_fn_with_state(auth, bearer_auth));
 

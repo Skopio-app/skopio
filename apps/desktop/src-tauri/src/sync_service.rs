@@ -5,14 +5,12 @@ use common::models::inputs::{AFKEventInput, EventInput, HeartbeatInput};
 use db::desktop::{afk_events::AFKEvent, events::Event, heartbeats::Heartbeat};
 use db::DBContext;
 use log::{error, info};
-use reqwest::Client;
 use tokio::sync::{mpsc, oneshot, watch, Mutex};
 use tokio::task::JoinHandle;
 use tokio::time::{interval, Duration, Instant};
 
+use crate::network::post_json;
 use crate::tracking_service::TrackingService;
-
-const SERVER_URL: &str = "http://localhost:8080";
 
 enum TrackingStats {
     Heartbeat(Heartbeat),
@@ -201,7 +199,6 @@ async fn flush(
 }
 
 async fn sync_with_server(db_context: &Arc<DBContext>) -> Result<(), anyhow::Error> {
-    let client = Client::new();
     let heartbeats = Heartbeat::unsynced(db_context).await?;
     if !heartbeats.is_empty() {
         let payload: Vec<HeartbeatInput> = heartbeats
@@ -222,20 +219,15 @@ async fn sync_with_server(db_context: &Arc<DBContext>) -> Result<(), anyhow::Err
             })
             .collect();
 
-        let res = client
-            .post(format!("{}/heartbeats", SERVER_URL))
-            .json(&payload)
-            .send()
-            .await?;
-        if res.status().is_success() {
-            Heartbeat::mark_as_synced(db_context, &heartbeats).await?;
-            info!("Synced {} heartbeats", heartbeats.len());
-            Heartbeat::delete_synced(db_context).await?;
-        } else {
-            error!(
-                "Something went wrong trying to sync heartbeats: {:?}",
-                res.text().await
-            );
+        match post_json::<Vec<HeartbeatInput>, String>("/heartbeats", &payload).await {
+            Ok(_) => {
+                Heartbeat::mark_as_synced(db_context, &heartbeats).await?;
+                info!("Synced {} heartbeats", heartbeats.len());
+                Heartbeat::delete_synced(db_context).await?;
+            }
+            Err(e) => {
+                error!("Something went wrong trying to sync heartbeats: {e}");
+            }
         }
     }
 
@@ -259,21 +251,15 @@ async fn sync_with_server(db_context: &Arc<DBContext>) -> Result<(), anyhow::Err
             })
             .collect();
 
-        let res = client
-            .post(format!("{}/events", SERVER_URL))
-            .json(&payload)
-            .send()
-            .await?;
-
-        if res.status().is_success() {
-            Event::mark_as_synced(db_context, &events).await?;
-            info!("Synced {} events", events.len());
-            Event::delete_synced(db_context).await?;
-        } else {
-            error!(
-                "Something went wrong trying to sync events: {:?}",
-                res.text().await
-            );
+        match post_json::<Vec<EventInput>, String>("/events", &payload).await {
+            Ok(_) => {
+                Event::mark_as_synced(db_context, &events).await?;
+                info!("Synced {} events", events.len());
+                Event::delete_synced(db_context).await?;
+            }
+            Err(e) => {
+                error!("Something went wrong trying to sync events: {e}");
+            }
         }
     }
 
@@ -288,21 +274,15 @@ async fn sync_with_server(db_context: &Arc<DBContext>) -> Result<(), anyhow::Err
             })
             .collect();
 
-        let res = client
-            .post(format!("{}/afk", SERVER_URL))
-            .json(&payload)
-            .send()
-            .await?;
-
-        if res.status().is_success() {
-            AFKEvent::mark_as_synced(db_context, &afk_events).await?;
-            info!("Synced {} afk events", afk_events.len());
-            AFKEvent::delete_synced(db_context).await?;
-        } else {
-            error!(
-                "Something went wrong trying to sync AFK events: {:?}",
-                res.text().await
-            )
+        match post_json::<Vec<AFKEventInput>, String>("/afk", &payload).await {
+            Ok(_) => {
+                AFKEvent::mark_as_synced(db_context, &afk_events).await?;
+                info!("Synced {} afk events", afk_events.len());
+                AFKEvent::delete_synced(db_context).await?;
+            }
+            Err(e) => {
+                error!("Something went wrong trying to sync AFK events: {e}")
+            }
         }
     }
 
