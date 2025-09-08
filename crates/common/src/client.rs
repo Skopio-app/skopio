@@ -25,14 +25,14 @@ pub enum Transport {
 impl Transport {
     pub fn detect() -> Result<Self> {
         let password = Uuid::new_v4().to_string();
-        let token = Keyring::get_or_set_password(SERVICE, ACCOUNT, password.as_str())?;
 
         if cfg!(debug_assertions) {
             Ok(Transport::DevTcp {
                 base: "http://127.0.0.1:8080".into(),
-                token,
+                token: password,
             })
         } else {
+            let token = Keyring::get_or_set_password(SERVICE, ACCOUNT, password.as_str())?;
             let run_dir = dirs::data_dir()
                 .ok_or_else(|| anyhow!("Data dir not found"))?
                 .join("com.samwahome.com/run");

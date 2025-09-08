@@ -1,8 +1,11 @@
+#[allow(unused_imports)]
 use crate::{
     app::create_app,
     auth::{bearer_auth, AuthCfg},
 };
+#[allow(unused_imports)]
 use axum::middleware;
+#[allow(unused_imports)]
 use common::keyring::Keyring;
 use db::DBContext;
 use std::sync::Arc;
@@ -48,13 +51,17 @@ async fn main() {
         }
     };
 
+    #[allow(unused_mut)]
     let mut app = create_app(db.clone()).await;
-    let token =
-        Keyring::get_password("skopio", "bearer_token").unwrap_or_else(|e| Some(e.to_string()));
-    let auth = AuthCfg {
-        bearer: Arc::from(token.unwrap_or_default()),
-    };
-    app = app.layer(middleware::from_fn_with_state(auth, bearer_auth));
+    #[cfg(not(debug_assertions))]
+    {
+        let token =
+            Keyring::get_password("skopio", "bearer_token").unwrap_or_else(|e| Some(e.to_string()));
+        let auth = AuthCfg {
+            bearer: Arc::from(token.unwrap_or_default()),
+        };
+        app = app.layer(middleware::from_fn_with_state(auth, bearer_auth));
+    }
 
     let shutdown = async {
         let _ = tokio::signal::ctrl_c().await;
