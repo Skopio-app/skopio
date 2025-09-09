@@ -21,7 +21,7 @@ pub struct Event {
 }
 
 impl Event {
-    pub async fn insert(self, db_context: &DBContext) -> Result<(), DBError> {
+    pub async fn insert(&self, db_context: &DBContext) -> Result<(), DBError> {
         sqlx::query!(
             "
             INSERT INTO events (timestamp, duration, category, app_name, entity_name, entity_type, project_name, project_path, branch_name, language_name, source_name, end_timestamp)

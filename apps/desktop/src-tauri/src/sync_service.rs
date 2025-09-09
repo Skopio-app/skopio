@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
 use async_trait::async_trait;
-use common::models::inputs::{AFKEventInput, EventInput, HeartbeatInput};
-use db::desktop::{afk_events::AFKEvent, events::Event, heartbeats::Heartbeat};
+use common::models::inputs::{AFKEventInput, EventInput};
+use db::desktop::{afk_events::AFKEvent, events::Event};
 use db::DBContext;
 use log::{error, info};
 use tokio::sync::{mpsc, oneshot, watch, Mutex};
@@ -13,9 +13,8 @@ use crate::network::post_json;
 use crate::tracking_service::TrackingService;
 
 enum TrackingStats {
-    Heartbeat(Heartbeat),
-    Event(Event),
-    Afk(AFKEvent),
+    Event(Box<Event>),
+    Afk(Box<AFKEvent>),
 }
 
 pub struct BufferedTrackingService {
@@ -71,18 +70,19 @@ impl BufferedTrackingService {
 
 #[async_trait]
 impl TrackingService for BufferedTrackingService {
-    async fn insert_heartbeat(&self, hb: Heartbeat) -> Result<(), anyhow::Error> {
-        let _ = self.sender.send(TrackingStats::Heartbeat(hb)).await;
+    async fn insert_event(&self, event: &Event) -> Result<(), anyhow::Error> {
+        let _ = self
+            .sender
+            .send(TrackingStats::Event(Box::new(event.clone())))
+            .await;
         Ok(())
     }
 
-    async fn insert_event(&self, event: Event) -> Result<(), anyhow::Error> {
-        let _ = self.sender.send(TrackingStats::Event(event)).await;
-        Ok(())
-    }
-
-    async fn insert_afk(&self, afk: AFKEvent) -> Result<(), anyhow::Error> {
-        let _ = self.sender.send(TrackingStats::Afk(afk)).await;
+    async fn insert_afk(&self, afk: &AFKEvent) -> Result<(), anyhow::Error> {
+        let _ = self
+            .sender
+            .send(TrackingStats::Afk(Box::new(afk.clone())))
+            .await;
         Ok(())
     }
 }
@@ -172,9 +172,8 @@ async fn flush(
 
         let result = loop {
             let res = match &msg {
-                TrackingStats::Heartbeat(hb) => inner.insert_heartbeat(hb.clone()).await,
-                TrackingStats::Event(ev) => inner.insert_event(ev.clone()).await,
-                TrackingStats::Afk(afk) => inner.insert_afk(afk.clone()).await,
+                TrackingStats::Event(ev) => inner.insert_event(ev).await,
+                TrackingStats::Afk(afk) => inner.insert_afk(afk).await,
             };
 
             match res {
@@ -199,38 +198,6 @@ async fn flush(
 }
 
 async fn sync_with_server(db_context: &Arc<DBContext>) -> Result<(), anyhow::Error> {
-    let heartbeats = Heartbeat::unsynced(db_context).await?;
-    if !heartbeats.is_empty() {
-        let payload: Vec<HeartbeatInput> = heartbeats
-            .iter()
-            .map(|hb| HeartbeatInput {
-                timestamp: hb.timestamp,
-                project_name: hb.project_name.clone().unwrap_or_default(),
-                project_path: hb.project_path.clone().unwrap_or_default(),
-                entity_name: hb.entity_name.clone(),
-                entity_type: hb.entity_type.clone(),
-                branch_name: hb.branch_name.clone(),
-                language_name: hb.language_name.clone(),
-                app_name: hb.app_name.clone(),
-                is_write: hb.is_write.unwrap_or_default(),
-                source_name: hb.source_name.clone(),
-                lines: hb.lines,
-                cursorpos: hb.cursorpos,
-            })
-            .collect();
-
-        match post_json::<Vec<HeartbeatInput>, String>("/heartbeats", &payload).await {
-            Ok(_) => {
-                Heartbeat::mark_as_synced(db_context, &heartbeats).await?;
-                info!("Synced {} heartbeats", heartbeats.len());
-                Heartbeat::delete_synced(db_context).await?;
-            }
-            Err(e) => {
-                error!("Something went wrong trying to sync heartbeats: {e}");
-            }
-        }
-    }
-
     let events = Event::unsynced(db_context).await?;
     if !events.is_empty() {
         let payload: Vec<EventInput> = events

@@ -11,12 +11,6 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
-// #[derive(Debug, Clone)]
-// pub struct CursorPosition {
-//     pub x: f64,
-//     pub y: f64,
-// }
-
 #[derive(Debug, Clone, PartialEq)]
 pub struct MouseButtons {
     pub left: bool,
@@ -37,7 +31,6 @@ pub struct MouseTracker {
 
 impl MouseTracker {
     pub fn new() -> Self {
-        // let (tx, rx) = watch::channel(None);
         Self {
             last_position: Arc::new(Mutex::new(CGPoint::new(0.0, 0.0))),
             last_movement: Arc::new(Mutex::new(Instant::now())),
@@ -49,8 +42,6 @@ impl MouseTracker {
             })),
             mouse_moved: Arc::new(AtomicBool::new(false)),
             runloop: Arc::new(Mutex::new(None)),
-            // tx,
-            // rx,
         }
     }
 
@@ -60,7 +51,6 @@ impl MouseTracker {
         let pressed_buttons = Arc::clone(&self.pressed_buttons);
         let mouse_moved = Arc::clone(&self.mouse_moved);
         let runloop_ref = Arc::clone(&self.runloop);
-        // let tx = self.tx.clone();
 
         tokio::task::spawn_blocking(move || unsafe {
             let pool = NSAutoreleasePool::new();
@@ -97,15 +87,6 @@ impl MouseTracker {
                                 *last_pos = position;
                                 *last_move_time = now;
                                 mouse_moved.store(true, Ordering::Relaxed);
-
-                                // let activity = CursorPosition {
-                                //     x: position.x,
-                                //     y: position.y,
-                                // };
-
-                                // if tx.send(Some(activity)).is_err() {
-                                //     warn!("No subscribers to receive mouse updates");
-                                // };
                             }
                         }
 
@@ -151,10 +132,6 @@ impl MouseTracker {
     pub fn has_mouse_moved(&self) -> bool {
         self.mouse_moved.swap(false, Ordering::Relaxed)
     }
-
-    // pub fn subscribe(&self) -> watch::Receiver<Option<CursorPosition>> {
-    //     self.rx.clone()
-    // }
 
     pub fn stop_tracking(&self) {
         if let Some(ref rl) = *self.runloop.lock().unwrap() {
