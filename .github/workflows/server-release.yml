@@ -1,4 +1,4 @@
-name: Build release CLI artifacts
+name: Build release SERVER artifacts
 
 on:
   push:
@@ -10,18 +10,19 @@ permissions:
   id-token: write
 
 env:
-  CLI_PATH: apps/cli
-  BIN_NAME: skopio-cli
-  TARGET_REPO: ${{ github.repository_owner }}/cli-releases
+  SERVER_PATH: apps/server
+  BIN_NAME: skopio-server
+  TARGET_REPO: ${{ github.repository_owner }}/server-releases
 
 jobs:
-  release-cli:
+  release-server:
     runs-on: macos-latest
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup build env (aarch64 + x86_64)
+      - name: Setup build env
         uses: ./.github/actions
         with:
           rust_target: aarch64-apple-darwin, x86_64-apple-darwin
@@ -71,20 +72,21 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          VER=$(cargo metadata --format-version=1 --no-deps --manifest-path "${{ env.CLI_PATH }}/Cargo.toml" \
+          VER=$(cargo metadata --format-version=1 --no-deps --manifest-path "${{ env.SERVER_PATH }}/Cargo.toml" \
                 | /usr/bin/python3 -c 'import sys,json;print(json.load(sys.stdin)["packages"][0]["version"])')
           TAG="v${VER}"
           [[ "$VER" =~ -([A-Za-z0-9.+-]+)$ ]] && PRERELEASE=true || PRERELEASE=false
           echo "version=$VER"     >> $GITHUB_OUTPUT
           echo "tag=$TAG"         >> $GITHUB_OUTPUT
           echo "prerelease=$PRERELEASE" >> $GITHUB_OUTPUT
+          echo "Release $TAG (prerelease=$PRERELEASE)"
 
       - name: Build aarch64
-        working-directory: ${{ env.CLI_PATH }}
+        working-directory: ${{ env.SERVER_PATH }}
         run: cargo build --release --locked --target aarch64-apple-darwin
 
       - name: Build x86_64
-        working-directory: ${{ env.CLI_PATH }}
+        working-directory: ${{ env.SERVER_PATH }}
         run: cargo build --release --locked --target x86_64-apple-darwin
 
       - name: Sign, zip, notarize, checksums
@@ -108,11 +110,7 @@ jobs:
 
           sign_bin() {
             local bin="$1"
-            /usr/bin/codesign \
-              --keychain "$KEYCHAIN" \
-              --force --options runtime --timestamp \
-              --sign "$ID_SHA" \
-              "$bin"
+            /usr/bin/codesign --keychain "$KEYCHAIN" --force --options runtime --timestamp --sign "$ID_SHA" "$bin"
             /usr/bin/codesign --verify --verbose=2 "$bin"
             /usr/sbin/spctl -a -vv -t execute "$bin" || true
           }
@@ -156,12 +154,12 @@ jobs:
 
       - name: Extract release notes from CHANGELOG.md
         id: changelog
-        working-directory: ${{ env.CLI_PATH }}
+        working-directory: ${{ env.SERVER_PATH }}
         shell: bash
         run: |
           set -euo pipefail
           VER="${{ steps.meta.outputs.version }}"
-          NOTES="$GITHUB_WORKSPACE/${{ env.CLI_PATH }}/RELEASE_NOTES.md"
+          NOTES="$GITHUB_WORKSPACE/${{ env.SERVER_PATH }}/RELEASE_NOTES.md"
           CHANGELOG="CHANGELOG.md"
           BODY="$(mktemp)"
           test -f "$CHANGELOG" || { echo "Missing $CHANGELOG"; exit 1; }
@@ -181,10 +179,10 @@ jobs:
           { echo "# Changelog"; echo; cat "$BODY"; } > "$NOTES"
           echo "notes_file=$NOTES" >> "$GITHUB_OUTPUT"
 
-      - name: Create/Update Release in org/cli-releases
+      - name: Create/Update Release in org/server-releases
         shell: bash
         env:
-          GH_TOKEN: ${{ secrets.CLI_RELEASES_TOKEN }}
+          GH_TOKEN: ${{ secrets.SERVER_RELEASES_TOKEN }}
         run: |
           set -euo pipefail
           TAG="${{ steps.meta.outputs.tag }}"
@@ -230,7 +228,7 @@ jobs:
       - name: Upload signatures to external Release
         shell: bash
         env:
-          GH_TOKEN: ${{ secrets.CLI_RELEASES_TOKEN }}
+          GH_TOKEN: ${{ secrets.SERVER_RELEASES_TOKEN }}
         run: |
           set -euo pipefail
           TAG="${{ steps.meta.outputs.tag }}"
@@ -241,7 +239,7 @@ jobs:
         if: ${{ steps.meta.outputs.prerelease != 'true' }}
         shell: bash
         env:
-          GH_TOKEN: ${{ secrets.CLI_RELEASES_TOKEN }}
+          GH_TOKEN: ${{ secrets.SERVER_RELEASES_TOKEN }}
         run: |
           set -euo pipefail
           REPO="${{ env.TARGET_REPO }}"
