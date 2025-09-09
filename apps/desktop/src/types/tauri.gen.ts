@@ -102,7 +102,6 @@ export const commands = {
 export type App = { id: string; name: string };
 export type AppConfig = {
   theme: Theme;
-  heartbeatInterval: number;
   afkTimeout: number;
   flushInterval: number;
   syncInterval: number;

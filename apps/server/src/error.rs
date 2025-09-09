@@ -69,6 +69,7 @@ impl From<DBError> for ServerError {
             DBError::Uuid(err) => ServerError::BadRequest(err.to_string()),
             DBError::Unsupported(msg) => ServerError::Unprocessable(msg.to_string()),
             DBError::Sqlx(err) => ServerError::Internal(anyhow!(err.to_string())),
+            DBError::Migration(err) => Self::Internal(anyhow!(err.to_string())),
         }
     }
 }

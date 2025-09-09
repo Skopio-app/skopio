@@ -10,7 +10,7 @@ rust-version.workspace = true
 chrono = { workspace = true, features = ["serde"] }
 clap = { version = "4.5.29", features = ["derive"] }
 reqwest = { workspace = true, features = ["blocking", "json"] }
-rusqlite = { version = "0.32.0", features = ["bundled-sqlcipher-vendored-openssl"] } # Update blocked by sqlx
+rusqlite = { workspace = true, features = ["bundled-sqlcipher-vendored-openssl"] }
 serde = { workspace = true, features = ["derive"] }
 dirs = { workspace = true }
 serde_json = { workspace = true }

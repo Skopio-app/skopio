@@ -224,7 +224,7 @@ pub async fn modify_goal(
     db: &DBContext,
     goal_id: i64,
     update: GoalUpdateInput,
-) -> Result<(), sqlx::Error> {
+) -> Result<(), DBError> {
     let now = Utc::now().to_rfc3339();
 
     let mut tx = db.pool().begin().await?;

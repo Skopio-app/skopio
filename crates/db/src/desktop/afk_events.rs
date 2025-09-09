@@ -70,7 +70,7 @@ impl AFKEvent {
         update_synced_in(db_context, "afk_events", &ids).await
     }
 
-    pub async fn delete_synced(db_context: &DBContext) -> Result<(), sqlx::Error> {
+    pub async fn delete_synced(db_context: &DBContext) -> Result<(), DBError> {
         sqlx::query!(
             "DELETE FROM afk_events
              WHERE id IN (

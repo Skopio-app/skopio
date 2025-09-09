@@ -22,4 +22,7 @@ pub enum DBError {
     /// The supplied configuration is not supported
     #[error("Unsupported configuration: {0}")]
     Unsupported(&'static str),
+
+    #[error("Migration error: {0}")]
+    Migration(#[from] sqlx::migrate::MigrateError),
 }

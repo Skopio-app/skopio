@@ -1249,6 +1249,7 @@ dependencies = [
  "async-trait",
  "chrono",
  "common",
+ "libsqlite3-sys",
  "log",
  "serde",
  "specta",
