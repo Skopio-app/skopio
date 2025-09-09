@@ -1,21 +1,3 @@
-CREATE TABLE IF NOT EXISTS heartbeats
-(
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    timestamp TEXT NOT NULL,
-    project_name TEXT,
-    project_path TEXT,
-    entity_name TEXT NOT NULL,
-    entity_type TEXT NOT NULL,
-    branch_name TEXT,
-    language_name TEXT,
-    app_name TEXT NOT NULL,
-    source_name TEXT NOT NULL,
-    is_write BOOL,
-    lines INTEGER,
-    cursorpos INTEGER,
-    synced BOOl DEFAULT 0
-);
-
 CREATE TABLE IF NOT EXISTS events
 (
     id INTEGER PRIMARY KEY AUTOINCREMENT,

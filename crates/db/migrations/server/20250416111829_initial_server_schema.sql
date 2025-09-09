@@ -65,27 +65,6 @@ CREATE TABLE IF NOT EXISTS afk_events
     duration  INTEGER
 ) WITHOUT ROWID;
 
-CREATE TABLE IF NOT EXISTS heartbeats
-(
-    id            BLOB(16) NOT NULL PRIMARY KEY,
-    project_id    BLOB(16),
-    entity_id     BLOB(16),
-    branch_id     BLOB(16),
-    language_id   BLOB(16),
-    app_id        BLOB(16) NOT NULL,
-    source_id     BLOB(16) NOT NULL,
-    timestamp     TEXT NOT NULL,
-    is_write      BOOLEAN DEFAULT FALSE,
-    lines         INTEGER,
-    cursorpos     INTEGER,
-    FOREIGN KEY (project_id) REFERENCES projects (id) ON DELETE CASCADE,
-    FOREIGN KEY (entity_id) REFERENCES entities (id) ON DELETE CASCADE,
-    FOREIGN KEY (branch_id) REFERENCES branches (id) ON DELETE CASCADE,
-    FOREIGN KEY (language_id) REFERENCES languages (id) ON DELETE CASCADE,
-    FOREIGN KEY (app_id) REFERENCES apps (id) ON DELETE CASCADE,
-    FOREIGN KEY (source_id) REFERENCES sources (id) ON DELETE CASCADE
-) WITHOUT ROWID;
-
 CREATE TABLE IF NOT EXISTS categories
 (
     id   BLOB(16) NOT NULL PRIMARY KEY,

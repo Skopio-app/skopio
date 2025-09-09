@@ -21,45 +21,6 @@ pub struct Cli {
 
 #[derive(Subcommand, Debug)]
 pub enum Commands {
-    /// Save a heartbeat (additional info, at a particular point in time)
-    Heartbeat {
-        #[arg(long, short)]
-        /// The project path.
-        project: String,
-
-        #[arg(long, short)]
-        /// The timestamp as the point the heartbeat is generated
-        timestamp: i32,
-
-        #[arg(long, short)]
-        /// The entity path
-        entity: String,
-
-        #[arg(long)]
-        /// The entity type, be it an app, file or URL
-        entity_type: String,
-
-        #[arg(long, short)]
-        /// The app being tracked
-        app: String,
-
-        #[arg(long, short)]
-        /// The number of lines edited
-        lines: Option<i64>,
-
-        #[arg(long, short)]
-        /// The name of the extension that has generated the heartbeat
-        source: String,
-
-        #[arg(long, short)]
-        /// The cursor position at the point the heartbeat is generated.
-        cursorpos: Option<i64>,
-
-        #[arg(short, long)]
-        /// Whether editing is in progress at the point of heartbeat generation.
-        is_write: bool,
-    },
-
     /// Save an event (a period of activity, with a start and end timestamp)
     Event {
         #[arg(long, short)]
