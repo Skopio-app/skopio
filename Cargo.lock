@@ -19,8 +19,9 @@ dependencies = [
  "console-subscriber",
  "core-foundation 0.10.1",
  "core-graphics",
- "dashmap 6.1.0",
  "db",
+ "futures-util",
+ "libc",
  "log",
  "objc2 0.6.1",
  "objc2-app-kit",
@@ -31,6 +32,7 @@ dependencies = [
  "serde",
  "serde_json",
  "serde_qs",
+ "sha2",
  "specta",
  "specta-typescript",
  "strum",
@@ -42,6 +44,7 @@ dependencies = [
  "tauri-plugin-global-shortcut",
  "tauri-plugin-log",
  "tauri-specta",
+ "thiserror 2.0.12",
  "tokio",
  "url",
 ]
@@ -1226,20 +1229,6 @@ dependencies = [
  "cfg-if",
  "num_cpus",
  "serde",
-]
-
-[[package]]
-name = "dashmap"
-version = "6.1.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5041cc499144891f3790297212f32a74fb938e5136a14943f338ef9e0ae276cf"
-dependencies = [
- "cfg-if",
- "crossbeam-utils",
- "hashbrown 0.14.5",
- "lock_api",
- "once_cell",
- "parking_lot_core 0.9.10",
 ]
 
 [[package]]
@@ -5318,9 +5307,9 @@ dependencies = [
 
 [[package]]
 name = "sha2"
-version = "0.10.8"
+version = "0.10.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "793db75ad2bcafc3ffa7c68b215fee268f537982cd901d132f89c6343f3a3dc8"
+checksum = "a7507d819769d01a365ab707794a4084392c824f54a7a6a7862f8c3d0892b283"
 dependencies = [
  "cfg-if",
  "cpufeatures",
@@ -6565,7 +6554,7 @@ dependencies = [
  "aho-corasick 0.7.20",
  "clap 2.34.0",
  "crossbeam-channel",
- "dashmap 4.0.2",
+ "dashmap",
  "dirs 3.0.2",
  "encoding_rs_io",
  "env_logger 0.8.4",
