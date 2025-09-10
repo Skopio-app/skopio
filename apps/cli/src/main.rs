@@ -2,7 +2,6 @@ use crate::cli::Cli;
 use crate::config::get_or_store_db_path;
 use crate::db::init_db;
 use crate::handlers::event::handle_event;
-use crate::handlers::heartbeat::handle_heartbeat;
 use crate::handlers::sync::handle_sync;
 use crate::utils::{init_logger, CliError};
 use clap::Parser;
@@ -13,7 +12,6 @@ mod config;
 mod db;
 mod event;
 mod handlers;
-mod heartbeat;
 mod sync;
 mod utils;
 
@@ -35,7 +33,6 @@ fn run() -> Result<(), CliError> {
     let conn = init_db(&db_path, &cli.app)?;
 
     match cli.command {
-        Some(cmd @ cli::Commands::Heartbeat { .. }) => handle_heartbeat(&conn, cmd),
         Some(cmd @ cli::Commands::Event { .. }) => handle_event(&conn, cmd),
         Some(cmd @ cli::Commands::Sync) => handle_sync(&conn, cmd),
         None => Ok(()),

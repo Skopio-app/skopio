@@ -22,6 +22,7 @@ use crate::{
 mod goals_service;
 mod monitored_app;
 mod network;
+mod server;
 mod sync_service;
 mod trackers;
 mod tracking_service;
@@ -75,7 +76,11 @@ pub async fn run() {
             let app_handle_clone = app_handle.clone();
             tauri::async_runtime::spawn(async move {
                 if let Err(e) = setup_trackers(&app_handle_clone).await {
-                    error!("Failed async setup: {}", e);
+                    error!("Failed async setup: {e}");
+                }
+
+                if let Err(e) = server::ensure_server_ready(&app_handle_clone.clone()).await {
+                    error!("Server check failed: {e}")
                 }
             });
 
@@ -177,11 +182,6 @@ async fn setup_trackers(app_handle: &AppHandle) -> Result<(), anyhow::Error> {
     ));
     app_handle.manage(Arc::clone(&afk_tracker));
 
-    // let hb_interval_rx = config_store.subscribe_heartbeat_interval();
-    // let heartbeat_tracker = Arc::new(HeartbeatTracker::new(
-    //     hb_interval_rx,
-    //     Arc::clone(&service_trait),
-    // ));
     let tracked_apps_rx = config_store.subscribe_tracked_apps();
     let event_tracker = Arc::new(EventTracker::new(
         Arc::clone(&cursor_tracker),
@@ -195,7 +195,6 @@ async fn setup_trackers(app_handle: &AppHandle) -> Result<(), anyhow::Error> {
     window_tracker_ref.start_tracking();
 
     let event_window_rx = window_tracker.subscribe();
-    // let heartbeat_window_rx = window_tracker.subscribe();
 
     cursor_tracker.start_tracking();
 
@@ -215,16 +214,6 @@ async fn setup_trackers(app_handle: &AppHandle) -> Result<(), anyhow::Error> {
             }
         }
     });
-
-    // tokio::spawn({
-    //     let cursor_tracker = Arc::clone(&cursor_tracker);
-    //     let cursor_rx = cursor_tracker.subscribe();
-    //     async move {
-    //         heartbeat_tracker
-    //             .start_tracking(cursor_rx, heartbeat_window_rx)
-    //             .await;
-    //     }
-    // });
 
     Ok(())
 }

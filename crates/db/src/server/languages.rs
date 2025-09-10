@@ -1,4 +1,4 @@
-use crate::{utils::DBError, DBContext};
+use crate::{error::DBError, DBContext};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -54,7 +54,7 @@ impl Language {
         Ok(rows)
     }
 
-    pub async fn delete(self, db_context: &DBContext) -> Result<(), sqlx::Error> {
+    pub async fn delete(self, db_context: &DBContext) -> Result<(), DBError> {
         sqlx::query!("DELETE FROM languages WHERE id = ?", self.id)
             .execute(db_context.pool())
             .await?;

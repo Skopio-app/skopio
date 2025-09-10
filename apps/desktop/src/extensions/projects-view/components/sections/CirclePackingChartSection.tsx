@@ -1,4 +1,4 @@
-import { Group } from "../../../../types/tauri.gen";
+import { Group } from "@/types/tauri.gen";
 import ChartContainer from "../ChartContainer";
 import CirclePackingChart from "../CirclePackingChart";
 import { useProjectSummaryData } from "../../hooks/useProjectSummaryData";

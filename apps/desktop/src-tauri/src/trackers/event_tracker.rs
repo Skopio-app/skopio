@@ -127,7 +127,7 @@ impl EventTracker {
                     };
 
                     self.tracker
-                        .insert_event(db_event)
+                        .insert_event(&db_event)
                         .await
                         .unwrap_or_else(|error| error!("Failed to batch event: {}", error));
 
@@ -264,7 +264,7 @@ impl EventTracker {
             };
 
             self.tracker
-                .insert_event(db_event)
+                .insert_event(&db_event)
                 .await
                 .unwrap_or_else(|error| error!("Failed to batch event: {}", error));
 

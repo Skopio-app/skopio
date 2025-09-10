@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import TextSectionItem from "./TextSectionItem";
 import { useYearFilter } from "../stores/useYearFilter";
-import { commands, SummaryQueryInput } from "../../../types/tauri.gen";
-import { formatDuration } from "../../../utils/time";
+import { commands, SummaryQueryInput } from "@/types/tauri.gen";
+import { formatDuration } from "@/utils/time";
 import { toast } from "sonner";
 import { endOfYear, startOfYear } from "date-fns";
 
@@ -40,7 +40,9 @@ const TotalTimeSection = () => {
   return (
     <TextSectionItem
       title="Total time logged"
-      text={`Total active time logged is ${time}`}
+      text={
+        time !== null ? `Total active time logged is ${time}` : "No data found"
+      }
       loading={loading}
     />
   );

@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { builtinExtensionRegistry } from "../extensions/registry";
-import { LAST_ACTIVE_TAB } from "../utils/constants";
+import { builtinExtensionRegistry } from "@/extensions/registry";
+import { LAST_ACTIVE_TAB } from "@/utils/constants";
 
 const RedirectToTab = () => {
   const navigate = useNavigate();

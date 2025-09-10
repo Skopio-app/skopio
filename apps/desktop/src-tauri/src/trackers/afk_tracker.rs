@@ -84,7 +84,7 @@ impl AFKTracker {
                         };
 
                         buffer_tracker
-                            .insert_afk(afk_event)
+                            .insert_afk(&afk_event)
                             .await
                             .unwrap_or_else(|error| error!("Failed to batch afk event: {}", error));
                     }
@@ -121,7 +121,7 @@ impl AFKTracker {
                 duration: Some(afk_duration),
             };
 
-            if let Err(err) = self.tracker.insert_afk(afk_event).await {
+            if let Err(err) = self.tracker.insert_afk(&afk_event).await {
                 error!("Failed to flush AFK event on stop: {}", err);
             }
 

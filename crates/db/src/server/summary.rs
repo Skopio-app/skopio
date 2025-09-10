@@ -1,4 +1,4 @@
-use std::{collections::HashMap, fmt::Debug, time::Instant};
+use std::{collections::HashMap, fmt::Debug};
 
 use chrono::{DateTime, Utc};
 use common::{
@@ -8,9 +8,9 @@ use common::{
     },
     time::{TimeBucket, TimeRange},
 };
-use log::debug;
 
 use crate::{
+    error::DBError,
     models::{BucketTimeSummary, GroupedTimeSummary},
     server::utils::{
         query::{
@@ -19,7 +19,6 @@ use crate::{
         },
         summary_filter::SummaryFilters,
     },
-    utils::DBError,
     DBContext,
 };
 
@@ -206,7 +205,6 @@ impl SummaryQueryBuilder {
         &self,
         db: &DBContext,
     ) -> Result<Vec<GroupedTimeSummary>, DBError> {
-        let start_time = Instant::now();
         let (group_key, inner_tbl) = group_key_info(self.filters.group_by);
 
         let mut base_query =
@@ -232,13 +230,6 @@ impl SummaryQueryBuilder {
         let records = sqlx::query_as::<_, GroupedTimeSummary>(&final_query)
             .fetch_all(db.pool())
             .await?;
-        let elapsed = start_time.elapsed();
-        debug!(
-            "Executed range summary SQL in {:.2?} - {} rows (group_by: {:?})",
-            elapsed,
-            records.len(),
-            self.filters.group_by,
-        );
 
         Ok(records)
     }
@@ -246,7 +237,6 @@ impl SummaryQueryBuilder {
     /// Executes a query that returns only the total time (in seconds)
     /// for the current filters
     pub async fn execute_total_time(&self, db: &DBContext) -> Result<i64, DBError> {
-        let start_time = Instant::now();
         let mut query = String::from("SELECT SUM(duration) as total_seconds FROM events");
         append_standard_joins(&mut query, None);
         query.push_str(" WHERE 1=1");
@@ -259,21 +249,11 @@ impl SummaryQueryBuilder {
             "events.end_timestamp",
         );
 
-        debug!(
-            "The filter start: {:?}. The filter end: {:?}",
-            self.filters.start, self.filters.end
-        );
         append_all_filters(&mut query, self.filters.clone());
 
         let result = sqlx::query_scalar::<_, Option<i64>>(&query)
             .fetch_one(db.pool())
             .await?;
-
-        let elapsed = start_time.elapsed();
-        debug!(
-            "Executed total time query in {:.2?} - {:?} (group_by: {:?})",
-            elapsed, result, self.filters.group_by,
-        );
 
         Ok(result.unwrap_or(0))
     }
@@ -284,7 +264,6 @@ impl SummaryQueryBuilder {
         &self,
         db: &DBContext,
     ) -> Result<Vec<BucketTimeSummary>, DBError> {
-        let start_time = Instant::now();
         let (group_key, inner_tbl) = group_key_info(self.filters.group_by);
 
         let time_bucket_expr = get_time_bucket_expr(self.filters.time_bucket);
@@ -332,14 +311,6 @@ impl SummaryQueryBuilder {
                 group_meta: row.group_meta,
             });
         }
-
-        let elapsed = start_time.elapsed();
-        debug!(
-            "Executed range summary with bucket query in {:.2?} - {} rows (group_key: {:?})",
-            elapsed,
-            records.len(),
-            self.filters.group_by,
-        );
 
         Ok(records)
     }

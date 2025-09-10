@@ -7,33 +7,18 @@ use common::{
     time::insight::InsightRange,
 };
 use sqlx::Row;
-use thiserror::Error;
 
-use crate::DBContext;
+use crate::{error::DBError, DBContext};
 
 #[derive(sqlx::FromRow)]
 struct YearResult {
     year: Option<String>,
 }
 
-#[derive(Debug, Error)]
-pub enum InsightError {
-    #[error("Missing required field: {0}")]
-    MissingField(&'static str),
-
-    #[error("Unsupported configuration: {0}")]
-    Unsupported(&'static str),
-
-    #[error("sqlx error: {0}")]
-    Sqlx(#[from] sqlx::Error),
-}
-
 #[async_trait]
 pub trait InsightProvider {
-    async fn execute(
-        db_context: &DBContext,
-        query: InsightQuery,
-    ) -> Result<InsightResult, InsightError>;
+    async fn execute(db_context: &DBContext, query: InsightQuery)
+        -> Result<InsightResult, DBError>;
 }
 
 #[derive(Debug, Clone)]
@@ -53,7 +38,7 @@ impl InsightProvider for Insights {
     async fn execute(
         db_context: &DBContext,
         query: InsightQuery,
-    ) -> Result<InsightResult, InsightError> {
+    ) -> Result<InsightResult, DBError> {
         match query.insight_type {
             InsightType::ActiveYears => {
                 let rows: Vec<YearResult> = sqlx::query_as!(
@@ -77,15 +62,15 @@ impl InsightProvider for Insights {
 
             InsightType::TopN => {
                 let Some(InsightRange { start, end, .. }) = query.insight_range else {
-                    return Err(InsightError::MissingField("insight_range"));
+                    return Err(DBError::MissingField("insight_range"));
                 };
 
                 let Some(group_by) = query.group_by else {
-                    return Err(InsightError::MissingField("group_by"));
+                    return Err(DBError::MissingField("group_by"));
                 };
 
                 let Some(limit) = query.limit else {
-                    return Err(InsightError::MissingField("limit"));
+                    return Err(DBError::MissingField("limit"));
                 };
 
                 let (_field, join) = match group_by {
@@ -145,13 +130,13 @@ impl InsightProvider for Insights {
 
             InsightType::MostActiveDay => {
                 let Some(InsightRange { start, end }) = query.insight_range else {
-                    return Err(InsightError::MissingField("insight_range"));
+                    return Err(DBError::MissingField("insight_range"));
                 };
 
                 match query.bucket {
                     Some(InsightBucket::Year | InsightBucket::Month | InsightBucket::Week) => {}
                     _ => {
-                        return Err(InsightError::Unsupported(
+                        return Err(DBError::Unsupported(
                             "Only year, month, or week buckets are supported",
                         ));
                     }
@@ -189,18 +174,18 @@ impl InsightProvider for Insights {
 
             InsightType::AggregatedAverage => {
                 let Some(InsightRange { start, end }) = query.insight_range else {
-                    return Err(InsightError::MissingField("insight_range"));
+                    return Err(DBError::MissingField("insight_range"));
                 };
 
                 let Some(bucket) = query.bucket else {
-                    return Err(InsightError::MissingField("bucket"));
+                    return Err(DBError::MissingField("bucket"));
                 };
 
                 let bucket_format = match bucket {
                     InsightBucket::Day => "%Y-%m-%d",
                     InsightBucket::Month => "%Y-%m",
                     _ => {
-                        return Err(InsightError::Unsupported("Only day or month is supported"));
+                        return Err(DBError::Unsupported("Only day or month is supported"));
                     }
                 };
 

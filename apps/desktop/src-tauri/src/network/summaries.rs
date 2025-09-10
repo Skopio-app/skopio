@@ -1,7 +1,7 @@
 use common::models::inputs::{BucketSummaryInput, SummaryQueryInput};
 use db::models::{BucketTimeSummary, GroupedTimeSummary};
 
-use crate::network::utils::req_json;
+use crate::network::req_json;
 
 #[tauri::command]
 #[specta::specta]

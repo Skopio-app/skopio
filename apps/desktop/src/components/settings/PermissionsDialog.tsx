@@ -1,9 +1,9 @@
 import * as Dialog from "@radix-ui/react-dialog";
-import { usePermissions } from "../../hooks/usePermissions";
+import { usePermissions } from "@/hooks/usePermissions";
 import { Button } from "@skopio/ui";
 import { PermissionRow } from "./PermissionRow";
 import { useEffect, useState } from "react";
-import { isGranted } from "../../utils/data";
+import { isGranted } from "@/utils/data";
 
 const LOCALSTORAGE_KEY = "permission-dialog-seen";
 
@@ -50,7 +50,7 @@ const PermissionsDialog = () => {
               Permissions required
             </Dialog.Title>
             <Dialog.Description className="text-sm text-muted-foreground">
-              Skopio needs the following permissions to track activity
+              Skopio needs the following permissions to track app activity
               accurately.
             </Dialog.Description>
           </div>

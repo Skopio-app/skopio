@@ -5,7 +5,7 @@ import {
   EventGroup,
   EventGroupResult,
   Group,
-} from "../../../types/tauri.gen";
+} from "@/types/tauri.gen";
 
 export const useEventFetcher = (
   group: Group,

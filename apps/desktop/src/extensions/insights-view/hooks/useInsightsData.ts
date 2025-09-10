@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { commands, Group, InsightQueryPayload } from "../../../types/tauri.gen";
+import { commands, Group, InsightQueryPayload } from "@/types/tauri.gen";
 import { useYearFilter } from "../stores/useYearFilter";
 import { toast } from "sonner";
 

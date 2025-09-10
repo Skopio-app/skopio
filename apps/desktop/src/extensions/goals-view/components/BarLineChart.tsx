@@ -1,8 +1,8 @@
 import React from "react";
 import { ResponsiveBar } from "@nivo/bar";
 import { ResponsiveLine } from "@nivo/line";
-import { formatDuration } from "../../../utils/time";
-import { TimeSpan } from "../../../types/tauri.gen";
+import { formatDuration } from "@/utils/time";
+import { TimeSpan } from "@/types/tauri.gen";
 
 interface BasicBarChartProps {
   data: {

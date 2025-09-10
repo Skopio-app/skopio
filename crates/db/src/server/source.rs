@@ -1,6 +1,6 @@
 use uuid::Uuid;
 
-use crate::{models::Source, utils::DBError, DBContext};
+use crate::{error::DBError, models::Source, DBContext};
 
 impl Source {
     /// Finds an existing source by name or inserts a new one, returning its ID.
@@ -45,7 +45,7 @@ impl Source {
     }
 
     /// Deletes a source
-    pub async fn delete(self, db_context: &DBContext) -> Result<(), sqlx::Error> {
+    pub async fn delete(self, db_context: &DBContext) -> Result<(), DBError> {
         sqlx::query!("DELETE FROM sources WHERE id = ?", self.id)
             .execute(db_context.pool())
             .await?;

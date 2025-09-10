@@ -4,14 +4,10 @@ import {
   BucketTimeSummary,
   commands,
   Group,
-} from "../../../types/tauri.gen";
+} from "@/types/tauri.gen";
 import { usePresetFilter } from "../stores/usePresetFilter";
-import {
-  BarChartData,
-  LineChartData,
-  PieChartData,
-} from "../../../types/chart";
-import { getEntityName } from "../../../utils/data";
+import { BarChartData, LineChartData, PieChartData } from "@/types/chart";
+import { getEntityName } from "@/utils/data";
 
 export interface UseSummaryOptions {
   group_by?: Group;
@@ -112,7 +108,7 @@ const useProjectSummaryDataImpl = (
     [rawOptions.group_by, rawOptions.mode],
   );
 
-  const { preset, project } = usePresetFilter();
+  const { preset, project, branches } = usePresetFilter();
   const [loading, setLoading] = useState(true);
   const [rawData, setRawData] = useState<BucketTimeSummary[]>([]);
 
@@ -123,6 +119,7 @@ const useProjectSummaryDataImpl = (
       const query: BucketSummaryInput = {
         preset,
         projects: [project],
+        branches: branches,
         groupBy: options.group_by,
       };
 
@@ -137,7 +134,7 @@ const useProjectSummaryDataImpl = (
     };
 
     fetchData();
-  }, [options.group_by, options.mode, project, preset]);
+  }, [options.group_by, options.mode, project, branches, preset]);
 
   switch (options.mode) {
     case "line": {

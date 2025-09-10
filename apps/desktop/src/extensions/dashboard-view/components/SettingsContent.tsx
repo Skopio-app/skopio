@@ -6,7 +6,7 @@ interface SettingsContentProps {
   setTopN: (val: number) => void;
 }
 
-export const MIN_TOP_N = 2;
+export const MIN_TOP_N = 1;
 const MAX_TOP_N = 40;
 
 const SettingsContent: React.FC<SettingsContentProps> = ({

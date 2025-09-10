@@ -1,7 +1,7 @@
 import WidgetCard from "../components/WidgetCard";
-import CustomPieChart from "../../../components/CustomPieChart";
+import CustomPieChart from "@/components/CustomPieChart";
 import { useSummaryData } from "../hooks/useSummaryData";
-import { Group } from "../../../types/tauri.gen";
+import { Group } from "@/types/tauri.gen";
 
 const LanguagePieChartWidget = () => {
   const options = { groupBy: "language" as Group, mode: "pie" as const };

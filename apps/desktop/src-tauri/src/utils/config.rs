@@ -21,7 +21,6 @@ pub struct TrackedApp {
 #[serde(rename_all = "camelCase")]
 pub struct AppConfig {
     pub theme: Theme,
-    pub heartbeat_interval: u64,
     pub afk_timeout: u64,
     pub flush_interval: u64,
     pub sync_interval: u64,
@@ -33,7 +32,6 @@ impl Default for AppConfig {
     fn default() -> Self {
         AppConfig {
             theme: Theme::System,
-            heartbeat_interval: 10,
             afk_timeout: 120,
             flush_interval: 120,
             sync_interval: 180,
@@ -61,7 +59,6 @@ fn get_config_name() -> String {
 #[derive(Clone)]
 pub struct ConfigStore {
     inner: Arc<RwLock<AppConfig>>,
-    // pub heartbeat_interval: watch::Sender<u64>,
     pub afk_timeout: watch::Sender<u64>,
     pub flush_interval: watch::Sender<u64>,
     pub sync_interval: watch::Sender<u64>,
@@ -80,7 +77,6 @@ impl ConfigStore {
             default
         };
 
-        // let (hb_tx, _) = watch::channel(config.heartbeat_interval);
         let (afk_tx, _) = watch::channel(config.afk_timeout);
         let (flush_tx, _) = watch::channel(config.flush_interval);
         let (sync_tx, _) = watch::channel(config.sync_interval);
@@ -88,7 +84,6 @@ impl ConfigStore {
 
         Ok(Self {
             inner: Arc::new(RwLock::new(config)),
-            // heartbeat_interval: hb_tx,
             afk_timeout: afk_tx,
             flush_interval: flush_tx,
             sync_interval: sync_tx,
@@ -116,7 +111,6 @@ impl ConfigStore {
         updater(&mut guard);
         guard.save(handle)?;
 
-        // let _ = self.heartbeat_interval.send(guard.heartbeat_interval);
         let _ = self.afk_timeout.send(guard.afk_timeout);
         let _ = self.flush_interval.send(guard.flush_interval);
         let _ = self.sync_interval.send(guard.sync_interval);
@@ -124,10 +118,6 @@ impl ConfigStore {
 
         Ok(())
     }
-
-    // pub fn subscribe_heartbeat_interval(&self) -> watch::Receiver<u64> {
-    //     self.heartbeat_interval.subscribe()
-    // }
 
     pub fn subscribe_afk_timeout(&self) -> watch::Receiver<u64> {
         self.afk_timeout.subscribe()

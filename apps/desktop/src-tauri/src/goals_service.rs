@@ -46,7 +46,7 @@ impl GoalService {
                 tokio::select! {
                     _ = interval.tick() => {
                         if let Err(e) = self.check_goals(&app_handle).await {
-                            error!("Goal check failed: {e:?}");
+                            error!("Goal check failed: {e}");
                         }
                     },
                     _ = stop_rx.recv() => {

@@ -1,4 +1,4 @@
-use crate::{models::App, utils::DBError, DBContext};
+use crate::{error::DBError, models::App, DBContext};
 use uuid::Uuid;
 
 impl App {
@@ -27,8 +27,8 @@ impl App {
     }
 
     /// Retrieves all apps
-    pub async fn get_all(db_context: &DBContext) -> Result<Vec<Self>, sqlx::Error> {
-        sqlx::query_as!(
+    pub async fn get_all(db_context: &DBContext) -> Result<Vec<Self>, DBError> {
+        let apps = sqlx::query_as!(
             Self,
             r#"
             SELECT
@@ -38,11 +38,12 @@ impl App {
             "#
         )
         .fetch_all(db_context.pool())
-        .await
+        .await?;
+        Ok(apps)
     }
 
     /// Deletes an app
-    pub async fn delete(self, db_context: &DBContext) -> Result<(), sqlx::Error> {
+    pub async fn delete(self, db_context: &DBContext) -> Result<(), DBError> {
         sqlx::query!("DELETE FROM apps WHERE id = ?", self.id)
             .execute(db_context.pool())
             .await?;

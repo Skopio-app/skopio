@@ -1,29 +1,44 @@
 name: Build release CLI artifacts
 
 on:
-  push:
-    branches:
-      - release
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Optional override tag (defaults from Cargo)"
+        required: false
+  workflow_call:
+    inputs:
+      tag:
+        required: false
+        type: string
+    secrets:
+      CLI_RELEASES_TOKEN:
+        required: true
 
 permissions:
-  contents: write
+  contents: read
   id-token: write
 
 env:
   CLI_PATH: apps/cli
   BIN_NAME: skopio-cli
+  TARGET_REPO: ${{ github.repository_owner }}/cli-releases
 
 jobs:
+  guard:
+    uses: ./.github/workflows/_guard-release-branch.yml
+
   release-cli:
+    needs: guard
     runs-on: macos-latest
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install Rust
-        uses: dtolnay/rust-toolchain@stable
+      - name: Setup build env
+        uses: ./.github/actions
         with:
-          targets: aarch64-apple-darwin, x86_64-apple-darwin
+          rust_target: aarch64-apple-darwin, x86_64-apple-darwin
 
       - name: Setup Apple signing keychain
         id: keychain
@@ -49,12 +64,10 @@ jobs:
 
           ID_SHA="$(security find-identity -v -p codesigning "$KEYCHAIN" \
             | awk '/Developer ID Application/ {print $2; exit}')"
-
           if [ -z "$ID_SHA" ]; then
             ID_SHA="$(security find-identity -v -p codesigning "$KEYCHAIN" \
               | awk '/Developer ID/ {print $2; exit}')"
           fi
-
           if [ -z "$ID_SHA" ]; then
             echo "::error::No Developer ID Application identity found in temp keychain."
             exit 1
@@ -66,6 +79,7 @@ jobs:
           MAC_CERT_P12_BASE64: ${{ secrets.MAC_CERT_P12_BASE64 }}
           MAC_CERT_PASSWORD: ${{ secrets.MAC_CERT_PASSWORD }}
           KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+
       - name: Detect version from Cargo.toml
         id: meta
         shell: bash
@@ -74,16 +88,10 @@ jobs:
           VER=$(cargo metadata --format-version=1 --no-deps --manifest-path "${{ env.CLI_PATH }}/Cargo.toml" \
                 | /usr/bin/python3 -c 'import sys,json;print(json.load(sys.stdin)["packages"][0]["version"])')
           TAG="v${VER}"
-          # mark prerelease if semver has a hyphen suffix (alpha/beta/rc or any pre tag)
-          if [[ "$VER" =~ -([A-Za-z0-9.+-]+)$ ]]; then
-            PRERELEASE=true
-          else
-            PRERELEASE=false
-          fi
-          echo "version=$VER" >> $GITHUB_OUTPUT
-          echo "tag=v$VER" >> $GITHUB_OUTPUT
+          [[ "$VER" =~ -([A-Za-z0-9.+-]+)$ ]] && PRERELEASE=true || PRERELEASE=false
+          echo "version=$VER"     >> $GITHUB_OUTPUT
+          echo "tag=$TAG"         >> $GITHUB_OUTPUT
           echo "prerelease=$PRERELEASE" >> $GITHUB_OUTPUT
-          echo "Release $TAG (prerelease=$PRERELEASE)"
 
       - name: Build aarch64
         working-directory: ${{ env.CLI_PATH }}
@@ -126,45 +134,34 @@ jobs:
           notarize_zip() {
             local zip="$1"
             /usr/bin/xcrun notarytool submit "$zip" \
-              --apple-id "$APPLE_ID" \
-              --team-id  "$TEAM_ID" \
-              --password "$AC_PASSWORD" \
-              --wait
+              --apple-id "$APPLE_ID" --team-id "$TEAM_ID" --password "$AC_PASSWORD" --wait
           }
 
           pack() {
-            local arch="$1"
-            local cpu
+            local arch="$1" cpu
             case "$arch" in
               aarch64-apple-darwin) cpu="aarch64" ;;
               x86_64-apple-darwin)  cpu="x86_64"  ;;
               *) cpu="$arch" ;;
             esac
+            local bin="${TARGET_DIR}/${arch}/release/${{ env.BIN_NAME }}"
+            local staged="dist/${{ env.BIN_NAME }}-darwin-${cpu}"
+            local zip="dist/${{ env.BIN_NAME }}-darwin-${cpu}.zip"
 
-           local bin="${TARGET_DIR}/${arch}/release/${{ env.BIN_NAME }}"
-           local staged="dist/${{ env.BIN_NAME }}-darwin-${cpu}"
-           local zip="dist/${{ env.BIN_NAME }}-darwin-${cpu}.zip"
+            [[ -f "$bin" ]] || { echo "❌ Missing $bin"; ls -la "${TARGET_DIR}/${arch}/release" || true; exit 1; }
 
-           if [[ ! -f "$bin" ]]; then
-             echo "❌ Expected binary not found: $bin"
-             ls -la "${TARGET_DIR}/${arch}/release" || true
-             exit 1
-           fi
+            cp "$bin" "$staged"
+            strip -S -x "$staged" || true
+            sign_bin "$staged"
+            (cd dist && /usr/bin/zip -q "$(basename "$zip")" "$(basename "$staged")")
+            notarize_zip "$zip"
 
-           cp "$bin" "$staged"
-           strip -S -x "$staged" || true
-           sign_bin "$staged"
-
-           (cd dist && /usr/bin/zip -q "$(basename "$zip")" "$(basename "$staged")")
-           notarize_zip "$zip"
-
-           local sh256; sh256=$(shasum -a 256 "$zip" | awk '{print $1}')
-           local size;  size=$(stat -f "%z" "$zip")
-
-           echo "${sh256}  $(basename "$zip")" >> dist/checksums_sha256.txt
-           echo "${arch}_zip=$zip"   >> $GITHUB_OUTPUT
-           echo "${arch}_sha=$sh256" >> $GITHUB_OUTPUT
-           echo "${arch}_size=$size" >> $GITHUB_OUTPUT
+            local sh256; sh256=$(shasum -a 256 "$zip" | awk '{print $1}')
+            local size;  size=$(stat -f "%z" "$zip")
+            echo "${sh256}  $(basename "$zip")" >> dist/checksums_sha256.txt
+            echo "${arch}_zip=$zip"   >> $GITHUB_OUTPUT
+            echo "${arch}_sha=$sh256" >> $GITHUB_OUTPUT
+            echo "${arch}_size=$size" >> $GITHUB_OUTPUT
           }
 
           : > dist/checksums_sha256.txt
@@ -181,17 +178,12 @@ jobs:
           NOTES="$GITHUB_WORKSPACE/${{ env.CLI_PATH }}/RELEASE_NOTES.md"
           CHANGELOG="CHANGELOG.md"
           BODY="$(mktemp)"
-
           test -f "$CHANGELOG" || { echo "Missing $CHANGELOG"; exit 1; }
 
-          # Match headings like: "## 1.2.3", "## v.1.2.3", "## [1.2.3]", "## [v1.2.3] ..."
           awk -v ver="$VER" '
-            BEGIN {
-              patv = "^##[[:space:]]*\\[?v?" ver "\\]?([[:space:]-]|$)"
-              insec=0
-            }
-            $0 ~ patv { insec=1; next }         # start after the heading line
-            insec && /^##[[:space:]]*\[?v?[0-9]/ { insec=0 }  # stop at next version section
+            BEGIN { patv = "^##[[:space:]]*\\[?v?" ver "\\]?([[:space:]-]|$)"; insec=0 }
+            $0 ~ patv { insec=1; next }
+            insec && /^##[[:space:]]*\[?v?[0-9]/ { insec=0 }
             insec { print }
           ' "$CHANGELOG" > "$BODY" || true
 
@@ -200,25 +192,32 @@ jobs:
             exit 1
           fi
 
-          {
-            echo "# Changelog"
-            echo
-            cat "$BODY"
-          } > "$NOTES"
-
+          { echo "# Changelog"; echo; cat "$BODY"; } > "$NOTES"
           echo "notes_file=$NOTES" >> "$GITHUB_OUTPUT"
 
-      - name: Create/Update GitHub Release
-        uses: softprops/action-gh-release@v2.3.2
-        with:
-          tag_name: ${{ steps.meta.outputs.tag }}
-          name: "v${{ steps.meta.outputs.version }}"
-          prerelease: ${{ steps.meta.outputs.prerelease }}
-          body_path: ${{ steps.changelog.outputs.notes_file }}
-          files: |
-            ${{ steps.pkg.outputs.aarch64-apple-darwin_zip }}
-            ${{ steps.pkg.outputs.x86_64-apple-darwin_zip }}
-            dist/checksums_sha256.txt
+      - name: Create/Update Release in org/cli-releases
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.CLI_RELEASES_TOKEN }}
+        run: |
+          set -euo pipefail
+          TAG="${{ steps.meta.outputs.tag }}"
+          VER="${{ steps.meta.outputs.version }}"
+          PRERELEASE="${{ steps.meta.outputs.prerelease }}"
+          NOTES="${{ steps.changelog.outputs.notes_file }}"
+          REPO="${{ env.TARGET_REPO }}"
+
+          if gh release view "$TAG" -R "$REPO" >/dev/null 2>&1; then
+            gh release edit "$TAG" -R "$REPO" --prerelease="$PRERELEASE" --notes-file "$NOTES"
+          else
+            gh release create "$TAG" -R "$REPO" --title "v${VER}" --prerelease="$PRERELEASE" --notes-file "$NOTES"
+          fi
+
+          gh release upload "$TAG" -R "$REPO" \
+            "${{ steps.pkg.outputs.aarch64-apple-darwin_zip }}" \
+            "${{ steps.pkg.outputs.x86_64-apple-darwin_zip }}" \
+            dist/checksums_sha256.txt \
+            --clobber
 
       - name: Install cosign
         uses: sigstore/cosign-installer@v3.9.2
@@ -242,53 +241,57 @@ jobs:
           sign "${{ steps.pkg.outputs.aarch64-apple-darwin_zip }}"
           sign "${{ steps.pkg.outputs.x86_64-apple-darwin_zip }}"
 
-      - name: Upload signatures to Release
-        uses: softprops/action-gh-release@v2.3.2
-        with:
-          tag_name: ${{ steps.meta.outputs.tag }}
-          files: dist/signatures/*
-
-      - name: Attach latest.json
-        if: ${{ steps.meta.outputs.prerelease != 'true' }}
+      - name: Upload signatures to external Release
         shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.CLI_RELEASES_TOKEN }}
         run: |
           set -euo pipefail
-          OWNER_REPO="${{ github.repository }}"
+          TAG="${{ steps.meta.outputs.tag }}"
+          REPO="${{ env.TARGET_REPO }}"
+          gh release upload "$TAG" -R "$REPO" dist/signatures/* --clobber
+
+      - name: Attach latest.json (non-prerelease)
+        if: ${{ steps.meta.outputs.prerelease != 'true' }}
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.CLI_RELEASES_TOKEN }}
+        run: |
+          set -euo pipefail
+          REPO="${{ env.TARGET_REPO }}"
           TAG="${{ steps.meta.outputs.tag }}"
           VER="${{ steps.meta.outputs.version }}"
           FILE_ARM="$(basename "${{ steps.pkg.outputs.aarch64-apple-darwin_zip }}")"
           FILE_X64="$(basename "${{ steps.pkg.outputs.x86_64-apple-darwin_zip }}")"
-          BASE="https://github.com/${OWNER_REPO}/releases/download/${TAG}"
+          BASE="https://github.com/${REPO}/releases/download/${TAG}"
           cat > latest.json <<EOF
           {
             "version": "$VER",
             "released_at": "$(date -u +"%Y-%m-%dT%H:%M:%SZ")",
             "assets": {
               "darwin-aarch64": {
-              "url": "$BASE/$FILE_ARM",
-              "sha256": "${{ steps.pkg.outputs.aarch64-apple-darwin_sha }}",
-              "size": ${{ steps.pkg.outputs.aarch64-apple-darwin_size }},
-              "sig": {
-                "type": "cosign",
-                "signature_url": "$BASE/signatures/$FILE_ARM.sig",
-                "certificate_url": "$BASE/signatures/$FILE_ARM.cert",
-                "bundle_url": "$BASE/signatures/$FILE_ARM.bundle"
-             }
-           },
-           "darwin-x86_64": {
-             "url": "$BASE/$FILE_X64",
-             "sha256": "${{ steps.pkg.outputs.x86_64-apple-darwin_sha }}",
-             "size": ${{ steps.pkg.outputs.x86_64-apple-darwin_size }},
-             "sig": {
-               "type": "cosign",
-               "signature_url": "$BASE/signatures/$FILE_X64.sig",
-               "certificate_url": "$BASE/signatures/$FILE_X64.cert",
-               "bundle_url": "$BASE/signatures/$FILE_X64.bundle"
-             }
+                "url": "$BASE/$FILE_ARM",
+                "sha256": "${{ steps.pkg.outputs.aarch64-apple-darwin_sha }}",
+                "size": ${{ steps.pkg.outputs.aarch64-apple-darwin_size }},
+                "sig": {
+                  "type": "cosign",
+                  "signature_url": "$BASE/signatures/$FILE_ARM.sig",
+                  "certificate_url": "$BASE/signatures/$FILE_ARM.cert",
+                  "bundle_url": "$BASE/signatures/$FILE_ARM.bundle"
+                }
+              },
+              "darwin-x86_64": {
+                "url": "$BASE/$FILE_X64",
+                "sha256": "${{ steps.pkg.outputs.x86_64-apple-darwin_sha }}",
+                "size": ${{ steps.pkg.outputs.x86_64-apple-darwin_size }},
+                "sig": {
+                  "type": "cosign",
+                  "signature_url": "$BASE/signatures/$FILE_X64.sig",
+                  "certificate_url": "$BASE/signatures/$FILE_X64.cert",
+                  "bundle_url": "$BASE/signatures/$FILE_X64.bundle"
+                }
+              }
             }
-           }
           }
           EOF
-          gh release upload "${TAG}" latest.json --clobber
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          gh release upload "${TAG}" -R "$REPO" latest.json --clobber

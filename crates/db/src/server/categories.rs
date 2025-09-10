@@ -1,4 +1,4 @@
-use crate::{models::Category, utils::DBError, DBContext};
+use crate::{error::DBError, models::Category, DBContext};
 use uuid::Uuid;
 
 impl Category {

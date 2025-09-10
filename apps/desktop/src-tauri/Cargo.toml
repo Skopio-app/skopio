@@ -26,13 +26,11 @@ chrono = { workspace = true, features = ["serde"] }
 tokio = { workspace = true, features = ["full", "tracing"] }
 strum_macros = "0.27.1"
 strum = "0.27.1"
-dashmap = "6.1.0"
 anyhow = { workspace = true }
 percent-encoding = { workspace = true }
 async-trait = { workspace = true }
 url = "2.5.4"
 console-subscriber = "0.4.1"
-reqwest = { workspace = true, default-features = false, features = ["json", "rustls-tls"] }
 tauri-plugin-dialog = "2.0.0"
 tauri-plugin-autostart = "2.5.0"
 tauri-plugin-global-shortcut = "2.3.0"
@@ -42,6 +40,10 @@ specta-typescript = { workspace = true }
 tauri-specta = { workspace = true, features = ["derive", "typescript"] }
 serde_qs = { workspace = true }
 ril = { version = "0.10.3", features = ["png"] }
+reqwest = { workspace = true, features = ["stream"] }
+sha2.workspace = true
+thiserror.workspace = true
+futures-util.workspace = true
 
 db = { path = "../../../crates/db", features = ["desktop"] }
 common = { path = "../../../crates/common" }
@@ -55,3 +57,6 @@ objc2-foundation = { version = "0.3.1", features = [
     "objc2-core-foundation",
 ] }
 objc2-app-kit = "0.3.1"
+
+[target.'cfg(unix)'.dependencies]
+libc = "0.2.175"

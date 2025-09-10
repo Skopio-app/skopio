@@ -1,6 +1,6 @@
 import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { getCurrentWindow } from "@tauri-apps/api/window";
-import { commands } from "../types/tauri.gen";
+import { commands } from "@/types/tauri.gen";
 import {
   register as registerShortcut,
   unregister as unregisterShortcut,
@@ -156,7 +156,7 @@ export const initializeGlobalShortcut = async (): Promise<void> => {
     }
   } catch (e) {
     // error seems to appear even though the shortcut is initialized successfully
-    console.error("Failed to initialize global shortcut: ", e);
+    console.warn("Failed to initialize global shortcut: ", e);
   }
 };
 
@@ -193,6 +193,7 @@ export const useGlobalShortcutListener = () => {
         return;
       }
 
+      // Windows specific
       if (alt && key === "ArrowLeft") {
         e.preventDefault();
         goBack();

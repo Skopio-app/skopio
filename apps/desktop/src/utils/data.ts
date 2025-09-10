@@ -1,4 +1,4 @@
-import { PermissionStatus } from "../types/tauri.gen";
+import { PermissionStatus } from "@/types/tauri.gen";
 
 export const getEntityName = (
   fullPath: string,

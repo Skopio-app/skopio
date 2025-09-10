@@ -24,23 +24,6 @@ pub struct EventInput {
     pub end_timestamp: Option<DateTime<Utc>>,
 }
 
-/// Input payload for inserting a new heartbeat.
-#[derive(Serialize, Deserialize, Debug)]
-pub struct HeartbeatInput {
-    pub timestamp: Option<DateTime<Utc>>,
-    pub project_name: String,
-    pub project_path: String,
-    pub entity_name: String,
-    pub entity_type: String,
-    pub branch_name: Option<String>,
-    pub language_name: Option<String>,
-    pub app_name: String,
-    pub source_name: String,
-    pub is_write: bool,
-    pub lines: Option<i64>,
-    pub cursorpos: Option<i64>,
-}
-
 /// Input payload for AFK (Away From Keyboard) events
 #[derive(Serialize, Deserialize, Debug)]
 pub struct AFKEventInput {

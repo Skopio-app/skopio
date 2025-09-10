@@ -1,25 +1,22 @@
 import * as Dialog from "@radix-ui/react-dialog";
 import { Calendar, cn } from "@skopio/ui";
 import { XIcon } from "lucide-react";
-import { DATE_RANGE_LABELS, DateRangeType } from "../utils/time";
+import { DATE_RANGE_LABELS, DateRangeType } from "@/utils/time";
 import { addDays, startOfDay } from "date-fns";
 import { useState } from "react";
 
 interface DateRangeDialogProps {
   selectedRange: DateRangeType;
   setSelectedRange: (range: DateRangeType) => void;
+
   pendingStart: Date;
   setPendingStart: (date: Date) => void;
   pendingEnd: Date;
   setPendingEnd: (date: Date) => void;
   setCustomStart: (date: Date) => void;
   setCustomEnd: (date: Date) => void;
+
   isCustom: boolean;
-  searchParams: URLSearchParams;
-  setSearchParams: (
-    params: URLSearchParams,
-    options?: { replace?: boolean },
-  ) => void;
 }
 
 const RangeSelectionDialog: React.FC<DateRangeDialogProps> = ({
@@ -32,8 +29,6 @@ const RangeSelectionDialog: React.FC<DateRangeDialogProps> = ({
   setCustomStart,
   setCustomEnd,
   isCustom,
-  searchParams,
-  setSearchParams,
 }) => {
   const [open, setOpen] = useState<boolean>(false);
   return (
@@ -72,7 +67,9 @@ const RangeSelectionDialog: React.FC<DateRangeDialogProps> = ({
                 )}
                 onClick={() => {
                   setSelectedRange(range);
-                  setOpen(false);
+                  if (range !== DateRangeType.Custom) {
+                    setOpen(false);
+                  }
                 }}
               >
                 {range}
@@ -119,9 +116,8 @@ const RangeSelectionDialog: React.FC<DateRangeDialogProps> = ({
                   onClick={() => {
                     setCustomStart(pendingStart);
                     setCustomEnd(pendingEnd);
-                    const params = new URLSearchParams(searchParams);
-                    params.set("range", DateRangeType.Custom);
-                    setSearchParams(params, { replace: true });
+
+                    setSelectedRange(DateRangeType.Custom);
                     setOpen(false);
                   }}
                   className={cn(

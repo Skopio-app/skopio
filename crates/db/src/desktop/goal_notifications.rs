@@ -1,11 +1,11 @@
-use crate::{desktop::goals::TimeSpan, DBContext};
+use crate::{desktop::goals::TimeSpan, error::DBError, DBContext};
 
 pub async fn has_shown_goal_notification(
     db: &DBContext,
     goal_id: i64,
     time_span: &TimeSpan,
     period_key: &str,
-) -> Result<bool, sqlx::Error> {
+) -> Result<bool, DBError> {
     let time_span = time_span.to_string();
     let exists = sqlx::query_scalar!(
         "
@@ -29,7 +29,7 @@ pub async fn insert_shown_goal_notification(
     goal_id: i64,
     time_span: &TimeSpan,
     period_key: &str,
-) -> Result<(), sqlx::Error> {
+) -> Result<(), DBError> {
     let time_span = time_span.to_string();
     sqlx::query!(
         "

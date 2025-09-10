@@ -114,8 +114,6 @@ const TOKEN_PAIRS = [
   ["Backspace", "Backspace"],
   ["Delete", "Delete"],
   ["Tab", "Tab"],
-  ["⌘", "Command"],
-  ["⌥", "Option"],
 ] as const satisfies readonly (readonly [string, string])[];
 
 export const UI_TO_ACCEL: Record<string, string> = {};

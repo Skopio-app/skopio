@@ -1,4 +1,4 @@
-use crate::{utils::DBError, DBContext};
+use crate::{error::DBError, DBContext};
 use common::models::Project;
 use uuid::Uuid;
 
@@ -72,7 +72,7 @@ impl ServerProject {
         db_context: &DBContext,
         after_id: Option<Uuid>,
         limit: u32,
-    ) -> Result<Vec<Project>, sqlx::Error> {
+    ) -> Result<Vec<Project>, DBError> {
         let limit = limit.min(100) as i64;
 
         let rows: Vec<ServerProject> = if let Some(cursor) = after_id {

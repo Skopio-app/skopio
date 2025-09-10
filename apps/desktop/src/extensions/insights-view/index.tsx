@@ -11,7 +11,7 @@ import AverageDaySection from "./components/AverageDaySection";
 import ActivitySection from "./components/ActivitySection";
 import TopProjectsSection from "./components/TopProjectsSection";
 import { useEffect, useState } from "react";
-import { commands, InsightQueryPayload } from "../../types/tauri.gen";
+import { commands, InsightQueryPayload } from "@/types/tauri.gen";
 import { useYearFilter } from "./stores/useYearFilter";
 import TopLanguagesSection from "./components/TopLanguagesSection";
 import MostActiveDaySection from "./components/MostActiveDaySection";

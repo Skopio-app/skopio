@@ -1,7 +1,7 @@
 import { cn } from "@skopio/ui";
 import { Pencil, Settings, Trash2, Type } from "lucide-react";
 import React from "react";
-import SkeletonChart from "../../../components/SkeletonChart";
+import SkeletonChart from "@/components/SkeletonChart";
 import * as DropdownMenu from "@radix-ui/react-dropdown-menu";
 
 interface GoalChartCardProps {

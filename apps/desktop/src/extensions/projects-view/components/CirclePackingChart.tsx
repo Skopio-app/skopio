@@ -2,7 +2,7 @@ import {
   CirclePackingCustomLayerProps,
   ResponsiveCirclePacking,
 } from "@nivo/circle-packing";
-import { formatDuration } from "../../../utils/time";
+import { formatDuration } from "@/utils/time";
 import { useState } from "react";
 
 type CirclePackingNode =
@@ -12,6 +12,10 @@ type CirclePackingNode =
 interface CirclePackingChartProps {
   data: { name: string; value: number }[];
 }
+
+const truncateValue = (text: string): string => {
+  return text.length > 50 ? `${text.slice(0, 50)}...` : text;
+};
 
 const CirclePackingChart: React.FC<CirclePackingChartProps> = ({ data }) => {
   const [zoomedId, setZoomedId] = useState<string | null>(null);
@@ -52,6 +56,7 @@ const CirclePackingChart: React.FC<CirclePackingChartProps> = ({ data }) => {
         borderColor={{ from: "color", modifiers: [["darker", 0.5]] }}
         tooltip={({ id, value }) => {
           const formattedTime = formatDuration(value);
+          const text = truncateValue(id);
 
           if (zoomedId === null || zoomedId !== "Total") {
             return <></>;
@@ -59,7 +64,7 @@ const CirclePackingChart: React.FC<CirclePackingChartProps> = ({ data }) => {
 
           return (
             <div className="min-w-32 rounded-md border border-gray-200 bg-white px-3 py-2 text-sm shadow-md text-neutral-700">
-              <h3 className="font-medium text-xs">{id}</h3>
+              <h3 className="font-medium text-xs">{text}</h3>
               <p className="text-xs">{formattedTime}</p>
             </div>
           );
@@ -82,9 +87,10 @@ const CirclePackingChart: React.FC<CirclePackingChartProps> = ({ data }) => {
                 const maxValue = Math.max(...nodes.map((n) => n.value));
                 const fontSize =
                   minFont + (value / maxValue) * (maxFont - minFont);
+                const words = truncateValue(id);
 
                 return (
-                  <g key={id} transform={`translate(${x}, ${y})`}>
+                  <g key={words} transform={`translate(${x}, ${y})`}>
                     <text
                       textAnchor="middle"
                       dominantBaseline="middle"
@@ -93,7 +99,7 @@ const CirclePackingChart: React.FC<CirclePackingChartProps> = ({ data }) => {
                       fontWeight={600}
                       y={-6}
                     >
-                      {id}
+                      {words}
                     </text>
                     <text
                       textAnchor="middle"

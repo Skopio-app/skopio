@@ -1,5 +1,5 @@
 import { Skeleton } from "@skopio/ui";
-import { formatDuration } from "../../../utils/time";
+import { formatDuration } from "@/utils/time";
 
 interface ItemsListProps {
   title: string;
@@ -24,7 +24,7 @@ const ItemsList: React.FC<ItemsListProps> = ({ title, data, loading }) => {
               <p className="text-xs font-light w-20 text-right">
                 {formatDuration(item.value)}
               </p>
-              <p className="text-sm">{item.name}</p>
+              <p className="text-sm truncate">{item.name}</p>
             </div>
           ))
         ) : (

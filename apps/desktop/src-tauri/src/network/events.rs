@@ -1,6 +1,6 @@
 use common::models::{inputs::BucketSummaryInput, outputs::EventGroupResult};
 
-use crate::network::utils::req_json;
+use crate::network::req_json;
 
 #[tauri::command]
 #[specta::specta]

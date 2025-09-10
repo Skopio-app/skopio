@@ -6,7 +6,7 @@ resolver = "2"
 edition = "2021"
 license = "MIT"
 authors = ["Samuel Wahome <hey@samwahome.com>"]
-repository = "https://github.com/Samuel-dot-cloud/skopio"
+repository = "https://github.com/Skopio-app/skopio"
 rust-version = "1.80.0"
 
 [workspace.dependencies]
@@ -24,6 +24,8 @@ env_logger = "0.11.6"
 anyhow = "1.0.97"
 percent-encoding = "2.3.1"
 sqlx = "0.8.6"
+libsqlite3-sys = "0.30.1"   # Update blocked by rusqlite
+rusqlite = "0.32.0"     # Update blocked by sqlx
 async-trait = "0.1.88"
 thiserror = "2.0.12"
 serde_qs = "0.15.0"
@@ -31,6 +33,8 @@ tokei = "12.1.2"
 tempfile = "3.20.0"
 keyring = "3.6.3"
 uuid = "1.18.0"
+futures-util = "0.3.31"
+sha2 = "0.10.9"
 
 specta = "2.0.0-rc.22"
 tauri-specta = "2.0.0-rc.21"

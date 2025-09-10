@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { useYearFilter } from "../stores/useYearFilter";
-import { commands, InsightQueryPayload } from "../../../types/tauri.gen";
+import { commands, InsightQueryPayload } from "@/types/tauri.gen";
 import SectionContainer from "./SectionContainer";
-import StackedBarChart from "../../../components/StackedBarChart";
+import StackedBarChart from "@/components/StackedBarChart";
 import { toast } from "sonner";
 
 const AverageDaySection = () => {

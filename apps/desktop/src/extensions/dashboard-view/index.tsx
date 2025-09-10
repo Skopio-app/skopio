@@ -1,12 +1,5 @@
-import { addDays, format, startOfDay } from "date-fns";
-import { useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "react-router-dom";
-import {
-  DATE_RANGE_LABELS,
-  DateRangeType,
-  getRangeDates,
-  mapRangeToPreset,
-} from "../../utils/time";
+import { format } from "date-fns";
+import { useEffect, useMemo } from "react";
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
 import { Layout, Responsive, WidthProvider } from "react-grid-layout";
@@ -16,66 +9,43 @@ import { useDashboardFilter } from "./stores/useDashboardFilter";
 import LanguagePieChartWidget from "./widgets/LanguagePieChartWidget";
 import CategoryChartWidget from "./widgets/CategoryChartWidget";
 import EntityChartWidget from "./widgets/EntityChartWidget";
-import RangeSelectionDialog from "../../components/RangeSelectionDialog";
+import RangeSelectionDialog from "@/components/RangeSelectionDialog";
 import ActivityChartWidget from "./widgets/ActivityChartWidget";
 import { useTotalTime } from "./hooks/useTotalTime";
 import { usePersistentLayout } from "./hooks/usePersistentLayout";
-import { formatDuration } from "../../utils/time";
+import { formatDuration } from "@/utils/time";
+import { useDateRangeParams } from "@/hooks/useDateRangesParams";
 
 const ResponsiveGridLayout = WidthProvider(
   Responsive,
 ) as React.ComponentType<any>;
 
 const DashboardView = () => {
-  const [customStart, setCustomStart] = useState<Date>(new Date());
-  const [customEnd, setCustomEnd] = useState<Date>(new Date());
-
-  const [pendingStart, setPendingStart] = useState<Date>(customStart);
-  const [pendingEnd, setPendingEnd] = useState<Date>(customEnd);
-
-  const [searchParams, setSearchParams] = useSearchParams();
-  const paramRange = searchParams.get("range") as DateRangeType;
-  const [selectedRange, setSelectedRange] = useState<DateRangeType>(
-    paramRange && DATE_RANGE_LABELS.includes(paramRange)
-      ? paramRange
-      : DateRangeType.Today,
-  );
-
-  const isCustom = selectedRange === DateRangeType.Custom;
-
-  useEffect(() => {
-    const params = new URLSearchParams(searchParams);
-    params.set("range", selectedRange);
-    setSearchParams(params, { replace: true });
-  }, [selectedRange]);
+  const {
+    selectedRange,
+    setSelectedRange,
+    startDate,
+    endDate,
+    isCustom,
+    pendingStart,
+    pendingEnd,
+    setPendingStart,
+    setPendingEnd,
+    setCustomStart,
+    setCustomEnd,
+    applyPresetToStore,
+  } = useDateRangeParams();
 
   useEffect(() => {
-    if (!isCustom) return;
-    const maxEnd = addDays(startOfDay(customStart ?? 0), 30);
-    if (customEnd) {
-      if (customEnd > maxEnd) setCustomEnd(maxEnd);
-    }
-  }, [customStart, customEnd, isCustom]);
+    applyPresetToStore((preset) => useDashboardFilter.setState({ preset }));
+  }, [applyPresetToStore, selectedRange, startDate, endDate]);
 
-  const [startDate, endDate] = useMemo(
-    () => getRangeDates(selectedRange, customStart, customEnd),
-    [selectedRange, customStart, customEnd],
-  );
-
-  useEffect(() => {
-    const newPreset = mapRangeToPreset(selectedRange, startDate, endDate);
-    useDashboardFilter.setState({ preset: newPreset });
-  }, [selectedRange, startDate, endDate]);
-
-  const formattedRange = useMemo(() => {
-    const sameDay = format(startDate, "PPP") === format(endDate, "PPP");
-    return sameDay
-      ? format(startDate, "EEEE, MMMM do yyyy")
-      : `${format(startDate, "EEE, MMM do yyyy")} - ${format(endDate, "EEE, MMM do yyyy")}`;
-  }, [startDate, endDate]);
+  const sameDay = format(startDate, "PPP") === format(endDate, "PPP");
+  const formattedRange = sameDay
+    ? format(startDate, "EEEE, MMMM do yyyy")
+    : `${format(startDate, "EEE, MMM do yyyy")} - ${format(endDate, "EEE, MMM do yyyy")}`;
 
   const { total, loading } = useTotalTime(startDate, endDate);
-
   const formattedDuration = formatDuration(total);
 
   const defaultLayout: Layout[] = [
@@ -135,10 +105,8 @@ const DashboardView = () => {
             pendingEnd={pendingEnd}
             setPendingEnd={setPendingEnd}
             setCustomStart={setCustomStart}
-            setCustomEnd={setCustomStart}
+            setCustomEnd={setCustomEnd}
             isCustom={isCustom}
-            searchParams={searchParams}
-            setSearchParams={setSearchParams}
           />
           :
         </span>{" "}

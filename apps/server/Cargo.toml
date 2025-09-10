@@ -1,5 +1,5 @@
 [package]
-name = "server"
+name = "skopio-server"
 version = "0.1.0"
 edition.workspace = true
 license.workspace = true
@@ -22,3 +22,5 @@ common = { path = "../../crates/common" }
 specta = { workspace = true }
 serde_qs = { workspace = true, features = ["axum"] }
 uuid = { workspace = true, features = ["v7", "fast-rng"] }
+anyhow.workspace = true
+thiserror.workspace = true

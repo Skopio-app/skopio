@@ -5,7 +5,7 @@ use common::models::{
 };
 use db::models::{App, Category};
 
-use crate::network::utils::req_json;
+use crate::network::req_json;
 
 #[tauri::command]
 #[specta::specta]

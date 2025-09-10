@@ -1,20 +1,18 @@
 use std::sync::Arc;
 
-use axum::{extract::State, http::StatusCode, routing::get, Json, Router};
+use axum::{extract::State, routing::get, Json, Router};
 use db::{models::Category, DBContext};
 use tokio::sync::Mutex;
 
-use crate::utils::error_response;
+use crate::error::AppResult;
 
 async fn fetch_categories(
     State(db): State<Arc<Mutex<DBContext>>>,
-) -> Result<Json<Vec<Category>>, (StatusCode, Json<String>)> {
+) -> AppResult<Json<Vec<Category>>> {
     let db = db.lock().await;
 
-    match Category::get_all(&db).await {
-        Ok(categories) => Ok(Json(categories)),
-        Err(err) => Err(error_response(err)),
-    }
+    let categories = Category::get_all(&db).await?;
+    Ok(Json(categories))
 }
 
 pub fn category_routes(db: Arc<Mutex<DBContext>>) -> Router {

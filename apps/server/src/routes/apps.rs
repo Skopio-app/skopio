@@ -1,20 +1,16 @@
 use std::sync::Arc;
 
-use axum::{extract::State, http::StatusCode, routing::get, Json, Router};
+use axum::{extract::State, routing::get, Json, Router};
 use db::{models::App, DBContext};
 use tokio::sync::Mutex;
 
-use crate::utils::error_response;
+use crate::error::AppResult;
 
-async fn fetch_apps(
-    State(db): State<Arc<Mutex<DBContext>>>,
-) -> Result<Json<Vec<App>>, (StatusCode, Json<String>)> {
+async fn fetch_apps(State(db): State<Arc<Mutex<DBContext>>>) -> AppResult<Json<Vec<App>>> {
     let db = db.lock().await;
 
-    match App::get_all(&db).await {
-        Ok(apps) => Ok(Json(apps)),
-        Err(err) => Err(error_response(err)),
-    }
+    let apps = App::get_all(&db).await?;
+    Ok(Json(apps))
 }
 
 pub fn app_routes(db: Arc<Mutex<DBContext>>) -> Router {

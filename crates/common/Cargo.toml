@@ -16,4 +16,8 @@ git2 = { workspace = true }
 tokei = { workspace = true }
 percent-encoding = { workspace = true }
 keyring = { workspace = true, features = ["apple-native"]}
-uuid = {workspace = true, features = ["v7", "serde"]}
+uuid = {workspace = true, features = ["v7", "v4", "serde"]}
+dirs.workspace = true
+anyhow.workspace = true
+reqwest = { workspace = true, features = ["json", "rustls-tls"] }
+tokio = { workspace = true, features = ["net"]}

@@ -6,7 +6,7 @@ import {
   Goal,
   TimeRangePreset,
   TimeSpan,
-} from "../../../types/tauri.gen";
+} from "@/types/tauri.gen";
 import BarLineChart from "./BarLineChart";
 import GoalChartCard from "./GoalChartCard";
 import GoalTitleDialog from "./Dialogs/GoalTitleDialog";
