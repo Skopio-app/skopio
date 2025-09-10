@@ -35,7 +35,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup build env (aarch64 + x86_64)
+      - name: Setup build env
         uses: ./.github/actions
         with:
           rust_target: aarch64-apple-darwin, x86_64-apple-darwin

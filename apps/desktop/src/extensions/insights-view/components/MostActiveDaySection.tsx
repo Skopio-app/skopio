@@ -45,7 +45,11 @@ const MostActiveDaySection = () => {
   return (
     <TextSectionItem
       title="Most Active Day"
-      text={`Your most active day was ${day} with ${time} of activity`}
+      text={
+        day && time !== null
+          ? `Your most active day was ${day} with ${time} of activity`
+          : "No data found"
+      }
       loading={loading}
     />
   );

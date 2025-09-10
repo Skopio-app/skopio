@@ -40,7 +40,9 @@ const TotalTimeSection = () => {
   return (
     <TextSectionItem
       title="Total time logged"
-      text={`Total active time logged is ${time}`}
+      text={
+        time !== null ? `Total active time logged is ${time}` : "No data found"
+      }
       loading={loading}
     />
   );
