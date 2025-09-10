@@ -1,9 +1,19 @@
 name: Build release CLI artifacts
 
 on:
-  push:
-    branches:
-      - release
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Optional override tag (defaults from Cargo)"
+        required: false
+  workflow_call:
+    inputs:
+      tag:
+        required: false
+        type: string
+    secrets:
+      CLI_RELEASES_TOKEN:
+        required: true
 
 permissions:
   contents: read
@@ -15,7 +25,11 @@ env:
   TARGET_REPO: ${{ github.repository_owner }}/cli-releases
 
 jobs:
+  guard:
+    uses: ./.github/workflows/_guard-release-branch.yml
+
   release-cli:
+    needs: guard
     runs-on: macos-latest
     steps:
       - name: Checkout repository

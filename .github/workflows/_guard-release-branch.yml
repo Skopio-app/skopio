@@ -1,0 +1,24 @@
+name: "Guard: release branch only"
+
+on:
+  workflow_call:
+    inputs:
+      branch:
+        description: "Branch name that is allowed to run"
+        required: false
+        type: string
+        default: release
+
+jobs:
+  guard:
+    runs-on: macos-latest
+    steps:
+      - name: Ensure we are on the allowed branch
+        shell: bash
+        run: |
+          echo "Allowed branch: '${{ inputs.branch }}'"
+          echo "Current ref: ${GITHUB_REF} (name: ${GITHUB_REF_NAME})"
+          if [ "${GITHUB_REF_NAME}" != "${{ inputs.branch }}" ]; then
+            echo "::error::This workflow may only run from the '${{ inputs.branch }}' branch. Current: ${GITHUB_REF_NAME}"
+            exit 1
+          fi
