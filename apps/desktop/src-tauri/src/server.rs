@@ -7,7 +7,6 @@ use std::sync::LazyLock;
 use std::{io, path::PathBuf};
 
 use futures_util::StreamExt;
-use log::debug;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
@@ -17,6 +16,8 @@ use tauri_specta::Event;
 use thiserror::Error;
 use tokio::sync::Mutex;
 use tokio::{fs as tokiofs, io::AsyncWriteExt};
+use zip::result::ZipError;
+use zip::ZipArchive;
 
 #[derive(Error, Debug)]
 pub enum ServerCtlError {
@@ -43,6 +44,9 @@ pub enum ServerCtlError {
 
     #[error("JSON error: {0}")]
     Json(#[from] serde_json::Error),
+
+    #[error("Zip error: {0}")]
+    Zip(#[from] ZipError),
 }
 
 #[derive(Debug, Clone, Serialize, Type, Event)]
@@ -181,7 +185,7 @@ async fn download_to_temp(
     Ok(tmp_file)
 }
 
-fn sha256_file(path: &Path) -> Result<String, ServerCtlError> {
+fn compute_sha256(path: &Path) -> Result<String, ServerCtlError> {
     let mut file = fs::File::open(path)?;
     let mut hasher = Sha256::new();
     let mut buf = [0u8; 64 * 1024];
@@ -206,23 +210,58 @@ fn installed_bin_sha256(app: &AppHandle) -> Option<String> {
     if !bin.exists() {
         return None;
     }
-    sha256_file(&bin).ok()
+    compute_sha256(&bin).ok()
 }
 
-fn install_binary(app: &AppHandle, tmp_file: &Path) -> Result<PathBuf, ServerCtlError> {
-    let bin_path = server_bin_path(app)?;
-    if let Some(dir) = bin_path.parent() {
+fn unzip_binary(zip_path: &Path, out_path: &Path) -> Result<(), ServerCtlError> {
+    let zip_file = fs::File::open(zip_path)?;
+    let mut archive = ZipArchive::new(zip_file)?;
+
+    let mut pick_idx: Option<usize> = None;
+    for i in 0..archive.len() {
+        let entry = archive.by_index(i)?;
+        if entry.is_file() {
+            let name = entry.name();
+            if name.ends_with(BIN_NAME) || name == BIN_NAME {
+                pick_idx = Some(i);
+                break;
+            }
+            if pick_idx.is_none()
+                && Path::new(name).file_name() == Some(std::ffi::OsStr::new(BIN_NAME))
+            {
+                pick_idx = Some(i);
+            }
+        }
+    }
+    if pick_idx.is_none() && archive.len() == 1 {
+        if archive.by_index(0)?.is_file() {
+            pick_idx = Some(0);
+        }
+    }
+
+    let idx = pick_idx
+        .ok_or_else(|| ServerCtlError::Manifest("Zip does not contain expected binary".into()))?;
+    let mut entry = archive.by_index(idx)?;
+    if let Some(dir) = out_path.parent() {
         fs::create_dir_all(dir)?;
     }
-    let final_path = bin_path;
-    if final_path.exists() {
-        fs::remove_file(&final_path)?;
+    let part = out_path.with_extension("part");
+    {
+        let mut out = fs::File::create(&part)?;
+        std::io::copy(&mut entry, &mut out)?;
+        out.flush()?;
     }
-    fs::rename(tmp_file, &final_path)?;
-    let mut perms = fs::metadata(&final_path)?.permissions();
-    perms.set_mode(0o755);
-    fs::set_permissions(&final_path, perms)?;
-    Ok(final_path)
+    let mut perms = fs::metadata(&part)?.permissions();
+    #[cfg(unix)]
+    {
+        perms.set_mode(0o755);
+        fs::set_permissions(&part, perms)?;
+    }
+    if out_path.exists() {
+        fs::remove_file(out_path)?;
+    }
+    fs::rename(part, out_path)?;
+    Ok(())
 }
 
 fn write_plist(app: &AppHandle, bin: &Path) -> Result<PathBuf, ServerCtlError> {
@@ -312,16 +351,17 @@ async fn download_and_install(
 ) -> Result<PathBuf, ServerCtlError> {
     let client = Client::new();
 
-    let tmp = download_to_temp(app, &client, &asset.url).await?;
-    let processed = sha256_file(&tmp)?;
+    let zip_path = download_to_temp(app, &client, &asset.url).await?;
+    let processed = compute_sha256(&zip_path)?;
     let fetched = asset.sha256.to_ascii_lowercase();
     if processed != fetched {
         return Err(ServerCtlError::DigestMismatch);
     }
 
-    let path = install_binary(app, &tmp)?;
+    let out = server_bin_path(app)?;
+    unzip_binary(&zip_path, &out)?;
     write_installed_version(app, &manifest.version)?;
-    Ok(path)
+    Ok(out)
 }
 
 async fn check_and_update(app: &AppHandle) -> Result<bool, ServerCtlError> {
@@ -329,9 +369,7 @@ async fn check_and_update(app: &AppHandle) -> Result<bool, ServerCtlError> {
 
     let client = Client::new();
     let manifest = fetch_manifest(&client).await?;
-    debug!("The manifest: {manifest:?}");
     let asset = pick_asset(&manifest)?;
-    debug!("The asset: {asset:?}");
 
     let new_sha = asset.sha256.to_ascii_lowercase();
     let current_sha = installed_bin_sha256(app);
