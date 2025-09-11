@@ -1,6 +1,7 @@
 import {
   Button,
   cn,
+  Separator,
   Sidebar,
   SidebarContent,
   SidebarFooter,
@@ -108,10 +109,22 @@ const DashboardLayout = () => {
             </SidebarGroupContent>
           </SidebarGroup>
         </SidebarContent>
-        <SidebarFooter>
-          <p className="text-xs text-neutral-500">
+        <SidebarFooter className="space-y-1">
+          <Separator />
+          <p className="text-xs text-neutral-500 flex items-center gap-2">
+            <span
+              className={cn(
+                "inline-block h-2 w-2 rounded-full",
+                status.state === "running"
+                  ? "bg-green-500 animate-pulse"
+                  : status.state === "offline" || status.state === "error"
+                    ? "bg-red-500"
+                    : "bg-yellow-500",
+              )}
+            />
             Server status: {renderStatus(status)}
           </p>
+
           {status.state === "downloading" && (
             <div className="mt-1 h-1 w-full bg-neutral-200 rounded">
               <div

@@ -1,6 +1,5 @@
 import { commands, events, ServerStatus } from "@/types/tauri.gen";
 import { UnlistenFn } from "@tauri-apps/api/event";
-import { WebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { useEffect, useState } from "react";
 
 export const useServerStatus = () => {
@@ -11,12 +10,9 @@ export const useServerStatus = () => {
 
     (async () => {
       const current = await commands.getServerStatus();
-      console.log("Current: ", current);
       setStatus(current);
 
-      const appWindow = new WebviewWindow("main");
-      unlisten = await events.serverStatus(appWindow).listen((e) => {
-        console.log("The payload: ", e.payload);
+      unlisten = await events.serverStatus.listen((e) => {
         setStatus(e.payload);
       });
     })();

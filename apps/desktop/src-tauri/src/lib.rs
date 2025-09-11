@@ -13,7 +13,7 @@ use utils::{config::ConfigStore, db::get_db_path};
 
 use crate::{
     goals_service::GoalService,
-    server::{ServerStatus, StatusBus},
+    server::ServerStatus,
     ui::{
         tray::init_tray,
         window::{NotificationPayload, WindowExt, WindowKind},
@@ -73,9 +73,6 @@ pub async fn run() {
                         .build(),
                 )?;
             }
-
-            let status_bus = StatusBus::new();
-            app.manage(status_bus);
 
             let app_handle_clone = app_handle.clone();
             tauri::async_runtime::spawn(async move {
@@ -252,7 +249,7 @@ fn make_specta_builder<R: Runtime>() -> tauri_specta::Builder<R> {
             crate::ui::window::show_window::<tauri::Wry>,
             crate::ui::window::open_devtools::<tauri::Wry>,
             crate::monitored_app::get_open_apps,
-            crate::server::get_server_status,
+            crate::server::get_server_status::<tauri::Wry>,
         ])
         .events(tauri_specta::collect_events![ServerStatus])
         .error_handling(tauri_specta::ErrorHandlingMode::Throw)

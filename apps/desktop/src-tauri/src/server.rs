@@ -7,13 +7,15 @@ use std::sync::LazyLock;
 use std::{io, path::PathBuf};
 
 use futures_util::StreamExt;
+use log::debug;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use specta::Type;
-use tauri::{AppHandle, Emitter, Manager};
+use tauri::{AppHandle, Manager, Runtime};
+use tauri_specta::Event;
 use thiserror::Error;
-use tokio::sync::{watch, Mutex};
+use tokio::sync::Mutex;
 use tokio::{fs as tokiofs, io::AsyncWriteExt};
 
 #[derive(Error, Debug)]
@@ -43,7 +45,7 @@ pub enum ServerCtlError {
     Json(#[from] serde_json::Error),
 }
 
-#[derive(Debug, Clone, Serialize, Type, tauri_specta::Event)]
+#[derive(Debug, Clone, Serialize, Type, Event)]
 #[serde(tag = "state", rename_all = "kebab-case")]
 pub enum ServerStatus {
     Offline,
@@ -62,27 +64,8 @@ pub enum ServerStatus {
     },
 }
 
-pub struct StatusBus {
-    tx: watch::Sender<ServerStatus>,
-    rx: watch::Receiver<ServerStatus>,
-}
-
-impl StatusBus {
-    pub fn new() -> Self {
-        let (tx, rx) = watch::channel(ServerStatus::Offline);
-        Self { tx, rx }
-    }
-    pub fn sender(&self) -> watch::Sender<ServerStatus> {
-        self.tx.clone()
-    }
-    pub fn receiver(&self) -> watch::Receiver<ServerStatus> {
-        self.rx.clone()
-    }
-}
-
-fn set_status(app: &AppHandle, tx: &watch::Sender<ServerStatus>, s: ServerStatus) {
-    let _ = tx.send(s.clone());
-    let _ = app.emit("server:status", &s);
+fn set_status(app: &AppHandle, status: ServerStatus) {
+    status.emit(app).unwrap();
 }
 
 const PLIST_LABEL: &str = "com.samwahome.skopio.server";
@@ -139,12 +122,12 @@ struct ManifestAssets {
     darwin_x86_64: Option<Asset>,
 }
 
-fn server_root(app: &AppHandle) -> Result<PathBuf, ServerCtlError> {
+fn server_root<R: Runtime>(app: &AppHandle<R>) -> Result<PathBuf, ServerCtlError> {
     let base = app.path().app_data_dir()?;
     Ok(base.join("server"))
 }
 
-fn server_bin_path(app: &AppHandle) -> Result<PathBuf, ServerCtlError> {
+fn server_bin_path<R: Runtime>(app: &AppHandle<R>) -> Result<PathBuf, ServerCtlError> {
     Ok(server_root(app)?.join("bin").join(BIN_NAME))
 }
 
@@ -166,8 +149,6 @@ async fn download_to_temp(
         return Err(ServerCtlError::BadStatus(resp.status().to_string()));
     }
     let total = resp.content_length();
-    let status_bus = app.state::<StatusBus>();
-    let tx = status_bus.sender();
 
     let tmp_dir = server_root(app)?.join("tmp");
     tokiofs::create_dir_all(&tmp_dir).await?;
@@ -187,7 +168,6 @@ async fn download_to_temp(
         if percent.unwrap_or(0) != last_emit {
             set_status(
                 app,
-                &tx,
                 ServerStatus::Downloading {
                     received,
                     total,
@@ -345,14 +325,13 @@ async fn download_and_install(
 }
 
 async fn check_and_update(app: &AppHandle) -> Result<bool, ServerCtlError> {
-    let status_bus = app.state::<StatusBus>();
-    let tx = status_bus.sender();
-
-    set_status(app, &tx, ServerStatus::Checking);
+    set_status(app, ServerStatus::Checking);
 
     let client = Client::new();
     let manifest = fetch_manifest(&client).await?;
+    debug!("The manifest: {manifest:?}");
     let asset = pick_asset(&manifest)?;
+    debug!("The asset: {asset:?}");
 
     let new_sha = asset.sha256.to_ascii_lowercase();
     let current_sha = installed_bin_sha256(app);
@@ -360,13 +339,13 @@ async fn check_and_update(app: &AppHandle) -> Result<bool, ServerCtlError> {
     let needs_update = current_sha.as_deref() != Some(new_sha.as_str());
 
     if needs_update {
-        set_status(app, &tx, ServerStatus::Updating);
+        set_status(app, ServerStatus::Updating);
         let _ = status().and_then(|_| stop());
-        set_status(app, &tx, ServerStatus::Installing);
+        set_status(app, ServerStatus::Installing);
         let _ = download_and_install(app, &manifest, asset).await?;
-        set_status(app, &tx, ServerStatus::Starting);
+        set_status(app, ServerStatus::Starting);
         start(app)?;
-        set_status(app, &tx, ServerStatus::Running);
+        set_status(app, ServerStatus::Running);
         return Ok(true);
     }
 
@@ -404,33 +383,29 @@ pub fn status() -> Result<(), ServerCtlError> {
 }
 
 pub async fn ensure_server_ready(app: &AppHandle) -> Result<(), ServerCtlError> {
-    let status_bus = app.state::<StatusBus>();
-    let tx = status_bus.sender();
-
-    set_status(app, &tx, ServerStatus::Checking);
+    set_status(app, ServerStatus::Checking);
 
     let _guard = SERVER_INIT_GUARD.lock().await;
     let is_running = status().is_ok();
 
     match check_and_update(app).await {
         Ok(true) => {
-            set_status(app, &tx, ServerStatus::Running);
+            set_status(app, ServerStatus::Running);
             Ok(())
         }
         Ok(false) => {
             if is_running {
-                set_status(app, &tx, ServerStatus::Running);
+                set_status(app, ServerStatus::Running);
             } else {
-                set_status(app, &tx, ServerStatus::Starting);
+                set_status(app, ServerStatus::Starting);
                 start(app)?;
-                set_status(app, &tx, ServerStatus::Running);
+                set_status(app, ServerStatus::Running);
             }
             Ok(())
         }
         Err(e) => {
             set_status(
                 app,
-                &tx,
                 ServerStatus::Error {
                     message: e.to_string(),
                 },
@@ -461,6 +436,13 @@ fn write_installed_version(app: &AppHandle, ver: &str) -> Result<(), ServerCtlEr
 
 #[tauri::command]
 #[specta::specta]
-pub async fn get_server_status(state: tauri::State<'_, StatusBus>) -> Result<ServerStatus, String> {
-    Ok(state.receiver().borrow().clone())
+pub fn get_server_status<R: Runtime>(app: AppHandle<R>) -> Result<ServerStatus, String> {
+    let bin = server_bin_path(&app).map_err(|e| e.to_string())?;
+    if !bin.exists() {
+        return Ok(ServerStatus::Offline);
+    }
+    match status() {
+        Ok(_) => Ok(ServerStatus::Running),
+        Err(_) => Ok(ServerStatus::Offline),
+    }
 }
