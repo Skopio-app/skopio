@@ -184,6 +184,7 @@ fn write_plist(app: &AppHandle, bin: &Path) -> Result<PathBuf, ServerCtlError> {
     if let Some(dir) = plist_dst.parent() {
         fs::create_dir_all(dir)?;
     }
+
     let plist = format!(
         r#"<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
@@ -197,18 +198,11 @@ fn write_plist(app: &AppHandle, bin: &Path) -> Result<PathBuf, ServerCtlError> {
   <key>RunAtLoad</key><true/>
   <key>KeepAlive</key><true/>
   <key>ProcessType</key><string>Background</string>
-  <key>StandardOutPath</key><string>{log}/stdout.log</string>
-  <key>StandardErrorPath</key><string>{log}/stderr.log</string>
 </dict></plist>
 "#,
         label = PLIST_LABEL,
         bin = bin.display(),
-        log = server_root(app)?.join("logs").display(),
     );
-    if let Some(log_dir) = server_root(app)?.join("logs").as_path().parent() {
-        fs::create_dir_all(log_dir)?;
-    }
-    fs::create_dir_all(server_root(app)?.join("logs"))?;
 
     let mut f = fs::File::create(&plist_dst)?;
     f.write_all(plist.as_bytes())?;
@@ -227,12 +221,12 @@ fn launchctl(args: &[&str]) -> Result<(), ServerCtlError> {
 }
 
 fn gui_domain() -> Result<String, ServerCtlError> {
-    let uid = nix_like_uid();
+    let uid = current_uid();
     Ok(format!("gui/{}", uid))
 }
 
 #[cfg(unix)]
-fn nix_like_uid() -> u32 {
+fn current_uid() -> u32 {
     unsafe { libc::getuid() }
 }
 
@@ -272,9 +266,9 @@ pub async fn download_and_install(app: &AppHandle) -> Result<PathBuf, ServerCtlE
 
     let tmp = download_to_temp(app, &client, &asset.url).await?;
 
-    let got = sha256_file(&tmp)?;
-    let want = asset.sha256.to_ascii_lowercase();
-    if got != want {
+    let processed = sha256_file(&tmp)?;
+    let fetched = asset.sha256.to_ascii_lowercase();
+    if processed != fetched {
         return Err(ServerCtlError::DigestMismatch);
     }
 

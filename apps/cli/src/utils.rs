@@ -32,7 +32,7 @@ pub enum CliError {
     VariantMismatch(String),
 
     #[error("Serde json error: {0}")]
-    SerdeJson(#[from] serde_json::Error),
+    Json(#[from] serde_json::Error),
 }
 
 /// Extracts the project name from the project path
