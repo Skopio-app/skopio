@@ -15,10 +15,13 @@ env:
   SERVER_PATH: apps/server
   BIN_NAME: skopio-server
   TARGET_REPO: ${{ github.repository_owner }}/server-releases
+  # Force vendored OpenSSL so openssl-sys builds without finding a system install
+  VENDORED_OPENSSL: "1"
 
 jobs:
   guard:
     uses: ./.github/workflows/_guard-release-branch.yml
+
   release-server:
     needs: guard
     runs-on: macos-latest
@@ -27,13 +30,12 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup build env
+      - name: Setup build env (Rust + cache)
         uses: ./.github/actions/setup-env
         with:
           rust_target: aarch64-apple-darwin, x86_64-apple-darwin
 
       - name: Setup Apple signing keychain
-        id: keychain
         shell: bash
         run: |
           set -euo pipefail
@@ -43,34 +45,39 @@ jobs:
           security set-keychain-settings -lut 21600 "$KEYCHAIN"
           security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
 
+          # Use this temporary keychain for the job
           security list-keychains -d user -s "$KEYCHAIN"
           security default-keychain -d user -s "$KEYCHAIN"
 
+          # Import Developer ID cert
           echo "$MAC_CERT_P12_BASE64" | base64 --decode > cert.p12
           security import cert.p12 -k "$KEYCHAIN" -P "$MAC_CERT_PASSWORD" \
             -T /usr/bin/codesign -T /usr/bin/security -T /usr/bin/xcrun
           rm -f cert.p12
 
+          # Allow tools to use the key
           security set-key-partition-list -S apple-tool:,apple: -s -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN"
-          security find-identity -v -p codesigning "$KEYCHAIN" || true
 
-          ID_SHA="$(security find-identity -v -p codesigning "$KEYCHAIN" \
-            | awk '/Developer ID Application/ {print $2; exit}')"
-          if [ -z "$ID_SHA" ]; then
-            ID_SHA="$(security find-identity -v -p codesigning "$KEYCHAIN" \
-              | awk '/Developer ID/ {print $2; exit}')"
-          fi
-          if [ -z "$ID_SHA" ]; then
-            echo "::error::No Developer ID Application identity found in temp keychain."
+          # Dynamically pick the identity that matches your Team ID
+          SIGN_ID="$(security find-identity -v -p codesigning "$KEYCHAIN" \
+            | awk '/Developer ID Application/ && /'"${TEAM_ID}"'/ {print $2; exit}')"
+
+          if [ -z "$SIGN_ID" ]; then
+            echo "::error::No matching Developer ID Application identity found for TEAM_ID=${TEAM_ID} in keychain."
+            echo "::group::Available identities"
+            security find-identity -v -p codesigning "$KEYCHAIN" || true
+            echo "::endgroup::"
             exit 1
           fi
 
-          echo "keychain=$KEYCHAIN"   >> "$GITHUB_OUTPUT"
-          echo "id_sha=$ID_SHA"       >> "$GITHUB_OUTPUT"
+          # Expose to later steps
+          echo "KEYCHAIN=$KEYCHAIN" >> "$GITHUB_ENV"
+          echo "SIGN_ID=$SIGN_ID"   >> "$GITHUB_ENV"
         env:
           MAC_CERT_P12_BASE64: ${{ secrets.MAC_CERT_P12_BASE64 }}
           MAC_CERT_PASSWORD: ${{ secrets.MAC_CERT_PASSWORD }}
           KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+          TEAM_ID: ${{ secrets.TEAM_ID }}
 
       - name: Detect version from Cargo.toml
         id: meta
@@ -81,26 +88,31 @@ jobs:
                 | /usr/bin/python3 -c 'import sys,json;print(json.load(sys.stdin)["packages"][0]["version"])')
           TAG="v${VER}"
           [[ "$VER" =~ -([A-Za-z0-9.+-]+)$ ]] && PRERELEASE=true || PRERELEASE=false
-          echo "version=$VER"     >> $GITHUB_OUTPUT
-          echo "tag=$TAG"         >> $GITHUB_OUTPUT
+          echo "version=$VER"           >> $GITHUB_OUTPUT
+          echo "tag=$TAG"               >> $GITHUB_OUTPUT
           echo "prerelease=$PRERELEASE" >> $GITHUB_OUTPUT
           echo "Release $TAG (prerelease=$PRERELEASE)"
 
+      # -------------------- Build (both targets) --------------------
       - name: Build aarch64
         working-directory: ${{ env.SERVER_PATH }}
+        env:
+          VENDORED_OPENSSL: "1"
         run: cargo build --release --locked --target aarch64-apple-darwin
 
       - name: Build x86_64
         working-directory: ${{ env.SERVER_PATH }}
+        env:
+          VENDORED_OPENSSL: "1"
         run: cargo build --release --locked --target x86_64-apple-darwin
 
       - name: Sign, zip, notarize, checksums
         id: pkg
         shell: bash
         env:
-          KEYCHAIN: ${{ steps.keychain.outputs.keychain }}
+          KEYCHAIN: ${{ env.KEYCHAIN }}
+          SIGN_ID: ${{ env.SIGN_ID }}
           KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
-          ID_SHA: ${{ steps.keychain.outputs.id_sha }}
           APPLE_ID: ${{ secrets.APPLE_ID }}
           AC_PASSWORD: ${{ secrets.AC_PASSWORD }}
           TEAM_ID: ${{ secrets.TEAM_ID }}
@@ -115,7 +127,11 @@ jobs:
 
           sign_bin() {
             local bin="$1"
-            /usr/bin/codesign --keychain "$KEYCHAIN" --force --options runtime --timestamp --sign "$ID_SHA" "$bin"
+            /usr/bin/codesign \
+              --keychain "$KEYCHAIN" \
+              --force --options runtime --timestamp \
+              --sign "$SIGN_ID" \
+              "$bin"
             /usr/bin/codesign --verify --verbose=2 "$bin"
             /usr/sbin/spctl -a -vv -t execute "$bin" || true
           }
@@ -123,7 +139,10 @@ jobs:
           notarize_zip() {
             local zip="$1"
             /usr/bin/xcrun notarytool submit "$zip" \
-              --apple-id "$APPLE_ID" --team-id "$TEAM_ID" --password "$AC_PASSWORD" --wait
+              --apple-id "$APPLE_ID" \
+              --team-id  "$TEAM_ID" \
+              --password "$AC_PASSWORD" \
+              --wait
           }
 
           pack() {
@@ -133,6 +152,7 @@ jobs:
               x86_64-apple-darwin)  cpu="x86_64"  ;;
               *) cpu="$arch" ;;
             esac
+
             local bin="${TARGET_DIR}/${arch}/release/${{ env.BIN_NAME }}"
             local staged="dist/${{ env.BIN_NAME }}-darwin-${cpu}"
             local zip="dist/${{ env.BIN_NAME }}-darwin-${cpu}.zip"
@@ -142,11 +162,13 @@ jobs:
             cp "$bin" "$staged"
             strip -S -x "$staged" || true
             sign_bin "$staged"
+
             (cd dist && /usr/bin/zip -q "$(basename "$zip")" "$(basename "$staged")")
             notarize_zip "$zip"
 
             local sh256; sh256=$(shasum -a 256 "$zip" | awk '{print $1}')
             local size;  size=$(stat -f "%z" "$zip")
+
             echo "${sh256}  $(basename "$zip")" >> dist/checksums_sha256.txt
             echo "${arch}_zip=$zip"   >> $GITHUB_OUTPUT
             echo "${arch}_sha=$sh256" >> $GITHUB_OUTPUT
@@ -184,7 +206,7 @@ jobs:
           { echo "# Changelog"; echo; cat "$BODY"; } > "$NOTES"
           echo "notes_file=$NOTES" >> "$GITHUB_OUTPUT"
 
-      - name: Create/Update Release in org/server-releases
+      - name: Create/Update Release in ${{ env.TARGET_REPO }}
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.SERVER_RELEASES_TOKEN }}
