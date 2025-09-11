@@ -80,8 +80,8 @@ pub fn init_tray(app: &mut App) -> tauri::Result<()> {
     let app_handle = app.handle();
     let tray_state = Arc::new(SharedTray::default());
 
-    let initial_icon_bytes = generate_text_icon(app_handle.clone(), "00.00".into())
-        .map_err(|e| Error::from(anyhow!(e)))?;
+    let initial_icon_bytes =
+        generate_text_icon(app_handle.clone(), "00".into()).map_err(|e| Error::from(anyhow!(e)))?;
     let initial_icon = tauri::image::Image::from_bytes(&initial_icon_bytes)?;
     let tray = TrayIconBuilder::new()
         .icon(initial_icon)

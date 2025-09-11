@@ -256,7 +256,7 @@ jobs:
           REPO="${{ env.TARGET_REPO }}"
           gh release upload "$TAG" -R "$REPO" dist/signatures/* --clobber
 
-      - name: Attach latest.json (non-prerelease)
+      - name: Attach latest.json
         if: ${{ steps.meta.outputs.prerelease != 'true' }}
         shell: bash
         env:

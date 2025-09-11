@@ -13,6 +13,7 @@ use utils::{config::ConfigStore, db::get_db_path};
 
 use crate::{
     goals_service::GoalService,
+    server::{ServerStatus, StatusBus},
     ui::{
         tray::init_tray,
         window::{NotificationPayload, WindowExt, WindowKind},
@@ -73,6 +74,9 @@ pub async fn run() {
                 )?;
             }
 
+            let status_bus = StatusBus::new();
+            app.manage(status_bus);
+
             let app_handle_clone = app_handle.clone();
             tauri::async_runtime::spawn(async move {
                 if let Err(e) = setup_trackers(&app_handle_clone).await {
@@ -80,7 +84,7 @@ pub async fn run() {
                 }
 
                 if let Err(e) = server::ensure_server_ready(&app_handle_clone.clone()).await {
-                    error!("Server check failed: {e}")
+                    error!("Server manager error: {e}")
                 }
             });
 
@@ -248,7 +252,9 @@ fn make_specta_builder<R: Runtime>() -> tauri_specta::Builder<R> {
             crate::ui::window::show_window::<tauri::Wry>,
             crate::ui::window::open_devtools::<tauri::Wry>,
             crate::monitored_app::get_open_apps,
+            crate::server::get_server_status,
         ])
+        .events(tauri_specta::collect_events![ServerStatus])
         .error_handling(tauri_specta::ErrorHandlingMode::Throw)
         .typ::<NotificationPayload>();
 

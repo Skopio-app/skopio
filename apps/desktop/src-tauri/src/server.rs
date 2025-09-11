@@ -10,9 +10,10 @@ use futures_util::StreamExt;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
+use specta::Type;
 use tauri::{AppHandle, Emitter, Manager};
 use thiserror::Error;
-use tokio::sync::Mutex;
+use tokio::sync::{watch, Mutex};
 use tokio::{fs as tokiofs, io::AsyncWriteExt};
 
 #[derive(Error, Debug)]
@@ -42,11 +43,46 @@ pub enum ServerCtlError {
     Json(#[from] serde_json::Error),
 }
 
-#[derive(Debug, Serialize)]
-pub enum ServerReadyState {
-    AlreadyRunning,
-    Started,
-    InstalledAndStarted,
+#[derive(Debug, Clone, Serialize, Type, tauri_specta::Event)]
+#[serde(tag = "state", rename_all = "kebab-case")]
+pub enum ServerStatus {
+    Offline,
+    Checking,
+    Downloading {
+        received: u64,
+        total: Option<u64>,
+        percent: Option<u8>,
+    },
+    Installing,
+    Starting,
+    Running,
+    Updating,
+    Error {
+        message: String,
+    },
+}
+
+pub struct StatusBus {
+    tx: watch::Sender<ServerStatus>,
+    rx: watch::Receiver<ServerStatus>,
+}
+
+impl StatusBus {
+    pub fn new() -> Self {
+        let (tx, rx) = watch::channel(ServerStatus::Offline);
+        Self { tx, rx }
+    }
+    pub fn sender(&self) -> watch::Sender<ServerStatus> {
+        self.tx.clone()
+    }
+    pub fn receiver(&self) -> watch::Receiver<ServerStatus> {
+        self.rx.clone()
+    }
+}
+
+fn set_status(app: &AppHandle, tx: &watch::Sender<ServerStatus>, s: ServerStatus) {
+    let _ = tx.send(s.clone());
+    let _ = app.emit("server:status", &s);
 }
 
 const PLIST_LABEL: &str = "com.samwahome.skopio.server";
@@ -105,7 +141,7 @@ struct ManifestAssets {
 
 fn server_root(app: &AppHandle) -> Result<PathBuf, ServerCtlError> {
     let base = app.path().app_data_dir()?;
-    Ok(base.join("com.samwahome.skopio").join("server"))
+    Ok(base.join("server"))
 }
 
 fn server_bin_path(app: &AppHandle) -> Result<PathBuf, ServerCtlError> {
@@ -129,15 +165,37 @@ async fn download_to_temp(
     if !resp.status().is_success() {
         return Err(ServerCtlError::BadStatus(resp.status().to_string()));
     }
+    let total = resp.content_length();
+    let status_bus = app.state::<StatusBus>();
+    let tx = status_bus.sender();
+
     let tmp_dir = server_root(app)?.join("tmp");
     tokiofs::create_dir_all(&tmp_dir).await?;
     let tmp_file = tmp_dir.join("download.bin.part");
 
     let mut file = tokiofs::File::create(&tmp_file).await?;
     let mut stream = resp.bytes_stream();
+    let mut received: u64 = 0;
+    let mut last_emit = 0u8;
+
     while let Some(chunk) = stream.next().await {
         let bytes = chunk?;
+        received += bytes.len() as u64;
         file.write_all(&bytes).await?;
+
+        let percent = total.map(|t| ((received.saturating_mul(100)) / t) as u8);
+        if percent.unwrap_or(0) != last_emit {
+            set_status(
+                app,
+                &tx,
+                ServerStatus::Downloading {
+                    received,
+                    total,
+                    percent,
+                },
+            );
+            last_emit = percent.unwrap_or(0)
+        }
     }
     file.flush().await?;
     Ok(tmp_file)
@@ -161,6 +219,14 @@ fn sha256_file(path: &Path) -> Result<String, ServerCtlError> {
         write!(&mut hex, "{:02x}", b).unwrap();
     }
     Ok(hex)
+}
+
+fn installed_bin_sha256(app: &AppHandle) -> Option<String> {
+    let bin = server_bin_path(app).ok()?;
+    if !bin.exists() {
+        return None;
+    }
+    sha256_file(&bin).ok()
 }
 
 fn install_binary(app: &AppHandle, tmp_file: &Path) -> Result<PathBuf, ServerCtlError> {
@@ -259,20 +325,56 @@ fn pick_asset(m: &Manifest) -> Result<&Asset, ServerCtlError> {
     }
 }
 
-pub async fn download_and_install(app: &AppHandle) -> Result<PathBuf, ServerCtlError> {
+async fn download_and_install(
+    app: &AppHandle,
+    manifest: &Manifest,
+    asset: &Asset,
+) -> Result<PathBuf, ServerCtlError> {
     let client = Client::new();
-    let manifest = fetch_manifest(&client).await?;
-    let asset = pick_asset(&manifest)?;
 
     let tmp = download_to_temp(app, &client, &asset.url).await?;
-
     let processed = sha256_file(&tmp)?;
     let fetched = asset.sha256.to_ascii_lowercase();
     if processed != fetched {
         return Err(ServerCtlError::DigestMismatch);
     }
 
-    install_binary(app, &tmp)
+    let path = install_binary(app, &tmp)?;
+    write_installed_version(app, &manifest.version)?;
+    Ok(path)
+}
+
+async fn check_and_update(app: &AppHandle) -> Result<bool, ServerCtlError> {
+    let status_bus = app.state::<StatusBus>();
+    let tx = status_bus.sender();
+
+    set_status(app, &tx, ServerStatus::Checking);
+
+    let client = Client::new();
+    let manifest = fetch_manifest(&client).await?;
+    let asset = pick_asset(&manifest)?;
+
+    let new_sha = asset.sha256.to_ascii_lowercase();
+    let current_sha = installed_bin_sha256(app);
+
+    let needs_update = current_sha.as_deref() != Some(new_sha.as_str());
+
+    if needs_update {
+        set_status(app, &tx, ServerStatus::Updating);
+        let _ = status().and_then(|_| stop());
+        set_status(app, &tx, ServerStatus::Installing);
+        let _ = download_and_install(app, &manifest, asset).await?;
+        set_status(app, &tx, ServerStatus::Starting);
+        start(app)?;
+        set_status(app, &tx, ServerStatus::Running);
+        return Ok(true);
+    }
+
+    if read_installed_version(app).as_deref() != Some(&manifest.version) {
+        let _ = write_installed_version(app, &manifest.version);
+    }
+
+    Ok(false)
 }
 
 pub fn start(app: &AppHandle) -> Result<(), ServerCtlError> {
@@ -290,38 +392,75 @@ pub fn start(app: &AppHandle) -> Result<(), ServerCtlError> {
     Ok(())
 }
 
-// pub fn stop() -> Result<(), ServerCtlError> {
-//     let label = PLIST_LABEL;
-//     launchctl(&["bootout", &format!("{}/{}", gui_domain()?, label)])?;
-//     Ok(())
-// }
+pub fn stop() -> Result<(), ServerCtlError> {
+    let label = PLIST_LABEL;
+    launchctl(&["bootout", &format!("{}/{}", gui_domain()?, label)])?;
+    Ok(())
+}
 
 pub fn status() -> Result<(), ServerCtlError> {
     let label = PLIST_LABEL;
     launchctl(&["print", &format!("{}/{}", gui_domain()?, label)])
 }
 
-pub async fn ensure_server_ready(app: &AppHandle) -> Result<ServerReadyState, String> {
+pub async fn ensure_server_ready(app: &AppHandle) -> Result<(), ServerCtlError> {
+    let status_bus = app.state::<StatusBus>();
+    let tx = status_bus.sender();
+
+    set_status(app, &tx, ServerStatus::Checking);
+
     let _guard = SERVER_INIT_GUARD.lock().await;
-    if status().is_ok() {
-        return Ok(ServerReadyState::AlreadyRunning);
-    }
+    let is_running = status().is_ok();
 
-    let bin = server_bin_path(&app).map_err(err_str)?;
-    if !bin.exists() {
-        app.emit("server:progress", "Downloading server...").ok();
-        download_and_install(&app).await.map_err(err_str)?;
-        app.emit("server:progress", "Installed. Starting server...")
-            .ok();
-        start(&app).map_err(err_str)?;
-        return Ok(ServerReadyState::InstalledAndStarted);
+    match check_and_update(app).await {
+        Ok(true) => {
+            set_status(app, &tx, ServerStatus::Running);
+            Ok(())
+        }
+        Ok(false) => {
+            if is_running {
+                set_status(app, &tx, ServerStatus::Running);
+            } else {
+                set_status(app, &tx, ServerStatus::Starting);
+                start(app)?;
+                set_status(app, &tx, ServerStatus::Running);
+            }
+            Ok(())
+        }
+        Err(e) => {
+            set_status(
+                app,
+                &tx,
+                ServerStatus::Error {
+                    message: e.to_string(),
+                },
+            );
+            Err(e)
+        }
     }
-
-    app.emit("server:progress", "Starting server...").ok();
-    start(&app).map_err(err_str)?;
-    return Ok(ServerReadyState::Started);
 }
 
-fn err_str<E: std::fmt::Display>(e: E) -> String {
-    e.to_string()
+fn version_file(app: &AppHandle) -> Result<PathBuf, ServerCtlError> {
+    Ok(server_root(app)?.join("bin").join("version.txt"))
+}
+
+fn read_installed_version(app: &AppHandle) -> Option<String> {
+    fs::read_to_string(version_file(app).ok()?)
+        .ok()
+        .map(|s| s.trim().to_string())
+}
+
+fn write_installed_version(app: &AppHandle, ver: &str) -> Result<(), ServerCtlError> {
+    let vf = version_file(app)?;
+    if let Some(dir) = vf.parent() {
+        fs::create_dir_all(dir)?;
+    }
+    fs::write(vf, ver.as_bytes())?;
+    Ok(())
+}
+
+#[tauri::command]
+#[specta::specta]
+pub async fn get_server_status(state: tauri::State<'_, StatusBus>) -> Result<ServerStatus, String> {
+    Ok(state.receiver().borrow().clone())
 }

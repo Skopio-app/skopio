@@ -91,9 +91,18 @@ export const commands = {
   async getOpenApps(): Promise<OpenApp[]> {
     return await TAURI_INVOKE("get_open_apps");
   },
+  async getServerStatus(): Promise<ServerStatus> {
+    return await TAURI_INVOKE("get_server_status");
+  },
 };
 
 /** user-defined events **/
+
+export const events = __makeEvents__<{
+  serverStatus: ServerStatus;
+}>({
+  serverStatus: "server-status",
+});
 
 /** user-defined constants **/
 
@@ -292,6 +301,20 @@ export type PermissionSummary = {
 export type Project = { id: string; name: string; root_path: string | null };
 export type ProjectQuery = { id: string };
 export type ProjectSearchQuery = { name: string; limit: number };
+export type ServerStatus =
+  | { state: "offline" }
+  | { state: "checking" }
+  | {
+      state: "downloading";
+      received: number;
+      total: number | null;
+      percent: number | null;
+    }
+  | { state: "installing" }
+  | { state: "starting" }
+  | { state: "running" }
+  | { state: "updating" }
+  | { state: "error"; message: string };
 /**
  * Query input for requesting summaries over a range of time
  */
