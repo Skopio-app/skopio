@@ -2,15 +2,7 @@ name: Build release CLI artifacts
 
 on:
   workflow_dispatch:
-    inputs:
-      tag:
-        description: "Optional override tag (defaults from Cargo)"
-        required: false
   workflow_call:
-    inputs:
-      tag:
-        required: false
-        type: string
     secrets:
       CLI_RELEASES_TOKEN:
         required: true
@@ -36,7 +28,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup build env
-        uses: ./.github/actions
+        uses: ./.github/actions/setup-env
         with:
           rust_target: aarch64-apple-darwin, x86_64-apple-darwin
 
