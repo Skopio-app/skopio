@@ -15,8 +15,6 @@ env:
   SERVER_PATH: apps/server
   BIN_NAME: skopio-server
   TARGET_REPO: ${{ github.repository_owner }}/server-releases
-  # Force vendored OpenSSL so openssl-sys builds without finding a system install
-  VENDORED_OPENSSL: "1"
 
 jobs:
   guard:
@@ -84,26 +82,22 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          VER=$(cargo metadata --format-version=1 --no-deps --manifest-path "${{ env.SERVER_PATH }}/Cargo.toml" \
-                | /usr/bin/python3 -c 'import sys,json;print(json.load(sys.stdin)["packages"][0]["version"])')
-          TAG="v${VER}"
-          [[ "$VER" =~ -([A-Za-z0-9.+-]+)$ ]] && PRERELEASE=true || PRERELEASE=false
-          echo "version=$VER"           >> $GITHUB_OUTPUT
-          echo "tag=$TAG"               >> $GITHUB_OUTPUT
-          echo "prerelease=$PRERELEASE" >> $GITHUB_OUTPUT
-          echo "Release $TAG (prerelease=$PRERELEASE)"
+          MANIFEST="$GITHUB_WORKSPACE/${{ env.SERVER_PATH }}/Cargo.toml"
+          VER=$(cargo metadata --format-version=1 --no-deps --manifest-path "$MANIFEST" \
+            | jq -r --arg mf "$MANIFEST" '.packages[] | select(.manifest_path == $mf) | .version')
+            TAG="v${VER}"
+            [[ "$VER" =~ -([A-Za-z0-9.+-]+)$ ]] && PRERELEASE=true || PRERELEASE=false
+            echo "version=$VER"           >> $GITHUB_OUTPUT
+            echo "tag=$TAG"               >> $GITHUB_OUTPUT
+            echo "prerelease=$PRERELEASE" >> $GITHUB_OUTPUT
+            echo "Release $TAG (prerelease=$PRERELEASE)"
 
-      # -------------------- Build (both targets) --------------------
       - name: Build aarch64
         working-directory: ${{ env.SERVER_PATH }}
-        env:
-          VENDORED_OPENSSL: "1"
         run: cargo build --release --locked --target aarch64-apple-darwin
 
       - name: Build x86_64
         working-directory: ${{ env.SERVER_PATH }}
-        env:
-          VENDORED_OPENSSL: "1"
         run: cargo build --release --locked --target x86_64-apple-darwin
 
       - name: Sign, zip, notarize, checksums
