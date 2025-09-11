@@ -1,4 +1,4 @@
-name: Build release SERVER artifacts
+name: Build release server artifacts
 
 on:
   workflow_dispatch:
@@ -30,7 +30,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Setup build env (Rust + cache)
+      - name: Setup build env
         uses: ./.github/actions/setup-env
         with:
           rust_target: aarch64-apple-darwin, x86_64-apple-darwin
@@ -206,7 +206,7 @@ jobs:
           { echo "# Changelog"; echo; cat "$BODY"; } > "$NOTES"
           echo "notes_file=$NOTES" >> "$GITHUB_OUTPUT"
 
-      - name: Create/Update Release in ${{ env.TARGET_REPO }}
+      - name: Create/Update Release in org/server-releases
         shell: bash
         env:
           GH_TOKEN: ${{ secrets.SERVER_RELEASES_TOKEN }}
