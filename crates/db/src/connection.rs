@@ -30,7 +30,8 @@ impl DBContext {
             .foreign_keys(true);
 
         if let Some(encryption_key) = get_encryption_key()? {
-            connection_options = connection_options.pragma("key", encryption_key)
+            let quoted = format!("'{}'", encryption_key.replace('\'', "''"));
+            connection_options = connection_options.pragma("key", quoted);
         }
 
         let pool = SqlitePoolOptions::new()
