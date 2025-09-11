@@ -56,6 +56,7 @@ pub async fn search_projects(
     Ok(Json(projects))
 }
 
+// TODO: Fix route naming
 pub fn project_routes(db: Arc<Mutex<DBContext>>) -> Router {
     Router::new()
         .route("/projects", get(get_projects))

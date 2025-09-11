@@ -6,7 +6,7 @@ use crate::network::req_json;
 #[tauri::command]
 #[specta::specta]
 pub async fn fetch_total_time(query: SummaryQueryInput) -> Result<i64, String> {
-    req_json("summary/total-time", Some(&query)).await
+    req_json("summary/total", Some(&query)).await
 }
 
 #[tauri::command]
