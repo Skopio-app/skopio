@@ -41,7 +41,7 @@ const InsightsView = () => {
   }, []);
 
   return (
-    <div className="flex flex-col m-3 space-y-5">
+    <div className="flex flex-col mx-3 space-y-5">
       <h2 className="text-neutral-800 font-semibold mb-4 mt-3 text-lg">
         Insights
       </h2>

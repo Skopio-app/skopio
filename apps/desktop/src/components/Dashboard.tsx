@@ -139,7 +139,7 @@ const DashboardLayout = () => {
         )}
       </Sidebar>
 
-      <SidebarInset>
+      <SidebarInset className="py-4">
         <Outlet />
       </SidebarInset>
     </SidebarProvider>
