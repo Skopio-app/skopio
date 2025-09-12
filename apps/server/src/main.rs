@@ -1,18 +1,10 @@
-#[allow(unused_imports)]
-use crate::{
-    app::create_app,
-    auth::{bearer_auth, AuthCfg},
-};
-#[allow(unused_imports)]
-use axum::middleware;
-#[allow(unused_imports)]
-use common::keyring::Keyring;
+use crate::{app::create_app, utils::init_tracing};
+
 use db::DBContext;
 use std::sync::Arc;
 use tokio::net::TcpListener;
 use tokio::sync::Mutex;
 use tracing::{error, info};
-use tracing_subscriber::{fmt, EnvFilter};
 
 mod app;
 mod auth;
@@ -23,21 +15,7 @@ mod utils;
 
 #[tokio::main]
 async fn main() {
-    let log_level = if cfg!(debug_assertions) {
-        "debug"
-    } else {
-        "info"
-    };
-
-    let filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new(log_level));
-
-    fmt()
-        .with_env_filter(filter)
-        .with_file(true)
-        .with_line_number(true)
-        .with_timer(fmt::time::ChronoLocal::rfc_3339())
-        .init();
-
+    init_tracing();
     info!("🚀 Starting server...");
 
     let db_path = utils::get_db_path();
@@ -55,6 +33,10 @@ async fn main() {
     let mut app = create_app(db.clone()).await;
     #[cfg(not(debug_assertions))]
     {
+        use auth::{bearer_auth, AuthCfg};
+        use axum::middleware;
+        use common::keyring::Keyring;
+
         let token =
             Keyring::get_password("skopio", "bearer_token").unwrap_or_else(|e| Some(e.to_string()));
         let auth = AuthCfg {

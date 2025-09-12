@@ -50,7 +50,7 @@ pub async fn get_bucketed_summary(
 
 pub fn summary_routes(db: Arc<Mutex<DBContext>>) -> Router {
     Router::new()
-        .route("/summary/total-time", get(total_time_handler))
+        .route("/summary/total", get(total_time_handler))
         .route("/summary/buckets", get(get_bucketed_summary))
         .route("/summary/range", get(execute_range_summary))
         .with_state(db)

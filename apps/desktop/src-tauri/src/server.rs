@@ -10,10 +10,14 @@ use futures_util::StreamExt;
 use reqwest::Client;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
-use tauri::{AppHandle, Emitter, Manager};
+use specta::Type;
+use tauri::{AppHandle, Manager, Runtime};
+use tauri_specta::Event;
 use thiserror::Error;
 use tokio::sync::Mutex;
 use tokio::{fs as tokiofs, io::AsyncWriteExt};
+use zip::result::ZipError;
+use zip::ZipArchive;
 
 #[derive(Error, Debug)]
 pub enum ServerCtlError {
@@ -40,13 +44,32 @@ pub enum ServerCtlError {
 
     #[error("JSON error: {0}")]
     Json(#[from] serde_json::Error),
+
+    #[error("Zip error: {0}")]
+    Zip(#[from] ZipError),
 }
 
-#[derive(Debug, Serialize)]
-pub enum ServerReadyState {
-    AlreadyRunning,
-    Started,
-    InstalledAndStarted,
+#[derive(Debug, Clone, Serialize, Type, Event)]
+#[serde(tag = "state", rename_all = "kebab-case")]
+pub enum ServerStatus {
+    Offline,
+    Checking,
+    Downloading {
+        received: u64,
+        total: Option<u64>,
+        percent: Option<u8>,
+    },
+    Installing,
+    Starting,
+    Running,
+    Updating,
+    Error {
+        message: String,
+    },
+}
+
+fn set_status(app: &AppHandle, status: ServerStatus) {
+    status.emit(app).unwrap();
 }
 
 const PLIST_LABEL: &str = "com.samwahome.skopio.server";
@@ -103,12 +126,12 @@ struct ManifestAssets {
     darwin_x86_64: Option<Asset>,
 }
 
-fn server_root(app: &AppHandle) -> Result<PathBuf, ServerCtlError> {
+fn server_root<R: Runtime>(app: &AppHandle<R>) -> Result<PathBuf, ServerCtlError> {
     let base = app.path().app_data_dir()?;
-    Ok(base.join("com.samwahome.skopio").join("server"))
+    Ok(base.join("server"))
 }
 
-fn server_bin_path(app: &AppHandle) -> Result<PathBuf, ServerCtlError> {
+fn server_bin_path<R: Runtime>(app: &AppHandle<R>) -> Result<PathBuf, ServerCtlError> {
     Ok(server_root(app)?.join("bin").join(BIN_NAME))
 }
 
@@ -129,21 +152,40 @@ async fn download_to_temp(
     if !resp.status().is_success() {
         return Err(ServerCtlError::BadStatus(resp.status().to_string()));
     }
+    let total = resp.content_length();
+
     let tmp_dir = server_root(app)?.join("tmp");
     tokiofs::create_dir_all(&tmp_dir).await?;
     let tmp_file = tmp_dir.join("download.bin.part");
 
     let mut file = tokiofs::File::create(&tmp_file).await?;
     let mut stream = resp.bytes_stream();
+    let mut received: u64 = 0;
+    let mut last_emit = 0u8;
+
     while let Some(chunk) = stream.next().await {
         let bytes = chunk?;
+        received += bytes.len() as u64;
         file.write_all(&bytes).await?;
+
+        let percent = total.map(|t| ((received.saturating_mul(100)) / t) as u8);
+        if percent.unwrap_or(0) != last_emit {
+            set_status(
+                app,
+                ServerStatus::Downloading {
+                    received,
+                    total,
+                    percent,
+                },
+            );
+            last_emit = percent.unwrap_or(0)
+        }
     }
     file.flush().await?;
     Ok(tmp_file)
 }
 
-fn sha256_file(path: &Path) -> Result<String, ServerCtlError> {
+fn compute_sha256(path: &Path) -> Result<String, ServerCtlError> {
     let mut file = fs::File::open(path)?;
     let mut hasher = Sha256::new();
     let mut buf = [0u8; 64 * 1024];
@@ -163,20 +205,63 @@ fn sha256_file(path: &Path) -> Result<String, ServerCtlError> {
     Ok(hex)
 }
 
-fn install_binary(app: &AppHandle, tmp_file: &Path) -> Result<PathBuf, ServerCtlError> {
-    let bin_path = server_bin_path(app)?;
-    if let Some(dir) = bin_path.parent() {
+fn installed_bin_sha256(app: &AppHandle) -> Option<String> {
+    let bin = server_bin_path(app).ok()?;
+    if !bin.exists() {
+        return None;
+    }
+    compute_sha256(&bin).ok()
+}
+
+fn unzip_binary(zip_path: &Path, out_path: &Path) -> Result<(), ServerCtlError> {
+    let zip_file = fs::File::open(zip_path)?;
+    let mut archive = ZipArchive::new(zip_file)?;
+
+    let mut pick_idx: Option<usize> = None;
+    for i in 0..archive.len() {
+        let entry = archive.by_index(i)?;
+        if entry.is_file() {
+            let name = entry.name();
+            if name.ends_with(BIN_NAME) || name == BIN_NAME {
+                pick_idx = Some(i);
+                break;
+            }
+            if pick_idx.is_none()
+                && Path::new(name).file_name() == Some(std::ffi::OsStr::new(BIN_NAME))
+            {
+                pick_idx = Some(i);
+            }
+        }
+    }
+    if pick_idx.is_none() && archive.len() == 1 {
+        if archive.by_index(0)?.is_file() {
+            pick_idx = Some(0);
+        }
+    }
+
+    let idx = pick_idx
+        .ok_or_else(|| ServerCtlError::Manifest("Zip does not contain expected binary".into()))?;
+    let mut entry = archive.by_index(idx)?;
+    if let Some(dir) = out_path.parent() {
         fs::create_dir_all(dir)?;
     }
-    let final_path = bin_path;
-    if final_path.exists() {
-        fs::remove_file(&final_path)?;
+    let part = out_path.with_extension("part");
+    {
+        let mut out = fs::File::create(&part)?;
+        std::io::copy(&mut entry, &mut out)?;
+        out.flush()?;
     }
-    fs::rename(tmp_file, &final_path)?;
-    let mut perms = fs::metadata(&final_path)?.permissions();
-    perms.set_mode(0o755);
-    fs::set_permissions(&final_path, perms)?;
-    Ok(final_path)
+    let mut perms = fs::metadata(&part)?.permissions();
+    #[cfg(unix)]
+    {
+        perms.set_mode(0o755);
+        fs::set_permissions(&part, perms)?;
+    }
+    if out_path.exists() {
+        fs::remove_file(out_path)?;
+    }
+    fs::rename(part, out_path)?;
+    Ok(())
 }
 
 fn write_plist(app: &AppHandle, bin: &Path) -> Result<PathBuf, ServerCtlError> {
@@ -184,6 +269,7 @@ fn write_plist(app: &AppHandle, bin: &Path) -> Result<PathBuf, ServerCtlError> {
     if let Some(dir) = plist_dst.parent() {
         fs::create_dir_all(dir)?;
     }
+
     let plist = format!(
         r#"<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
@@ -197,18 +283,11 @@ fn write_plist(app: &AppHandle, bin: &Path) -> Result<PathBuf, ServerCtlError> {
   <key>RunAtLoad</key><true/>
   <key>KeepAlive</key><true/>
   <key>ProcessType</key><string>Background</string>
-  <key>StandardOutPath</key><string>{log}/stdout.log</string>
-  <key>StandardErrorPath</key><string>{log}/stderr.log</string>
 </dict></plist>
 "#,
         label = PLIST_LABEL,
         bin = bin.display(),
-        log = server_root(app)?.join("logs").display(),
     );
-    if let Some(log_dir) = server_root(app)?.join("logs").as_path().parent() {
-        fs::create_dir_all(log_dir)?;
-    }
-    fs::create_dir_all(server_root(app)?.join("logs"))?;
 
     let mut f = fs::File::create(&plist_dst)?;
     f.write_all(plist.as_bytes())?;
@@ -227,12 +306,12 @@ fn launchctl(args: &[&str]) -> Result<(), ServerCtlError> {
 }
 
 fn gui_domain() -> Result<String, ServerCtlError> {
-    let uid = nix_like_uid();
+    let uid = current_uid();
     Ok(format!("gui/{}", uid))
 }
 
 #[cfg(unix)]
-fn nix_like_uid() -> u32 {
+fn current_uid() -> u32 {
     unsafe { libc::getuid() }
 }
 
@@ -265,20 +344,54 @@ fn pick_asset(m: &Manifest) -> Result<&Asset, ServerCtlError> {
     }
 }
 
-pub async fn download_and_install(app: &AppHandle) -> Result<PathBuf, ServerCtlError> {
+async fn download_and_install(
+    app: &AppHandle,
+    manifest: &Manifest,
+    asset: &Asset,
+) -> Result<PathBuf, ServerCtlError> {
+    let client = Client::new();
+
+    let zip_path = download_to_temp(app, &client, &asset.url).await?;
+    let processed = compute_sha256(&zip_path)?;
+    let fetched = asset.sha256.to_ascii_lowercase();
+    if processed != fetched {
+        return Err(ServerCtlError::DigestMismatch);
+    }
+
+    let out = server_bin_path(app)?;
+    unzip_binary(&zip_path, &out)?;
+    write_installed_version(app, &manifest.version)?;
+    Ok(out)
+}
+
+async fn check_and_update(app: &AppHandle) -> Result<bool, ServerCtlError> {
+    set_status(app, ServerStatus::Checking);
+
     let client = Client::new();
     let manifest = fetch_manifest(&client).await?;
     let asset = pick_asset(&manifest)?;
 
-    let tmp = download_to_temp(app, &client, &asset.url).await?;
+    let new_sha = asset.sha256.to_ascii_lowercase();
+    let current_sha = installed_bin_sha256(app);
 
-    let got = sha256_file(&tmp)?;
-    let want = asset.sha256.to_ascii_lowercase();
-    if got != want {
-        return Err(ServerCtlError::DigestMismatch);
+    let needs_update = current_sha.as_deref() != Some(new_sha.as_str());
+
+    if needs_update {
+        set_status(app, ServerStatus::Updating);
+        let _ = status().and_then(|_| stop());
+        set_status(app, ServerStatus::Installing);
+        let _ = download_and_install(app, &manifest, asset).await?;
+        set_status(app, ServerStatus::Starting);
+        start(app)?;
+        set_status(app, ServerStatus::Running);
+        return Ok(true);
     }
 
-    install_binary(app, &tmp)
+    if read_installed_version(app).as_deref() != Some(&manifest.version) {
+        let _ = write_installed_version(app, &manifest.version);
+    }
+
+    Ok(false)
 }
 
 pub fn start(app: &AppHandle) -> Result<(), ServerCtlError> {
@@ -296,38 +409,78 @@ pub fn start(app: &AppHandle) -> Result<(), ServerCtlError> {
     Ok(())
 }
 
-// pub fn stop() -> Result<(), ServerCtlError> {
-//     let label = PLIST_LABEL;
-//     launchctl(&["bootout", &format!("{}/{}", gui_domain()?, label)])?;
-//     Ok(())
-// }
+pub fn stop() -> Result<(), ServerCtlError> {
+    let label = PLIST_LABEL;
+    launchctl(&["bootout", &format!("{}/{}", gui_domain()?, label)])?;
+    Ok(())
+}
 
 pub fn status() -> Result<(), ServerCtlError> {
     let label = PLIST_LABEL;
     launchctl(&["print", &format!("{}/{}", gui_domain()?, label)])
 }
 
-pub async fn ensure_server_ready(app: &AppHandle) -> Result<ServerReadyState, String> {
+pub async fn ensure_server_ready(app: &AppHandle) -> Result<(), ServerCtlError> {
+    set_status(app, ServerStatus::Checking);
+
     let _guard = SERVER_INIT_GUARD.lock().await;
-    if status().is_ok() {
-        return Ok(ServerReadyState::AlreadyRunning);
-    }
+    let is_running = status().is_ok();
 
-    let bin = server_bin_path(&app).map_err(err_str)?;
-    if !bin.exists() {
-        app.emit("server:progress", "Downloading server...").ok();
-        download_and_install(&app).await.map_err(err_str)?;
-        app.emit("server:progress", "Installed. Starting server...")
-            .ok();
-        start(&app).map_err(err_str)?;
-        return Ok(ServerReadyState::InstalledAndStarted);
+    match check_and_update(app).await {
+        Ok(true) => {
+            set_status(app, ServerStatus::Running);
+            Ok(())
+        }
+        Ok(false) => {
+            if is_running {
+                set_status(app, ServerStatus::Running);
+            } else {
+                set_status(app, ServerStatus::Starting);
+                start(app)?;
+                set_status(app, ServerStatus::Running);
+            }
+            Ok(())
+        }
+        Err(e) => {
+            set_status(
+                app,
+                ServerStatus::Error {
+                    message: e.to_string(),
+                },
+            );
+            Err(e)
+        }
     }
-
-    app.emit("server:progress", "Starting server...").ok();
-    start(&app).map_err(err_str)?;
-    return Ok(ServerReadyState::Started);
 }
 
-fn err_str<E: std::fmt::Display>(e: E) -> String {
-    e.to_string()
+fn version_file(app: &AppHandle) -> Result<PathBuf, ServerCtlError> {
+    Ok(server_root(app)?.join("bin").join("version.txt"))
+}
+
+fn read_installed_version(app: &AppHandle) -> Option<String> {
+    fs::read_to_string(version_file(app).ok()?)
+        .ok()
+        .map(|s| s.trim().to_string())
+}
+
+fn write_installed_version(app: &AppHandle, ver: &str) -> Result<(), ServerCtlError> {
+    let vf = version_file(app)?;
+    if let Some(dir) = vf.parent() {
+        fs::create_dir_all(dir)?;
+    }
+    fs::write(vf, ver.as_bytes())?;
+    Ok(())
+}
+
+#[tauri::command]
+#[specta::specta]
+pub fn get_server_status<R: Runtime>(app: AppHandle<R>) -> Result<ServerStatus, String> {
+    let bin = server_bin_path(&app).map_err(|e| e.to_string())?;
+    if !bin.exists() {
+        return Ok(ServerStatus::Offline);
+    }
+    match status() {
+        Ok(_) => Ok(ServerStatus::Running),
+        Err(_) => Ok(ServerStatus::Offline),
+    }
 }

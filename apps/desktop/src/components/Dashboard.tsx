@@ -1,8 +1,10 @@
 import {
   Button,
   cn,
+  Separator,
   Sidebar,
   SidebarContent,
+  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
@@ -18,13 +20,38 @@ import { Outlet, useLocation, useNavigate } from "react-router-dom";
 import { builtinExtensionRegistry } from "@/extensions/registry";
 import { LAST_ACTIVE_TAB } from "@/utils/constants";
 import { Cog } from "lucide-react";
-import { commands } from "@/types/tauri.gen";
+import { commands, ServerStatus } from "@/types/tauri.gen";
+import { useServerStatus } from "@/hooks/useServerStatus";
 
 const DashboardLayout = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const status = useServerStatus();
 
   const tabExtensions = [...builtinExtensionRegistry.getTabExtensions()];
+
+  const renderStatus = (s: ServerStatus): string => {
+    switch (s.state) {
+      case "running":
+        return "Running";
+      case "starting":
+        return "Starting...";
+      case "checking":
+        return "Checking...";
+      case "installing":
+        return "Installing";
+      case "updating":
+        return "Updating...";
+      case "downloading": {
+        const pct = s.percent ?? 0;
+        return `Downloading... ${pct}%`;
+      }
+      case "error":
+        return `Error: ${s.message}`;
+      default:
+        return "Offline";
+    }
+  };
 
   return (
     <SidebarProvider className="bg-muted relative">
@@ -82,6 +109,31 @@ const DashboardLayout = () => {
             </SidebarGroupContent>
           </SidebarGroup>
         </SidebarContent>
+        <SidebarFooter className="space-y-1">
+          <Separator />
+          <p className="text-xs text-neutral-500 flex items-center gap-2">
+            <span
+              className={cn(
+                "inline-block h-2 w-2 rounded-full",
+                status.state === "running"
+                  ? "bg-green-500 animate-pulse"
+                  : status.state === "offline" || status.state === "error"
+                    ? "bg-red-500"
+                    : "bg-yellow-500",
+              )}
+            />
+            Server status: {renderStatus(status)}
+          </p>
+
+          {status.state === "downloading" && (
+            <div className="mt-1 h-1 w-full bg-neutral-200 rounded">
+              <div
+                className="h-1 bg-neutral-500 rounded"
+                style={{ width: `${status.percent ?? 0}%` }}
+              />
+            </div>
+          )}
+        </SidebarFooter>
       </Sidebar>
 
       <SidebarInset>
