@@ -2,7 +2,6 @@
 
 use core_foundation::base::{CFRelease, TCFType};
 use core_foundation::string::CFString;
-use log::{debug, info, warn};
 use objc2::msg_send;
 use objc2::rc::{autoreleasepool, Retained};
 use objc2::runtime::{AnyClass, AnyObject};
@@ -13,6 +12,7 @@ use std::ptr;
 use std::sync::Arc;
 use tokio::sync::{watch, Notify};
 use tokio::time::{interval, Duration};
+use tracing::{debug, info, warn};
 
 use crate::utils::config::TrackedApp;
 

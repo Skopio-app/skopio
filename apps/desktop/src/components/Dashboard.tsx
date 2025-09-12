@@ -22,6 +22,7 @@ import { LAST_ACTIVE_TAB } from "@/utils/constants";
 import { Cog } from "lucide-react";
 import { commands, ServerStatus } from "@/types/tauri.gen";
 import { useServerStatus } from "@/hooks/useServerStatus";
+import { isDev } from "@/utils/environment";
 
 const DashboardLayout = () => {
   const navigate = useNavigate();
@@ -109,31 +110,33 @@ const DashboardLayout = () => {
             </SidebarGroupContent>
           </SidebarGroup>
         </SidebarContent>
-        <SidebarFooter className="space-y-1">
-          <Separator />
-          <p className="text-xs text-neutral-500 flex items-center gap-2">
-            <span
-              className={cn(
-                "inline-block h-2 w-2 rounded-full",
-                status.state === "running"
-                  ? "bg-green-500 animate-pulse"
-                  : status.state === "offline" || status.state === "error"
-                    ? "bg-red-500"
-                    : "bg-yellow-500",
-              )}
-            />
-            Server status: {renderStatus(status)}
-          </p>
-
-          {status.state === "downloading" && (
-            <div className="mt-1 h-1 w-full bg-neutral-200 rounded">
-              <div
-                className="h-1 bg-neutral-500 rounded"
-                style={{ width: `${status.percent ?? 0}%` }}
+        {!isDev() && (
+          <SidebarFooter className="space-y-1">
+            <Separator />
+            <p className="text-xs text-neutral-500 flex items-center gap-2">
+              <span
+                className={cn(
+                  "inline-block h-2 w-2 rounded-full",
+                  status.state === "running"
+                    ? "bg-green-500 animate-pulse"
+                    : status.state === "offline" || status.state === "error"
+                      ? "bg-red-500"
+                      : "bg-yellow-500 animate-pulse",
+                )}
               />
-            </div>
-          )}
-        </SidebarFooter>
+              Server status: {renderStatus(status)}
+            </p>
+
+            {status.state === "downloading" && (
+              <div className="mt-1 h-1 w-full bg-neutral-200 rounded">
+                <div
+                  className="h-1 bg-neutral-500 rounded"
+                  style={{ width: `${status.percent ?? 0}%` }}
+                />
+              </div>
+            )}
+          </SidebarFooter>
+        )}
       </Sidebar>
 
       <SidebarInset>

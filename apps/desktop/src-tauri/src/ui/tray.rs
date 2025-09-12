@@ -14,6 +14,7 @@ use tauri::{
     App, AppHandle, Manager,
 };
 use tokio::sync::Mutex;
+use tracing::warn;
 
 use crate::network::summaries::fetch_total_time;
 use crate::utils::time::format_duration;
@@ -139,11 +140,15 @@ pub fn init_tray(app: &mut App) -> tauri::Result<()> {
                     languages: None,
                 };
 
-                let time_secs = fetch_total_time(query).await.unwrap();
+                let time_text = match fetch_total_time(query).await {
+                    Ok(time_secs) => format_duration(time_secs),
+                    Err(err) => {
+                        warn!(%err, "Failed to fetch total time for tray; server may be down");
+                        "--".to_string()
+                    }
+                };
 
-                let time = format_duration(time_secs);
-
-                if let Ok(icon_bytes) = generate_text_icon(app_handle.clone(), time) {
+                if let Ok(icon_bytes) = generate_text_icon(app_handle.clone(), time_text) {
                     if let Ok(new_icon) = tauri::image::Image::from_bytes(&icon_bytes) {
                         let tray_lock = tray_state.icon.lock().await;
                         if let Some(ref tray) = *tray_lock {

@@ -32,11 +32,13 @@ pub fn init_tracing() {
             .with(filter)
             .with(
                 fmt::layer()
+                    .with_target(true)
                     .with_file(true)
                     .with_line_number(true)
                     .with_timer(fmt::time::ChronoLocal::rfc_3339()),
             )
-            .init();
+            .try_init()
+            .ok();
     }
 
     #[cfg(not(debug_assertions))]
@@ -57,11 +59,13 @@ pub fn init_tracing() {
             .with(filter)
             .with(
                 fmt::layer()
+                    .with_target(true)
                     .with_writer(file_nb)
                     .with_file(true)
                     .with_line_number(true)
                     .with_timer(fmt::time::ChronoLocal::rfc_3339()),
             )
-            .init();
+            .try_init()
+            .ok();
     }
 }

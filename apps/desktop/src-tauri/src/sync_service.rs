@@ -4,10 +4,10 @@ use async_trait::async_trait;
 use common::models::inputs::{AFKEventInput, EventInput};
 use db::desktop::{afk_events::AFKEvent, events::Event};
 use db::DBContext;
-use log::{error, info};
 use tokio::sync::{mpsc, oneshot, watch, Mutex};
 use tokio::task::JoinHandle;
 use tokio::time::{interval, Duration, Instant};
+use tracing::{error, info};
 
 use crate::network::post_json;
 use crate::tracking_service::TrackingService;

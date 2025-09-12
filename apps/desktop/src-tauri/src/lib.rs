@@ -1,9 +1,8 @@
-use chrono::Local;
 use db::DBContext;
-use log::error;
 use std::sync::Arc;
 use sync_service::BufferedTrackingService;
 use tauri::{AppHandle, Manager, Runtime};
+use tracing::{debug, error, info, warn};
 use trackers::{
     afk_tracker::AFKTracker, event_tracker::EventTracker, keyboard_tracker::KeyboardTracker,
     mouse_tracker::MouseTracker, window_tracker::WindowTracker,
@@ -18,6 +17,7 @@ use crate::{
         tray::init_tray,
         window::{NotificationPayload, WindowExt, WindowKind},
     },
+    utils::tracing::TracingExt,
 };
 
 mod goals_service;
@@ -52,27 +52,12 @@ pub async fn run() {
             let app_handle = app.handle().clone();
 
             specta_builder.mount_events(&app_handle);
-            // Enable logging in debug mode
-            if cfg!(debug_assertions) {
-                app_handle.plugin(
-                    tauri_plugin_log::Builder::default()
-                        .level(log::LevelFilter::Debug)
-                        .format(|out, message, record| {
-                            let local_time = Local::now().format("%Y-%m-%d %H:%M:%S");
-                            let module = record.target();
-                            let line = record.line().unwrap_or_default();
-                            out.finish(format_args!(
-                                "[{}][{}:{}][{}] {}",
-                                local_time,
-                                module,
-                                line,
-                                record.level(),
-                                message
-                            ));
-                        })
-                        .build(),
-                )?;
-            }
+            app_handle.init_tracing()?;
+
+            error!("---Testing error---");
+            debug!("---Testing debug ---");
+            warn!("---Testing warn ---");
+            info!("--- Testing info ---");
 
             let app_handle_clone = app_handle.clone();
             tauri::async_runtime::spawn(async move {
@@ -127,7 +112,7 @@ pub async fn run() {
         })
         .plugin(tauri_plugin_autostart::init(
             tauri_plugin_autostart::MacosLauncher::LaunchAgent,
-            None,
+            Some(vec!["--background"]),
         ))
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .run(tauri::generate_context!())
