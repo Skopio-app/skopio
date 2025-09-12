@@ -29,6 +29,10 @@ struct SharedTray {
     icon: Mutex<Option<TrayIcon>>,
 }
 
+pub trait TrayExt {
+    fn init_tray(&self) -> tauri::Result<()>;
+}
+
 fn generate_text_icon(app_handle: AppHandle, time_string: String) -> Result<Vec<u8>, String> {
     let scale_factor = app_handle
         .get_webview_window("main")
@@ -77,87 +81,89 @@ fn generate_text_icon(app_handle: AppHandle, time_string: String) -> Result<Vec<
     }
 }
 
-pub fn init_tray(app: &mut App) -> tauri::Result<()> {
-    let app_handle = app.handle();
-    let tray_state = Arc::new(SharedTray::default());
+impl TrayExt for App {
+    fn init_tray(&self) -> tauri::Result<()> {
+        let app_handle = self.handle();
+        let tray_state = Arc::new(SharedTray::default());
 
-    let initial_icon_bytes =
-        generate_text_icon(app_handle.clone(), "00".into()).map_err(|e| Error::from(anyhow!(e)))?;
-    let initial_icon = tauri::image::Image::from_bytes(&initial_icon_bytes)?;
-    let tray = TrayIconBuilder::new()
-        .icon(initial_icon)
-        .tooltip("Total active time for the day")
-        .build(app)?;
+        let initial_icon_bytes = generate_text_icon(app_handle.clone(), "--".into())
+            .map_err(|e| Error::from(anyhow!(e)))?;
+        let initial_icon = tauri::image::Image::from_bytes(&initial_icon_bytes)?;
+        let tray = TrayIconBuilder::new()
+            .icon(initial_icon)
+            .tooltip("Total active time for the day")
+            .build(self)?;
 
-    // Store tray in shared state
-    {
-        let tray_state = tray_state.clone();
-        let tray_clone = tray.clone();
-        tokio::spawn(async move {
-            tray_state.icon.lock().await.replace(tray_clone);
-        });
-    }
+        // Store tray in shared state
+        {
+            let tray_state = tray_state.clone();
+            let tray_clone = tray.clone();
+            tokio::spawn(async move {
+                tray_state.icon.lock().await.replace(tray_clone);
+            });
+        }
 
-    // Start tray update task
-    {
-        let app_handle = app_handle.clone();
-        let tray_state = tray_state.clone();
+        // Start tray update task
+        {
+            let app_handle = app_handle.clone();
+            let tray_state = tray_state.clone();
 
-        tokio::spawn(async move {
-            let mut interval = tokio::time::interval(StdDuration::from_secs(30));
+            tokio::spawn(async move {
+                let mut interval = tokio::time::interval(StdDuration::from_secs(30));
 
-            loop {
-                interval.tick().await;
+                loop {
+                    interval.tick().await;
 
-                let local_now = Local::now();
-                let local_date = local_now.date_naive();
+                    let local_now = Local::now();
+                    let local_date = local_now.date_naive();
 
-                let local_start = Local
-                    .with_ymd_and_hms(
-                        local_date.year(),
-                        local_date.month(),
-                        local_date.day(),
-                        0,
-                        0,
-                        0,
-                    )
-                    .single()
-                    .unwrap();
+                    let local_start = Local
+                        .with_ymd_and_hms(
+                            local_date.year(),
+                            local_date.month(),
+                            local_date.day(),
+                            0,
+                            0,
+                            0,
+                        )
+                        .single()
+                        .unwrap();
 
-                let local_end = local_start + Duration::days(1) - Duration::nanoseconds(1);
+                    let local_end = local_start + Duration::days(1) - Duration::nanoseconds(1);
 
-                let utc_start = local_start.with_timezone(&Utc);
-                let utc_end = local_end.with_timezone(&Utc);
+                    let utc_start = local_start.with_timezone(&Utc);
+                    let utc_end = local_end.with_timezone(&Utc);
 
-                let query = SummaryQueryInput {
-                    start: Some(utc_start),
-                    end: Some(utc_end),
-                    apps: None,
-                    projects: None,
-                    categories: None,
-                    entities: None,
-                    branches: None,
-                    languages: None,
-                };
+                    let query = SummaryQueryInput {
+                        start: Some(utc_start),
+                        end: Some(utc_end),
+                        apps: None,
+                        projects: None,
+                        categories: None,
+                        entities: None,
+                        branches: None,
+                        languages: None,
+                    };
 
-                let time_text = match fetch_total_time(query).await {
-                    Ok(time_secs) => format_duration(time_secs),
-                    Err(err) => {
-                        warn!(%err, "Failed to fetch total time for tray; server may be down");
-                        "--".to_string()
-                    }
-                };
+                    let time_text = match fetch_total_time(query).await {
+                        Ok(time_secs) => format_duration(time_secs),
+                        Err(err) => {
+                            warn!(%err, "Failed to fetch total time for tray; server may be down");
+                            "--".to_string()
+                        }
+                    };
 
-                if let Ok(icon_bytes) = generate_text_icon(app_handle.clone(), time_text) {
-                    if let Ok(new_icon) = tauri::image::Image::from_bytes(&icon_bytes) {
-                        let tray_lock = tray_state.icon.lock().await;
-                        if let Some(ref tray) = *tray_lock {
-                            let _ = tray.set_icon(Some(new_icon));
+                    if let Ok(icon_bytes) = generate_text_icon(app_handle.clone(), time_text) {
+                        if let Ok(new_icon) = tauri::image::Image::from_bytes(&icon_bytes) {
+                            let tray_lock = tray_state.icon.lock().await;
+                            if let Some(ref tray) = *tray_lock {
+                                let _ = tray.set_icon(Some(new_icon));
+                            }
                         }
                     }
                 }
-            }
-        });
+            });
+        }
+        Ok(())
     }
-    Ok(())
 }

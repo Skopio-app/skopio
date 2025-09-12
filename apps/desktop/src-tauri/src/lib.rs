@@ -2,7 +2,7 @@ use db::DBContext;
 use std::sync::Arc;
 use sync_service::BufferedTrackingService;
 use tauri::{AppHandle, Manager, Runtime};
-use tracing::{debug, error, info, warn};
+use tracing::error;
 use trackers::{
     afk_tracker::AFKTracker, event_tracker::EventTracker, keyboard_tracker::KeyboardTracker,
     mouse_tracker::MouseTracker, window_tracker::WindowTracker,
@@ -14,7 +14,7 @@ use crate::{
     goals_service::GoalService,
     server::ServerStatus,
     ui::{
-        tray::init_tray,
+        tray::TrayExt,
         window::{NotificationPayload, WindowExt, WindowKind},
     },
     utils::tracing::TracingExt,
@@ -54,11 +54,6 @@ pub async fn run() {
             specta_builder.mount_events(&app_handle);
             app_handle.init_tracing()?;
 
-            error!("---Testing error---");
-            debug!("---Testing debug ---");
-            warn!("---Testing warn ---");
-            info!("--- Testing info ---");
-
             let app_handle_clone = app_handle.clone();
             tauri::async_runtime::spawn(async move {
                 if let Err(e) = setup_trackers(&app_handle_clone).await {
@@ -74,7 +69,7 @@ pub async fn run() {
 
             app_handle.show_window(WindowKind::Main)?;
 
-            init_tray(app)?;
+            app.init_tray()?;
 
             Ok(())
         })

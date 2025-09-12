@@ -33,7 +33,6 @@ pub fn init_tracing() {
             .with(
                 fmt::layer()
                     .with_target(true)
-                    .with_file(true)
                     .with_line_number(true)
                     .with_timer(fmt::time::ChronoLocal::rfc_3339()),
             )
@@ -61,7 +60,6 @@ pub fn init_tracing() {
                 fmt::layer()
                     .with_target(true)
                     .with_writer(file_nb)
-                    .with_file(true)
                     .with_line_number(true)
                     .with_timer(fmt::time::ChronoLocal::rfc_3339()),
             )

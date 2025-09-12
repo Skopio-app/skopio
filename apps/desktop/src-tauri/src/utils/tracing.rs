@@ -32,7 +32,6 @@ impl TracingExt for AppHandle {
                 .with_target(true)
                 .with_level(true)
                 .with_line_number(true)
-                .with_file(true)
                 .with_ansi(true);
 
             tracing_subscriber::registry()
@@ -60,7 +59,6 @@ impl TracingExt for AppHandle {
                 .with_target(true)
                 .with_level(true)
                 .with_line_number(true)
-                .with_file(true)
                 .with_ansi(false)
                 .with_writer(non_blocking);
 
