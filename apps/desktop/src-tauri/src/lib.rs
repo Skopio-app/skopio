@@ -80,8 +80,10 @@ pub async fn run() {
                     error!("Failed async setup: {e}");
                 }
 
-                if let Err(e) = server::ensure_server_ready(&app_handle_clone.clone()).await {
-                    error!("Server manager error: {e}")
+                if !cfg!(debug_assertions) {
+                    if let Err(e) = server::ensure_server_ready(&app_handle_clone.clone()).await {
+                        error!("Server manager error: {e}")
+                    }
                 }
             });
 
@@ -123,7 +125,6 @@ pub async fn run() {
                 }
             }
         })
-        .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_autostart::init(
             tauri_plugin_autostart::MacosLauncher::LaunchAgent,
             None,

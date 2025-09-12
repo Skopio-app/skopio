@@ -2658,7 +2658,6 @@ __metadata:
     "@tauri-apps/api": "npm:^2.8.0"
     "@tauri-apps/cli": "npm:^2.8.1"
     "@tauri-apps/plugin-autostart": "npm:^2.5.0"
-    "@tauri-apps/plugin-dialog": "npm:^2.2.2"
     "@tauri-apps/plugin-global-shortcut": "npm:^2.3.0"
     "@types/canvas-confetti": "npm:^1"
     "@types/lodash": "npm:^4.17.17"
@@ -3079,13 +3078,6 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@tauri-apps/api@npm:^2.0.0":
-  version: 2.5.0
-  resolution: "@tauri-apps/api@npm:2.5.0"
-  checksum: 10c0/8eeb28049d48f5f89a5419cdf313bb159305204b193a5f27ebddbe0704ff43037c8b2e78518de831d7393e00178f0c0ac66cef1a57b99c632de71eca29f562c0
-  languageName: node
-  linkType: hard
-
 "@tauri-apps/api@npm:^2.6.0, @tauri-apps/api@npm:^2.8.0":
   version: 2.8.0
   resolution: "@tauri-apps/api@npm:2.8.0"
@@ -3220,15 +3212,6 @@ __metadata:
   dependencies:
     "@tauri-apps/api": "npm:^2.6.0"
   checksum: 10c0/8646ef6e3d48c1293e28ae3ac9a39bfc99ee76cd85869ba523ccca8db4eae46b36d3efb1424ac2ac8198b7e870fc34f2b442d3f3ce0a5f933e2af2c49656daa1
-  languageName: node
-  linkType: hard
-
-"@tauri-apps/plugin-dialog@npm:^2.2.2":
-  version: 2.2.2
-  resolution: "@tauri-apps/plugin-dialog@npm:2.2.2"
-  dependencies:
-    "@tauri-apps/api": "npm:^2.0.0"
-  checksum: 10c0/d08a30c35d93bb99ac9f8a33c98d8e4bab83308346b8db0ecf54ad8dffc798623fc4db16fb4c40167b905d894012e04577106b96b2fcccb53960d5a9544e8ccd
   languageName: node
   linkType: hard
 
