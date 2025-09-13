@@ -80,6 +80,12 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v5
 
+      - name: Enable Corepack
+        shell: bash
+        run: |
+          corepack enable
+          corepack prepare yarn@4.9.2 --activate
+
       - name: Setup Node
         uses: actions/setup-node@v5
         with:
@@ -90,7 +96,6 @@ jobs:
         working-directory: .
         shell: bash
         run: |
-          corepack enable
           yarn install --frozen-lockfile
 
       - name: Setup Rust
