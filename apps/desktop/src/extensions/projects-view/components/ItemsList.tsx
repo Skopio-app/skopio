@@ -12,7 +12,7 @@ interface ItemsListProps {
 
 const ItemsList: React.FC<ItemsListProps> = ({ title, data, loading }) => {
   return (
-    <div className="flex flex-col items-center">
+    <div className="flex flex-col items-center mb-4">
       <div className="flex flex-col space-y-2 w-fit">
         <h3 className="font-semibold text-center">{title}</h3>
         {data.length === 0 && !loading && (

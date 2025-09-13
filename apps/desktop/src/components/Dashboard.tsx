@@ -16,7 +16,7 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from "@skopio/ui";
-import { Outlet, useLocation, useNavigate } from "react-router-dom";
+import { Outlet, useLocation, useNavigate } from "react-router";
 import { builtinExtensionRegistry } from "@/extensions/registry";
 import { LAST_ACTIVE_TAB } from "@/utils/constants";
 import { Cog } from "lucide-react";
@@ -55,12 +55,12 @@ const DashboardLayout = () => {
   };
 
   return (
-    <SidebarProvider className="bg-muted relative">
+    <SidebarProvider className="bg-muted fixed inset-0 overflow-hidden">
       <div
         data-tauri-drag-region
         className={cn(
-          "fixed left-0 top-0 z-40 flex h-[20px] w-full items-center",
-          "bg-transparent select-none px-4",
+          "fixed left-0 top-0 z-40 flex h-[30px] w-full items-center",
+          "bg-neutral-50 border border-neutral-50 shadow-sm select-none px-4",
         )}
       >
         <div className="w-[64px] h-full" />
@@ -80,7 +80,7 @@ const DashboardLayout = () => {
 
       <Sidebar
         collapsible="offcanvas"
-        className="pt-[10px] border-border bg-neutral-50"
+        className="pt-[10px] border-border bg-neutral-50 overflow-hidden"
       >
         <SidebarHeader />
         <SidebarContent>
@@ -139,7 +139,7 @@ const DashboardLayout = () => {
         )}
       </Sidebar>
 
-      <SidebarInset className="py-7">
+      <SidebarInset className="pt-10 h-dvh overflow-auto overscroll-contain">
         <Outlet />
       </SidebarInset>
     </SidebarProvider>
