@@ -2,7 +2,7 @@
 
 Skopio Desktop is the native cross-platform client of the [Skopio](https://github.com/Skopio-app/skopio) productivity and coding time-tracking ecosytem.
 
-It provides a lightweight, privacy-first interface for collecting, visualizing, and syncing app usage, coding activity, AFK detection, and goal-tracking — all running locally on your machine.
+It provides a lightweight, privacy-first interface for collecting, visualizing, and syncing app usage, coding activity, AFK (Away from keyboard) detection, and goal-tracking — all running locally on your machine.
 
 ---
 
@@ -19,6 +19,7 @@ It provides a lightweight, privacy-first interface for collecting, visualizing, 
 - [Rust](https://www.rust-lang.org/)
 - [Node.js](https://nodejs.org/en)
 - [Yarn](https://yarnpkg.com/) (preferred package manager)
+- [Xcode](https://developer.apple.com/xcode/)
 
 ### Installation (Development)
 
