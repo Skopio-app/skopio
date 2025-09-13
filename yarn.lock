@@ -2659,6 +2659,8 @@ __metadata:
     "@tauri-apps/cli": "npm:^2.8.1"
     "@tauri-apps/plugin-autostart": "npm:^2.5.0"
     "@tauri-apps/plugin-global-shortcut": "npm:^2.3.0"
+    "@tauri-apps/plugin-process": "npm:^2.3.0"
+    "@tauri-apps/plugin-updater": "npm:^2.9.0"
     "@types/canvas-confetti": "npm:^1"
     "@types/lodash": "npm:^4.17.17"
     "@types/node": "npm:^22.10.2"
@@ -3221,6 +3223,24 @@ __metadata:
   dependencies:
     "@tauri-apps/api": "npm:^2.6.0"
   checksum: 10c0/bf6081270711fc7c794b025c51c646848ae99a0b2cdbf10338b2e9ed7b6c39d78e32b528b3fe330616cb63b263afdb2e7de2401e368d2a59ef996ef0e9bd3631
+  languageName: node
+  linkType: hard
+
+"@tauri-apps/plugin-process@npm:^2.3.0":
+  version: 2.3.0
+  resolution: "@tauri-apps/plugin-process@npm:2.3.0"
+  dependencies:
+    "@tauri-apps/api": "npm:^2.6.0"
+  checksum: 10c0/ef50344a7436d92278c2ef4526f72daaf3171c4d65743bbc1f7a00fa581644a8583bb8680f637a34af5c7e6a0e8722c22189290e903584fef70ed83b64b6e9c0
+  languageName: node
+  linkType: hard
+
+"@tauri-apps/plugin-updater@npm:^2.9.0":
+  version: 2.9.0
+  resolution: "@tauri-apps/plugin-updater@npm:2.9.0"
+  dependencies:
+    "@tauri-apps/api": "npm:^2.6.0"
+  checksum: 10c0/72ce83d1c241308a13b9929f0900e4d33453875877009166e3998e3e75a1003ac48c3641086b4d3230f0f18c64f475ad6c3556d1603fc641ca50dc9c18d61866
   languageName: node
   linkType: hard
 
