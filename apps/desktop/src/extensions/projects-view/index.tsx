@@ -81,7 +81,7 @@ const ProjectsView = () => {
 
   return (
     <div className="flex flex-col h-full mx-4 space-y-4">
-      <div className="relative w-full">
+      <div className="relative w-full pt-2">
         <SearchIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground size-4" />
         <Input
           placeholder="Search projects..."

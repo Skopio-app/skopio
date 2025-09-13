@@ -59,13 +59,13 @@ const DashboardLayout = () => {
       <div
         data-tauri-drag-region
         className={cn(
-          "fixed left-0 top-0 z-40 flex h-[30px] w-full items-center",
+          "fixed left-0 top-0 z-40 flex h-9 w-full items-center",
           "bg-neutral-50 border border-neutral-50 shadow-sm select-none px-4",
         )}
       >
-        <div className="w-[64px] h-full" />
+        <div className="w-16 h-full" />
 
-        <div className="absolute left-[90px] top-[6px] flex flex-row space-x-3">
+        <div className="absolute left-23 top-1.5 flex flex-row space-x-3">
           <SidebarTrigger className="w-5 h-5 cursor-pointer hover:bg-neutral-200" />
           <Button
             className="h-5 w-5 hover:bg-neutral-200"
@@ -73,14 +73,14 @@ const DashboardLayout = () => {
             size="icon"
             onClick={async () => await commands.showWindow("settings")}
           >
-            <Cog />
+            <Cog size={30} />
           </Button>
         </div>
       </div>
 
       <Sidebar
         collapsible="offcanvas"
-        className="pt-[10px] border-border bg-neutral-50 overflow-hidden"
+        className="pt-4 border-neutral-300 shadow-md"
       >
         <SidebarHeader />
         <SidebarContent>
