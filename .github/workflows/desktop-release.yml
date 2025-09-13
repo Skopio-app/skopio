@@ -84,12 +84,13 @@ jobs:
         uses: actions/setup-node@v5
         with:
           node-version: 24
+          cache: "yarn"
 
       - name: Install frontend deps
         working-directory: .
         shell: bash
         run: |
-          corepack enable || true
+          corepack enable
           yarn install --frozen-lockfile
 
       - name: Setup Rust
