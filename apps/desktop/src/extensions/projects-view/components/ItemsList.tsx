@@ -1,5 +1,6 @@
 import { Skeleton } from "@skopio/ui";
 import { formatDuration } from "@/utils/time";
+import { truncateValue } from "@/utils/data";
 
 interface ItemsListProps {
   title: string;
@@ -12,7 +13,7 @@ interface ItemsListProps {
 
 const ItemsList: React.FC<ItemsListProps> = ({ title, data, loading }) => {
   return (
-    <div className="flex flex-col items-center">
+    <div className="flex flex-col items-center mb-4">
       <div className="flex flex-col space-y-2 w-fit">
         <h3 className="font-semibold text-center">{title}</h3>
         {data.length === 0 && !loading && (
@@ -24,7 +25,7 @@ const ItemsList: React.FC<ItemsListProps> = ({ title, data, loading }) => {
               <p className="text-xs font-light w-20 text-right">
                 {formatDuration(item.value)}
               </p>
-              <p className="text-sm truncate">{item.name}</p>
+              <p className="text-sm">{truncateValue(item.name)}</p>
             </div>
           ))
         ) : (

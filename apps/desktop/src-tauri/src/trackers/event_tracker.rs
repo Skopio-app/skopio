@@ -5,12 +5,12 @@ use crate::utils::config::TrackedApp;
 use chrono::{DateTime, Utc};
 use common::git::find_git_branch;
 use db::desktop::events::Event as DBEvent;
-use log::{error, info};
 use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::sync::Arc;
 use tokio::sync::{watch, Mutex, RwLock};
 use tokio::time::{Duration, Instant};
+use tracing::{error, info};
 
 use super::keyboard_tracker::KeyboardTracker;
 use super::mouse_tracker::MouseTracker;

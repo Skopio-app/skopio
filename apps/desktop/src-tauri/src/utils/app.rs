@@ -1,7 +1,7 @@
 use std::{panic, process::Command};
 
 use common::language::detect_language;
-use log::{error, warn};
+use tracing::{error, warn};
 use url::{Position, Url};
 
 use crate::monitored_app::MonitoredApp;

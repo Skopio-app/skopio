@@ -5,11 +5,11 @@ use core_graphics::event::{
     CGEventFlags, CGEventTap, CGEventTapLocation, CGEventTapOptions, CGEventTapPlacement,
     CGEventType, EventField,
 };
-use log::{error, info};
 use objc2_foundation::NSAutoreleasePool;
 use std::collections::HashSet;
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
+use tracing::{error, info};
 
 pub struct KeyboardTracker {
     last_keypress: Arc<Mutex<Instant>>,

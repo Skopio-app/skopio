@@ -89,7 +89,7 @@ const ProjectDetails = () => {
   }
 
   return (
-    <div className="p-4 space-y-6 mt-2">
+    <div className="px-4 space-y-6">
       <Breadcrumb>
         <BreadcrumbList className="text-lg">
           <BreadcrumbItem>

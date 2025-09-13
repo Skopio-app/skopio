@@ -9,8 +9,8 @@
 // static GLOBAL: Jemalloc = Jemalloc;
 
 fn main() {
-    #[cfg(debug_assertions)]
-    console_subscriber::init();
+    // #[cfg(debug_assertions)]
+    // console_subscriber::init();
 
     skopio_desktop_lib::run();
 }

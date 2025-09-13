@@ -16,9 +16,9 @@ The server runs in the background and communicates with the Skopio desktop app a
   - AFK stats
   - Entity (`File`, `App`, `Url`) data
 
-## Installation
+## Releases
 
-The server is shipped as a standalone binary via the [server-releases repo](https://github.com/Skopio-app/server-releases). It is automatically downloaded, installed, and managed by the Skopio desktop app.
+The server is shipped as a standalone binary via the [server-releases](https://github.com/Skopio-app/server-releases) repo. It is automatically downloaded, installed, and managed by the Skopio desktop app.
 
 ## Development
 

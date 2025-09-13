@@ -4,6 +4,7 @@ import {
 } from "@nivo/circle-packing";
 import { formatDuration } from "@/utils/time";
 import { useState } from "react";
+import { truncateValue } from "@/utils/data";
 
 type CirclePackingNode =
   | { name: string; value: number }
@@ -12,10 +13,6 @@ type CirclePackingNode =
 interface CirclePackingChartProps {
   data: { name: string; value: number }[];
 }
-
-const truncateValue = (text: string): string => {
-  return text.length > 50 ? `${text.slice(0, 50)}...` : text;
-};
 
 const CirclePackingChart: React.FC<CirclePackingChartProps> = ({ data }) => {
   const [zoomedId, setZoomedId] = useState<string | null>(null);
@@ -64,7 +61,7 @@ const CirclePackingChart: React.FC<CirclePackingChartProps> = ({ data }) => {
 
           return (
             <div className="min-w-32 rounded-md border border-gray-200 bg-white px-3 py-2 text-sm shadow-md text-neutral-700">
-              <h3 className="font-medium text-xs">{text}</h3>
+              <h3 className="font-medium text-xs text-neutral-900">{text}</h3>
               <p className="text-xs">{formattedTime}</p>
             </div>
           );

@@ -17,6 +17,7 @@ import {
 import { isDev } from "@/utils/environment";
 import { commands } from "@/types/tauri.gen";
 import PermissionsDialog from "@/components/settings/PermissionsDialog";
+import UpdaterToast from "@/components/updater/UpdaterToast";
 
 function App() {
   useGlobalShortcutListener();
@@ -26,6 +27,7 @@ function App() {
     <>
       <Toaster richColors />
       <PermissionsDialog />
+      <UpdaterToast />
       <ContextMenu>
         <ContextMenuTrigger className="block min-h-screen w-full">
           <Outlet />

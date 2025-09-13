@@ -14,10 +14,10 @@ runs:
       with:
         targets: ${{ inputs.rust_target }}
 
-    - uses: Swatinem/rust-cache@v2
+    - uses: Swatinem/rust-cache@v2.8.0
       with:
         workspaces: |
           apps/cli
           apps/server
           apps/desktop/src-tauri
-        shared-key: base-env-${{ inputs.rust_target }}
+        shared-key: base-env-macos

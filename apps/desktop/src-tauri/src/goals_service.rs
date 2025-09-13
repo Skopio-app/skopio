@@ -15,9 +15,9 @@ use db::{
     },
     DBContext,
 };
-use log::{debug, error, info};
 use tauri::AppHandle;
 use tokio::{sync::broadcast, task::JoinHandle};
+use tracing::{debug, error, info};
 
 use crate::{
     network::summaries::fetch_total_time,
