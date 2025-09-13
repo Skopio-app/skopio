@@ -1,4 +1,4 @@
-name: Build release desktop
+name: Build release desktop artifacts
 
 on:
   workflow_dispatch:
@@ -55,16 +55,18 @@ jobs:
             insec && /^##[[:space:]]*\[?v?[0-9]/ { insec=0 }
             insec { print }
           ' CHANGELOG.md)"
+
           if [ -z "$BODY" ]; then
             echo "::error::No changelog section found for $VER"
             exit 1
           fi
+
           {
-            echo "body<<'EOF'"
+            echo "body<<__CHANGELOG__"
             echo "# Changelog"
             echo
             echo "$BODY"
-            echo "EOF"
+            echo "__CHANGELOG__"
           } >> "$GITHUB_OUTPUT"
   build:
     needs: meta
