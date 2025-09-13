@@ -16,12 +16,13 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from "@skopio/ui";
-import { Outlet, useLocation, useNavigate } from "react-router-dom";
+import { Outlet, useLocation, useNavigate } from "react-router";
 import { builtinExtensionRegistry } from "@/extensions/registry";
 import { LAST_ACTIVE_TAB } from "@/utils/constants";
 import { Cog } from "lucide-react";
 import { commands, ServerStatus } from "@/types/tauri.gen";
 import { useServerStatus } from "@/hooks/useServerStatus";
+import { isDev } from "@/utils/environment";
 
 const DashboardLayout = () => {
   const navigate = useNavigate();
@@ -54,12 +55,12 @@ const DashboardLayout = () => {
   };
 
   return (
-    <SidebarProvider className="bg-muted relative">
+    <SidebarProvider className="bg-muted fixed inset-0 overflow-hidden">
       <div
         data-tauri-drag-region
         className={cn(
-          "fixed left-0 top-0 z-40 flex h-[20px] w-full items-center",
-          "bg-transparent select-none px-4",
+          "fixed left-0 top-0 z-40 flex h-[30px] w-full items-center",
+          "bg-neutral-50 border border-neutral-50 shadow-sm select-none px-4",
         )}
       >
         <div className="w-[64px] h-full" />
@@ -79,7 +80,7 @@ const DashboardLayout = () => {
 
       <Sidebar
         collapsible="offcanvas"
-        className="pt-[10px] border-border bg-neutral-50"
+        className="pt-[10px] border-border bg-neutral-50 overflow-hidden"
       >
         <SidebarHeader />
         <SidebarContent>
@@ -109,34 +110,36 @@ const DashboardLayout = () => {
             </SidebarGroupContent>
           </SidebarGroup>
         </SidebarContent>
-        <SidebarFooter className="space-y-1">
-          <Separator />
-          <p className="text-xs text-neutral-500 flex items-center gap-2">
-            <span
-              className={cn(
-                "inline-block h-2 w-2 rounded-full",
-                status.state === "running"
-                  ? "bg-green-500 animate-pulse"
-                  : status.state === "offline" || status.state === "error"
-                    ? "bg-red-500"
-                    : "bg-yellow-500",
-              )}
-            />
-            Server status: {renderStatus(status)}
-          </p>
-
-          {status.state === "downloading" && (
-            <div className="mt-1 h-1 w-full bg-neutral-200 rounded">
-              <div
-                className="h-1 bg-neutral-500 rounded"
-                style={{ width: `${status.percent ?? 0}%` }}
+        {!isDev() && (
+          <SidebarFooter className="space-y-1">
+            <Separator />
+            <p className="text-xs text-neutral-500 flex items-center gap-2">
+              <span
+                className={cn(
+                  "inline-block h-2 w-2 rounded-full",
+                  status.state === "running"
+                    ? "bg-green-500 animate-pulse"
+                    : status.state === "offline" || status.state === "error"
+                      ? "bg-red-500"
+                      : "bg-yellow-500 animate-pulse",
+                )}
               />
-            </div>
-          )}
-        </SidebarFooter>
+              Server status: {renderStatus(status)}
+            </p>
+
+            {status.state === "downloading" && (
+              <div className="mt-1 h-1 w-full bg-neutral-200 rounded">
+                <div
+                  className="h-1 bg-neutral-500 rounded"
+                  style={{ width: `${status.percent ?? 0}%` }}
+                />
+              </div>
+            )}
+          </SidebarFooter>
+        )}
       </Sidebar>
 
-      <SidebarInset>
+      <SidebarInset className="pt-10 h-dvh overflow-auto overscroll-contain">
         <Outlet />
       </SidebarInset>
     </SidebarProvider>

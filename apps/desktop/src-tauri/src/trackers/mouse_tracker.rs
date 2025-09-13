@@ -5,11 +5,11 @@ use core_graphics::event::{
     CGEventTap, CGEventTapLocation, CGEventTapOptions, CGEventTapPlacement, CGEventType,
 };
 use core_graphics::geometry::CGPoint;
-use log::{error, info};
 use objc2_foundation::NSAutoreleasePool;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
+use tracing::{error, info};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct MouseButtons {

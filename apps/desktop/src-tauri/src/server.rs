@@ -3,7 +3,6 @@ use std::io::{Read, Write};
 use std::os::unix::fs::PermissionsExt;
 use std::path::Path;
 use std::process::Command;
-use std::sync::LazyLock;
 use std::{io, path::PathBuf};
 
 use futures_util::StreamExt;
@@ -14,7 +13,6 @@ use specta::Type;
 use tauri::{AppHandle, Manager, Runtime};
 use tauri_specta::Event;
 use thiserror::Error;
-use tokio::sync::Mutex;
 use tokio::{fs as tokiofs, io::AsyncWriteExt};
 use zip::result::ZipError;
 use zip::ZipArchive;
@@ -76,7 +74,6 @@ const PLIST_LABEL: &str = "com.samwahome.skopio.server";
 const BIN_NAME: &str = "skopio-server";
 const MANIFEST_URL: &str =
     "https://github.com/Skopio-app/server-releases/releases/latest/download/latest.json";
-static SERVER_INIT_GUARD: LazyLock<Mutex<()>> = LazyLock::new(|| Mutex::new(()));
 
 #[derive(Debug, Deserialize)]
 struct AssetSig {
@@ -108,7 +105,6 @@ struct Asset {
 
 #[derive(Debug, Deserialize)]
 struct Manifest {
-    #[allow(dead_code)]
     version: String,
     #[allow(dead_code)]
     #[serde(default)]
@@ -135,6 +131,7 @@ fn server_bin_path<R: Runtime>(app: &AppHandle<R>) -> Result<PathBuf, ServerCtlE
     Ok(server_root(app)?.join("bin").join(BIN_NAME))
 }
 
+#[cfg(target_os = "macos")]
 fn plist_path(app: &AppHandle) -> Result<PathBuf, ServerCtlError> {
     let home = app.path().home_dir()?;
     Ok(home
@@ -295,6 +292,7 @@ fn write_plist(app: &AppHandle, bin: &Path) -> Result<PathBuf, ServerCtlError> {
     Ok(plist_dst)
 }
 
+#[cfg(target_os = "macos")]
 fn launchctl(args: &[&str]) -> Result<(), ServerCtlError> {
     let out = Command::new("launchctl").args(args).output()?;
     if !out.status.success() {
@@ -423,7 +421,6 @@ pub fn status() -> Result<(), ServerCtlError> {
 pub async fn ensure_server_ready(app: &AppHandle) -> Result<(), ServerCtlError> {
     set_status(app, ServerStatus::Checking);
 
-    let _guard = SERVER_INIT_GUARD.lock().await;
     let is_running = status().is_ok();
 
     match check_and_update(app).await {

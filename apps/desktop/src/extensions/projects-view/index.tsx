@@ -23,7 +23,7 @@ const ProjectsView = () => {
   const [projects, setProjects] = useState<Project[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState<number>(0);
-  const [cursors, setCursors] = useState<(number | null)[]>([]);
+  const [cursors, setCursors] = useState<(string | null)[]>([]);
   const [totalPages, setTotalPages] = useState<number>(0);
   const [searchResults, setSearchResults] = useState<Project[]>([]);
 
@@ -42,12 +42,11 @@ const ProjectsView = () => {
   const fetchData = async (page: number) => {
     setIsLoading(true);
     try {
-      const after = cursors[page] ?? null;
+      const after = cursors[page];
       const res: PaginatedProjects = await commands.fetchProjects({
         after,
         limit,
       });
-
       setProjects(res.data);
       setCursors(res.cursors ?? null);
       setTotalPages(res.totalPages ?? 0);
@@ -81,17 +80,17 @@ const ProjectsView = () => {
   const end = Math.min(total, start + pageWindowSize);
 
   return (
-    <div className="flex flex-col h-full px-4 py-8 space-y-4">
-      <div className="relative w-full max-w-md">
+    <div className="flex flex-col h-full mx-4 space-y-4">
+      <div className="relative w-full">
         <SearchIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground size-4" />
         <Input
           placeholder="Search projects..."
-          className="pl-10"
+          className="pl-10 max-w-md"
           {...register("query")}
         />
       </div>
 
-      <div className="flex-1 overflow-auto space-y-6">
+      <div className="flex-1 overflow-auto space-y-6 scroll-hidden">
         <ul className="divide-y divide-muted border">
           {isLoading ? (
             Array.from({ length: limit }).map((_, i) => (
@@ -107,7 +106,7 @@ const ProjectsView = () => {
             (query.length > 0 ? searchResults : projects).map((project) => (
               <li
                 key={project.id}
-                className="p-4 hover:bg-muted/40 transition-colors hover:cursor-pointer"
+                className="p-4 hover:bg-neutral-200/40 transition-colors hover:cursor-pointer"
                 onClick={() => navigate(`/tab/${tabId}/projects/${project.id}`)}
               >
                 <h3 className="text-base font-medium break-words">
@@ -120,7 +119,7 @@ const ProjectsView = () => {
       </div>
 
       {query.length === 0 && totalPages > 1 && (
-        <div className="pt-4 mb-6">
+        <div className="pt-4 mb-5">
           <Pagination className="mt-auto">
             <PaginationContent>
               <PaginationItem>

@@ -29,10 +29,9 @@ async fn main() {
         }
     };
 
-    #[allow(unused_mut)]
     let mut app = create_app(db.clone()).await;
-    #[cfg(not(debug_assertions))]
-    {
+
+    if !cfg!(debug_assertions) {
         use auth::{bearer_auth, AuthCfg};
         use axum::middleware;
         use common::keyring::Keyring;
@@ -66,8 +65,7 @@ async fn main() {
         return;
     }
 
-    #[cfg(not(debug_assertions))]
-    {
+    if !cfg!(debug_assertions) {
         use crate::net::{bind_uds, ensure_dir_mode, mac_run_dir};
 
         let run_dir = mac_run_dir().expect("Could not resolve run dir");

@@ -88,7 +88,7 @@ const DashboardView = () => {
   );
 
   return (
-    <main className="p-6 space-y-4">
+    <main className="px-6 space-y-4">
       <h1 className="text-2xl font-bold">
         <span className="text-gray-900">Activity for </span>
         <span className="text-gray-500">{formattedRange}</span>

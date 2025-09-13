@@ -1,10 +1,10 @@
-use log::error;
 use percent_encoding::{utf8_percent_encode, NON_ALPHANUMERIC};
 use serde::{Deserialize, Serialize};
 use tauri::{
     AppHandle, LogicalPosition, Manager, Position, Runtime, TitleBarStyle, WebviewUrl,
     WebviewWindow, WebviewWindowBuilder,
 };
+use tracing::error;
 use url::{ParseError, Url};
 
 #[derive(Debug, Deserialize, Clone, Copy, PartialEq, Eq, specta::Type)]

@@ -1,50 +1,53 @@
-# React + TypeScript + Vite
+# Skopio Desktop
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+Skopio Desktop is the native cross-platform client of the [Skopio](https://github.com/Skopio-app/skopio) productivity and coding time-tracking ecosytem.
 
-Currently, two official plugins are available:
+It provides a lightweight, privacy-first interface for collecting, visualizing, and syncing app usage, coding activity, AFK detection, and goal-tracking — all running locally on your machine.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+---
 
-## Expanding the ESLint configuration
+## Features
 
-If you are developing a production application, we recommend updating the configuration to enable type aware lint rules:
+- **App usage tracking** - Capture active windows, apps, and their durations of use.
+- **Coding Activity** - Detect files, projects, languages, and editor events (Xcode).
+- **Goals & Notifications** - Define usage goals (per app, category) with desktop notifications.
+- **Dashboard** - Visualize activity timelines, categories, and insights with charts.
+- **Local-First** - All data is stored in a local SQLite database.
 
-- Configure the top-level `parserOptions` property like this:
+## Getting Started
 
-```js
-export default tseslint.config({
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ["./tsconfig.node.json", "./tsconfig.app.json"],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-});
+- [Rust](https://www.rust-lang.org/)
+- [Node.js](https://nodejs.org/en)
+- [Yarn](https://yarnpkg.com/) (preferred package manager)
+
+### Installation (Development)
+
+Clone the monorepo and install dependencies:
+
+```bash
+yarn install
 ```
 
-- Replace `tseslint.configs.recommended` to `tseslint.configs.recommendedTypeChecked` or `tseslint.configs.strictTypeChecked`
-- Optionally add `...tseslint.configs.stylisticTypeChecked`
-- Install [eslint-plugin-react](https://github.com/jsx-eslint/eslint-plugin-react) and update the config:
+Run the desktop app in development mode:
 
-```js
-// eslint.config.js
-import react from "eslint-plugin-react";
-
-export default tseslint.config({
-  // Set the react version
-  settings: { react: { version: "18.3" } },
-  plugins: {
-    // Add the react plugin
-    react,
-  },
-  rules: {
-    // other rules...
-    // Enable its recommended rules
-    ...react.configs.recommended.rules,
-    ...react.configs["jsx-runtime"].rules,
-  },
-});
+```bash
+yarn workspace @skopio/desktop tauri dev
 ```
+
+## Releases
+
+Official builds are published to the [desktop-releases](https://github.com/Skopio-app/desktop-releases) repository.
+
+## Screenshots
+
+| Dashboard                                     | Goals                                 |
+| --------------------------------------------- | ------------------------------------- |
+| ![Dashboard](../../screenshots/dashboard.png) | ![Goals](../../screenshots/goals.png) |
+
+| Projects                                    | Project Details                                           |
+| ------------------------------------------- | --------------------------------------------------------- |
+| ![Projects](../../screenshots/projects.png) | ![Project Details](../../screenshots/project-details.png) |
+
+| Timeline                                    |     |
+| ------------------------------------------- | --- |
+| ![Timeline](../../screenshots/timeline.png) |     |

@@ -1,9 +1,9 @@
 use chrono::{DateTime, Utc};
 use db::desktop::afk_events::AFKEvent;
-use log::{error, info};
 use std::sync::Arc;
 use tokio::sync::{watch, Mutex, RwLock};
 use tokio::time::{interval, Duration};
+use tracing::{error, info};
 
 use crate::tracking_service::TrackingService;
 

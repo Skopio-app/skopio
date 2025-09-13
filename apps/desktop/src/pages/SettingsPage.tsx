@@ -17,13 +17,13 @@ const SettingsPage = () => {
     tab === "general" ? "General" : tab === "permissions" ? "Permissions" : tab;
 
   return (
-    <div className="flex min-h-dvh w-full items-stretch overflow-hidden">
-      <aside className="flex w-60 flex-col border-r">
+    <div className="fixed inset-0 flex w-full items-stretch overflow-hidden">
+      <aside className="flex w-60 flex-none flex-col border-r overflow-hidden">
         <div
           data-tauri-drag-region
           className="flex h-11 items-center justify-end px-2"
         />
-        <div className="min-h-0 flex-1 overflow-y-auto p-2">
+        <div className="p-2">
           <nav className="space-y-1">
             {TABS.map((tab) => (
               <NavLink
@@ -31,7 +31,7 @@ const SettingsPage = () => {
                 to={tab.name}
                 className={({ isActive }) =>
                   cn(
-                    "flex w-full items-center gap-2 rounded-lg p-2 text-sm text-neutral-600 hover:bg-neutral-100",
+                    "flex w-full items-center gap-2 rounded-lg p-2 text-sm text-neutral-600 hover:bg-neutral-200",
                     isActive && "bg-neutral-100 font-medium",
                   )
                 }
@@ -50,7 +50,7 @@ const SettingsPage = () => {
       <main className="flex min-h-0 flex-1 flex-col overflow-hidden">
         <header
           data-tauri-drag-region
-          className="flex h-11 w-full items-center justify-between border-b px-2"
+          className="flex h-11 w-full flex-none items-center justify-between border-b px-2"
         >
           <div className="w-40" data-tauri-drag-region />
           <h1
@@ -62,7 +62,7 @@ const SettingsPage = () => {
           <div className="w-40" data-tauri-drag-region />
         </header>
 
-        <div className="min-h-0 flex-1 overflow-y-auto p-6 w-full">
+        <div className="min-h-0 min-w-0 flex-1 overflow-auto p-6">
           <Outlet />
         </div>
       </main>

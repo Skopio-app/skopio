@@ -97,7 +97,7 @@ const TimelineExtension = () => {
   };
 
   return (
-    <div className="flex-col items-center h-full w-full space-y-4 px-4 py-8">
+    <div className="flex-col items-center h-full w-full space-y-4 px-4">
       <h3 className="font-semibold text-3xl">Timeline</h3>
       <div className="flex flex-wrap justify-start gap-2">
         <Label htmlFor="timePreset" className="text-neutral-800">

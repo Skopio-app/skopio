@@ -50,7 +50,7 @@ export const usePermissions = () => {
     }
   };
 
-  const openSettings = async (kind: "accessibility" | "inputMonitoring") => {
+  const openSettings = async (kind: PermissionKind) => {
     try {
       await commands.openPermissionSettings(kind);
     } catch (e) {

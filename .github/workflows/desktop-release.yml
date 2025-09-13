@@ -1,0 +1,120 @@
+name: Build release desktop
+
+on:
+  workflow_dispatch:
+  workflow_call:
+    secrets:
+      DESKTOP_RELEASES_TOKEN:
+        required: true
+
+permissions:
+  contents: write
+
+env:
+  DESKTOP_PATH: apps/desktop
+
+jobs:
+  guard:
+    uses: ./.github/workflows/_guard-release-branch.yml
+
+  meta:
+    needs: guard
+    runs-on: macos-latest
+    outputs:
+      version: ${{ steps.meta.outputs.version }}
+      tag: ${{ steps.meta.outputs.tag }}
+      prerelease: ${{ steps.meta.outputs.prerelease }}
+      body: ${{ steps.changelog.outputs.body }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Detect version from Cargo.toml
+        id: meta
+        run: |
+          set -euo pipefail
+          MANIFEST="apps/desktop/src-tauri/Cargo.toml"
+          VER=$(cargo metadata --format-version=1 --no-deps --manifest-path "$MANIFEST" \
+            | jq -r --arg mf "$MANIFEST" '.packages[] | select(.manifest_path == $mf) | .version')
+          TAG="v${VER}"
+          [[ "$VER" =~ - ]] && PRERELEASE=true || PRERELEASE=false
+          echo "version=$VER"           >> $GITHUB_OUTPUT
+          echo "tag=$TAG"               >> $GITHUB_OUTPUT
+          echo "prerelease=$PRERELEASE" >> $GITHUB_OUTPUT
+
+      - name: Extract release notes from CHANGELOG.md
+        id: changelog
+        working-directory: ${{ env.DESKTOP_PATH }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          VER="${{ steps.meta.outputs.version }}"
+          BODY="$(awk -v ver="$VER" '
+            BEGIN { patv = "^##[[:space:]]*\\[?v?" ver "\\]?"; insec=0 }
+            $0 ~ patv { insec=1; next }
+            insec && /^##[[:space:]]*\[?v?[0-9]/ { insec=0 }
+            insec { print }
+          ' CHANGELOG.md)"
+          if [ -z "$BODY" ]; then
+            echo "::error::No changelog section found for $VER"
+            exit 1
+          fi
+          {
+            echo "body<<'EOF'"
+            echo "# Changelog"
+            echo
+            echo "$BODY"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+  build:
+    needs: meta
+    runs-on: macos-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [aarch64-apple-darwin, x86_64-apple-darwin]
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Setup Node
+        uses: actions/setup-node@v5
+        with:
+          node-version: 24
+
+      - name: Install frontend deps
+        working-directory: .
+        shell: bash
+        run: |
+          corepack enable || true
+          yarn install --frozen-lockfile
+
+      - name: Setup Rust
+        uses: ./.github/actions/setup-env
+        with:
+          rust_target: ${{ matrix.arch }}
+
+      - name: Create release
+        uses: tauri-apps/tauri-action@v0.5.23
+        env:
+          GITHUB_TOKEN: ${{ secrets.DESKTOP_RELEASES_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY}}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD}}
+          APPLE_CERTIFICATE: ${{ secrets.MAC_CERT_P12_BASE64 }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.MAC_CERT_PASSWORD }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.DEV_IDENTITY }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_PASSWORD: ${{ secrets.AC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ secrets.TEAM_ID }}
+        with:
+          projectPath: ${{ env.DESKTOP_PATH }}
+          args: --target ${{ matrix.arch }}
+          tagName: ${{ needs.meta.outputs.tag }}
+          releaseName: v${{needs.meta.outputs.version}}
+          releaseBody: ${{ needs.meta.outputs.body }}
+          prerelease: ${{ needs.meta.outputs.prerelease }}
+          releaseDraft: false
+          owner: ${{ github.repository_owner }}
+          repo: desktop-releases
+          releaseCommitish: ${{ github.sha }}
