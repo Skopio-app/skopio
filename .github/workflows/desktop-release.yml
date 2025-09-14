@@ -125,11 +125,11 @@ jobs:
         with:
           projectPath: ${{ env.DESKTOP_PATH }}
           args: --target ${{ matrix.arch }}
-          tagName: ${{ needs.meta.outputs.tag }}
-          releaseName: v${{needs.meta.outputs.version}}
+          tagName: v__VERSION__
+          releaseName: v__VERSION__
           releaseBody: ${{ needs.meta.outputs.body }}
           prerelease: ${{ needs.meta.outputs.prerelease }}
           releaseDraft: false
           owner: ${{ github.repository_owner }}
           repo: desktop-releases
-          # releaseCommitish: ${{ github.sha }}
+          releaseCommitish: main
