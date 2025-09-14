@@ -25,7 +25,6 @@ sqlx = { workspace = true, features = [
     "uuid"
 ] }
 libsqlite3-sys = { workspace = true, features = ["bundled-sqlcipher"]}
-log = { workspace = true }
 specta = { workspace = true, features = ["uuid"] }
 common = { path = "../common" }
 thiserror = { workspace = true }

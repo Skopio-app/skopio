@@ -17,7 +17,11 @@ interface CirclePackingChartProps {
 const CirclePackingChart: React.FC<CirclePackingChartProps> = ({ data }) => {
   const [zoomedId, setZoomedId] = useState<string | null>(null);
 
-  if (!data.length) {
+  const children = data
+    .filter((d) => Number.isFinite(d.value) && d.value > 0)
+    .sort((a, b) => b.value - a.value);
+
+  if (children.length === 0) {
     return (
       <div className="h-[220px] w-full flex items-center justify-center text-sm text-gray-500">
         No data available
@@ -27,7 +31,7 @@ const CirclePackingChart: React.FC<CirclePackingChartProps> = ({ data }) => {
 
   const packedData: CirclePackingNode = {
     name: "Total",
-    children: [...data].sort((a, b) => b.value - a.value),
+    children,
   };
 
   return (
@@ -52,12 +56,9 @@ const CirclePackingChart: React.FC<CirclePackingChartProps> = ({ data }) => {
         borderWidth={1}
         borderColor={{ from: "color", modifiers: [["darker", 0.5]] }}
         tooltip={({ id, value }) => {
+          if (zoomedId === null || zoomedId !== "Total") return <></>;
           const formattedTime = formatDuration(value);
           const text = truncateValue(id);
-
-          if (zoomedId === null || zoomedId !== "Total") {
-            return <></>;
-          }
 
           return (
             <div className="min-w-32 rounded-md border border-gray-200 bg-white px-3 py-2 text-sm shadow-md text-neutral-700">
@@ -76,18 +77,27 @@ const CirclePackingChart: React.FC<CirclePackingChartProps> = ({ data }) => {
                 return node.id === zoomedId;
               })
               .map((node) => {
-                const { x, y, id, value } = node;
+                const { x, y, id } = node;
+                const value = Number(node.value) || 0;
+
+                if (x == null && y == null) return null;
+
+                const maxValue = Math.max(
+                  1,
+                  ...nodes.map((n) => Number(n.value) || 0),
+                );
+
+                console.log(JSON.stringify(node));
 
                 const isZoomed = zoomedId !== null && zoomedId !== "Total";
                 const minFont = isZoomed ? 12 : 6;
                 const maxFont = isZoomed ? 16 : 14;
-                const maxValue = Math.max(...nodes.map((n) => n.value));
                 const fontSize =
                   minFont + (value / maxValue) * (maxFont - minFont);
-                const words = truncateValue(id);
+                const title = truncateValue(id);
 
                 return (
-                  <g key={words} transform={`translate(${x}, ${y})`}>
+                  <g key={id} transform={`translate(${x}, ${y})`}>
                     <text
                       textAnchor="middle"
                       dominantBaseline="middle"
@@ -96,7 +106,7 @@ const CirclePackingChart: React.FC<CirclePackingChartProps> = ({ data }) => {
                       fontWeight={600}
                       y={-6}
                     >
-                      {words}
+                      {title}
                     </text>
                     <text
                       textAnchor="middle"

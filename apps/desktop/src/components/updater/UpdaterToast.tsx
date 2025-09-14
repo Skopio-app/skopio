@@ -3,6 +3,7 @@ import { toast } from "sonner";
 import { relaunch } from "@tauri-apps/plugin-process";
 import { check } from "@tauri-apps/plugin-updater";
 import { useEffect } from "react";
+import Markdown from "react-markdown";
 
 type ProgressState = {
   pct: number;
@@ -42,12 +43,12 @@ const showUpdaterToast = (meta: {
           <div className="flex items-start gap-2">
             <div className="flex-1">
               <p className="text-sm font-semibold text-neutral-900">
-                Update available - {state.version}
+                Update available - v{state.version}
               </p>
               {state.notes && (
-                <p className="mt-1 line-clamp-3 whitespace-pre-line text-xs text-neutral-600">
-                  {state.notes}
-                </p>
+                <div className="mt-1 prose prose-invert text-xs text-neutral-600 max-w-none">
+                  <Markdown>{state.notes}</Markdown>
+                </div>
               )}
             </div>
           </div>
@@ -191,6 +192,8 @@ const showUpdaterToast = (meta: {
 const runUpdaterFlow = async () => {
   const update = await check().catch((e) => console.warn("Updater error: ", e));
   if (!update) return;
+
+  console.log("The update: ", update);
 
   const ui = showUpdaterToast({
     version: update.version,

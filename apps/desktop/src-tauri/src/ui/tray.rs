@@ -14,7 +14,7 @@ use tauri::{
     App, AppHandle, Manager,
 };
 use tokio::sync::Mutex;
-use tracing::warn;
+use tracing::error;
 
 use crate::network::summaries::fetch_total_time;
 use crate::utils::time::format_duration;
@@ -148,7 +148,7 @@ impl TrayExt for App {
                     let time_text = match fetch_total_time(query).await {
                         Ok(time_secs) => format_duration(time_secs),
                         Err(err) => {
-                            warn!(%err, "Failed to fetch total time for tray; server may be down");
+                            error!(%err, "Failed to fetch total time for tray; server may be down");
                             "--".to_string()
                         }
                     };

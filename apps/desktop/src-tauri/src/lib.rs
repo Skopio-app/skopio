@@ -230,7 +230,7 @@ fn make_specta_builder<R: Runtime>() -> tauri_specta::Builder<R> {
             crate::network::events::fetch_events,
             crate::ui::window::dismiss_notification_window::<tauri::Wry>,
             crate::ui::window::show_window::<tauri::Wry>,
-            crate::ui::window::open_devtools::<tauri::Wry>,
+            // crate::ui::window::open_devtools::<tauri::Wry>,
             crate::monitored_app::get_open_apps,
             crate::server::get_server_status::<tauri::Wry>,
         ])

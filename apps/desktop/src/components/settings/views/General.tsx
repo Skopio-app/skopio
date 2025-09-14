@@ -1,4 +1,4 @@
-import { zodResolver } from "@hookform/resolvers/zod";
+import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import {
   FormControl,
   FormDescription,
@@ -17,8 +17,8 @@ import {
   ChipSelector,
 } from "@skopio/ui";
 import { useEffect, useRef } from "react";
-import { useForm, useWatch } from "react-hook-form";
-import z from "zod/v4";
+import { useForm } from "react-hook-form";
+import * as z from "zod/v4";
 import HotkeyField from "@/components/settings/HotkeyField";
 import { AFK, AFK_KEYS, AFK_SECONDS } from "@/utils/constants";
 import { useAutostart } from "@/hooks/useAutostart";
@@ -32,7 +32,7 @@ const TrackedAppSchema = z.object({
 });
 
 const settingsSchema = z.object({
-  launchOnStartup: z.boolean().default(false),
+  launchOnStartup: z.boolean(),
   globalShortcut: z
     .string()
     .min(1, "Please set a shortcut")
@@ -40,8 +40,8 @@ const settingsSchema = z.object({
     .refine((s) => /\+/.test(s), {
       message: "Shortcut must be a key combination (e.g., Ctrl+Shift+S)",
     }),
-  afkSensitivity: z.enum(AFK_KEYS).default("1m"),
-  trackedApps: z.array(TrackedAppSchema).default([]),
+  afkSensitivity: z.enum(AFK_KEYS),
+  trackedApps: z.array(TrackedAppSchema),
 });
 
 type GeneralSettingsValues = z.infer<typeof settingsSchema>;
@@ -62,8 +62,8 @@ const General = () => {
 
   const { apps: openApps } = useOpenApps();
 
-  const form = useForm({
-    resolver: zodResolver(settingsSchema),
+  const form = useForm<GeneralSettingsValues>({
+    resolver: standardSchemaResolver(settingsSchema),
     defaultValues: {
       launchOnStartup: false,
       globalShortcut: shortcut,
@@ -203,11 +203,6 @@ const General = () => {
     };
   }, [form, saveShorcut]);
 
-  const watchedTracked = useWatch<GeneralSettingsValues>({
-    control: form.control,
-    name: "trackedApps",
-  });
-
   return (
     <div className="mx-auto w-full max-w-2xl p-2">
       <Form {...form}>
@@ -277,7 +272,7 @@ const General = () => {
               <FormItem>
                 <FormLabel>AFK sensitivity</FormLabel>
                 <FormDescription>
-                  How quickly Skopio marks you as idle when there’s no input.
+                  How quickly Skopio marks you as idle when there's no input.
                 </FormDescription>
                 <FormControl>
                   <Select value={field.value} onValueChange={field.onChange}>
@@ -311,7 +306,7 @@ const General = () => {
                 </FormDescription>
                 <FormControl>
                   <ChipSelector<TrackedApp, OpenApp>
-                    values={watchedTracked}
+                    values={field.value ?? []}
                     options={openApps}
                     getValueKey={(a) => a.bundleId}
                     getOptionKey={(o) => o.app.bundleId}

@@ -5,13 +5,13 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "tauri": "tauri dev",
     "build": "tsc -b && vite build",
+    "tauri": "tauri",
     "lint": "eslint .",
     "preview": "vite preview"
   },
   "dependencies": {
-    "@hookform/resolvers": "^5.1.1",
+    "@hookform/resolvers": "^5.2.1",
     "@nivo/bar": "^0.99.0",
     "@nivo/calendar": "^0.99.0",
     "@nivo/circle-packing": "^0.99.0",
@@ -36,13 +36,14 @@
     "dexie": "^4.0.11",
     "lucide-react": "^0.516.0",
     "react-grid-layout": "^1.5.1",
-    "react-hook-form": "^7.60.0",
+    "react-hook-form": "^7.62.0",
+    "react-markdown": "^10.1.0",
     "react-router": "^7.6.1",
     "react-router-dom": "^7.6.1",
     "sonner": "^2.0.6",
     "tailwindcss": "^4.1.11",
     "vis-timeline": "^7.7.4",
-    "zod": "^4.0.8",
+    "zod": "^4.1.8",
     "zustand": "^5.0.5"
   },
   "devDependencies": {

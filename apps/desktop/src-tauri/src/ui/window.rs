@@ -214,8 +214,8 @@ pub fn show_window<R: Runtime>(app: AppHandle<R>, kind: WindowKind) -> Result<()
     Ok(())
 }
 
-#[tauri::command]
-#[specta::specta]
-pub fn open_devtools<R: Runtime>(window: tauri::WebviewWindow<R>) {
-    window.open_devtools();
-}
+// #[tauri::command]
+// #[specta::specta]
+// pub fn open_devtools<R: Runtime>(window: tauri::WebviewWindow<R>) {
+//     window.open_devtools();
+// }

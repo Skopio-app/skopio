@@ -14,7 +14,7 @@ import { useNavigate, useParams } from "react-router";
 import { SearchIcon } from "lucide-react";
 import z from "zod/v4";
 import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import { toast } from "sonner";
 
 const schema = z.object({ query: z.string() });
@@ -32,8 +32,8 @@ const ProjectsView = () => {
   const { id: tabId } = useParams();
   const navigate = useNavigate();
 
-  const { register, watch } = useForm({
-    resolver: zodResolver(schema),
+  const { register, watch } = useForm<z.infer<typeof schema>>({
+    resolver: standardSchemaResolver(schema),
     defaultValues: { query: "" },
   });
 
@@ -81,7 +81,7 @@ const ProjectsView = () => {
 
   return (
     <div className="flex flex-col h-full mx-4 space-y-4">
-      <div className="relative w-full">
+      <div className="relative w-full pt-2">
         <SearchIcon className="absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground size-4" />
         <Input
           placeholder="Search projects..."
