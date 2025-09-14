@@ -85,9 +85,6 @@ export const commands = {
   async showWindow(kind: WindowKind): Promise<null> {
     return await TAURI_INVOKE("show_window", { kind });
   },
-  async openDevtools(): Promise<void> {
-    await TAURI_INVOKE("open_devtools");
-  },
   async getOpenApps(): Promise<OpenApp[]> {
     return await TAURI_INVOKE("get_open_apps");
   },

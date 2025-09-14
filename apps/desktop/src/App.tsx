@@ -14,8 +14,8 @@ import {
   useGlobalShortcutListener,
   useHistoryControls,
 } from "@/utils/shortcut";
-import { isDev } from "@/utils/environment";
-import { commands } from "@/types/tauri.gen";
+// import { isDev } from "@/utils/environment";
+// import { commands } from "@/types/tauri.gen";
 import PermissionsDialog from "@/components/settings/PermissionsDialog";
 import UpdaterToast from "@/components/updater/UpdaterToast";
 
@@ -33,7 +33,7 @@ function App() {
           <Outlet />
         </ContextMenuTrigger>
 
-        <ContextMenuContent className="w-42 h-32">
+        <ContextMenuContent className="w-42 h-24">
           <ContextMenuItem
             className="text-xs"
             disabled={!canGoBack}
@@ -54,7 +54,7 @@ function App() {
             Reload
             <ContextMenuShortcut>⌘⇧R</ContextMenuShortcut>
           </ContextMenuItem>
-          {isDev && (
+          {/* {isDev && (
             <ContextMenuItem
               inset
               className="text-xs"
@@ -63,7 +63,7 @@ function App() {
             >
               Inspect Element
             </ContextMenuItem>
-          )}
+          )} */}
         </ContextMenuContent>
       </ContextMenu>
     </>
