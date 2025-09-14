@@ -31,16 +31,23 @@ jobs:
 
       - name: Detect version from Cargo.toml
         id: meta
+        shell: bash
         run: |
           set -euo pipefail
-          MANIFEST="apps/desktop/src-tauri/Cargo.toml"
-          VER=$(cargo metadata --format-version=1 --no-deps --manifest-path "$MANIFEST" \
-            | jq -r --arg mf "$MANIFEST" '.packages[] | select(.manifest_path == $mf) | .version')
+          MANIFEST="$GITHUB_WORKSPACE/apps/desktop/src-tauri/Cargo.toml"
+          VER=$(
+            cargo metadata --format-version=1 --no-deps --manifest-path "$MANIFEST" \
+              | jq -r --arg mf "$MANIFEST" '.packages[] | select(.manifest_path == $mf) | .version'
+          )
+          if [ -z "${VER:-}" ]; then
+            echo "::error::Failed to detect version from $MANIFEST"
+            exit 1
+          fi
           TAG="v${VER}"
           [[ "$VER" =~ - ]] && PRERELEASE=true || PRERELEASE=false
-          echo "version=$VER"           >> $GITHUB_OUTPUT
-          echo "tag=$TAG"               >> $GITHUB_OUTPUT
-          echo "prerelease=$PRERELEASE" >> $GITHUB_OUTPUT
+          echo "version=$VER"           >> "$GITHUB_OUTPUT"
+          echo "tag=$TAG"               >> "$GITHUB_OUTPUT"
+          echo "prerelease=$PRERELEASE" >> "$GITHUB_OUTPUT"
 
       - name: Extract release notes from CHANGELOG.md
         id: changelog
@@ -125,4 +132,4 @@ jobs:
           releaseDraft: false
           owner: ${{ github.repository_owner }}
           repo: desktop-releases
-          releaseCommitish: ${{ github.sha }}
+          # releaseCommitish: ${{ github.sha }}
