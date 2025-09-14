@@ -111,7 +111,7 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD}}
           APPLE_CERTIFICATE: ${{ secrets.MAC_CERT_P12_BASE64 }}
           APPLE_CERTIFICATE_PASSWORD: ${{ secrets.MAC_CERT_PASSWORD }}
-          APPLE_SIGNING_IDENTITY: ${{ secrets.DEV_IDENTITY }}
+          APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
           APPLE_ID: ${{ secrets.APPLE_ID }}
           APPLE_PASSWORD: ${{ secrets.AC_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.TEAM_ID }}
