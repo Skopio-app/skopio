@@ -103,7 +103,7 @@ jobs:
         working-directory: .
         shell: bash
         run: |
-          yarn install --immutable --immutable-cache
+          yarn install --immutable
 
       - name: Setup Rust
         uses: ./.github/actions/setup-env
