@@ -103,7 +103,7 @@ jobs:
         working-directory: .
         shell: bash
         run: |
-          yarn install --frozen-lockfile
+          yarn install --immutable --immutable-cache
 
       - name: Setup Rust
         uses: ./.github/actions/setup-env

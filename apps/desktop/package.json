@@ -37,6 +37,7 @@
     "lucide-react": "^0.516.0",
     "react-grid-layout": "^1.5.1",
     "react-hook-form": "^7.62.0",
+    "react-markdown": "^10.1.0",
     "react-router": "^7.6.1",
     "react-router-dom": "^7.6.1",
     "sonner": "^2.0.6",
