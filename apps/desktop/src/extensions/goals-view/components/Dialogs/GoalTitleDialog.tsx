@@ -1,11 +1,11 @@
 import * as Dialog from "@radix-ui/react-dialog";
 import { Button, Input } from "@skopio/ui";
 import { X } from "lucide-react";
-import { z } from "zod";
+import z from "zod/v4";
 import { GoalUpdateInput } from "@/types/tauri.gen";
 import { useGoalStore } from "../../stores/useGoalStore";
 import { FieldErrors, useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
@@ -33,8 +33,8 @@ const GoalTitleDialog: React.FC<GoalTitleDialogProps> = ({
   const { updateGoal } = useGoalStore();
   const [formError, setFormError] = useState<string | null>(null);
 
-  const form = useForm({
-    resolver: zodResolver(titleFormSchema),
+  const form = useForm<z.infer<typeof titleFormSchema>>({
+    resolver: standardSchemaResolver(titleFormSchema),
     defaultValues: {
       name: title,
     },

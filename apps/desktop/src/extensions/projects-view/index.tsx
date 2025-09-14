@@ -14,7 +14,7 @@ import { useNavigate, useParams } from "react-router";
 import { SearchIcon } from "lucide-react";
 import z from "zod/v4";
 import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import { toast } from "sonner";
 
 const schema = z.object({ query: z.string() });
@@ -32,8 +32,8 @@ const ProjectsView = () => {
   const { id: tabId } = useParams();
   const navigate = useNavigate();
 
-  const { register, watch } = useForm({
-    resolver: zodResolver(schema),
+  const { register, watch } = useForm<z.infer<typeof schema>>({
+    resolver: standardSchemaResolver(schema),
     defaultValues: { query: "" },
   });
 

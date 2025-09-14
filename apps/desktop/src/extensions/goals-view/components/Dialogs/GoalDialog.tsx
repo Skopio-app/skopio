@@ -2,9 +2,9 @@ import { Button, ChipSelector, Input, Label, Switch } from "@skopio/ui";
 import * as Dialog from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
 import { useEffect, useState } from "react";
-import { z } from "zod/v4";
+import z from "zod/v4";
 import { FieldErrors, useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import {
   App,
   Category,
@@ -134,8 +134,8 @@ const GoalDialog: React.FC<GoalDialogProps> = ({
   const [allApps, setAllApps] = useState<App[]>([]);
   const [formError, setFormError] = useState<string | null>(null);
 
-  const form = useForm({
-    resolver: zodResolver(goalFormSchema),
+  const form = useForm<z.infer<typeof goalFormSchema>>({
+    resolver: standardSchemaResolver(goalFormSchema),
     defaultValues: {
       hours: goal ? goal?.targetSeconds / 3600 : 2,
       timeSpan: goal?.timeSpan ?? "day",
