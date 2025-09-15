@@ -3,8 +3,8 @@ use rusqlite::Connection;
 
 use crate::{
     cli::Commands,
+    error::CliError,
     event::{self, EventData},
-    utils::CliError,
 };
 
 pub fn handle_event(conn: &Connection, command: Commands) -> Result<(), CliError> {

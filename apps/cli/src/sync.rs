@@ -1,4 +1,4 @@
-use crate::utils::{extract_project_name, CliError};
+use crate::{error::CliError, utils::extract_project_name};
 use chrono::{Duration, TimeZone, Utc};
 use common::{client::Transport, models::inputs::EventInput};
 use log::{debug, info};

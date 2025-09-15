@@ -3,7 +3,7 @@ use rusqlite::Connection;
 use std::fs;
 use std::path::Path;
 
-use crate::utils::{setup_keyring, CliError};
+use crate::{error::CliError, utils::setup_keyring};
 
 embed_migrations!("./migrations");
 

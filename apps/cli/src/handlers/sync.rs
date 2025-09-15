@@ -1,6 +1,6 @@
 use rusqlite::Connection;
 
-use crate::{cli::Commands, sync, utils::CliError};
+use crate::{cli::Commands, error::CliError, sync};
 
 pub async fn handle_sync(conn: &Connection, command: Commands) -> Result<(), CliError> {
     match command {
