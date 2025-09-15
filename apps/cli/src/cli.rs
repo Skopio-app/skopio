@@ -9,14 +9,6 @@ use clap::{Parser, Subcommand};
 pub struct Cli {
     #[command(subcommand)]
     pub command: Option<Commands>,
-
-    /// Optional database directory path
-    #[arg(long)]
-    pub dir: Option<String>,
-
-    /// The name of the app being tracked
-    #[arg(long)]
-    pub app: String,
 }
 
 #[derive(Subcommand, Debug)]

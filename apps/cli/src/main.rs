@@ -1,14 +1,12 @@
 use crate::cli::Cli;
-use crate::config::get_or_store_db_path;
 use crate::db::init_db;
 use crate::handlers::event::handle_event;
 use crate::handlers::sync::handle_sync;
 use crate::utils::{init_logger, CliError};
 use clap::Parser;
-use log::{debug, error};
+use log::error;
 
 mod cli;
-mod config;
 mod db;
 mod event;
 mod handlers;
@@ -26,11 +24,8 @@ fn main() {
 
 fn run() -> Result<(), CliError> {
     let cli = Cli::parse();
-    let db_path = get_or_store_db_path(cli.dir, &cli.app)?;
 
-    debug!("Using database path: {}", db_path);
-
-    let conn = init_db(&db_path, &cli.app)?;
+    let conn = init_db()?;
 
     match cli.command {
         Some(cmd @ cli::Commands::Event { .. }) => handle_event(&conn, cmd),

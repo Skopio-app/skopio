@@ -22,9 +22,6 @@ pub enum CliError {
     #[error("Migration error: {0}")]
     Migration(#[from] refinery::Error),
 
-    #[error("Invalid database path: No parent directory")]
-    InvalidDbPath,
-
     #[error("Sync error: {0}")]
     Sync(#[from] SyncError),
 
@@ -81,12 +78,12 @@ pub fn setup_test_conn() -> Connection {
     conn
 }
 
-pub fn setup_keyring(app_name: &str) -> Result<Option<String>, CliError> {
+pub fn setup_keyring() -> Result<Option<String>, CliError> {
     if cfg!(debug_assertions) {
         return Ok(None);
     }
     let password = uuid::Uuid::new_v4().to_string();
-    let key = Keyring::get_or_set_password("skopio-cli", app_name, &password)
+    let key = Keyring::get_or_set_password("skopio-cli", "db-master-key", &password)
         .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, format!("keyring: {e}")))?;
     Ok(Some(key))
 }
