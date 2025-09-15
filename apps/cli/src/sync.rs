@@ -1,27 +1,11 @@
-use crate::utils::extract_project_name;
+use crate::utils::{extract_project_name, CliError};
 use chrono::{Duration, TimeZone, Utc};
-use common::models::inputs::EventInput;
+use common::{client::Transport, models::inputs::EventInput};
 use log::{debug, info};
-use reqwest::blocking::Client;
 use rusqlite::{Connection, Row};
-use thiserror::Error;
 
-const SERVER_URL: &str = "http://localhost:8080";
-
-#[derive(Debug, Error)]
-pub enum SyncError {
-    #[error("Database error: {0}")]
-    Db(#[from] rusqlite::Error),
-
-    #[error("Network error: {0}")]
-    Network(#[from] reqwest::Error),
-
-    #[error("Unexpected response: {0}")]
-    UnexpectedResponse(String),
-}
-
-pub fn sync_data(conn: &Connection) -> Result<(), SyncError> {
-    let client = Client::new();
+pub async fn sync_data(conn: &Connection) -> Result<(), CliError> {
+    let transport = Transport::new()?;
     let events = fetch_unsynced_events(conn)?;
 
     if events.is_empty() {
@@ -30,7 +14,7 @@ pub fn sync_data(conn: &Connection) -> Result<(), SyncError> {
     }
 
     if !events.is_empty() {
-        sync_to_server(&client, "events", &events)?;
+        sync_to_server(&transport, "events", &events).await?;
         conn.execute("UPDATE events SET synced = 1 WHERE synced = 0", [])?;
         info!("Events synced successfully!")
     }
@@ -71,29 +55,23 @@ fn parse_event(row: &Row) -> rusqlite::Result<EventInput> {
     })
 }
 
-fn sync_to_server<T: serde::Serialize>(
-    client: &Client,
+async fn sync_to_server<T: serde::Serialize>(
+    transport: &Transport,
     path: &str,
     data: &T,
-) -> Result<(), SyncError> {
-    let res = client
-        .post(format!("{}/{}", SERVER_URL, path))
-        .json(data)
-        .send()?;
-
-    if res.status().is_success() {
-        Ok(())
+) -> Result<(), CliError> {
+    let path = if path.starts_with('/') {
+        path.to_string()
     } else {
-        let status = res.status();
-        let body = res.text().unwrap_or_default();
-        Err(SyncError::UnexpectedResponse(format!(
-            "Status: {}, Body: {}",
-            status, body
-        )))
-    }
+        format!("/{}", path)
+    };
+    let json = serde_json::to_string(data)?;
+
+    let _ = transport.post_json(&path, &json).await?;
+    Ok(())
 }
 
-fn delete_synced_data(conn: &Connection) -> Result<(), SyncError> {
+fn delete_synced_data(conn: &Connection) -> Result<(), CliError> {
     let cutoff = Utc::now() - Duration::days(15);
     let cutoff_unix = cutoff.timestamp();
 
@@ -103,7 +81,6 @@ fn delete_synced_data(conn: &Connection) -> Result<(), SyncError> {
     )?;
 
     debug!("Deleted {} old synced events", deleted_events);
-
     Ok(())
 }
 

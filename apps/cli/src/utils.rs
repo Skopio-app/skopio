@@ -9,21 +9,24 @@ use log::{error, LevelFilter};
 use rusqlite::Connection;
 use thiserror::Error;
 
-use crate::{db::migrations, sync::SyncError};
+use crate::db::migrations;
 
 #[derive(Error, Debug)]
 pub enum CliError {
+    #[error("Database error: {0}")]
+    Db(#[from] rusqlite::Error),
+
+    #[error("Network error: {0}")]
+    Network(#[from] reqwest::Error),
+
+    #[error("Common error: {0}")]
+    Common(#[from] common::error::CommonError),
+
     #[error("I/O error: {0}")]
     Io(#[from] std::io::Error),
 
-    #[error("SQLite error: {0}")]
-    Sqlite(#[from] rusqlite::Error),
-
     #[error("Migration error: {0}")]
     Migration(#[from] refinery::Error),
-
-    #[error("Sync error: {0}")]
-    Sync(#[from] SyncError),
 
     #[error("Expected {0} command, but received a different variant")]
     VariantMismatch(String),

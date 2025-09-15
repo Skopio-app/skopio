@@ -13,23 +13,24 @@ mod handlers;
 mod sync;
 mod utils;
 
-fn main() {
+#[tokio::main]
+async fn main() {
     init_logger();
 
-    if let Err(err) = run() {
+    if let Err(err) = run().await {
         error!("Fatal error: {:#}", err);
         std::process::exit(1);
     }
 }
 
-fn run() -> Result<(), CliError> {
+async fn run() -> Result<(), CliError> {
     let cli = Cli::parse();
 
     let conn = init_db()?;
 
     match cli.command {
         Some(cmd @ cli::Commands::Event { .. }) => handle_event(&conn, cmd),
-        Some(cmd @ cli::Commands::Sync) => handle_sync(&conn, cmd),
+        Some(cmd @ cli::Commands::Sync) => handle_sync(&conn, cmd).await,
         None => Ok(()),
     }
 }

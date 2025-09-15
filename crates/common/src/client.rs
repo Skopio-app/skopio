@@ -23,7 +23,7 @@ pub enum Transport {
 }
 
 impl Transport {
-    pub fn detect() -> Result<Self, CommonError> {
+    pub fn new() -> Result<Self, CommonError> {
         if cfg!(debug_assertions) {
             Ok(Transport::DevTcp {
                 base: "http://127.0.0.1:8080".into(),
