@@ -25,7 +25,7 @@ where
         }
     }
 
-    let transport = Transport::detect().map_err(|e| e.to_string())?;
+    let transport = Transport::new().map_err(|e| e.to_string())?;
     let text = transport.get(&full_path).await.map_err(|e| e.to_string())?;
     serde_json::from_str::<TRes>(&text).map_err(|e| e.to_string())
 }
@@ -42,7 +42,7 @@ where
     full_path.push_str(path);
 
     let json = serde_json::to_string(body).map_err(|e| e.to_string())?;
-    let transport = Transport::detect().map_err(|e| e.to_string())?;
+    let transport = Transport::new().map_err(|e| e.to_string())?;
     let text = transport
         .post_json(&full_path, &json)
         .await

@@ -1,6 +1,6 @@
 [package]
 name = "skopio-cli"
-version = "0.1.1"
+version = "0.1.2"
 edition.workspace = true
 authors.workspace = true
 repository.workspace = true
@@ -9,7 +9,6 @@ rust-version.workspace = true
 [dependencies]
 chrono = { workspace = true, features = ["serde"] }
 clap = { version = "4.5.29", features = ["derive"] }
-reqwest = { workspace = true, features = ["blocking", "json"] }
 rusqlite = { workspace = true, features = ["bundled-sqlcipher-vendored-openssl"] }
 serde = { workspace = true, features = ["derive"] }
 dirs = { workspace = true }
@@ -20,6 +19,7 @@ common = { path = "../../crates/common" }
 refinery = { version = "0.8.16", features = ["rusqlite"]}
 thiserror = { workspace = true }
 uuid = { workspace = true, features = ["v4"]}
+tokio = { workspace = true, features = ["rt-multi-thread", "macros"]}
 
 [dev-dependencies]
 tempfile = { workspace = true }

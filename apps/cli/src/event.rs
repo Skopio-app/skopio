@@ -2,7 +2,7 @@ use common::git::find_git_branch;
 use log::info;
 use rusqlite::{params, Connection};
 
-use crate::utils::CliError;
+use crate::error::CliError;
 
 pub struct EventData {
     pub timestamp: i32,

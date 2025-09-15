@@ -1,6 +1,6 @@
 # Skopio Server
 
-The Skopio server is the local backend component of the Skopio ecosystem. It provides a secure, local-first API for storing and querying coding activity, app usage, and AFK stats.,
+The Skopio server is the local backend component of the Skopio ecosystem. It provides a secure, local-first API for storing and querying coding activity, app usage, and AFK stats.
 
 The server runs in the background and communicates with the Skopio desktop app and CLI over a secure channel.
 

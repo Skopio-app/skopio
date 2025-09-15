@@ -15,15 +15,18 @@ use db::DBContext;
 use serde_qs::axum::QsQuery;
 use std::sync::Arc;
 use tokio::sync::Mutex;
-use tracing::debug;
+use tracing::{debug, info};
+use uuid::Uuid;
 
 async fn insert_events(
     State(db): State<Arc<Mutex<DBContext>>>,
     Json(payload): Json<Vec<EventInput>>,
-) -> AppResult<Json<String>> {
+) -> AppResult<()> {
+    debug!("Handling {} events", payload.len());
+
     let db = db.lock().await;
 
-    debug!("Handling {} events", payload.len());
+    let mut staged: Vec<Event> = Vec::with_capacity(payload.len());
 
     for event in payload {
         let app_id = App::find_or_insert(&db, &event.app_name).await?;
@@ -36,10 +39,8 @@ async fn insert_events(
         let category_id = Category::find_or_insert(&db, &event.category).await?;
         let source_id = Source::find_or_insert(&db, &event.source_name).await?;
 
-        let id = uuid::Uuid::now_v7();
-
-        let event = Event {
-            id: id,
+        staged.push(Event {
+            id: Uuid::now_v7(),
             timestamp: event.timestamp.unwrap_or_default(),
             duration: event.duration,
             category_id,
@@ -50,10 +51,13 @@ async fn insert_events(
             language_id,
             source_id,
             end_timestamp: event.end_timestamp,
-        };
-        event.create(&db).await?;
+        });
     }
-    Ok(Json("Events saved".to_string()))
+
+    let inserted = Event::bulk_create(&db, &staged).await?;
+    info!("Inserted {} events", inserted);
+
+    Ok(())
 }
 
 async fn fetch_events(

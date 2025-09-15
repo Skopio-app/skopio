@@ -13,15 +13,13 @@ pub trait TracingExt {
 
 impl TracingExt for AppHandle {
     fn init_tracing(&self) -> Result<()> {
-        let env_filter = EnvFilter::try_from_default_env()
-            .or_else(|_| {
-                EnvFilter::try_from(if cfg!(debug_assertions) {
-                    "debug"
-                } else {
-                    "info"
-                })
+        let env_filter = EnvFilter::try_from_default_env().unwrap_or_else(|_| {
+            EnvFilter::from(if cfg!(debug_assertions) {
+                "debug"
+            } else {
+                "info"
             })
-            .unwrap();
+        });
 
         let timer = fmt::time::ChronoLocal::rfc_3339();
 

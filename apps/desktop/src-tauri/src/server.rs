@@ -230,10 +230,8 @@ fn unzip_binary(zip_path: &Path, out_path: &Path) -> Result<(), ServerCtlError> 
             }
         }
     }
-    if pick_idx.is_none() && archive.len() == 1 {
-        if archive.by_index(0)?.is_file() {
-            pick_idx = Some(0);
-        }
+    if pick_idx.is_none() && archive.len() == 1 && archive.by_index(0)?.is_file() {
+        pick_idx = Some(0);
     }
 
     let idx = pick_idx
@@ -269,19 +267,19 @@ fn write_plist(app: &AppHandle, bin: &Path) -> Result<PathBuf, ServerCtlError> {
 
     let plist = format!(
         r#"<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
-  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0"><dict>
-  <key>Label</key><string>{label}</string>
-  <key>ProgramArguments</key>
-    <array>
-      <string>{bin}</string>
-    </array>
-  <key>RunAtLoad</key><true/>
-  <key>KeepAlive</key><true/>
-  <key>ProcessType</key><string>Background</string>
-</dict></plist>
-"#,
+            <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+                "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+                <plist version="1.0"><dict>
+                <key>Label</key><string>{label}</string>
+                <key>ProgramArguments</key>
+                <array>
+                <string>{bin}</string>
+                </array>
+                <key>RunAtLoad</key><true/>
+                <key>KeepAlive</key><true/>
+                <key>ProcessType</key><string>Background</string>
+                </dict></plist>
+            "#,
         label = PLIST_LABEL,
         bin = bin.display(),
     );

@@ -34,28 +34,41 @@ pub struct Event {
 }
 
 impl Event {
-    // Inserts a new event into the database
-    pub async fn create(self, db_context: &DBContext) -> Result<(), DBError> {
-        sqlx::query!(
+    // Bulk inserts new events into the database
+    pub async fn bulk_create(db_context: &DBContext, events: &[Self]) -> Result<u64, DBError> {
+        if events.is_empty() {
+            return Ok(0);
+        }
+
+        let mut tx = db_context.pool().begin().await?;
+        let mut total_inserted: u64 = 0;
+
+        for ev in events {
+            let res = sqlx::query!(
             "
             INSERT INTO events (id, timestamp, duration, category_id, app_id, entity_id, project_id, branch_id, language_id, source_id, end_timestamp)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             ",
-            self.id,
-            self.timestamp,
-            self.duration,
-            self.category_id,
-            self.app_id,
-            self.entity_id,
-            self.project_id,
-            self.branch_id,
-            self.language_id,
-            self.source_id,
-            self.end_timestamp
+            ev.id,
+            ev.timestamp,
+            ev.duration,
+            ev.category_id,
+            ev.app_id,
+            ev.entity_id,
+            ev.project_id,
+            ev.branch_id,
+            ev.language_id,
+            ev.source_id,
+            ev.end_timestamp
         )
-        .execute(db_context.pool())
+        .execute(&mut *tx)
         .await?;
-        Ok(())
+
+            total_inserted += res.rows_affected();
+        }
+
+        tx.commit().await?;
+        Ok(total_inserted)
     }
 }
 
@@ -124,7 +137,7 @@ impl SummaryQueryBuilder {
                 .map(|s| s.parse::<DateTime<Utc>>())
                 .transpose()?;
 
-            let id = row.try_get("id").map(|id| Uuid::from_slice(id)).unwrap()?;
+            let id = row.try_get("id").map(Uuid::from_slice).unwrap()?;
 
             let event = FullEvent {
                 id,

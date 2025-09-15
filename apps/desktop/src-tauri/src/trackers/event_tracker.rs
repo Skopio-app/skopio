@@ -146,7 +146,7 @@ impl EventTracker {
             *active = Some(Event {
                 timestamp: Some(now),
                 duration: None,
-                category: category,
+                category,
                 app_name: app_name.to_string(),
                 entity_name: Some(entity_name.clone()),
                 entity_type: Some(entity_type),

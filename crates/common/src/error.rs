@@ -2,7 +2,8 @@ use std::{num::ParseIntError, str::Utf8Error};
 
 use thiserror::Error;
 
-/// Errors returned by the common crate
+/// This type represents all possible errors that can occur when interacting
+/// with this crate
 #[derive(Error, Debug)]
 pub enum CommonError {
     /// reqwest errors

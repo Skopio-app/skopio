@@ -5,35 +5,10 @@ use std::{
 
 use common::keyring::Keyring;
 use env_logger::Builder;
-use log::{error, LevelFilter};
+use log::LevelFilter;
 use rusqlite::Connection;
-use thiserror::Error;
 
-use crate::{db::migrations, sync::SyncError};
-
-#[derive(Error, Debug)]
-pub enum CliError {
-    #[error("I/O error: {0}")]
-    Io(#[from] std::io::Error),
-
-    #[error("SQLite error: {0}")]
-    Sqlite(#[from] rusqlite::Error),
-
-    #[error("Migration error: {0}")]
-    Migration(#[from] refinery::Error),
-
-    #[error("Invalid database path: No parent directory")]
-    InvalidDbPath,
-
-    #[error("Sync error: {0}")]
-    Sync(#[from] SyncError),
-
-    #[error("Expected {0} command, but received a different variant")]
-    VariantMismatch(String),
-
-    #[error("Serde json error: {0}")]
-    Json(#[from] serde_json::Error),
-}
+use crate::{db::migrations, error::CliError};
 
 /// Extracts the project name from the project path
 pub fn extract_project_name<T: AsRef<Path>>(project_path: T) -> String {
@@ -81,12 +56,12 @@ pub fn setup_test_conn() -> Connection {
     conn
 }
 
-pub fn setup_keyring(app_name: &str) -> Result<Option<String>, CliError> {
+pub fn setup_keyring() -> Result<Option<String>, CliError> {
     if cfg!(debug_assertions) {
         return Ok(None);
     }
     let password = uuid::Uuid::new_v4().to_string();
-    let key = Keyring::get_or_set_password("skopio-cli", app_name, &password)
-        .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, format!("keyring: {e}")))?;
+    let key = Keyring::get_or_set_password("skopio-cli", "db-master-key", &password)
+        .map_err(|e| std::io::Error::other(format!("keyring: {e}")))?;
     Ok(Some(key))
 }

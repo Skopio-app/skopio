@@ -3,7 +3,7 @@ use common::models::inputs::AFKEventInput;
 use db::{server::afk_events::AFKEvent, DBContext};
 use std::sync::Arc;
 use tokio::sync::Mutex;
-use tracing::debug;
+use tracing::{debug, info};
 use uuid::Uuid;
 
 use crate::error::AppResult;
@@ -11,24 +11,28 @@ use crate::error::AppResult;
 async fn handle_afk_events(
     State(db): State<Arc<Mutex<DBContext>>>,
     Json(payload): Json<Vec<AFKEventInput>>,
-) -> AppResult<Json<String>> {
-    let db = db.lock().await;
-
+) -> AppResult<()> {
     debug!("Handling {} afk events", payload.len());
 
-    for afk in payload {
-        let id = Uuid::now_v7();
-        let afk_event = AFKEvent {
-            id,
+    let events: Vec<AFKEvent> = payload
+        .into_iter()
+        .map(|afk| AFKEvent {
+            id: Uuid::now_v7(),
             afk_start: afk.afk_start,
             afk_end: afk.afk_end,
             duration: afk.duration,
-        };
+        })
+        .collect();
 
-        afk_event.create(&db).await?;
+    if events.is_empty() {
+        return Ok(());
     }
 
-    Ok(Json("AFK events saved".to_owned()))
+    let db = db.lock().await;
+    let inserted = AFKEvent::bulk_create(&db, &events).await?;
+
+    info!("Inserted {} AFK events", inserted);
+    Ok(())
 }
 
 pub fn afk_event_routes(db: Arc<Mutex<DBContext>>) -> Router {

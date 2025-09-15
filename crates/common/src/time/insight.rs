@@ -22,10 +22,7 @@ impl TryFrom<String> for InsightRange {
                 _ => return Err(TimeError::InvalidDate),
             };
             let end = start + Duration::days(1);
-            return Ok(InsightRange {
-                start: start,
-                end: end,
-            });
+            return Ok(InsightRange { start, end });
         }
 
         // Handle "yyyy-mm"
@@ -43,10 +40,7 @@ impl TryFrom<String> for InsightRange {
                 _ => return Err(TimeError::InvalidDate),
             };
 
-            return Ok(InsightRange {
-                start: start,
-                end: end,
-            });
+            return Ok(InsightRange { start, end });
         }
 
         // Handle "yyyy-W##"
@@ -72,10 +66,7 @@ impl TryFrom<String> for InsightRange {
             };
             let end = start + Duration::days(7);
 
-            return Ok(InsightRange {
-                start: start,
-                end: end,
-            });
+            return Ok(InsightRange { start, end });
         }
 
         // Handle "yyyy"
@@ -88,10 +79,7 @@ impl TryFrom<String> for InsightRange {
                 LocalResult::Single(dt) => dt,
                 _ => return Err(TimeError::InvalidDate),
             };
-            return Ok(InsightRange {
-                start: start,
-                end: end,
-            });
+            return Ok(InsightRange { start, end });
         }
 
         Err(TimeError::InvalidDate)

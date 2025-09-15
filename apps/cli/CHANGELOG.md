@@ -1,3 +1,5 @@
+<!-- markdownlint-disable MD024 -->
+
 # Changelog
 
 All notable changes to the CLI app will be documented in this file.
@@ -18,6 +20,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - (placeholder)
+
+---
+
+## [v0.1.2] - 2025-09-16
+
+### Changed
+
+- Removed redundant `heartbeat` command.
+- Removed `app` and `db` cli options.
 
 ---
 

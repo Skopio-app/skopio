@@ -5,7 +5,8 @@ export const getEntityName = (
   metadata: string | null,
 ): string => {
   if (metadata !== null && metadata === "File") {
-    return fullPath.split(/[\\/]/).pop() || fullPath;
+    const parts = fullPath.split(/[\\/]/);
+    return parts.slice(-2).join("/");
   }
   return fullPath;
 };

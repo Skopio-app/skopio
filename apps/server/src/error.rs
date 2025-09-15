@@ -10,6 +10,8 @@ use serde::Serialize;
 use thiserror::Error;
 use tracing::{error, warn};
 
+/// This type represents all possible errors that can occur when interacting
+/// with the server app
 #[derive(Debug, Error)]
 pub enum ServerError {
     // 4xx

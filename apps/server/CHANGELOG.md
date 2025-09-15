@@ -1,3 +1,5 @@
+<!-- markdownlint-disable MD024 -->
+
 # Changelog
 
 All notable changes to the server app will be documented in this file.
@@ -18,6 +20,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - (placeholder)
+
+---
+
+## [v.0.1.1] - 2025-09-15
+
+### Fixed
+
+- Improved batch insertion of events and AFK events
 
 ---
 
