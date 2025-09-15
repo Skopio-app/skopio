@@ -52,10 +52,10 @@ pub struct EventGroup {
 /// The result of fetching events for a time/window query
 ///
 /// - `Flat(Vec<FullEvent>)` - returned when no `group_by` is set. Contains every
-///    matching event row.
+///   matching event row.
 /// - `Grouped(Vec<EventGroup>)` - returned when a `group_by` dimension is set.
-///    Each `EventGroup` holds a `group` key (e.g., a category name) and **all**
-///    events that belong to that group.
+///   Each `EventGroup` holds a `group` key (e.g., a category name) and **all**
+///   events that belong to that group.
 #[derive(Debug, Serialize, Deserialize, specta::Type)]
 pub enum EventGroupResult {
     /// Ungrouped list of events.

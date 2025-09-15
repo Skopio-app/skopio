@@ -137,7 +137,7 @@ impl SummaryQueryBuilder {
                 .map(|s| s.parse::<DateTime<Utc>>())
                 .transpose()?;
 
-            let id = row.try_get("id").map(|id| Uuid::from_slice(id)).unwrap()?;
+            let id = row.try_get("id").map(Uuid::from_slice).unwrap()?;
 
             let event = FullEvent {
                 id,

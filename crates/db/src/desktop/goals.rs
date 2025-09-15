@@ -1,4 +1,8 @@
-use std::{collections::HashMap, str::FromStr};
+use std::{
+    collections::HashMap,
+    fmt::{self, Display},
+    str::FromStr,
+};
 
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
@@ -28,19 +32,18 @@ impl FromStr for TimeSpan {
     }
 }
 
-impl ToString for TimeSpan {
-    fn to_string(&self) -> String {
-        match self {
+impl Display for TimeSpan {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> fmt::Result {
+        let s = match self {
             TimeSpan::Day => "day",
             TimeSpan::Week => "week",
             TimeSpan::Month => "month",
             TimeSpan::Year => "year",
-        }
-        .to_string()
+        };
+        write!(f, "{}", s)
     }
 }
 
-// TODO: Store excluded days as numbers instead of strings
 #[derive(Debug, Clone, Serialize, Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct Goal {

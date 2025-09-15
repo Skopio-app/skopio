@@ -30,7 +30,7 @@ fn fetch_unsynced_events(conn: &Connection) -> Result<Vec<EventInput>, CliError>
             "SELECT timestamp, category, app, entity_name, entity_type, duration, project_path, branch, language, source, end_timestamp
                  FROM events WHERE synced = 0"
                 )?;
-    let rows = stmt.query_map([], |row| parse_event(row))?;
+    let rows = stmt.query_map([], parse_event)?;
     Ok(rows.flatten().collect())
 }
 

@@ -41,7 +41,7 @@ impl Branch {
             .await?;
 
             let result_id = Uuid::from_slice(&result.id)?;
-            return Ok(Some(result_id));
+            Ok(Some(result_id))
         } else {
             Ok(None)
         }

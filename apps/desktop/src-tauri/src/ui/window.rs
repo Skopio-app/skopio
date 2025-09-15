@@ -174,7 +174,7 @@ fn get_notification_url(payload: &NotificationPayload) -> Result<Url, ParseError
     };
 
     let mut url = Url::parse(base_url)?;
-    if let Ok(payload_data) = encode_payload(&payload) {
+    if let Ok(payload_data) = encode_payload(payload) {
         url.query_pairs_mut().append_pair("payload", &payload_data);
     }
 

@@ -62,6 +62,6 @@ pub fn setup_keyring() -> Result<Option<String>, CliError> {
     }
     let password = uuid::Uuid::new_v4().to_string();
     let key = Keyring::get_or_set_password("skopio-cli", "db-master-key", &password)
-        .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, format!("keyring: {e}")))?;
+        .map_err(|e| std::io::Error::other(format!("keyring: {e}")))?;
     Ok(Some(key))
 }

@@ -25,7 +25,7 @@ repos:
       - id: clippy
         name: Rust Linter (Clippy)
         description: Check for warnings and best practices
-        entry: cargo clippy -- -D warnings -A clippy::style
+        entry: cargo clippy -- -D warnings
         language: system
         pass_filenames: false
 

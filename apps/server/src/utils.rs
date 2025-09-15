@@ -4,9 +4,9 @@ use tracing_subscriber::{fmt, layer::SubscriberExt, util::SubscriberInitExt, Env
 
 fn get_db_name() -> String {
     if cfg!(debug_assertions) {
-        return String::from("skopio_server_test.db");
+        String::from("skopio_server_test.db")
     } else {
-        return String::from("skopio_server.db");
+        String::from("skopio_server.db")
     }
 }
 

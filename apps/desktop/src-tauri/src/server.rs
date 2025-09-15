@@ -230,10 +230,8 @@ fn unzip_binary(zip_path: &Path, out_path: &Path) -> Result<(), ServerCtlError> 
             }
         }
     }
-    if pick_idx.is_none() && archive.len() == 1 {
-        if archive.by_index(0)?.is_file() {
-            pick_idx = Some(0);
-        }
+    if pick_idx.is_none() && archive.len() == 1 && archive.by_index(0)?.is_file() {
+        pick_idx = Some(0);
     }
 
     let idx = pick_idx

@@ -9,9 +9,9 @@ pub fn format_duration(seconds: i64) -> String {
     let sec_str = format!("{:02}s", secs);
 
     if hrs > 0 {
-        return format!("{hrs_str} {min_str} {sec_str}");
+        format!("{hrs_str} {min_str} {sec_str}")
     } else if mins > 0 {
-        return format!("{min_str} {sec_str}");
+        format!("{min_str} {sec_str}")
     } else {
         sec_str
     }

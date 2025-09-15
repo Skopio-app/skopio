@@ -27,7 +27,13 @@ pub fn init_db() -> Result<Connection, CliError> {
 
     let key_opt = setup_keyring()?;
 
-    let db_path = cli_dir.join("cli.db");
+    let db_name = if cfg!(debug_assertions) {
+        "cli_dev.db"
+    } else {
+        "cli.db"
+    };
+
+    let db_path = cli_dir.join(db_name);
 
     let mut conn = get_connection(db_path, key_opt)?;
     migrations::runner().run(&mut conn)?;
