@@ -24,6 +24,14 @@ DATABASE_URL_DESKTOP=sqlite://./data/desktop.db
 DATABASE_URL_SERVER=sqlite://./data/server.db
 ```
 
+Given that we use pre-commit hooks for running tasks such as code formatting and linting, run the following commands to
+set up the pre-commit config already in the project:
+
+```bash
+pip install pre-commit
+pre-commit install
+```
+
 For any changes to the database schema over at `crates/db/migrations`, make sure to run `./scripts/sync_db.sh`.
 
 In order to guarantee that both desktop and server query validations are satisfied whenever you make changes to queries in the `db` crate, make sure to run `./scripts/merge_sqlx.sh`.
