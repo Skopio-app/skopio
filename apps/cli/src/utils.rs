@@ -16,9 +16,6 @@ pub enum CliError {
     #[error("Database error: {0}")]
     Db(#[from] rusqlite::Error),
 
-    #[error("Network error: {0}")]
-    Network(#[from] reqwest::Error),
-
     #[error("Common error: {0}")]
     Common(#[from] common::error::CommonError),
 

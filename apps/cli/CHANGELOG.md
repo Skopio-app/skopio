@@ -21,6 +21,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v0.1.2] - 2025-09-16
+
+### Changed
+
+- Removed redundant `heartbeat` command.
+- Removed `app` and `db` cli options.
+
+---
+
 ## [v0.1.1] - 2025-08-15
 
 ### Added

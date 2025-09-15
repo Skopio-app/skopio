@@ -16,7 +16,7 @@ pub async fn sync_data(conn: &Connection) -> Result<(), CliError> {
     if !events.is_empty() {
         sync_to_server(&transport, "events", &events).await?;
         conn.execute("UPDATE events SET synced = 1 WHERE synced = 0", [])?;
-        info!("Events synced successfully!")
+        info!("{} events synced successfully!", events.len())
     }
 
     delete_synced_data(conn)?;
