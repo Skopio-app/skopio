@@ -24,7 +24,7 @@ pub async fn sync_data(conn: &Connection) -> Result<(), CliError> {
     Ok(())
 }
 
-fn fetch_unsynced_events(conn: &Connection) -> Result<Vec<EventInput>, rusqlite::Error> {
+fn fetch_unsynced_events(conn: &Connection) -> Result<Vec<EventInput>, CliError> {
     let mut stmt = conn
         .prepare(
             "SELECT timestamp, category, app, entity_name, entity_type, duration, project_path, branch, language, source, end_timestamp

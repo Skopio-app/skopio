@@ -269,19 +269,19 @@ fn write_plist(app: &AppHandle, bin: &Path) -> Result<PathBuf, ServerCtlError> {
 
     let plist = format!(
         r#"<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
-  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
-<plist version="1.0"><dict>
-  <key>Label</key><string>{label}</string>
-  <key>ProgramArguments</key>
-    <array>
-      <string>{bin}</string>
-    </array>
-  <key>RunAtLoad</key><true/>
-  <key>KeepAlive</key><true/>
-  <key>ProcessType</key><string>Background</string>
-</dict></plist>
-"#,
+            <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+                "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+                <plist version="1.0"><dict>
+                <key>Label</key><string>{label}</string>
+                <key>ProgramArguments</key>
+                <array>
+                <string>{bin}</string>
+                </array>
+                <key>RunAtLoad</key><true/>
+                <key>KeepAlive</key><true/>
+                <key>ProcessType</key><string>Background</string>
+                </dict></plist>
+            "#,
         label = PLIST_LABEL,
         bin = bin.display(),
     );

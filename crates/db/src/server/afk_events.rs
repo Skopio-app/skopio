@@ -12,21 +12,32 @@ pub struct AFKEvent {
 }
 
 impl AFKEvent {
-    /// Insert an AFK event
-    pub async fn create(&self, db_context: &DBContext) -> Result<(), DBError> {
-        sqlx::query!(
-            "
-            INSERT INTO afk_events (id, afk_start, afk_end, duration)
-             VALUES (?, ?, ?, ?)
-             ",
-            self.id,
-            self.afk_start,
-            self.afk_end,
-            self.duration
-        )
-        .execute(db_context.pool())
-        .await?;
-        Ok(())
+    /// Bulk inserts AFK events into the database
+    pub async fn bulk_create(db_context: &DBContext, events: &[Self]) -> Result<u64, DBError> {
+        if events.is_empty() {
+            return Ok(0);
+        }
+
+        let mut tx = db_context.pool().begin().await?;
+        let mut total_inserted: u64 = 0;
+
+        for ev in events {
+            let res = sqlx::query!(
+                "INSERT OR IGNORE INTO afk_events (id, afk_start, afk_end, duration)
+                 VALUES (?, ?, ?, ?)",
+                ev.id,
+                ev.afk_start,
+                ev.afk_end,
+                ev.duration
+            )
+            .execute(&mut *tx)
+            .await?;
+
+            total_inserted += res.rows_affected();
+        }
+
+        tx.commit().await?;
+        Ok(total_inserted)
     }
 }
 
