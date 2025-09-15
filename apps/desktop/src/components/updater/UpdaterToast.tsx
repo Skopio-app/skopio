@@ -193,8 +193,6 @@ const runUpdaterFlow = async () => {
   const update = await check().catch((e) => console.warn("Updater error: ", e));
   if (!update) return;
 
-  console.log("The update: ", update);
-
   const ui = showUpdaterToast({
     version: update.version,
     body: update.body,

@@ -20,7 +20,7 @@ async fn main() {
     init_logger();
 
     if let Err(err) = run().await {
-        error!("Fatal error: {:#}", err);
+        error!("CLI error: {:#}", err);
         std::process::exit(1);
     }
 }
