@@ -45,24 +45,28 @@ impl Event {
 
         for ev in events {
             let res = sqlx::query!(
-            "
-            INSERT INTO events (id, timestamp, duration, category_id, app_id, entity_id, project_id, branch_id, language_id, source_id, end_timestamp)
+                "
+            INSERT INTO events (
+                id, timestamp, duration, category_id, app_id,
+                entity_id, project_id, branch_id, language_id, source_id, end_timestamp
+            )
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(id) DO NOTHING
             ",
-            ev.id,
-            ev.timestamp,
-            ev.duration,
-            ev.category_id,
-            ev.app_id,
-            ev.entity_id,
-            ev.project_id,
-            ev.branch_id,
-            ev.language_id,
-            ev.source_id,
-            ev.end_timestamp
-        )
-        .execute(&mut *tx)
-        .await?;
+                ev.id,
+                ev.timestamp,
+                ev.duration,
+                ev.category_id,
+                ev.app_id,
+                ev.entity_id,
+                ev.project_id,
+                ev.branch_id,
+                ev.language_id,
+                ev.source_id,
+                ev.end_timestamp
+            )
+            .execute(&mut *tx)
+            .await?;
 
             total_inserted += res.rows_affected();
         }

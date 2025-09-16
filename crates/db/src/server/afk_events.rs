@@ -24,7 +24,8 @@ impl AFKEvent {
         for ev in events {
             let res = sqlx::query!(
                 "INSERT OR IGNORE INTO afk_events (id, afk_start, afk_end, duration)
-                 VALUES (?, ?, ?, ?)",
+                 VALUES (?, ?, ?, ?)
+                 ON CONFLICT(id) DO NOTHING",
                 ev.id,
                 ev.afk_start,
                 ev.afk_end,

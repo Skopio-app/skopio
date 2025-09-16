@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "INSERT OR IGNORE INTO afk_events (id, afk_start, afk_end, duration)\n                 VALUES (?, ?, ?, ?)\n                 ON CONFLICT(id) DO NOTHING",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 4
+    },
+    "nullable": []
+  },
+  "hash": "cd1f4e794fbde8b9f6a7f14b7d53cbfd42eee60c60d58f105dab6a2b449df1b0"
+}
