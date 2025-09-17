@@ -101,4 +101,4 @@ impl IntoResponse for ServerError {
     }
 }
 
-pub type AppResult<T> = Result<T, ServerError>;
+pub type ServerResult<T> = Result<T, ServerError>;

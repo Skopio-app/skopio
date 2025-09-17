@@ -10,12 +10,12 @@ use db::{
 use serde_qs::axum::QsQuery;
 use tokio::sync::Mutex;
 
-use crate::error::AppResult;
+use crate::error::ServerResult;
 
 pub async fn total_time_handler(
     State(db): State<Arc<Mutex<DBContext>>>,
     QsQuery(payload): QsQuery<SummaryQueryInput>,
-) -> AppResult<Json<i64>> {
+) -> ServerResult<Json<i64>> {
     let db = db.lock().await;
 
     let builder: SummaryQueryBuilder = payload.into();
@@ -27,7 +27,7 @@ pub async fn total_time_handler(
 pub async fn execute_range_summary(
     State(db): State<Arc<Mutex<DBContext>>>,
     QsQuery(payload): QsQuery<SummaryQueryInput>,
-) -> AppResult<Json<Vec<GroupedTimeSummary>>> {
+) -> ServerResult<Json<Vec<GroupedTimeSummary>>> {
     let db = db.lock().await;
 
     let builder: SummaryQueryBuilder = payload.into();
@@ -39,7 +39,7 @@ pub async fn execute_range_summary(
 pub async fn get_bucketed_summary(
     State(db): State<Arc<Mutex<DBContext>>>,
     QsQuery(payload): QsQuery<BucketSummaryInput>,
-) -> AppResult<Json<Vec<BucketTimeSummary>>> {
+) -> ServerResult<Json<Vec<BucketTimeSummary>>> {
     let db = db.lock().await;
     let builder: SummaryQueryBuilder = payload.into();
 

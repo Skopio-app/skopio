@@ -6,12 +6,12 @@ use tokio::sync::Mutex;
 use tracing::info;
 use uuid::Uuid;
 
-use crate::error::AppResult;
+use crate::error::ServerResult;
 
 async fn handle_afk_events(
     State(db): State<Arc<Mutex<DBContext>>>,
     Json(payload): Json<Vec<AFKEventInput>>,
-) -> AppResult<()> {
+) -> ServerResult<()> {
     info!("Handling {} afk events", payload.len());
 
     let mut events: Vec<AFKEvent> = payload
@@ -37,10 +37,6 @@ async fn handle_afk_events(
 
     events.sort_by_key(|e| e.id);
     events.dedup_by_key(|e| e.id);
-
-    if events.is_empty() {
-        return Ok(());
-    }
 
     let db = db.lock().await;
     let inserted = AFKEvent::bulk_create(&db, &events).await?;

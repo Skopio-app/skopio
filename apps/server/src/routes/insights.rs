@@ -15,12 +15,12 @@ use db::{
 };
 use tokio::sync::Mutex;
 
-use crate::error::AppResult;
+use crate::error::ServerResult;
 
 pub async fn fetch_insight(
     State(db): State<Arc<Mutex<DBContext>>>,
     Query(payload): Query<InsightQueryPayload>,
-) -> AppResult<Json<InsightResult>> {
+) -> ServerResult<Json<InsightResult>> {
     let db = db.lock().await;
 
     let insight_range = match &payload.insight_range {

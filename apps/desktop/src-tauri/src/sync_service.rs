@@ -218,7 +218,7 @@ async fn sync_with_server(db_context: &Arc<DBContext>) -> Result<(), anyhow::Err
             })
             .collect();
 
-        match post_json::<Vec<EventInput>, String>("/events", &payload).await {
+        match post_json::<Vec<EventInput>, ()>("/events", &payload).await {
             Ok(_) => {
                 Event::mark_as_synced(db_context, &events).await?;
                 info!("Synced {} events", events.len());
@@ -241,7 +241,7 @@ async fn sync_with_server(db_context: &Arc<DBContext>) -> Result<(), anyhow::Err
             })
             .collect();
 
-        match post_json::<Vec<AFKEventInput>, String>("/afk", &payload).await {
+        match post_json::<Vec<AFKEventInput>, ()>("/afk", &payload).await {
             Ok(_) => {
                 AFKEvent::mark_as_synced(db_context, &afk_events).await?;
                 info!("Synced {} afk events", afk_events.len());

@@ -1,4 +1,4 @@
-use crate::error::AppResult;
+use crate::error::ServerResult;
 use axum::extract::State;
 use axum::routing::{get, post};
 use axum::{Json, Router};
@@ -21,7 +21,7 @@ use uuid::Uuid;
 async fn insert_events(
     State(db): State<Arc<Mutex<DBContext>>>,
     Json(payload): Json<Vec<EventInput>>,
-) -> AppResult<()> {
+) -> ServerResult<()> {
     info!("Handling {} events", payload.len());
 
     let db = db.lock().await;
@@ -81,7 +81,7 @@ async fn insert_events(
 async fn fetch_events(
     State(db): State<Arc<Mutex<DBContext>>>,
     QsQuery(payload): QsQuery<BucketSummaryInput>,
-) -> AppResult<Json<EventGroupResult>> {
+) -> ServerResult<Json<EventGroupResult>> {
     let db = db.lock().await;
     let builder = SummaryQueryBuilder::from(payload);
     let result = builder.fetch_event_range(&db).await?;

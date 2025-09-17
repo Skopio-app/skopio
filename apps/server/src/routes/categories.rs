@@ -4,11 +4,11 @@ use axum::{extract::State, routing::get, Json, Router};
 use db::{models::Category, DBContext};
 use tokio::sync::Mutex;
 
-use crate::error::AppResult;
+use crate::error::ServerResult;
 
 async fn fetch_categories(
     State(db): State<Arc<Mutex<DBContext>>>,
-) -> AppResult<Json<Vec<Category>>> {
+) -> ServerResult<Json<Vec<Category>>> {
     let db = db.lock().await;
 
     let categories = Category::get_all(&db).await?;
