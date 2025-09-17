@@ -43,12 +43,16 @@ impl TracingExt for AppHandle {
         {
             use std::fs;
             use tauri::Manager;
-            use tracing_appender::rolling;
+            use tracing_appender::rolling::{RollingFileAppender, Rotation};
 
             let log_dir = self.path().app_log_dir().unwrap_or_default();
             fs::create_dir_all(&log_dir).ok();
 
-            let file_appender = rolling::daily(&log_dir, "skopio.log");
+            let file_appender = RollingFileAppender::builder()
+                .rotation(Rotation::DAILY)
+                .filename_prefix("skopio")
+                .filename_suffix("log")
+                .build(log_dir)?;
             let (non_blocking, guard) = tracing_appender::non_blocking(file_appender);
             self.manage(guard);
 

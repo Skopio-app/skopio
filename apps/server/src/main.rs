@@ -15,7 +15,9 @@ mod utils;
 
 #[tokio::main]
 async fn main() {
-    init_tracing();
+    if let Err(e) = init_tracing() {
+        error!("Failed to init tracing: {e}");
+    }
     info!("🚀 Starting server...");
 
     let db_path = utils::get_db_path();
