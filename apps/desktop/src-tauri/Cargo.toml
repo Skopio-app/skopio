@@ -1,7 +1,7 @@
 [package]
 name = "Skopio"
-version = "0.1.0"
-description = "A Tauri App"
+version = "0.1.1"
+description = "A productivity tool to help track general app usage and coding stats."
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
