@@ -20,7 +20,7 @@ import { useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
 import * as z from "zod/v4";
 import HotkeyField from "@/components/settings/HotkeyField";
-import { AFK, AFK_KEYS, AFK_SECONDS } from "@/utils/constants";
+import { AFK, AFK_KEYS, AFK_SECONDS, AFK_LABELS } from "@/utils/constants";
 import { useAutostart } from "@/hooks/useAutostart";
 import { useGlobalShortcut } from "@/hooks/useGlobalShortcut";
 import { commands, OpenApp, TrackedApp } from "@/types/tauri.gen";
@@ -92,13 +92,14 @@ const General = () => {
     (async () => {
       try {
         const tracked = (await commands.getConfig()).trackedApps ?? [];
-        const initialAfk = form.getValues("afkSensitivity") || "1m";
+        const afk = (await commands.getConfig()).afkTimeout;
+        const seconds = AFK_LABELS[afk];
 
         form.reset(
           {
             launchOnStartup: autoEnabled,
             globalShortcut: shortcut || "",
-            afkSensitivity: initialAfk,
+            afkSensitivity: seconds,
             trackedApps: tracked,
           },
           { keepDirty: false, keepTouched: true },
@@ -106,7 +107,7 @@ const General = () => {
 
         lastShortcut.current = shortcut || "";
         lastSaved.current = autoEnabled;
-        lastAfk.current = initialAfk;
+        lastAfk.current = seconds;
         lastTrackedJSON.current = JSON.stringify([...tracked].sort());
         hydratedRef.current = true;
       } catch (e) {

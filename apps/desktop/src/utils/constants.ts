@@ -16,3 +16,6 @@ export const AFK_KEYS = AFK.map(([key]) => key) as readonly AfkKey[];
 export const AFK_SECONDS = Object.fromEntries(
   AFK.map(([k, , s]) => [k, s]),
 ) as Record<AfkKey, AfkSeconds>;
+export const AFK_LABELS = Object.fromEntries(
+  AFK.map(([k, , s]) => [s, k]),
+) as Record<number, AfkKey>;
