@@ -1,3 +1,5 @@
+<!-- markdownlint-disable MD024 -->
+
 # Changelog
 
 All notable changes to the desktop app will be documented in this file.
@@ -18,6 +20,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - (placeholder)
+
+---
+
+## [v0.1.1] - 2025-09-17
+
+### Fixed
+
+- EOF error when syncing events.
+
+### Changed
+
+- Move traffic light position in UI due to macos Tahoe.
+- Modify olling log appender config to save logs in a more accessible manner.
+- Add Windsurf to list of ignored apps.
+- `File` entity displays an additional path segment.
 
 ---
 
