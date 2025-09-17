@@ -13,12 +13,12 @@ use common::models::{
 use db::{server::projects::ServerProject, DBContext};
 use tokio::sync::Mutex;
 
-use crate::error::AppResult;
+use crate::error::ServerResult;
 
 pub async fn get_projects(
     State(db): State<Arc<Mutex<DBContext>>>,
     Query(query): Query<PaginationQuery>,
-) -> AppResult<Json<PaginatedProjects>> {
+) -> ServerResult<Json<PaginatedProjects>> {
     let db = db.lock().await;
 
     let limit = query.limit.unwrap_or(20).min(100);
@@ -37,7 +37,7 @@ pub async fn get_projects(
 pub async fn fetch_project(
     State(db): State<Arc<Mutex<DBContext>>>,
     Query(query): Query<ProjectQuery>,
-) -> AppResult<Json<Option<Project>>> {
+) -> ServerResult<Json<Option<Project>>> {
     let db = db.lock().await;
 
     let project = ServerProject::find_by_id(&db, query.id).await?;
@@ -48,7 +48,7 @@ pub async fn fetch_project(
 pub async fn search_projects(
     State(db): State<Arc<Mutex<DBContext>>>,
     Query(query): Query<ProjectSearchQuery>,
-) -> AppResult<Json<Vec<Project>>> {
+) -> ServerResult<Json<Vec<Project>>> {
     let db = db.lock().await;
 
     let projects = ServerProject::search_project(&db, &query.name, query.limit).await?;

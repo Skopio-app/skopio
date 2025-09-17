@@ -48,5 +48,8 @@ where
         .await
         .map_err(|e| e.to_string())?;
 
-    serde_json::from_str::<TRes>(&text).map_err(|e| e.to_string())
+    let trimmed = text.trim();
+    let json_src = if trimmed.is_empty() { "null" } else { trimmed };
+
+    serde_json::from_str::<TRes>(json_src).map_err(|e| e.to_string())
 }

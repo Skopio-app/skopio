@@ -17,13 +17,6 @@ git clone https://github.com/Skopio-app/skopio --recursive
 yarn install
 ```
 
-Add the following variables to a `.env` file created at the root of the project. These are required for database schema syncing via `sqlx`
-
-```env
-DATABASE_URL_DESKTOP=sqlite://./data/desktop.db
-DATABASE_URL_SERVER=sqlite://./data/server.db
-```
-
 Given that we use pre-commit hooks for running tasks such as code formatting and linting, run the following commands to
 set up the pre-commit config already in the project:
 

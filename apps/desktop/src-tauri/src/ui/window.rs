@@ -32,7 +32,6 @@ impl WindowKind {
         }
     }
 
-    /// Returns the base App route for this window (used when not using multiple HTML entries).
     pub fn default_route(self) -> &'static str {
         match self {
             WindowKind::Main => "/",
@@ -60,7 +59,7 @@ impl WindowKind {
     }
 
     fn build<R: Runtime>(self, app: &AppHandle<R>) -> tauri::Result<WebviewWindow<R>> {
-        let position = Position::from(LogicalPosition::new(20.0, 15.0));
+        let position = Position::from(LogicalPosition::new(20.0, 19.0));
         match self {
             WindowKind::Main => {
                 let url = WebviewUrl::App(self.default_route().into());

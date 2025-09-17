@@ -18,7 +18,7 @@ pub fn get_db_path() -> PathBuf {
         .join(get_db_name())
 }
 
-pub fn init_tracing() {
+pub fn init_tracing() -> anyhow::Result<()> {
     let level = if cfg!(debug_assertions) {
         "debug"
     } else {
@@ -43,13 +43,18 @@ pub fn init_tracing() {
     #[cfg(not(debug_assertions))]
     {
         use std::fs;
-        use tracing_appender::rolling;
+        use tracing_appender::rolling::{RollingFileAppender, Rotation};
 
         let log_dir: PathBuf = dirs::home_dir()
             .unwrap_or_else(|| PathBuf::from("/tmp"))
             .join("Library/Logs/com.samwahome.skopio/server");
-        let _ = fs::create_dir_all(&log_dir);
-        let file_appender = rolling::daily(&log_dir, "server.log");
+        fs::create_dir_all(&log_dir).ok();
+
+        let file_appender = RollingFileAppender::builder()
+            .rotation(Rotation::DAILY)
+            .filename_prefix("server")
+            .filename_suffix("log")
+            .build(log_dir)?;
         let (file_nb, guard) = tracing_appender::non_blocking(file_appender);
 
         Box::leak(Box::new(guard));
@@ -66,4 +71,6 @@ pub fn init_tracing() {
             .try_init()
             .ok();
     }
+
+    Ok(())
 }

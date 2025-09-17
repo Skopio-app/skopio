@@ -3,30 +3,40 @@ use common::models::inputs::AFKEventInput;
 use db::{server::afk_events::AFKEvent, DBContext};
 use std::sync::Arc;
 use tokio::sync::Mutex;
-use tracing::{debug, info};
+use tracing::info;
 use uuid::Uuid;
 
-use crate::error::AppResult;
+use crate::error::ServerResult;
 
 async fn handle_afk_events(
     State(db): State<Arc<Mutex<DBContext>>>,
     Json(payload): Json<Vec<AFKEventInput>>,
-) -> AppResult<()> {
-    debug!("Handling {} afk events", payload.len());
+) -> ServerResult<()> {
+    info!("Handling {} afk events", payload.len());
 
-    let events: Vec<AFKEvent> = payload
+    let mut events: Vec<AFKEvent> = payload
         .into_iter()
-        .map(|afk| AFKEvent {
-            id: Uuid::now_v7(),
-            afk_start: afk.afk_start,
-            afk_end: afk.afk_end,
-            duration: afk.duration,
+        .map(|afk| {
+            let key = format!(
+                "{}|{}|{}",
+                afk.afk_start,
+                afk.afk_end.unwrap_or_default(),
+                afk.duration.unwrap_or_default(),
+            );
+
+            let id = Uuid::new_v5(&Uuid::NAMESPACE_URL, key.as_bytes());
+
+            AFKEvent {
+                id,
+                afk_start: afk.afk_start,
+                afk_end: afk.afk_end,
+                duration: afk.duration,
+            }
         })
         .collect();
 
-    if events.is_empty() {
-        return Ok(());
-    }
+    events.sort_by_key(|e| e.id);
+    events.dedup_by_key(|e| e.id);
 
     let db = db.lock().await;
     let inserted = AFKEvent::bulk_create(&db, &events).await?;

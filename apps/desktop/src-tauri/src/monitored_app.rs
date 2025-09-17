@@ -53,10 +53,16 @@ static LEARNING_URLS: LazyLock<HashSet<&'static str>> = LazyLock::new(|| {
 });
 
 pub static IGNORED_APPS: LazyLock<HashMap<MonitoredApp, &'static str>> = LazyLock::new(|| {
-    HashMap::from([(
-        MonitoredApp::Code,
-        "An editor extension for Code is available to capture more accurate data",
-    )])
+    HashMap::from([
+        (
+            MonitoredApp::Code,
+            "An editor extension for Visual Studio Code is available to capture more accurate data",
+        ),
+        (
+            MonitoredApp::Windsurf,
+            "An editor extension for Windsurf is available to capture more accurate data",
+        ),
+    ])
 });
 
 static CODING_URLS: LazyLock<HashSet<&'static str>> = LazyLock::new(|| {
@@ -120,6 +126,10 @@ pub enum MonitoredApp {
     Warp,
     #[strum(serialize = "us.zoom.xos")]
     Zoom,
+    #[strum(serialize = "com.exafunction.windsurf")]
+    Windsurf,
+    #[strum(serialize = "com.todesktop.230313mzl4w4u92")]
+    Cursor,
     /// Fallback for unrecognized applications
     #[strum(serialize = "unknown")]
     Unknown,
