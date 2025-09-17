@@ -1,11 +1,8 @@
 #!/usr/bin/env bash
+set -euo pipefail
 
-set -e
-
-if [ -f .env ]; then
-  export DATABASE_URL_DESKTOP=$(grep '^DATABASE_URL_DESKTOP=' .env | cut -d '=' -f2-)
-  export DATABASE_URL_SERVER=$(grep '^DATABASE_URL_SERVER=' .env | cut -d '=' -f2-)
-fi
+DATABASE_URL_DESKTOP="sqlite://./data/desktop.db"
+DATABASE_URL_SERVER="sqlite://./data/server.db"
 
 mkdir -p ./data
 
@@ -20,4 +17,3 @@ sqlx database create || true
 sqlx migrate run --source crates/db/migrations/server
 
 echo "🚀 Both desktop and server DBs are synced!"
-
