@@ -3,8 +3,11 @@
 set -e
 
 if [ -f .env ]; then
-  export $(grep -v '^#' .env | xargs)
+  export DATABASE_URL_DESKTOP=$(grep '^DATABASE_URL_DESKTOP=' .env | cut -d '=' -f2-)
+  export DATABASE_URL_SERVER=$(grep '^DATABASE_URL_SERVER=' .env | cut -d '=' -f2-)
 fi
+
+mkdir -p ./data
 
 echo "===> Applying migrations for DESKTOP DB"
 export DATABASE_URL="$DATABASE_URL_DESKTOP"

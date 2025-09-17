@@ -32,7 +32,6 @@ impl WindowKind {
         }
     }
 
-    /// Returns the base App route for this window (used when not using multiple HTML entries).
     pub fn default_route(self) -> &'static str {
         match self {
             WindowKind::Main => "/",
