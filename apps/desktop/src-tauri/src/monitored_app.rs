@@ -5,7 +5,7 @@ use std::{
 };
 
 use common::language::detect_language;
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 use strum_macros::{Display, EnumString};
 
 use crate::{
@@ -61,6 +61,10 @@ pub static IGNORED_APPS: LazyLock<HashMap<MonitoredApp, &'static str>> = LazyLoc
         (
             MonitoredApp::Windsurf,
             "An editor extension for Windsurf is available to capture more accurate data",
+        ),
+        (
+            MonitoredApp::Cursor,
+            "An editor extension for Cursor is available to capture more accurate data",
         ),
     ])
 });
@@ -138,7 +142,7 @@ pub enum MonitoredApp {
 /// Categories representing the type of activity detected in an application.
 ///
 /// Used to classify user activity based on the application being used or the URL visited.
-#[derive(Serialize, Deserialize, Clone, Debug, EnumString, PartialEq, Eq, Hash, Display)]
+#[derive(Serialize, Clone, Debug, EnumString, PartialEq, Eq, Hash, Display)]
 pub enum Category {
     Browsing,
     Coding,
@@ -158,14 +162,14 @@ pub enum Category {
 /// Defines the type of entity being tracked in a monitored application.
 ///
 /// This helps determine whether the entity being logged is a file, an application or a URL.
-#[derive(Serialize, Deserialize, PartialEq, Clone, Debug, EnumString, Display)]
+#[derive(Serialize, PartialEq, Clone, Debug, EnumString, Display)]
 pub enum Entity {
     File,
     App,
     Url,
 }
 
-#[derive(Debug, Serialize, Deserialize, specta::Type)]
+#[derive(Debug, Serialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct OpenApp {
     app: TrackedApp,
