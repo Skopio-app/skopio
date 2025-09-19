@@ -16,6 +16,6 @@ export const isGranted = (s: PermissionStatus) => s === "granted";
 export const truncateValue = (text: string, limit?: number): string => {
   const effectiveLimit = limit ?? 50;
   return text.length > effectiveLimit
-    ? `${text.slice(0, effectiveLimit)}...`
+    ? `...${text.slice(-effectiveLimit)}`
     : text;
 };

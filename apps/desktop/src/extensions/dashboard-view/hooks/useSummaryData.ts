@@ -5,7 +5,7 @@ import {
   commands,
   Group,
   TimeRangePreset,
-} from "../../../types/tauri.gen";
+} from "@/types/tauri.gen";
 import {
   BarChartData,
   CalendarChartData,
@@ -14,7 +14,7 @@ import {
 } from "../../../types/chart";
 import { useDashboardFilter } from "../stores/useDashboardFilter";
 import { format, parseISO } from "date-fns";
-import { getEntityName } from "../../../utils/data";
+import { getEntityName } from "@/utils/data";
 
 export interface UseSummaryOptions {
   groupBy?: Group;

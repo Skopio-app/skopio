@@ -142,7 +142,7 @@ pub enum MonitoredApp {
 /// Categories representing the type of activity detected in an application.
 ///
 /// Used to classify user activity based on the application being used or the URL visited.
-#[derive(Serialize, Clone, Debug, EnumString, PartialEq, Eq, Hash, Display)]
+#[derive(Clone, Debug, EnumString, PartialEq, Eq, Hash, Display)]
 pub enum Category {
     Browsing,
     Coding,
@@ -162,7 +162,7 @@ pub enum Category {
 /// Defines the type of entity being tracked in a monitored application.
 ///
 /// This helps determine whether the entity being logged is a file, an application or a URL.
-#[derive(Serialize, PartialEq, Clone, Debug, EnumString, Display)]
+#[derive(PartialEq, Clone, Debug, EnumString, Display)]
 pub enum Entity {
     File,
     App,

@@ -15,6 +15,7 @@ import {
   Switch,
   Form,
   ChipSelector,
+  Skeleton,
 } from "@skopio/ui";
 import { useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
@@ -60,7 +61,11 @@ const General = () => {
     // error: hotkeyError,
   } = useGlobalShortcut();
 
-  const { apps: openApps } = useOpenApps();
+  const {
+    apps: openApps,
+    fetch: fetchApps,
+    loading: appsLoading,
+  } = useOpenApps();
 
   const form = useForm<GeneralSettingsValues>({
     resolver: standardSchemaResolver(settingsSchema),
@@ -296,57 +301,66 @@ const General = () => {
 
           <Separator />
 
-          <FormField
-            control={form.control}
-            name="trackedApps"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Tracked apps</FormLabel>
-                <FormDescription>
-                  Pick which currently open apps Skopio should track
-                </FormDescription>
-                <FormControl>
-                  <ChipSelector<TrackedApp, OpenApp>
-                    values={field.value ?? []}
-                    options={openApps}
-                    getValueKey={(a) => a.bundleId}
-                    getOptionKey={(o) => o.app.bundleId}
-                    disabled={(o) => Boolean(o.blockReason)}
-                    reason={(o) => o.blockReason}
-                    renderChip={(a) => (
-                      <span className="flex items-center gap-1">
-                        <span className="truncate max-w-[10rem]">{a.name}</span>
-                      </span>
-                    )}
-                    renderOption={(o) => (
-                      <div className="flex items-center gap-2">
-                        <span className="truncate">{o.app.name}</span>
-                      </div>
-                    )}
-                    onToggle={(open) => {
-                      if (open.blockReason) return;
-                      const curr = new Map(
-                        (field.value ?? []).map((t) => [t.bundleId, t]),
-                      );
-                      const id = open.app.bundleId;
-                      if (curr.has(id)) {
-                        curr.delete(id);
-                      } else {
-                        curr.set(id, { name: open.app.name, bundleId: id });
-                      }
-                      field.onChange(Array.from(curr.values()));
-                    }}
-                    onRemove={(app) => {
-                      const next = (field.value ?? []).filter(
-                        (t) => t.bundleId !== app.bundleId,
-                      );
-                      field.onChange(next);
-                    }}
-                  />
-                </FormControl>
-              </FormItem>
-            )}
-          />
+          {appsLoading ? (
+            <Skeleton />
+          ) : (
+            <FormField
+              control={form.control}
+              name="trackedApps"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Tracked apps</FormLabel>
+                  <FormDescription>
+                    Pick which currently open apps Skopio should track
+                  </FormDescription>
+                  <FormControl>
+                    <ChipSelector<TrackedApp, OpenApp>
+                      values={field.value ?? []}
+                      options={openApps}
+                      getValueKey={(a) => a.bundleId}
+                      getOptionKey={(o) => o.app.bundleId}
+                      disabled={(o) => Boolean(o.blockReason)}
+                      reason={(o) => o.blockReason}
+                      onOpenChange={(open) => {
+                        if (open) fetchApps();
+                      }}
+                      renderChip={(a) => (
+                        <span className="flex items-center gap-1">
+                          <span className="truncate max-w-[10rem]">
+                            {a.name}
+                          </span>
+                        </span>
+                      )}
+                      renderOption={(o) => (
+                        <div className="flex items-center gap-2">
+                          <span className="truncate">{o.app.name}</span>
+                        </div>
+                      )}
+                      onToggle={(open) => {
+                        if (open.blockReason) return;
+                        const curr = new Map(
+                          (field.value ?? []).map((t) => [t.bundleId, t]),
+                        );
+                        const id = open.app.bundleId;
+                        if (curr.has(id)) {
+                          curr.delete(id);
+                        } else {
+                          curr.set(id, { name: open.app.name, bundleId: id });
+                        }
+                        field.onChange(Array.from(curr.values()));
+                      }}
+                      onRemove={(app) => {
+                        const next = (field.value ?? []).filter(
+                          (t) => t.bundleId !== app.bundleId,
+                        );
+                        field.onChange(next);
+                      }}
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+          )}
         </form>
       </Form>
     </div>
