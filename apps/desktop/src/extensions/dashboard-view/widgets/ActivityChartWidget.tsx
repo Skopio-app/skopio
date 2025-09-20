@@ -19,7 +19,11 @@ const ActivityChartWidget = () => {
   const { loading, data } = useSummaryData(options);
 
   return (
-    <WidgetCard title="Daily Activity" loading={loading}>
+    <WidgetCard
+      tooltip="Daily recorded activity durations for the current year."
+      title="Daily Activity"
+      loading={loading}
+    >
       <CalendarChart
         data={data}
         start={startOfYear(new Date())}

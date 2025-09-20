@@ -882,6 +882,9 @@
   .fill-neutral-50 {
     fill: var(--color-neutral-50);
   }
+  .fill-primary {
+    fill: var(--color-primary);
+  }
   .p-0 {
     padding: calc(var(--spacing) * 0);
   }

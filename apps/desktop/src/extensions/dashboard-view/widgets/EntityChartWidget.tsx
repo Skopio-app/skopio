@@ -22,6 +22,7 @@ const EntityChartWidget = () => {
 
   return (
     <WidgetCard
+      tooltip="The duration of use grouped by recorded file paths or URL segments."
       title="Entities"
       loading={loading}
       settingsContent={

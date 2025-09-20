@@ -4,13 +4,17 @@ import {
   Popover,
   PopoverContent,
   PopoverTrigger,
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
 } from "@skopio/ui";
-import { GripVertical, Settings, X } from "lucide-react";
+import { GripVertical, Info, Settings, X } from "lucide-react";
 import SkeletonChart from "../../../components/SkeletonChart";
 import React from "react";
 
 export interface WidgetCardProps {
   title?: string;
+  tooltip?: string;
   onSettingsOpenChange?: (open: boolean) => void;
   onRemove?: () => void;
   children: React.ReactNode;
@@ -24,6 +28,7 @@ const WidgetCard = React.forwardRef<HTMLDivElement, WidgetCardProps>(
   (
     {
       title,
+      tooltip,
       onRemove,
       onSettingsOpenChange,
       children,
@@ -50,6 +55,14 @@ const WidgetCard = React.forwardRef<HTMLDivElement, WidgetCardProps>(
             </h2>
           )}
           <div className="flex items-center gap-1">
+            {tooltip && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Info className="h-4 w-4 mr-2 cursor-pointer text-muted-foreground" />
+                </TooltipTrigger>
+                <TooltipContent>{tooltip}</TooltipContent>
+              </Tooltip>
+            )}
             <Button
               variant="ghost"
               size="icon"

@@ -21,6 +21,7 @@ const CategoryChartWidget = () => {
 
   return (
     <WidgetCard
+      tooltip="The duration of use grouped by category, e.g., Coding, Code Reviewing, Browsing, Other, etc."
       title="Categories"
       loading={loading}
       settingsContent={

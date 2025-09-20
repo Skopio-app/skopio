@@ -13,7 +13,7 @@ import {
 import "vis-timeline/styles/vis-timeline-graph2d.css";
 import { formatDuration } from "@/utils/time";
 import { EventGroup, FullEvent } from "@/types/tauri.gen";
-import { getEntityName } from "@/utils/data";
+import { getEntityName, truncateValue } from "@/utils/data";
 
 interface TimelineViewProps {
   durationMinutes: number;
@@ -64,8 +64,7 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
   const dataSetRef = useRef<DataSet<TimelineDataItem> | null>(null);
   const animationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  const ANIMATION_INACTIVITY_DELAY_MS = 5000; // Animate to latest after 10 seconds
-  const MAX_LABEL_LENGTH = 40;
+  const ANIMATION_INACTIVITY_DELAY_MS = 5000;
 
   const groups: TimelineGroup[] = useMemo(() => {
     return groupedEvents
@@ -73,11 +72,7 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
         return a.group.localeCompare(b.group);
       })
       .map((group) => {
-        const content =
-          group.group.length > MAX_LABEL_LENGTH
-            ? `${group.group.slice(0, MAX_LABEL_LENGTH)}...`
-            : group.group;
-
+        const content = truncateValue(group.group, 20);
         return {
           id: group.group,
           content,
@@ -156,7 +151,7 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
       `End: ${format(end, "HH:mm:ss")}`,
       `Duration: ${formattedDuration}`,
       `App: ${app ?? "unknown"}`,
-      `Entity: ${getEntityName(entity ?? "unknown", entityType ?? "unknown")?.slice(0, MAX_LABEL_LENGTH) ?? "unknown"}`,
+      `Entity: ${getEntityName(entity ?? "unknown", entityType ?? "unknown")}`,
     ]
       .map((line) => line.replace(/"/g, "&quot;"))
       .join("<br/>");
