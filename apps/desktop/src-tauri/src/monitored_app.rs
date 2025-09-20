@@ -176,6 +176,15 @@ pub struct OpenApp {
     block_reason: Option<String>,
 }
 
+pub struct AppDetails {
+    pub project_name: Option<String>,
+    pub project_path: Option<String>,
+    pub entity: String,
+    pub entity_type: Entity,
+    pub category: Category,
+    pub language: Option<String>,
+}
+
 fn get_entity_for_app(app: &MonitoredApp) -> Entity {
     if BROWSER_APPS.contains(app) {
         Entity::Url
@@ -270,45 +279,38 @@ pub fn resolve_app_details(
     app_name: &str,
     app_path: &str,
     entity: &str,
-) -> (
-    Option<String>,
-    Option<String>,
-    String,
-    Option<String>,
-    Entity,
-    Category,
-) {
+) -> AppDetails {
     match app {
         MonitoredApp::Xcode => {
             let (project_name, project_path, entity, lang) = get_xcode_project_details();
-            (
+            AppDetails {
                 project_name,
                 project_path,
-                entity.clone(),
-                lang,
-                Entity::File,
-                get_category_for_app(app, Some(&entity), None),
-            )
+                entity: entity.clone(),
+                language: lang,
+                entity_type: Entity::File,
+                category: get_category_for_app(app, Some(&entity), None),
+            }
         }
         _ if BROWSER_APPS.contains(app) => {
             let (domain, url, tab) = get_browser_active_tab(app);
-            (
-                Some(domain),
-                Some(url.clone()),
-                tab,
-                None,
-                get_entity_for_app(app),
-                get_category_for_app(app, None, Some(&url)),
-            )
+            AppDetails {
+                project_name: Some(domain),
+                project_path: Some(url.clone()),
+                entity: tab,
+                language: None,
+                category: get_category_for_app(app, None, Some(&url)),
+                entity_type: get_entity_for_app(app),
+            }
         }
-        _ => (
-            Some(app_name.to_lowercase()),
-            Some(app_path.to_string()),
-            entity.to_string(),
-            None,
-            Entity::App,
-            get_category_for_app(app, None, None),
-        ),
+        _ => AppDetails {
+            project_name: Some(app_name.to_lowercase()),
+            project_path: Some(app_path.to_string()),
+            entity: entity.to_string(),
+            entity_type: Entity::App,
+            category: get_category_for_app(app, None, None),
+            language: None,
+        },
     }
 }
 
