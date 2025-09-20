@@ -14,6 +14,7 @@ import "vis-timeline/styles/vis-timeline-graph2d.css";
 import { formatDuration } from "@/utils/time";
 import { EventGroup, FullEvent } from "@/types/tauri.gen";
 import { getEntityName, truncateValue } from "@/utils/data";
+import { useColorCache } from "@/stores/useColorCache";
 
 interface TimelineViewProps {
   durationMinutes: number;
@@ -101,15 +102,9 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
     return null;
   };
 
-  const getColorForActivity = (type: string): string => {
-    const colors: Record<string, string> = {
-      Browsing: "#4dabf7",
-      "Code Reviewing": "#63e6be",
-      Coding: "#5d8b14",
-      Debugging: "#ffd43b",
-      Testing: "#f783ac",
-    };
-    return colors[type] || "#dbe4ed";
+  const getColorForCategory = (category: string): string => {
+    const cachedColor = useColorCache.getState().getColor(category);
+    return cachedColor || "#dbe4ed";
   };
 
   const clearAnimationTimeout = useCallback(() => {
@@ -250,7 +245,7 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
 
         const id = String(e.id);
         const group = groupData.group;
-        const color = getColorForActivity(e.category);
+        const color = getColorForCategory(e.category);
 
         const item: TimelineDataItem = {
           id,
