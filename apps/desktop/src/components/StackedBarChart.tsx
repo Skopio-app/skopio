@@ -1,9 +1,8 @@
 import { ResponsiveBarCanvas } from "@nivo/bar";
 import { useRef, useState, useEffect } from "react";
-import { useOrdinalColorScale } from "@nivo/colors";
-import { useColorCache } from "@/stores/useColorCache";
 import ChartTooltipPortal from "@/components/ChartTooltipPortal";
 import { formatDuration } from "@/utils/time";
+import { useChartColor } from "@/hooks/useChartColor";
 
 interface StackedBarChartProps {
   data: {
@@ -29,19 +28,7 @@ const StackedBarChart: React.FC<StackedBarChartProps> = ({
   const mousePosRef = useRef<{ x: number; y: number } | null>(null);
   const rafId = useRef<number | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
-
-  const getColor = useOrdinalColorScale({ scheme: "nivo" }, "id");
-
-  const getColorForKey = (
-    key: string,
-    getColorScale: (input: { id: string }) => string,
-  ): string => {
-    const cachedColor = useColorCache.getState().getColor(key);
-    if (cachedColor) return cachedColor;
-    const newColor = getColorScale({ id: key });
-    useColorCache.getState().setColor(key, newColor);
-    return newColor;
-  };
+  const { getColorForKey } = useChartColor();
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
     const x = e.clientX + 5;
@@ -89,7 +76,7 @@ const StackedBarChart: React.FC<StackedBarChartProps> = ({
         margin={{ top: 20, right: 30, bottom: 50, left: axisLeft ? 90 : 50 }}
         padding={0.3}
         groupMode="stacked"
-        colors={(bar) => getColorForKey(String(bar.id), getColor)}
+        colors={(bar) => getColorForKey(String(bar.id))}
         borderRadius={2}
         borderWidth={1}
         borderColor={{ from: "color", modifiers: [["darker", 1.6]] }}
@@ -146,7 +133,7 @@ const StackedBarChart: React.FC<StackedBarChartProps> = ({
                   <div key={key} className="flex items-center gap-2 py-0.5">
                     <span
                       className="w-2.5 h-2.5 rounded-full inline-block shrink-0"
-                      style={{ backgroundColor: getColorForKey(key, getColor) }}
+                      style={{ backgroundColor: getColorForKey(key) }}
                     />
                     <span className="truncate flex-1 text-xs">{key}</span>
                     <span className="text-gray-500 text-xs">

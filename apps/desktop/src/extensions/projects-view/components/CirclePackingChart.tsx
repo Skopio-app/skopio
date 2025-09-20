@@ -5,6 +5,7 @@ import {
 import { formatDuration } from "@/utils/time";
 import { useState } from "react";
 import { truncateValue } from "@/utils/data";
+import { useChartColor } from "@/hooks/useChartColor";
 
 type CirclePackingNode =
   | { name: string; value: number }
@@ -16,6 +17,7 @@ interface CirclePackingChartProps {
 
 const CirclePackingChart: React.FC<CirclePackingChartProps> = ({ data }) => {
   const [zoomedId, setZoomedId] = useState<string | null>(null);
+  const { getColorForKey } = useChartColor();
 
   const children = data
     .filter((d) => Number.isFinite(d.value) && d.value > 0)
@@ -43,7 +45,7 @@ const CirclePackingChart: React.FC<CirclePackingChartProps> = ({ data }) => {
         margin={{ top: 20, right: 20, bottom: 20, left: 20 }}
         id="name"
         value="value"
-        colors={{ scheme: "nivo" }}
+        colors={(circle) => getColorForKey(String(circle.id))}
         colorBy="id"
         padding={4}
         enableLabels={true}
