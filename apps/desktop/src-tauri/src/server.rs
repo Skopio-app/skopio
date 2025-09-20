@@ -7,6 +7,7 @@ use std::{io, path::PathBuf};
 
 use futures_util::StreamExt;
 use reqwest::Client;
+use semver::Version;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 use specta::Type;
@@ -45,6 +46,9 @@ pub enum ServerCtlError {
 
     #[error("Zip error: {0}")]
     Zip(#[from] ZipError),
+
+    #[error("Semver error: {0}")]
+    Semver(#[from] semver::Error),
 }
 
 #[derive(Debug, Clone, Serialize, Type, Event)]
@@ -200,14 +204,6 @@ fn compute_sha256(path: &Path) -> Result<String, ServerCtlError> {
         write!(&mut hex, "{:02x}", b).unwrap();
     }
     Ok(hex)
-}
-
-fn installed_bin_sha256(app: &AppHandle) -> Option<String> {
-    let bin = server_bin_path(app).ok()?;
-    if !bin.exists() {
-        return None;
-    }
-    compute_sha256(&bin).ok()
 }
 
 fn unzip_binary(zip_path: &Path, out_path: &Path) -> Result<(), ServerCtlError> {
@@ -367,10 +363,11 @@ async fn check_and_update(app: &AppHandle) -> Result<bool, ServerCtlError> {
     let manifest = fetch_manifest(&client).await?;
     let asset = pick_asset(&manifest)?;
 
-    let new_sha = asset.sha256.to_ascii_lowercase();
-    let current_sha = installed_bin_sha256(app);
+    let latest = Version::parse(&manifest.version)?;
+    let current_str = read_installed_version(app).unwrap_or_default();
+    let current = Version::parse(&current_str)?;
 
-    let needs_update = current_sha.as_deref() != Some(new_sha.as_str());
+    let needs_update = latest > current;
 
     if needs_update {
         set_status(app, ServerStatus::Updating);
