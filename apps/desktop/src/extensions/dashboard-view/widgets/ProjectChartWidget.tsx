@@ -22,6 +22,7 @@ const ProjectChartWidget = () => {
 
   return (
     <WidgetCard
+      tooltip="The duration of use of the various recorded domains, app names, and projects (shown by their folder names)."
       title="Projects"
       loading={loading}
       settingsContent={

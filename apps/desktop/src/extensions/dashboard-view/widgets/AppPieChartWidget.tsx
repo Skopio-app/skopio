@@ -8,7 +8,11 @@ const AppPieChartWidget = () => {
   const { data, loading } = useSummaryData(options);
 
   return (
-    <WidgetCard title="Apps" loading={loading}>
+    <WidgetCard
+      tooltip="The duration of use of the various tracked apps."
+      title="Apps"
+      loading={loading}
+    >
       <CustomPieChart data={data} />
     </WidgetCard>
   );

@@ -5,7 +5,7 @@ use crate::utils::config::TrackedApp;
 use chrono::{DateTime, Utc};
 use common::git::find_git_branch;
 use db::desktop::events::Event as DBEvent;
-use serde::{Deserialize, Serialize};
+
 use std::collections::HashSet;
 use std::sync::Arc;
 use tokio::sync::{watch, Mutex, RwLock};
@@ -16,7 +16,7 @@ use super::keyboard_tracker::KeyboardTracker;
 use super::mouse_tracker::MouseTracker;
 use super::window_tracker::Window;
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
+#[derive(Debug, Clone)]
 pub struct Event {
     pub timestamp: Option<DateTime<Utc>>,
     pub duration: Option<i64>,

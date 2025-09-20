@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { OpenApp, commands } from "@/types/tauri.gen";
 
 export const useOpenApps = () => {
@@ -6,27 +6,26 @@ export const useOpenApps = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<unknown>(null);
 
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        setLoading(true);
-        const apps = await commands.getOpenApps();
-        if (!cancelled) setApps(apps ?? []);
-      } catch (e) {
-        setError(e);
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
+  const fetch = useCallback(async () => {
+    try {
+      setLoading(true);
+      const apps = await commands.getOpenApps();
+      setApps(apps ?? []);
+    } catch (e) {
+      setError(e);
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    void fetch();
+  }, [fetch]);
 
   return {
     apps,
     loading,
     error,
+    fetch,
   };
 };

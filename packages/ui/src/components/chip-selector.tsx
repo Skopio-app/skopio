@@ -1,6 +1,7 @@
 import * as DropDownMenu from "@radix-ui/react-dropdown-menu";
 import { Check, X } from "lucide-react";
 import { cn } from "../utils/cn";
+import { useCallback, useState } from "react";
 
 type KeyLike = string | number;
 
@@ -19,6 +20,8 @@ interface ChipSelectorProps<V, O = V> {
   onToggle: (val: O) => void;
   onRemove: (val: V) => void;
 
+  onOpenChange?: (open: boolean) => void;
+
   disabled?: (opt: O) => boolean;
   reason?: (opt: O) => React.ReactNode;
 
@@ -36,6 +39,7 @@ export function ChipSelector<V, O = V>({
   renderChip,
   renderOption,
   onToggle,
+  onOpenChange,
   onRemove,
   disabled,
   reason,
@@ -46,9 +50,21 @@ export function ChipSelector<V, O = V>({
   menuClassName,
   itemClassName,
 }: ChipSelectorProps<V, O>) {
+  const [open, setOpen] = useState(false);
+  const handleOpenChange = useCallback(
+    (next: boolean) => {
+      setOpen(next);
+      onOpenChange?.(next);
+    },
+    [onOpenChange],
+  );
   const selectedKeys = new Set<KeyLike>(values.map(getValueKey));
   return (
-    <DropDownMenu.Root modal={false}>
+    <DropDownMenu.Root
+      modal={false}
+      open={open}
+      onOpenChange={handleOpenChange}
+    >
       <DropDownMenu.Trigger asChild>
         <div
           className={cn(

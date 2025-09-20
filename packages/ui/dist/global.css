@@ -882,6 +882,9 @@
   .fill-neutral-50 {
     fill: var(--color-neutral-50);
   }
+  .fill-primary {
+    fill: var(--color-primary);
+  }
   .p-0 {
     padding: calc(var(--spacing) * 0);
   }
@@ -1049,9 +1052,6 @@
   }
   .text-primary-foreground {
     color: var(--color-primary-foreground);
-  }
-  .text-red-400 {
-    color: var(--color-red-400);
   }
   .text-red-500 {
     color: var(--color-red-500);
@@ -1719,6 +1719,14 @@
       --tw-ring-color: var(--color-ring);
     }
   }
+  .focus\:ring-ring\/50 {
+    &:focus {
+      --tw-ring-color: var(--color-ring);
+      @supports (color: color-mix(in lab, red, red)) {
+        --tw-ring-color: color-mix(in oklab, var(--color-ring) 50%, transparent);
+      }
+    }
+  }
   .focus\:ring-offset-2 {
     &:focus {
       --tw-ring-offset-width: 2px;
@@ -1733,6 +1741,12 @@
         outline: 2px solid transparent;
         outline-offset: 2px;
       }
+    }
+  }
+  .focus\:outline-none {
+    &:focus {
+      --tw-outline-style: none;
+      outline-style: none;
     }
   }
   .focus-visible\:z-10 {

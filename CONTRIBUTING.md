@@ -50,7 +50,7 @@ cargo run
 
 ### Run CLI app
 
-The CLI is a Rust-based helper tha sits between your **editor plugins/extensions** (VSCode, Jetbrains, Zed, etc.) and the server.
+The CLI is a Rust-based helper that sits between your **editor plugins/extensions** (VSCode, Jetbrains, Zed, etc.) and the server.
 
 It captures coding activity from editors, saves it to a SQLite database, and peridiocally syncs the saved data to the skopio server to be aggregated then presented via the desktop app.
 

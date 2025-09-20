@@ -1,6 +1,6 @@
 import Dexie, { Table } from "dexie";
 import { Layout } from "react-grid-layout";
-import { CalendarChartData } from "../../../types/chart";
+import { CalendarChartData } from "@/types/chart";
 
 export interface CachedActivity {
   year: number;
@@ -13,9 +13,15 @@ export interface StoredLayout {
   layout: Layout[];
 }
 
+export interface ColorRow {
+  id: string;
+  map: Record<string, string>;
+}
+
 class SkopioDB extends Dexie {
   activity!: Table<CachedActivity>;
   layouts!: Table<StoredLayout>;
+  colors!: Table<ColorRow>;
 
   constructor() {
     super("SkopioDB");
@@ -23,6 +29,7 @@ class SkopioDB extends Dexie {
     this.version(1).stores({
       activity: "year",
       layouts: "id",
+      colors: "id",
     });
   }
 }

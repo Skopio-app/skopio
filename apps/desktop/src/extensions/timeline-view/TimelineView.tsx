@@ -13,7 +13,8 @@ import {
 import "vis-timeline/styles/vis-timeline-graph2d.css";
 import { formatDuration } from "@/utils/time";
 import { EventGroup, FullEvent } from "@/types/tauri.gen";
-import { getEntityName } from "@/utils/data";
+import { getEntityName, truncateValue } from "@/utils/data";
+import { useColorCache } from "@/stores/useColorCache";
 
 interface TimelineViewProps {
   durationMinutes: number;
@@ -64,8 +65,7 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
   const dataSetRef = useRef<DataSet<TimelineDataItem> | null>(null);
   const animationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  const ANIMATION_INACTIVITY_DELAY_MS = 5000; // Animate to latest after 10 seconds
-  const MAX_LABEL_LENGTH = 40;
+  const ANIMATION_INACTIVITY_DELAY_MS = 5000;
 
   const groups: TimelineGroup[] = useMemo(() => {
     return groupedEvents
@@ -73,11 +73,7 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
         return a.group.localeCompare(b.group);
       })
       .map((group) => {
-        const content =
-          group.group.length > MAX_LABEL_LENGTH
-            ? `${group.group.slice(0, MAX_LABEL_LENGTH)}...`
-            : group.group;
-
+        const content = truncateValue(group.group, 20);
         return {
           id: group.group,
           content,
@@ -106,15 +102,9 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
     return null;
   };
 
-  const getColorForActivity = (type: string): string => {
-    const colors: Record<string, string> = {
-      Browsing: "#4dabf7",
-      "Code Reviewing": "#63e6be",
-      Coding: "#5d8b14",
-      Debugging: "#ffd43b",
-      Testing: "#f783ac",
-    };
-    return colors[type] || "#dbe4ed";
+  const getColorForCategory = (category: string): string => {
+    const cachedColor = useColorCache.getState().getColor(category);
+    return cachedColor || "#dbe4ed";
   };
 
   const clearAnimationTimeout = useCallback(() => {
@@ -156,7 +146,7 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
       `End: ${format(end, "HH:mm:ss")}`,
       `Duration: ${formattedDuration}`,
       `App: ${app ?? "unknown"}`,
-      `Entity: ${getEntityName(entity ?? "unknown", entityType ?? "unknown")?.slice(0, MAX_LABEL_LENGTH) ?? "unknown"}`,
+      `Entity: ${entityType === "File" ? getEntityName(entity ?? "unknown", entityType ?? "unknown") : truncateValue(entity ?? "unknown")}`,
     ]
       .map((line) => line.replace(/"/g, "&quot;"))
       .join("<br/>");
@@ -255,7 +245,7 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
 
         const id = String(e.id);
         const group = groupData.group;
-        const color = getColorForActivity(e.category);
+        const color = getColorForCategory(e.category);
 
         const item: TimelineDataItem = {
           id,

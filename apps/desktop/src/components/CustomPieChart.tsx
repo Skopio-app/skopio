@@ -1,7 +1,7 @@
 import { ResponsivePieCanvas } from "@nivo/pie";
 import { useMemo } from "react";
-import { useOrdinalColorScale } from "@nivo/colors";
 import { formatDuration } from "@/utils/time";
+import { useChartColor } from "@/hooks/useChartColor";
 
 interface CustomPieChartProps {
   data: {
@@ -16,7 +16,8 @@ const CustomPieChart: React.FC<CustomPieChartProps> = ({ data }) => {
     () => data.sort((a, b) => b.value - a.value),
     [data],
   );
-  const getColor = useOrdinalColorScale({ scheme: "nivo" }, "id");
+
+  const { getColorForKey } = useChartColor();
 
   if (!chartData.length) {
     return (
@@ -39,7 +40,7 @@ const CustomPieChart: React.FC<CustomPieChartProps> = ({ data }) => {
           arcLinkLabelsSkipAngle={5}
           arcLinkLabelsTextColor="#333333"
           arcLinkLabelsThickness={2}
-          colors={{ scheme: "nivo" }}
+          colors={(bar) => getColorForKey(String(bar.id))}
           arcLinkLabelsDiagonalLength={12}
           arcLinkLabelsColor={{ from: "color" }}
           arcLabelsSkipAngle={10}
@@ -70,7 +71,7 @@ const CustomPieChart: React.FC<CustomPieChartProps> = ({ data }) => {
             <div className="flex items-center gap-2 min-w-0">
               <span
                 className="w-3 h-3 rounded-full inline-block shrink-0"
-                style={{ backgroundColor: getColor(d) }}
+                style={{ backgroundColor: getColorForKey(d.id) }}
               />
               <span className="truncate text-gray-700 text-xs max-w-[7rem]">
                 {d.label}

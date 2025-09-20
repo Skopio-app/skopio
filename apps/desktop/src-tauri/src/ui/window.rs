@@ -59,7 +59,7 @@ impl WindowKind {
     }
 
     fn build<R: Runtime>(self, app: &AppHandle<R>) -> tauri::Result<WebviewWindow<R>> {
-        let position = Position::from(LogicalPosition::new(20.0, 19.0));
+        let position = Position::from(LogicalPosition::new(20.0, 15.0));
         match self {
             WindowKind::Main => {
                 let url = WebviewUrl::App(self.default_route().into());
@@ -213,8 +213,8 @@ pub fn show_window<R: Runtime>(app: AppHandle<R>, kind: WindowKind) -> Result<()
     Ok(())
 }
 
-// #[tauri::command]
-// #[specta::specta]
-// pub fn open_devtools<R: Runtime>(window: tauri::WebviewWindow<R>) {
-//     window.open_devtools();
-// }
+#[tauri::command]
+#[specta::specta]
+pub fn open_devtools<R: Runtime>(window: tauri::WebviewWindow<R>) {
+    window.open_devtools();
+}

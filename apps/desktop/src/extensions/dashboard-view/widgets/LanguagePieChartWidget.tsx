@@ -8,7 +8,11 @@ const LanguagePieChartWidget = () => {
   const { loading, data } = useSummaryData(options);
 
   return (
-    <WidgetCard title="Languages" loading={loading}>
+    <WidgetCard
+      tooltip="The duration of use of the various detected programming languages."
+      title="Languages"
+      loading={loading}
+    >
       <CustomPieChart data={data} />
     </WidgetCard>
   );
