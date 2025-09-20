@@ -23,6 +23,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v0.1.2] - 2025-09-20
+
+### Fixed
+
+- Revert traffic lights position.
+- Adjust search icon position in search bar.
+- Fetch open apps every time we select the open apps input.
+- Server version check now uses semver version.
+- AFK timeout option reflects stored value in the filesystem even after reload.
+
+### Added
+
+- Tooltip in chart widgets to give more info on the data displayed.
+
+---
+
 ## [v0.1.1] - 2025-09-17
 
 ### Fixed
