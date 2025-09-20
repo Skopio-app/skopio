@@ -40,6 +40,7 @@
     "react-markdown": "^10.1.0",
     "react-router": "^7.6.1",
     "react-router-dom": "^7.6.1",
+    "remark-gfm": "^4.0.1",
     "sonner": "^2.0.6",
     "tailwindcss": "^4.1.11",
     "vis-timeline": "^7.7.4",

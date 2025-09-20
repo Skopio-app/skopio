@@ -3,7 +3,8 @@ import { toast } from "sonner";
 import { relaunch } from "@tauri-apps/plugin-process";
 import { check } from "@tauri-apps/plugin-updater";
 import { useEffect } from "react";
-import Markdown from "react-markdown";
+import Markdown, { Components } from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 type ProgressState = {
   pct: number;
@@ -17,6 +18,55 @@ type ProgressState = {
 };
 
 const formatMB = (n: number) => (n / (1024 * 1024)).toFixed(1);
+
+const mdComponents: Components = {
+  h1: (p: any) => <h1 className="mt-2 text-base font-semibold" {...p} />,
+  h2: (p: any) => <h2 className="mt-3 text-sm font-semibold" {...p} />,
+  h3: (p: any) => <h3 className="mt-3 text-sm font-medium" {...p} />,
+  p: (p: any) => (
+    <p className="mt-2 text-xs leading-relaxed text-neutral-700" {...p} />
+  ),
+  ul: (p: any) => (
+    <ul className="mt-2 ml-4 list-disc space-y-1 text-xs" {...p} />
+  ),
+  ol: (p: any) => (
+    <ol className="mt-2 ml-4 list-decimal space-y-1 text-xs" {...p} />
+  ),
+  li: (p: any) => <li className="marker:text-neutral-500" {...p} />,
+  a: (p: any) => (
+    <a className="underline underline-offset-2 hover:opacity-80" {...p} />
+  ),
+  hr: () => <div className="my-3 h-px w-full bg-neutral-200" />,
+  code: ({ inline, className, children, ...props }: any) =>
+    inline ? (
+      <code
+        className="rounded bg-neutral-100 px-1 py-0.5 text-[11px]"
+        {...props}
+      >
+        {children}
+      </code>
+    ) : (
+      <pre
+        className="mt-2 max-h-56 overflow-auto rounded bg-neutral-900 p-2 text-[11px] text-neutral-100"
+        {...props}
+      >
+        <code className={className}>{children}</code>
+      </pre>
+    ),
+  blockquote: (p: any) => (
+    <blockquote
+      className="mt-2 border-l-2 border-neutral-300 pl-2 text-xs italic text-neutral-600"
+      {...p}
+    />
+  ),
+  table: (p: any) => (
+    <table className="mt-2 w-full text-xs border-collapse" {...p} />
+  ),
+  th: (p: any) => (
+    <th className="border-b px-2 py-1 text-left font-medium" {...p} />
+  ),
+  td: (p: any) => <td className="border-b px-2 py-1 align-top" {...p} />,
+};
 
 const showUpdaterToast = (meta: {
   version: string;
@@ -46,8 +96,13 @@ const showUpdaterToast = (meta: {
                 Update available - v{state.version}
               </p>
               {state.notes && (
-                <div className="mt-1 prose prose-invert text-xs text-neutral-600 max-w-none">
-                  <Markdown>{state.notes}</Markdown>
+                <div className="mt-1 prose prose-invert text-xs text-neutral-800 max-w-none">
+                  <Markdown
+                    components={mdComponents}
+                    remarkPlugins={[remarkGfm]}
+                  >
+                    {state.notes}
+                  </Markdown>
                 </div>
               )}
             </div>
