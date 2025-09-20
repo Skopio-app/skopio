@@ -54,7 +54,7 @@ const GoalDeleteConfirmDialog: React.FC<GoalDeleteConfirmDialogProps> = ({
             <Dialog.Close asChild>
               <Button variant="outline">Cancel</Button>
             </Dialog.Close>
-            <Button variant="default" onClick={handleConfirm}>
+            <Button variant="destructive" onClick={handleConfirm}>
               Delete
             </Button>
           </div>

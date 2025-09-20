@@ -151,7 +151,7 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
       `End: ${format(end, "HH:mm:ss")}`,
       `Duration: ${formattedDuration}`,
       `App: ${app ?? "unknown"}`,
-      `Entity: ${getEntityName(entity ?? "unknown", entityType ?? "unknown")}`,
+      `Entity: ${entityType === "File" ? getEntityName(entity ?? "unknown", entityType ?? "unknown") : truncateValue(entity ?? "unknown")}`,
     ]
       .map((line) => line.replace(/"/g, "&quot;"))
       .join("<br/>");
