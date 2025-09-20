@@ -55,7 +55,7 @@ function App() {
             Reload
             <ContextMenuShortcut>⌘⇧R</ContextMenuShortcut>
           </ContextMenuItem>
-          {isDev && (
+          {isDev() && (
             <ContextMenuItem
               inset
               className="text-xs"
