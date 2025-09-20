@@ -15,7 +15,7 @@ export interface StoredLayout {
 
 export interface ColorRow {
   id: string;
-  value: string;
+  map: Record<string, string>;
 }
 
 class SkopioDB extends Dexie {

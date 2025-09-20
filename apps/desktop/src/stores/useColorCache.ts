@@ -8,13 +8,25 @@ interface ColorCacheState {
   getColor: (key: string) => string | undefined;
 }
 
-const dexieStorage: StateStorage = {
+const colorStorage: StateStorage = {
   async getItem(name) {
     const row = await skopioDB.colors.get(name);
-    return row?.value ?? null;
+    if (!row) return null;
+    const payload = {
+      state: { colorMap: row.map ?? {} },
+      version: 0,
+    };
+    return JSON.stringify(payload);
   },
   async setItem(name, value) {
-    await skopioDB.colors.put({ id: name, value });
+    try {
+      const parsed = JSON.parse(value ?? "{}");
+      const colorMap: Record<string, string> = parsed?.state?.colorMap ?? {};
+
+      await skopioDB.colors.put({ id: name, map: colorMap });
+    } catch (e) {
+      console.error("Error getting color item: ", e);
+    }
   },
   async removeItem(name) {
     await skopioDB.colors.delete(name);
@@ -36,7 +48,7 @@ export const useColorCache = create<ColorCacheState>()(
     }),
     {
       name: "skopio-color-cache",
-      storage: createJSONStorage(() => dexieStorage),
+      storage: createJSONStorage(() => colorStorage),
     },
   ),
 );
