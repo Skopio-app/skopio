@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Layout } from "react-grid-layout";
-import { skopioDB } from "../db/skopioDB";
+import { skopioDB } from "@/db/skopioDB";
 
 export const usePersistentLayout = (key: string, defaultLayout: Layout[]) => {
   const [layout, setLayout] = useState<Layout[]>(defaultLayout);

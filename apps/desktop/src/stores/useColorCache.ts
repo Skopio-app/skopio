@@ -1,11 +1,25 @@
 import { create } from "zustand";
-import { persist } from "zustand/middleware";
+import { persist, createJSONStorage, StateStorage } from "zustand/middleware";
+import { skopioDB } from "@/db/skopioDB";
 
 interface ColorCacheState {
   colorMap: Record<string, string>;
   setColor: (key: string, color: string) => void;
   getColor: (key: string) => string | undefined;
 }
+
+const dexieStorage: StateStorage = {
+  async getItem(name) {
+    const row = await skopioDB.colors.get(name);
+    return row?.value ?? null;
+  },
+  async setItem(name, value) {
+    await skopioDB.colors.put({ id: name, value });
+  },
+  async removeItem(name) {
+    await skopioDB.colors.delete(name);
+  },
+};
 
 export const useColorCache = create<ColorCacheState>()(
   persist(
@@ -22,6 +36,7 @@ export const useColorCache = create<ColorCacheState>()(
     }),
     {
       name: "skopio-color-cache",
+      storage: createJSONStorage(() => dexieStorage),
     },
   ),
 );
