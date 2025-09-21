@@ -45,9 +45,9 @@ static MEETING_URLS: LazyLock<HashSet<&'static str>> = LazyLock::new(|| {
 static LEARNING_URLS: LazyLock<HashSet<&'static str>> = LazyLock::new(|| {
     HashSet::from([
         "udemy.com",
-        "cousera.org",
+        "coursera.org",
         "khanacademy.org",
-        "codeacademy.com",
+        "codecademy.com",
         "educative.io",
     ])
 });
