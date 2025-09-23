@@ -1,6 +1,3 @@
-PRAGMA foreign_keys = OFF;
-BEGIN TRANSACTION;
-
 CREATE TABLE apps_new (
     id   BLOB(16) NOT NULL PRIMARY KEY,
     name TEXT NOT NULL UNIQUE,
@@ -166,8 +163,3 @@ BEGIN
      WHERE rowid = (SELECT docid FROM projects_fts_map WHERE project_id = old.id);
     DELETE FROM projects_fts_map WHERE project_id = old.id;
 END;
-
-COMMIT;
-
-PRAGMA foreign_keys = ON;
-PRAGMA foreign_key_check;
