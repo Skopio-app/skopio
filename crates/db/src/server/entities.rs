@@ -1,4 +1,5 @@
 use crate::{error::DBError, DBContext};
+use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -26,18 +27,24 @@ impl Entity {
         .fetch_optional(db_context.pool())
         .await?;
 
+        let timestamp = Utc::now().timestamp();
+
         if let Some(row) = record {
+            sqlx::query!("UPDATE entities SET last_updated = ?", timestamp)
+                .execute(db_context.pool())
+                .await?;
             let id = Uuid::from_slice(&row.id)?;
             return Ok(id);
         }
 
         let id = uuid::Uuid::now_v7();
         let result = sqlx::query!(
-            "INSERT INTO entities (id, project_id, name, type) VALUES (?, ?, ?, ?) RETURNING id",
+            "INSERT INTO entities (id, project_id, name, type, last_updated) VALUES (?, ?, ?, ?, ?) RETURNING id",
             id,
             project_id,
             name,
-            entity_type
+            entity_type,
+            timestamp
         )
         .fetch_one(db_context.pool())
         .await?;

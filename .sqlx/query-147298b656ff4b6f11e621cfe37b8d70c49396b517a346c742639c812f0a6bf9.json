@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE languages SET last_updated = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": []
+  },
+  "hash": "147298b656ff4b6f11e621cfe37b8d70c49396b517a346c742639c812f0a6bf9"
+}

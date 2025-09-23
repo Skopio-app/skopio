@@ -1,4 +1,5 @@
 use crate::{error::DBError, DBContext};
+use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -25,17 +26,23 @@ impl Branch {
             .fetch_optional(db_context.pool())
             .await?;
 
+            let timestamp = Utc::now().timestamp();
+
             if let Some(row) = record {
+                sqlx::query!("UPDATE branches SET last_updated = ?", timestamp)
+                    .execute(db_context.pool())
+                    .await?;
                 let id = Uuid::from_slice(&row.id)?;
                 return Ok(Some(id));
             }
 
             let id = uuid::Uuid::now_v7();
             let result = sqlx::query!(
-                "INSERT INTO branches (id, project_id, name) VALUES (?, ?, ?) RETURNING id",
+                "INSERT INTO branches (id, project_id, name, last_updated) VALUES (?, ?, ?, ?) RETURNING id",
                 id,
                 project_id,
-                name
+                name,
+                timestamp
             )
             .fetch_one(db_context.pool())
             .await?;

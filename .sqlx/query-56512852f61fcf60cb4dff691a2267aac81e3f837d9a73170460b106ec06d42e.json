@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "INSERT INTO categories (id, name) VALUES (?, ?) RETURNING id",
+  "query": "INSERT INTO branches (id, project_id, name, last_updated) VALUES (?, ?, ?, ?) RETURNING id",
   "describe": {
     "columns": [
       {
@@ -10,11 +10,11 @@
       }
     ],
     "parameters": {
-      "Right": 2
+      "Right": 4
     },
     "nullable": [
       false
     ]
   },
-  "hash": "27be7db4cce3b4a7f63593bace6485766f0675b7325cb981a3cc0154514973b7"
+  "hash": "56512852f61fcf60cb4dff691a2267aac81e3f837d9a73170460b106ec06d42e"
 }

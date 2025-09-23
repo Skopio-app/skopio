@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "INSERT INTO projects (id, name, root_path) VALUES (?, ?, ?) RETURNING id",
+  "query": "INSERT INTO apps (id, name, last_updated) VALUES (?, ?, ?) RETURNING id",
   "describe": {
     "columns": [
       {
@@ -16,5 +16,5 @@
       false
     ]
   },
-  "hash": "51d5efb5f85abfc1de208e7a8c7a95ef7681be487d7227ff8d12d64bacd46139"
+  "hash": "8c49bb8155c51a5b8abeac7422d27226d974930a936562542782c535b7ace7e4"
 }
