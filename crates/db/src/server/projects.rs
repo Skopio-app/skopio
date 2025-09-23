@@ -92,7 +92,7 @@ impl ServerProject {
                     root_path
                 FROM projects
                 WHERE id > ?
-                ORDER BY id
+                ORDER BY last_updated
                 LIMIT ?
                 "#,
                 cursor,
@@ -109,7 +109,7 @@ impl ServerProject {
                     name,
                     root_path
                 FROM projects
-                ORDER BY id
+                ORDER BY last_updated
                 LIMIT ?
                 "#,
                 limit

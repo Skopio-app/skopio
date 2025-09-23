@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "\n                SELECT\n                    id  AS \"id: Uuid\",\n                    name,\n                    root_path\n                FROM projects\n                ORDER BY id\n                LIMIT ?\n                ",
+  "query": "\n                SELECT\n                    id  AS \"id: Uuid\",\n                    name,\n                    root_path\n                FROM projects\n                ORDER BY last_updated\n                LIMIT ?\n                ",
   "describe": {
     "columns": [
       {
@@ -28,5 +28,5 @@
       true
     ]
   },
-  "hash": "dae15119da9dd6ad43b905fd19b40d67a93095dcbaf8110c1763d64d36bcc155"
+  "hash": "c07c629cd94772ff028fa19e6a961ef85c4723a64fd9077a0edda26df1de5f30"
 }
