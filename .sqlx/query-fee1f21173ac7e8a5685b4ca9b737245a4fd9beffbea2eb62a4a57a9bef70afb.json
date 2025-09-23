@@ -1,0 +1,12 @@
+{
+  "db_name": "SQLite",
+  "query": "UPDATE entities SET last_updated = ? WHERE id = ?",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Right": 2
+    },
+    "nullable": []
+  },
+  "hash": "fee1f21173ac7e8a5685b4ca9b737245a4fd9beffbea2eb62a4a57a9bef70afb"
+}

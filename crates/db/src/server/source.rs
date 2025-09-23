@@ -13,9 +13,13 @@ impl Source {
         let timestamp = Utc::now().timestamp();
 
         if let Some(row) = record {
-            sqlx::query!("UPDATE sources SET last_updated = ?", timestamp)
-                .execute(db_context.pool())
-                .await?;
+            sqlx::query!(
+                "UPDATE sources SET last_updated = ? WHERE id = ?",
+                timestamp,
+                row.id
+            )
+            .execute(db_context.pool())
+            .await?;
             let id = Uuid::from_slice(&row.id)?;
             return Ok(id);
         }

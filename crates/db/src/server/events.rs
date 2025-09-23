@@ -21,7 +21,7 @@ use crate::{
 #[derive(Serialize, Deserialize, Debug, sqlx::FromRow)]
 pub struct Event {
     pub id: Uuid,
-    pub timestamp: DateTime<Utc>,
+    pub timestamp: i64,
     pub duration: Option<i64>,
     pub category_id: Uuid,
     pub app_id: Uuid,
@@ -30,7 +30,7 @@ pub struct Event {
     pub branch_id: Option<Uuid>,
     pub language_id: Option<Uuid>,
     pub source_id: Uuid,
-    pub end_timestamp: Option<DateTime<Utc>>,
+    pub end_timestamp: Option<i64>,
 }
 
 impl Event {
@@ -133,13 +133,11 @@ impl SummaryQueryBuilder {
         let mut grouped_events: HashMap<String, Vec<FullEvent>> = HashMap::new();
 
         for row in rows {
-            let timestamp = row
-                .try_get::<String, _>("timestamp")?
-                .parse::<DateTime<Utc>>()?;
-            let end_timestamp = row
-                .try_get::<Option<String>, _>("end_timestamp")?
-                .map(|s| s.parse::<DateTime<Utc>>())
-                .transpose()?;
+            let timestamp: DateTime<Utc> =
+                DateTime::<Utc>::from_timestamp(row.try_get::<i64, _>("timestamp")?, 0)
+                    .unwrap_or_default();
+            let end_timestamp: Option<DateTime<Utc>> =
+                DateTime::<Utc>::from_timestamp(row.try_get::<i64, _>("end_timestamp")?, 0);
 
             let id = row.try_get("id").map(Uuid::from_slice).unwrap()?;
 

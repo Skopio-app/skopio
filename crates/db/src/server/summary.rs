@@ -1,6 +1,5 @@
 use std::{collections::HashMap, fmt::Debug};
 
-use chrono::{DateTime, Utc};
 use common::{
     models::{
         inputs::{BucketSummaryInput, SummaryQueryInput},
@@ -40,11 +39,11 @@ impl From<SummaryQueryInput> for SummaryQueryBuilder {
         let mut builder = SummaryQueryBuilder::new();
 
         if let Some(start) = input.start {
-            builder = builder.start(start);
+            builder = builder.start(start.timestamp());
         }
 
         if let Some(end) = input.end {
-            builder = builder.end(end);
+            builder = builder.end(end.timestamp());
         }
 
         if let Some(apps) = input.apps {
@@ -79,8 +78,8 @@ impl From<BucketSummaryInput> for SummaryQueryBuilder {
         let mut builder = SummaryQueryBuilder::new();
 
         let time_range = TimeRange::from(input.preset);
-        builder = builder.start(time_range.start());
-        builder = builder.end(time_range.end());
+        builder = builder.start(time_range.start().timestamp());
+        builder = builder.end(time_range.end().timestamp());
         builder.filters.time_bucket = time_range.bucket();
 
         if let Some(apps) = input.apps {
@@ -148,12 +147,12 @@ impl SummaryQueryBuilder {
         }
     }
 
-    pub fn start(mut self, start: DateTime<Utc>) -> Self {
+    pub fn start(mut self, start: i64) -> Self {
         self.filters.start = Some(start);
         self
     }
 
-    pub fn end(mut self, end: DateTime<Utc>) -> Self {
+    pub fn end(mut self, end: i64) -> Self {
         self.filters.end = Some(end);
         self
     }
