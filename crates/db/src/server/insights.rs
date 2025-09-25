@@ -44,7 +44,7 @@ impl InsightProvider for Insights {
                 let rows: Vec<YearResult> = sqlx::query_as!(
                     YearResult,
                     "
-                    SELECT DISTINCT strftime('%Y', datetime(timestamp, 'localtime')) as year
+                    SELECT DISTINCT strftime('%Y', datetime(timestamp, 'unixepoch', 'localtime')) as year
                     FROM events
                     ORDER BY year DESC
                     "
@@ -145,11 +145,11 @@ impl InsightProvider for Insights {
                 let row = sqlx::query!(
                     r#"
                     SELECT
-                        COALESCE(DATE(datetime(timestamp, 'localtime')), '') AS "date: String",
+                        COALESCE(DATE(datetime(timestamp, 'unixepoch', 'localtime')), '') AS "date: String",
                         COALESCE(SUM(duration), 0)  AS "total: i64"
                     FROM events
                     WHERE timestamp >= ?1 AND timestamp < ?2
-                    GROUP BY DATE(datetime(timestamp, 'localtime'))
+                    GROUP BY DATE(datetime(timestamp, 'unixepoch', 'localtime'))
                     ORDER BY 2 DESC
                     LIMIT 1
                     "#,
@@ -231,7 +231,7 @@ impl InsightProvider for Insights {
                 let sql = format!(
                     "
                     SELECT
-                        strftime('{bucket_format}', datetime(e.timestamp, 'localtime')) as bucket,
+                        strftime('{bucket_format}', datetime(e.timestamp, 'unixepoch', 'localtime')) as bucket,
                         ROUND(AVG(e.duration), 2) as avg_duration
                         {label_select}
                     FROM events e
