@@ -142,27 +142,31 @@ impl InsightProvider for Insights {
                     }
                 }
 
+                let start_epoch = start.timestamp();
+                let end_epoch = end.timestamp();
+
                 let row = sqlx::query!(
                     r#"
                     SELECT
-                        COALESCE(DATE(datetime(timestamp, 'unixepoch', 'localtime')), '') AS "date: String",
-                        COALESCE(SUM(duration), 0)  AS "total: i64"
+                        DATE(timestamp, 'unixepoch', 'localtime') AS "date!: String",
+                        COALESCE(SUM(duration), 0)  AS "total!: i64"
                     FROM events
                     WHERE timestamp >= ?1 AND timestamp < ?2
-                    GROUP BY DATE(datetime(timestamp, 'unixepoch', 'localtime'))
+                    GROUP BY 1
                     ORDER BY 2 DESC
                     LIMIT 1
                     "#,
-                    start,
-                    end
+                    start_epoch,
+                    end_epoch
                 )
                 .fetch_optional(db_context.pool())
                 .await?;
 
+                println!("The row: {:?}", row);
                 if let Some(value) = row {
                     Ok(InsightResult::MostActiveDay {
-                        date: value.date.unwrap_or_default(),
-                        total_duration: value.total.unwrap_or(0),
+                        date: value.date,
+                        total_duration: value.total,
                     })
                 } else {
                     Ok(InsightResult::MostActiveDay {
