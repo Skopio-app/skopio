@@ -44,7 +44,7 @@ impl InsightProvider for Insights {
                 let rows: Vec<YearResult> = sqlx::query_as!(
                     YearResult,
                     "
-                    SELECT DISTINCT strftime('%Y', datetime(timestamp, 'unixepoch', 'localtime')) as year
+                    SELECT DISTINCT strftime('%Y', timestamp, 'unixepoch', 'localtime') as year
                     FROM events
                     ORDER BY year DESC
                     "
@@ -225,7 +225,7 @@ impl InsightProvider for Insights {
                     ),
                     Some(Group::Source) => (
                         "JOIN sources s ON s.id = e.source_id",
-                        ", s.name as source",
+                        ", s.name as label",
                         ", label",
                     ),
                     None => ("", ", '_' as label", ""),
@@ -234,7 +234,7 @@ impl InsightProvider for Insights {
                 let sql = format!(
                     "
                     SELECT
-                        strftime('{bucket_format}', datetime(e.timestamp, 'unixepoch', 'localtime')) as bucket,
+                        strftime('{bucket_format}', e.timestamp, 'unixepoch', 'localtime') as bucket,
                         ROUND(AVG(e.duration), 2) as avg_duration
                         {label_select}
                     FROM events e
@@ -246,8 +246,8 @@ impl InsightProvider for Insights {
                 );
 
                 let rows = sqlx::query(&sql)
-                    .bind(start)
-                    .bind(end)
+                    .bind(start.timestamp())
+                    .bind(end.timestamp())
                     .fetch_all(db_context.pool())
                     .await?;
 
