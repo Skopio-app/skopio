@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "INSERT INTO entities (id, project_id, name, type) VALUES (?, ?, ?, ?) RETURNING id",
+  "query": "INSERT INTO projects (id, name, root_path, last_updated) VALUES (?, ?, ?, ?) RETURNING id",
   "describe": {
     "columns": [
       {
@@ -16,5 +16,5 @@
       false
     ]
   },
-  "hash": "8ae7dc98e4e784b65b1141d59c83f87b42e9257e8fb087c43af6956348004c3f"
+  "hash": "e04aa70d628ca482b5ba812523757607258a9d40fab374c7ad0701de1f08ca4e"
 }

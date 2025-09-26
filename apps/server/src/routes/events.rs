@@ -46,8 +46,8 @@ async fn insert_events(
             project_id,
             category_id,
             source_id,
-            event.timestamp.unwrap_or_default(),
-            event.end_timestamp.unwrap_or_default(),
+            event.timestamp.unwrap_or_default().timestamp(),
+            event.end_timestamp.unwrap_or_default().timestamp(),
             branch_id.unwrap_or_default(),
             language_id.unwrap_or_default(),
         );
@@ -56,7 +56,7 @@ async fn insert_events(
 
         staged.push(Event {
             id,
-            timestamp: event.timestamp.unwrap_or_default(),
+            timestamp: event.timestamp.unwrap_or_default().timestamp(),
             duration: event.duration,
             category_id,
             app_id,
@@ -65,7 +65,7 @@ async fn insert_events(
             branch_id,
             language_id,
             source_id,
-            end_timestamp: event.end_timestamp,
+            end_timestamp: event.end_timestamp.map(|t| t.timestamp()),
         });
     }
 

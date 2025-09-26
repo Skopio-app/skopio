@@ -1,4 +1,5 @@
 use crate::{error::DBError, DBContext};
+use chrono::Utc;
 use common::models::Project;
 use uuid::Uuid;
 
@@ -29,17 +30,27 @@ impl ServerProject {
             .fetch_optional(db_context.pool())
             .await?;
 
+        let timestamp = Utc::now().timestamp();
+
         if let Some(row) = record {
+            sqlx::query!(
+                "UPDATE projects SET last_updated = ? WHERE id = ?",
+                timestamp,
+                row.id
+            )
+            .execute(db_context.pool())
+            .await?;
             let id = Uuid::from_slice(&row.id)?;
             return Ok(id);
         }
 
         let id = uuid::Uuid::now_v7();
         let result = sqlx::query!(
-            "INSERT INTO projects (id, name, root_path) VALUES (?, ?, ?) RETURNING id",
+            "INSERT INTO projects (id, name, root_path, last_updated) VALUES (?, ?, ?, ?) RETURNING id",
             id,
             name,
             root_path,
+            timestamp
         )
         .fetch_one(db_context.pool())
         .await?;
@@ -85,7 +96,7 @@ impl ServerProject {
                     root_path
                 FROM projects
                 WHERE id > ?
-                ORDER BY id
+                ORDER BY last_updated
                 LIMIT ?
                 "#,
                 cursor,
@@ -102,7 +113,7 @@ impl ServerProject {
                     name,
                     root_path
                 FROM projects
-                ORDER BY id
+                ORDER BY last_updated
                 LIMIT ?
                 "#,
                 limit

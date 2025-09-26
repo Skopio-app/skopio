@@ -88,11 +88,10 @@ impl EventTracker {
         }
 
         let now = Utc::now();
-        let (project_name, project_path, entity_name, language_name, entity_type, category) =
-            resolve_app_details(&bundle_id, app_name, app_path, entity);
+        let app_details = resolve_app_details(&bundle_id, app_name, app_path, entity);
 
         let branch_name = if app_name == "Xcode" {
-            project_path.as_ref().and_then(find_git_branch)
+            app_details.project_path.as_ref().and_then(find_git_branch)
         } else {
             None
         };
@@ -104,7 +103,7 @@ impl EventTracker {
             if let Some(prev_event) = active.as_ref() {
                 let duration = (now - prev_event.timestamp.unwrap()).num_seconds();
                 if prev_event.app_name != app_name
-                    || prev_event.entity_name.as_deref() != Some(entity_name.as_str())
+                    || prev_event.entity_name.as_deref() != Some(app_details.entity.as_str())
                 {
                     let mut ended_event = prev_event.clone();
                     ended_event.duration = Some(duration);
@@ -146,14 +145,14 @@ impl EventTracker {
             *active = Some(Event {
                 timestamp: Some(now),
                 duration: None,
-                category,
+                category: app_details.category,
                 app_name: app_name.to_string(),
-                entity_name: Some(entity_name.clone()),
-                entity_type: Some(entity_type),
-                project_name,
-                project_path,
+                entity_name: Some(app_details.entity.clone()),
+                entity_type: Some(app_details.entity_type),
+                project_name: app_details.project_name,
+                project_path: app_details.project_path,
                 branch_name,
-                language_name,
+                language_name: app_details.language,
                 end_timestamp: None,
             });
         }

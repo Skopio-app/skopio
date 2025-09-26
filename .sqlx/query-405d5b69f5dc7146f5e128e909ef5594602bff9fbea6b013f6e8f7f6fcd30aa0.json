@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "INSERT INTO apps (id, name) VALUES (?, ?) RETURNING id",
+  "query": "INSERT INTO languages (id, name, last_updated) VALUES (?, ?, ?) RETURNING id",
   "describe": {
     "columns": [
       {
@@ -10,11 +10,11 @@
       }
     ],
     "parameters": {
-      "Right": 2
+      "Right": 3
     },
     "nullable": [
       false
     ]
   },
-  "hash": "c403116639292c3cc7023959b97a7ab13fe4ac11ae26e889b895ee230110f4a1"
+  "hash": "405d5b69f5dc7146f5e128e909ef5594602bff9fbea6b013f6e8f7f6fcd30aa0"
 }

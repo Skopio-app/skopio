@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "INSERT INTO sources (id, name) VALUES (?, ?) RETURNING id",
+  "query": "INSERT INTO sources (id, name, last_updated) VALUES (?, ?, ?) RETURNING id",
   "describe": {
     "columns": [
       {
@@ -10,11 +10,11 @@
       }
     ],
     "parameters": {
-      "Right": 2
+      "Right": 3
     },
     "nullable": [
       false
     ]
   },
-  "hash": "a7c0e37c6b25518fee71470c7fb5d64b330ef7cab6229e54e4e27cc04664de4e"
+  "hash": "3aaf2fb450aa053ad37ac30b30d83e16dd4c4c402b89750a2c91e7c16ece0a4b"
 }

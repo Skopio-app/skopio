@@ -1,4 +1,5 @@
 use crate::{error::DBError, models::Category, DBContext};
+use chrono::Utc;
 use uuid::Uuid;
 
 impl Category {
@@ -8,16 +9,26 @@ impl Category {
             .fetch_optional(db.pool())
             .await?;
 
+        let timestamp = Utc::now().timestamp();
+
         if let Some(row) = record {
+            sqlx::query!(
+                "UPDATE categories SET last_updated = ? WHERE id = ?",
+                timestamp,
+                row.id
+            )
+            .execute(db.pool())
+            .await?;
             let id = Uuid::from_slice(&row.id)?;
             return Ok(id);
         }
 
         let id = Uuid::now_v7();
         let result = sqlx::query!(
-            "INSERT INTO categories (id, name) VALUES (?, ?) RETURNING id",
+            "INSERT INTO categories (id, name, last_updated) VALUES (?, ?, ?) RETURNING id",
             id,
-            name
+            name,
+            timestamp
         )
         .fetch_one(db.pool())
         .await?;
