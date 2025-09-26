@@ -106,8 +106,8 @@ impl InsightProvider for Insights {
                 );
 
                 let rows = sqlx::query(&query_string)
-                    .bind(start)
-                    .bind(end)
+                    .bind(start.timestamp())
+                    .bind(end.timestamp())
                     .bind(limit as i64)
                     .fetch_all(db_context.pool())
                     .await?;
@@ -162,7 +162,6 @@ impl InsightProvider for Insights {
                 .fetch_optional(db_context.pool())
                 .await?;
 
-                println!("The row: {:?}", row);
                 if let Some(value) = row {
                     Ok(InsightResult::MostActiveDay {
                         date: value.date,
