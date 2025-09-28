@@ -28,8 +28,6 @@ const ProjectsView = () => {
   const [cursors, setCursors] = useState<(string | null)[]>([]);
   const [totalPages, setTotalPages] = useState<number>(0);
 
-  const limit = 15;
-
   const { id: tabId } = useParams();
   const navigate = useNavigate();
 
@@ -119,7 +117,7 @@ const ProjectsView = () => {
       <div className="flex-1 overflow-auto space-y-6 scroll-hidden">
         <ul className="divide-y divide-muted border">
           {isLoading ? (
-            Array.from({ length: limit }).map((_, i) => (
+            Array.from({ length: LIMIT }).map((_, i) => (
               <li key={i} className="p-4">
                 <Skeleton className="h-6 w-1/2" />
               </li>

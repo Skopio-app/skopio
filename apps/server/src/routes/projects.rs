@@ -6,7 +6,10 @@ use axum::{
     Json, Router,
 };
 use common::models::{inputs::ProjectListQuery, outputs::PaginatedProjects, Project};
-use db::{server::projects::ServerProject, DBContext};
+use db::{
+    server::projects::{cursor::ProjectCursor, ServerProject},
+    DBContext,
+};
 use tokio::sync::Mutex;
 use uuid::Uuid;
 
@@ -28,8 +31,9 @@ pub async fn get_projects(
         }));
     }
 
-    let data = ServerProject::fetch_paginated(&db, query.after, limit).await?;
-    let cursors = ServerProject::get_all_cursors(&db, limit).await?;
+    let after = query.after.as_deref().and_then(ProjectCursor::decode);
+    let data = ServerProject::fetch_paginated(&db, after, limit).await?;
+    let cursors = ServerProject::get_page_cursors(&db, limit).await?;
 
     Ok(Json(PaginatedProjects {
         data,

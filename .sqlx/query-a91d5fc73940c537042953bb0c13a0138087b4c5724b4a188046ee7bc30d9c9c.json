@@ -1,6 +1,6 @@
 {
   "db_name": "SQLite",
-  "query": "\n                SELECT\n                    id  AS \"id: Uuid\",\n                    name,\n                    root_path,\n                    last_updated\n                FROM projects\n                ORDER BY last_updated\n                LIMIT ?\n                ",
+  "query": "\n                SELECT\n                    id  AS \"id: Uuid\",\n                    name,\n                    root_path,\n                    last_updated\n                FROM projects\n                WHERE\n                  (last_updated < ?)\n                  OR (last_updated = ? AND id < ?)\n                ORDER BY last_updated DESC\n                LIMIT ?\n                ",
   "describe": {
     "columns": [
       {
@@ -25,7 +25,7 @@
       }
     ],
     "parameters": {
-      "Right": 1
+      "Right": 4
     },
     "nullable": [
       false,
@@ -34,5 +34,5 @@
       true
     ]
   },
-  "hash": "75168e074805094870fc6fb29ecf841508efc810d5af4baf517753c6e4562d13"
+  "hash": "a91d5fc73940c537042953bb0c13a0138087b4c5724b4a188046ee7bc30d9c9c"
 }

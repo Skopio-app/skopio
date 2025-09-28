@@ -283,7 +283,7 @@ export type OpenApp = { app: TrackedApp; blockReason: string | null };
 export type PaginatedProjects = {
   data: Project[];
   totalPages: number | null;
-  cursors: (string | null)[];
+  cursors: string[];
 };
 export type PermissionKind = "accessibility" | "inputMonitoring";
 /**

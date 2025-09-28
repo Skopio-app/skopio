@@ -1,0 +1,26 @@
+{
+  "db_name": "SQLite",
+  "query": "\n            SELECT id AS \"id: Uuid\",\n                   last_updated AS \"last_updated: i64\"\n            FROM (\n              SELECT\n                id,\n                last_updated,\n                ROW_NUMBER() OVER (ORDER BY last_updated DESC) AS row_num\n                FROM projects\n            )\n            WHERE (row_num - 1) % ? = 0\n            ORDER BY last_updated DESC\n            ",
+  "describe": {
+    "columns": [
+      {
+        "name": "id: Uuid",
+        "ordinal": 0,
+        "type_info": "Blob"
+      },
+      {
+        "name": "last_updated: i64",
+        "ordinal": 1,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      true
+    ]
+  },
+  "hash": "4b4b42ba371123b6e69fae506eb8ff5d86fd6af3e5fb42efcdbf68b54be2e2ff"
+}
