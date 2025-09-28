@@ -7,9 +7,9 @@ export const storeYearlyActivity = async (summary: BucketTimeSummary[]) => {
   const now = Date.now();
   const year = new Date(summary[0].bucket).getFullYear();
 
-  const values = summary.map(({ bucket, grouped_values }) => ({
+  const values = summary.map(({ bucket, groupedValues }) => ({
     day: bucket,
-    value: grouped_values["Total"] ?? 0,
+    value: groupedValues["Total"] ?? 0,
   }));
 
   const group: CachedActivity = {
@@ -32,7 +32,7 @@ export const updateTodayActivity = async (
   todayBucket: BucketTimeSummary | null,
 ) => {
   if (!todayBucket) return;
-  const value = todayBucket.grouped_values["Total"] ?? 0;
+  const value = todayBucket.groupedValues["Total"] ?? 0;
   const day = todayBucket.bucket;
   const year = new Date(day).getFullYear();
 

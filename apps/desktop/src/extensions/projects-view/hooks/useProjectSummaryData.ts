@@ -52,11 +52,11 @@ const generateGroupedChartData = (rawData: BucketTimeSummary[]) => {
   const allKeys = new Set<string>();
   const totalPerKey: Record<string, number> = {};
 
-  for (const { bucket, grouped_values } of rawData) {
+  for (const { bucket, groupedValues } of rawData) {
     const date = new Date(bucket);
     const values: Record<string, number> = {};
 
-    for (const [key, seconds] of Object.entries(grouped_values)) {
+    for (const [key, seconds] of Object.entries(groupedValues)) {
       const value = seconds ?? 0;
       values[key] = value;
       totalPerKey[key] = (totalPerKey[key] ?? 0) + value;
@@ -84,8 +84,8 @@ const generateGroupedChartData = (rawData: BucketTimeSummary[]) => {
 const mergeGroupedValues = (data: BucketTimeSummary[]) => {
   const merged: Record<string, number> = {};
   for (const item of data) {
-    for (const [key, value] of Object.entries(item.grouped_values)) {
-      const entity = getEntityName(key, item.group_meta);
+    for (const [key, value] of Object.entries(item.groupedValues)) {
+      const entity = getEntityName(key, item.groupMeta);
       merged[entity] = (merged[entity] ?? 0) + (value ?? 0);
     }
   }
@@ -140,7 +140,7 @@ const useProjectSummaryDataImpl = (
     case "line": {
       const data: LineChartData[] = rawData.map((item) => ({
         x: item.bucket,
-        y: item.grouped_values["Total"] ?? 0,
+        y: item.groupedValues["Total"] ?? 0,
       }));
       return { data, loading };
     }

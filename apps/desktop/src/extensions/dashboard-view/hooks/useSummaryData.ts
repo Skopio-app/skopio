@@ -11,7 +11,7 @@ import {
   CalendarChartData,
   LineChartData,
   PieChartData,
-} from "../../../types/chart";
+} from "@/types/chart";
 import { useDashboardFilter } from "../stores/useDashboardFilter";
 import { format, parseISO } from "date-fns";
 import { getEntityName } from "@/utils/data";
@@ -68,7 +68,7 @@ const generateGroupedChartData = (
 
   const totalPerKey: Record<string, number> = {};
 
-  for (const { bucket, grouped_values, group_meta } of rawData) {
+  for (const { bucket, groupedValues, groupMeta } of rawData) {
     const date = parseISO(bucket);
     const label = format(date, "MMM d");
 
@@ -79,9 +79,9 @@ const generateGroupedChartData = (
 
     const acc = byLabel.get(label)!;
 
-    for (const [rawKey, seconds] of Object.entries(grouped_values)) {
+    for (const [rawKey, seconds] of Object.entries(groupedValues)) {
       if (rawKey === "Total") continue;
-      const key = getEntityName(rawKey, group_meta);
+      const key = getEntityName(rawKey, groupMeta);
       const value = seconds ?? 0;
 
       if (value <= 0) continue;
@@ -154,7 +154,7 @@ const generateGroupedChartData = (
 const mergeGroupedValues = (data: BucketTimeSummary[]) => {
   const merged: Record<string, number> = {};
   for (const item of data) {
-    for (const [key, value] of Object.entries(item.grouped_values)) {
+    for (const [key, value] of Object.entries(item.groupedValues)) {
       merged[key] = (merged[key] ?? 0) + (value ?? 0);
     }
   }
@@ -216,7 +216,7 @@ const useSummaryDataImpl = (
     case "line": {
       const data: LineChartData[] = rawData.map((item) => ({
         x: item.bucket,
-        y: item.grouped_values["Total"] ?? 0,
+        y: item.groupedValues["Total"] ?? 0,
       }));
       return { data, loading };
     }
@@ -251,9 +251,9 @@ const useSummaryDataImpl = (
 
     case "calendar": {
       const data: CalendarChartData[] = rawData.map(
-        ({ bucket, grouped_values }) => ({
+        ({ bucket, groupedValues }) => ({
           day: bucket,
-          value: grouped_values["Total"] ?? 0,
+          value: groupedValues["Total"] ?? 0,
         }),
       );
 

@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 
 /// A single time bucket with grouped values.
 #[derive(Debug, Serialize, Deserialize, sqlx::FromRow, specta::Type)]
+#[serde(rename_all = "camelCase")]
 pub struct BucketTimeSummary {
     /// The time bucket (e.g., "2025-08-01")
     pub bucket: String,
@@ -15,6 +16,7 @@ pub struct BucketTimeSummary {
 }
 /// Represents an aggregated total time for a specific group.
 #[derive(Debug, Serialize, Deserialize, sqlx::FromRow, specta::Type)]
+#[serde(rename_all = "camelCase")]
 pub struct GroupedTimeSummary {
     /// The group key (e.g., project name, app name)
     pub group_key: String,

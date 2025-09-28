@@ -42,9 +42,9 @@ const ActivitySection = () => {
         if (!Array.isArray(result)) return;
 
         const values: CalendarChartData[] = result.map(
-          ({ bucket, grouped_values }) => ({
+          ({ bucket, groupedValues }) => ({
             day: bucket,
-            value: grouped_values["Total"] ?? 0,
+            value: groupedValues["Total"] ?? 0,
           }),
         );
         setData(values);

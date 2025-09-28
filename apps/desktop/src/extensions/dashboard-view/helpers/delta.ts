@@ -6,7 +6,7 @@ export const isDeltaOutdated = (
   incoming: BucketTimeSummary,
   thresholdSeconds = 60,
 ): { outdated: boolean; delta: number } => {
-  const newValue = incoming.grouped_values["Total"] ?? 0;
+  const newValue = incoming.groupedValues["Total"] ?? 0;
   const oldValue = cached?.value ?? 0;
 
   const delta = Math.abs(newValue - oldValue);

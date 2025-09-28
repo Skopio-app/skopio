@@ -59,7 +59,7 @@ const GoalDisplay = ({ goal }: { goal: Goal }) => {
 
   const chartData = data.map((item) => ({
     label: item.bucket,
-    value: item.grouped_values["Total"] ?? 0,
+    value: item.groupedValues["Total"] ?? 0,
   }));
 
   return (

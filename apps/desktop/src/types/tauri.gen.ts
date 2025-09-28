@@ -141,11 +141,11 @@ export type BucketTimeSummary = {
   /**
    * A map of group_key: total_seconds
    */
-  grouped_values: Partial<{ [key in string]: number }>;
+  groupedValues: Partial<{ [key in string]: number }>;
   /**
    * Optional per-group metadata (e.g. entity type when grouping by Entity)
    */
-  group_meta: string | null;
+  groupMeta: string | null;
 };
 export type Category = { id: string; name: string };
 /**
@@ -249,11 +249,11 @@ export type GroupedTimeSummary = {
   /**
    * The group key (e.g., project name, app name)
    */
-  group_key: string;
+  groupKey: string;
   /**
    * Total aggregated time (in seconds)
    */
-  total_seconds: number;
+  totalSeconds: number;
 };
 export type InsightBucket = "day" | "week" | "month" | "year";
 /**
