@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router";
-import { commands, Project, ProjectQuery } from "@/types/tauri.gen";
+import { commands, Project } from "@/types/tauri.gen";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -59,11 +59,7 @@ const ProjectDetails = () => {
     const fetchProject = async () => {
       try {
         if (!projectId) return;
-        const query: ProjectQuery = {
-          id: projectId,
-        };
-
-        const result = await commands.fetchProject(query);
+        const result = await commands.fetchProject(projectId);
         usePresetFilter.setState({ project: result?.name });
         setProject(result);
       } catch (err) {

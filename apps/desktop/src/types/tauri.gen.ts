@@ -294,7 +294,12 @@ export type PermissionSummary = {
   accessibility: PermissionStatus;
   inputMonitoring: PermissionStatus;
 };
-export type Project = { id: string; name: string; root_path: string | null };
+export type Project = {
+  id: string;
+  name: string;
+  rootPath: string | null;
+  lastUpdated: number | null;
+};
 export type ProjectListQuery = {
   after: string | null;
   limit: number | null;

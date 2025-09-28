@@ -8,7 +8,7 @@ import {
   PaginationPrevious,
   Skeleton,
 } from "@skopio/ui";
-import { useEffect, useState } from "react";
+import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { commands, PaginatedProjects, Project } from "@/types/tauri.gen";
 import { useNavigate, useParams } from "react-router";
 import { SearchIcon } from "lucide-react";
@@ -18,14 +18,15 @@ import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import { toast } from "sonner";
 
 const schema = z.object({ query: z.string() });
+const LIMIT = 15;
+const PAGE_WINDOW = 7;
 
 const ProjectsView = () => {
-  const [projects, setProjects] = useState<Project[]>([]);
+  const [list, setList] = useState<Project[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState<number>(0);
   const [cursors, setCursors] = useState<(string | null)[]>([]);
   const [totalPages, setTotalPages] = useState<number>(0);
-  const [searchResults, setSearchResults] = useState<Project[]>([]);
 
   const limit = 15;
 
@@ -37,48 +38,72 @@ const ProjectsView = () => {
     defaultValues: { query: "" },
   });
 
-  const query = watch("query");
-
-  const fetchData = async (page: number) => {
-    setIsLoading(true);
-    try {
-      const after = cursors[page];
-      const res: PaginatedProjects = await commands.fetchProjects({
-        query: null,
-        after,
-        limit,
-      });
-      setProjects(res.data);
-      setCursors(res.cursors ?? null);
-      setTotalPages(res.totalPages ?? 0);
-    } catch (err) {
-      toast.error((err as Error).message);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  const rawQuery = watch("query");
+  const query = useDeferredValue(rawQuery);
+  const prevQueryRef = useRef<string>("");
 
   useEffect(() => {
-    fetchData(currentPage);
-  }, [currentPage]);
+    const controller = new AbortController();
+    const run = async () => {
+      try {
+        setIsLoading(true);
 
-  useEffect(() => {
-    const delay = setTimeout(() => {
-      if (query.length > 0) {
-        commands
-          .fetchProjects({ query, limit, after: null })
-          .then((projects) => setSearchResults(projects.data))
-          .catch(toast.error);
+        const searching = query.trim().length > 0;
+        const after = searching ? null : (cursors[currentPage] ?? null);
+
+        if (searching && prevQueryRef.current.trim().length === 0) {
+          setCurrentPage(0);
+        }
+
+        const res: PaginatedProjects = await commands
+          .fetchProjects({
+            query: searching ? query : null,
+            after,
+            limit: LIMIT,
+          })
+          .catch((e) => {
+            if (!controller.signal.aborted) throw e;
+            return null as any;
+          });
+
+        if (controller.signal.aborted || !res) return;
+
+        const data = (res.data ?? []).slice().sort((a, b) => {
+          const la = a.lastUpdated ?? 0;
+          const lb = b.lastUpdated ?? 0;
+          return lb - la;
+        });
+
+        setList(data);
+
+        if (!searching) {
+          setCursors(res.cursors ?? []);
+          setTotalPages(res.totalPages ?? 0);
+        }
+      } catch (err) {
+        if (!controller.signal.aborted) {
+          toast.error((err as Error)?.message ?? "Failed to fetch projects");
+        }
+      } finally {
+        if (!controller.signal.aborted) {
+          setIsLoading(false);
+          prevQueryRef.current = query;
+        }
       }
-    }, 300);
+    };
 
-    return () => clearTimeout(delay);
-  }, [query]);
+    run();
+    return () => controller.abort();
+  }, [currentPage, query]);
 
-  const pageWindowSize = 7;
-  const total = totalPages;
-  const start = Math.max(0, currentPage - Math.floor(pageWindowSize / 2));
-  const end = Math.min(total, start + pageWindowSize);
+  const { start, end } = useMemo(() => {
+    const total = totalPages;
+    const start = Math.max(0, currentPage - Math.floor(PAGE_WINDOW / 2));
+    const end = Math.min(total, start + PAGE_WINDOW);
+    return { start, end };
+  }, [currentPage, totalPages]);
+
+  const isSearching = query.trim().length > 0;
 
   return (
     <div className="flex flex-col h-full mx-4 space-y-4">
@@ -99,12 +124,12 @@ const ProjectsView = () => {
                 <Skeleton className="h-6 w-1/2" />
               </li>
             ))
-          ) : projects.length === 0 ? (
+          ) : list.length === 0 ? (
             <p className="h-[300px] w-full flex items-center justify-center text-sm text-gray-500">
               No projects found
             </p>
           ) : (
-            (query.length > 0 ? searchResults : projects).map((project) => (
+            list.map((project) => (
               <li
                 key={project.id}
                 className="p-4 hover:bg-neutral-200/40 transition-colors hover:cursor-pointer"
@@ -119,7 +144,7 @@ const ProjectsView = () => {
         </ul>
       </div>
 
-      {query.length === 0 && totalPages > 1 && (
+      {!isSearching && totalPages > 1 && (
         <div className="pt-4 mb-5">
           <Pagination className="mt-auto">
             <PaginationContent>
@@ -161,16 +186,18 @@ const ProjectsView = () => {
                 );
               })}
 
-              {end < total && (
+              {end < totalPages && (
                 <>
-                  {end < total - 1 && (
+                  {end < totalPages - 1 && (
                     <PaginationItem>
                       <span className="px-2">...</span>
                     </PaginationItem>
                   )}
                   <PaginationItem>
-                    <PaginationLink onClick={() => setCurrentPage(total - 1)}>
-                      {total}
+                    <PaginationLink
+                      onClick={() => setCurrentPage(totalPages - 1)}
+                    >
+                      {totalPages}
                     </PaginationLink>
                   </PaginationItem>
                 </>

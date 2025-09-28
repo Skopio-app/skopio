@@ -34,8 +34,10 @@ pub enum InsightType {
 }
 
 #[derive(Serialize, Deserialize, Debug, specta::Type)]
+#[serde(rename_all = "camelCase")]
 pub struct Project {
     pub id: uuid::Uuid,
     pub name: String,
     pub root_path: Option<String>,
+    pub last_updated: Option<i64>,
 }

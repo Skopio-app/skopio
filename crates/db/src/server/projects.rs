@@ -8,6 +8,7 @@ pub struct ServerProject {
     pub id: Uuid,
     pub name: String,
     pub root_path: Option<String>,
+    pub last_updated: Option<i64>,
 }
 
 impl From<ServerProject> for Project {
@@ -16,6 +17,7 @@ impl From<ServerProject> for Project {
             id: value.id,
             name: value.name,
             root_path: value.root_path,
+            last_updated: value.last_updated,
         }
     }
 }
@@ -67,7 +69,8 @@ impl ServerProject {
             SELECT
                 id  AS "id: Uuid",
                 name,
-                root_path
+                root_path,
+                last_updated
             FROM projects
             WHERE id = ?
             "#,
@@ -93,7 +96,8 @@ impl ServerProject {
                 SELECT
                     id  AS "id: Uuid",
                     name,
-                    root_path
+                    root_path,
+                    last_updated
                 FROM projects
                 WHERE id > ?
                 ORDER BY last_updated
@@ -111,7 +115,8 @@ impl ServerProject {
                 SELECT
                     id  AS "id: Uuid",
                     name,
-                    root_path
+                    root_path,
+                    last_updated
                 FROM projects
                 ORDER BY last_updated
                 LIMIT ?
@@ -169,7 +174,8 @@ impl ServerProject {
             SELECT
                 p.id    AS "id: Uuid",
                 p.name,
-                p.root_path
+                p.root_path,
+                p.last_updated
             FROM projects_fts fts
             JOIN projects_fts_map m ON m.docid = fts.rowid
             JOIN projects p ON p.id = m.project_id

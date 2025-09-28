@@ -25,5 +25,6 @@ pub async fn fetch_projects(query: ProjectListQuery) -> Result<PaginatedProjects
 #[tauri::command]
 #[specta::specta]
 pub async fn fetch_project(id: Uuid) -> Result<Option<Project>, String> {
-    req_json("projects/:id", Some(&id)).await
+    let path = format!("projects/{}", id);
+    req_json::<Option<Project>, ()>(&path, None::<&()>).await
 }
