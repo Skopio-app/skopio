@@ -225,7 +225,6 @@ fn make_specta_builder<R: Runtime>() -> tauri_specta::Builder<R> {
             crate::network::data::fetch_categories,
             crate::network::data::fetch_projects,
             crate::network::data::fetch_project,
-            crate::network::data::search_projects,
             crate::network::insights::fetch_insights,
             crate::network::events::fetch_events,
             crate::ui::window::dismiss_notification_window::<tauri::Wry>,

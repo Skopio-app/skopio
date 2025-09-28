@@ -62,7 +62,7 @@ impl ServerProject {
     /// Fetches a project by id
     pub async fn find_by_id(db_context: &DBContext, id: Uuid) -> Result<Option<Project>, DBError> {
         let result = sqlx::query_as!(
-            ServerProject,
+            Self,
             r#"
             SELECT
                 id  AS "id: Uuid",
@@ -86,9 +86,9 @@ impl ServerProject {
     ) -> Result<Vec<Project>, DBError> {
         let limit = limit.min(100) as i64;
 
-        let rows: Vec<ServerProject> = if let Some(cursor) = after_id {
+        let rows: Vec<Self> = if let Some(cursor) = after_id {
             sqlx::query_as!(
-                ServerProject,
+                Self,
                 r#"
                 SELECT
                     id  AS "id: Uuid",
@@ -106,7 +106,7 @@ impl ServerProject {
             .await?
         } else {
             sqlx::query_as!(
-                ServerProject,
+                Self,
                 r#"
                 SELECT
                     id  AS "id: Uuid",
@@ -164,7 +164,7 @@ impl ServerProject {
         let formatted_query = format!("\"{}\"*", escaped_query);
 
         let rows: Vec<ServerProject> = sqlx::query_as!(
-            ServerProject,
+            Self,
             r#"
             SELECT
                 p.id    AS "id: Uuid",

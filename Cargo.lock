@@ -49,6 +49,7 @@ dependencies = [
  "tracing-appender",
  "tracing-subscriber",
  "url",
+ "uuid",
  "zip 5.1.1",
 ]
 

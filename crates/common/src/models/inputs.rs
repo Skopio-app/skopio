@@ -74,20 +74,11 @@ pub struct BucketSummaryInput {
 }
 
 #[derive(Serialize, Deserialize, Debug, specta::Type)]
-pub struct PaginationQuery {
+#[serde(rename_all = "camelCase")]
+pub struct ProjectListQuery {
     pub after: Option<Uuid>,
     pub limit: Option<u32>,
-}
-
-#[derive(Serialize, Deserialize, Debug, specta::Type)]
-pub struct ProjectQuery {
-    pub id: Uuid,
-}
-
-#[derive(Serialize, Deserialize, Debug, specta::Type)]
-pub struct ProjectSearchQuery {
-    pub name: String,
-    pub limit: u32,
+    pub query: Option<String>,
 }
 
 /// Query payload for insights

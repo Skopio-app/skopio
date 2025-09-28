@@ -44,6 +44,7 @@ const ProjectsView = () => {
     try {
       const after = cursors[page];
       const res: PaginatedProjects = await commands.fetchProjects({
+        query: null,
         after,
         limit,
       });
@@ -65,8 +66,8 @@ const ProjectsView = () => {
     const delay = setTimeout(() => {
       if (query.length > 0) {
         commands
-          .searchProjects({ name: query, limit })
-          .then(setSearchResults)
+          .fetchProjects({ query, limit, after: null })
+          .then((projects) => setSearchResults(projects.data))
           .catch(toast.error);
       }
     }, 300);

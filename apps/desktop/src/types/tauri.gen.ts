@@ -64,14 +64,11 @@ export const commands = {
   async fetchCategories(): Promise<Category[]> {
     return await TAURI_INVOKE("fetch_categories");
   },
-  async fetchProjects(query: PaginationQuery): Promise<PaginatedProjects> {
+  async fetchProjects(query: ProjectListQuery): Promise<PaginatedProjects> {
     return await TAURI_INVOKE("fetch_projects", { query });
   },
-  async fetchProject(query: ProjectQuery): Promise<Project | null> {
-    return await TAURI_INVOKE("fetch_project", { query });
-  },
-  async searchProjects(query: ProjectSearchQuery): Promise<Project[]> {
-    return await TAURI_INVOKE("search_projects", { query });
+  async fetchProject(id: string): Promise<Project | null> {
+    return await TAURI_INVOKE("fetch_project", { id });
   },
   async fetchInsights(query: InsightQueryPayload): Promise<InsightResult> {
     return await TAURI_INVOKE("fetch_insights", { query });
@@ -288,7 +285,6 @@ export type PaginatedProjects = {
   totalPages: number | null;
   cursors: (string | null)[];
 };
-export type PaginationQuery = { after: string | null; limit: number | null };
 export type PermissionKind = "accessibility" | "inputMonitoring";
 /**
  * Normalized status for a permission check.
@@ -299,8 +295,11 @@ export type PermissionSummary = {
   inputMonitoring: PermissionStatus;
 };
 export type Project = { id: string; name: string; root_path: string | null };
-export type ProjectQuery = { id: string };
-export type ProjectSearchQuery = { name: string; limit: number };
+export type ProjectListQuery = {
+  after: string | null;
+  limit: number | null;
+  query: string | null;
+};
 export type ServerStatus =
   | { state: "offline" }
   | { state: "checking" }
