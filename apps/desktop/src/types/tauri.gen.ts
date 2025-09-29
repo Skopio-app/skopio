@@ -41,11 +41,6 @@ export const commands = {
   async fetchTotalTime(query: SummaryQueryInput): Promise<number> {
     return await TAURI_INVOKE("fetch_total_time", { query });
   },
-  async fetchRangeSummary(
-    query: SummaryQueryInput,
-  ): Promise<GroupedTimeSummary[]> {
-    return await TAURI_INVOKE("fetch_range_summary", { query });
-  },
   async addGoal(input: GoalInput): Promise<null> {
     return await TAURI_INVOKE("add_goal", { input });
   },
@@ -239,19 +234,6 @@ export type Group =
   | "category"
   | "entity"
   | "source";
-/**
- * Represents an aggregated total time for a specific group.
- */
-export type GroupedTimeSummary = {
-  /**
-   * The group key (e.g., project name, app name)
-   */
-  groupKey: string;
-  /**
-   * Total aggregated time (in seconds)
-   */
-  totalSeconds: number;
-};
 export type InsightBucket = "day" | "week" | "month" | "year";
 /**
  * Query payload for insights

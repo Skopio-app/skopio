@@ -84,13 +84,6 @@ pub fn append_standard_joins(query: &mut String, inner_join: Option<&str>) {
     ));
 }
 
-/// Optionally appends a GROUP BY clause.
-pub fn append_group_by(query: &mut String, group_by_field: Option<&str>) {
-    if let Some(field) = group_by_field {
-        query.push_str(&format!(" GROUP BY {}", field));
-    }
-}
-
 /// Returns (group_key_sql, inner_join_table_name)
 pub fn group_key_info(group: Option<Group>) -> (&'static str, Option<&'static str>) {
     match group {

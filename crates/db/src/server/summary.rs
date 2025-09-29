@@ -10,11 +10,11 @@ use common::{
 
 use crate::{
     error::DBError,
-    models::{BucketTimeSummary, GroupedTimeSummary},
+    models::BucketTimeSummary,
     server::utils::{
         query::{
-            append_all_filters, append_date_range, append_group_by, append_standard_joins,
-            get_time_bucket_expr, group_key_info,
+            append_all_filters, append_date_range, append_standard_joins, get_time_bucket_expr,
+            group_key_info,
         },
         summary_filter::SummaryFilters,
     },
@@ -195,42 +195,6 @@ impl SummaryQueryBuilder {
     pub fn time_bucket(mut self, bucket: TimeBucket) -> Self {
         self.filters.time_bucket = Some(bucket);
         self
-    }
-
-    /// Executes a range summary query with the current filters.
-    ///
-    /// Returns aggregated durations grouped by the chosen `Group`, if any.
-    pub async fn execute_range_summary(
-        &self,
-        db: &DBContext,
-    ) -> Result<Vec<GroupedTimeSummary>, DBError> {
-        let (group_key, inner_tbl) = group_key_info(self.filters.group_by);
-
-        let mut base_query =
-            format!("SELECT {group_key} as group_key, SUM(duration) as total_seconds FROM events");
-        append_standard_joins(&mut base_query, inner_tbl);
-        base_query.push_str(" WHERE 1=1");
-
-        append_date_range(
-            &mut base_query,
-            self.filters.start,
-            self.filters.end,
-            "events.timestamp",
-            "events.end_timestamp",
-        );
-        append_all_filters(&mut base_query, self.filters.clone());
-
-        if self.filters.group_by.is_some() {
-            append_group_by(&mut base_query, Some(group_key));
-        }
-
-        let final_query = base_query.clone();
-
-        let records = sqlx::query_as::<_, GroupedTimeSummary>(&final_query)
-            .fetch_all(db.pool())
-            .await?;
-
-        Ok(records)
     }
 
     /// Executes a query that returns only the total time (in seconds)

@@ -14,15 +14,6 @@ pub struct BucketTimeSummary {
     /// Optional per-group metadata (e.g. entity type when grouping by Entity)
     pub group_meta: Option<String>,
 }
-/// Represents an aggregated total time for a specific group.
-#[derive(Debug, Serialize, Deserialize, sqlx::FromRow, specta::Type)]
-#[serde(rename_all = "camelCase")]
-pub struct GroupedTimeSummary {
-    /// The group key (e.g., project name, app name)
-    pub group_key: String,
-    /// Total aggregated time (in seconds)
-    pub total_seconds: i64,
-}
 
 #[derive(Serialize, Deserialize, Debug, specta::Type, sqlx::FromRow)]
 pub struct App {

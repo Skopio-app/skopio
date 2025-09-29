@@ -298,12 +298,6 @@ cargo run
 
 ---
 
-- GET `/summary/range`
-
-  Fetch the total active time for a particular group when supplied with a `SummaryQueryInput`
-
----
-
 - GET `/insights`
 
   Fetch time based insights when supplied with an `InsightQueryPayload`

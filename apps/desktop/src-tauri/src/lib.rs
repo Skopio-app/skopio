@@ -216,7 +216,6 @@ fn make_specta_builder<R: Runtime>() -> tauri_specta::Builder<R> {
             crate::utils::permissions::open_permission_settings,
             crate::network::summaries::fetch_bucketed_summary,
             crate::network::summaries::fetch_total_time,
-            crate::network::summaries::fetch_range_summary,
             crate::goals_service::add_goal,
             crate::goals_service::get_goals,
             crate::goals_service::update_goal,
