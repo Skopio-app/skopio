@@ -23,6 +23,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v0.1.3] - 2025-09-30
+
+### Fixed
+
+- Removed redundant indexes.
+
+### Added
+
+- `last_updated` field to keep track of recently accessed items.
+
+### Changed
+
+- Use integers instead of text when storing timestamp values.
+- Rename project routes to follow REST conventions.
+
+### Removed
+
+- Redundant `without_row_id` config.
+
+---
+
 ## [v0.1.2] - 2025-09-17
 
 ### Fixed
