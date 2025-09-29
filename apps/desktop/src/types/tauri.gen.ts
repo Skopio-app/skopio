@@ -41,11 +41,6 @@ export const commands = {
   async fetchTotalTime(query: SummaryQueryInput): Promise<number> {
     return await TAURI_INVOKE("fetch_total_time", { query });
   },
-  async fetchRangeSummary(
-    query: SummaryQueryInput,
-  ): Promise<GroupedTimeSummary[]> {
-    return await TAURI_INVOKE("fetch_range_summary", { query });
-  },
   async addGoal(input: GoalInput): Promise<null> {
     return await TAURI_INVOKE("add_goal", { input });
   },
@@ -64,14 +59,11 @@ export const commands = {
   async fetchCategories(): Promise<Category[]> {
     return await TAURI_INVOKE("fetch_categories");
   },
-  async fetchProjects(query: PaginationQuery): Promise<PaginatedProjects> {
+  async fetchProjects(query: ProjectListQuery): Promise<PaginatedProjects> {
     return await TAURI_INVOKE("fetch_projects", { query });
   },
-  async fetchProject(query: ProjectQuery): Promise<Project | null> {
-    return await TAURI_INVOKE("fetch_project", { query });
-  },
-  async searchProjects(query: ProjectSearchQuery): Promise<Project[]> {
-    return await TAURI_INVOKE("search_projects", { query });
+  async fetchProject(id: string): Promise<Project | null> {
+    return await TAURI_INVOKE("fetch_project", { id });
   },
   async fetchInsights(query: InsightQueryPayload): Promise<InsightResult> {
     return await TAURI_INVOKE("fetch_insights", { query });
@@ -141,11 +133,11 @@ export type BucketTimeSummary = {
   /**
    * A map of group_key: total_seconds
    */
-  grouped_values: Partial<{ [key in string]: number }>;
+  groupedValues: Partial<{ [key in string]: number }>;
   /**
    * Optional per-group metadata (e.g. entity type when grouping by Entity)
    */
-  group_meta: string | null;
+  groupMeta: string | null;
 };
 export type Category = { id: string; name: string };
 /**
@@ -242,19 +234,6 @@ export type Group =
   | "category"
   | "entity"
   | "source";
-/**
- * Represents an aggregated total time for a specific group.
- */
-export type GroupedTimeSummary = {
-  /**
-   * The group key (e.g., project name, app name)
-   */
-  group_key: string;
-  /**
-   * Total aggregated time (in seconds)
-   */
-  total_seconds: number;
-};
 export type InsightBucket = "day" | "week" | "month" | "year";
 /**
  * Query payload for insights
@@ -286,9 +265,8 @@ export type OpenApp = { app: TrackedApp; blockReason: string | null };
 export type PaginatedProjects = {
   data: Project[];
   totalPages: number | null;
-  cursors: (string | null)[];
+  cursors: string[];
 };
-export type PaginationQuery = { after: string | null; limit: number | null };
 export type PermissionKind = "accessibility" | "inputMonitoring";
 /**
  * Normalized status for a permission check.
@@ -298,9 +276,17 @@ export type PermissionSummary = {
   accessibility: PermissionStatus;
   inputMonitoring: PermissionStatus;
 };
-export type Project = { id: string; name: string; root_path: string | null };
-export type ProjectQuery = { id: string };
-export type ProjectSearchQuery = { name: string; limit: number };
+export type Project = {
+  id: string;
+  name: string;
+  rootPath: string | null;
+  lastUpdated: number | null;
+};
+export type ProjectListQuery = {
+  after: string | null;
+  limit: number | null;
+  query: string | null;
+};
 export type ServerStatus =
   | { state: "offline" }
   | { state: "checking" }

@@ -1,4 +1,5 @@
 use crate::{error::DBError, DBContext};
+use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
@@ -18,16 +19,26 @@ impl Language {
                 .fetch_optional(db_context.pool())
                 .await?;
 
+            let timestamp = Utc::now().timestamp();
+
             if let Some(row) = record {
+                sqlx::query!(
+                    "UPDATE languages SET last_updated = ? WHERE id = ?",
+                    timestamp,
+                    row.id
+                )
+                .execute(db_context.pool())
+                .await?;
                 let id = Uuid::from_slice(&row.id)?;
                 return Ok(Some(id));
             }
 
             let id = uuid::Uuid::now_v7();
             let result = sqlx::query!(
-                "INSERT INTO languages (id, name) VALUES (?, ?) RETURNING id",
+                "INSERT INTO languages (id, name, last_updated) VALUES (?, ?, ?) RETURNING id",
                 id,
-                name
+                name,
+                timestamp
             )
             .fetch_one(db_context.pool())
             .await?;

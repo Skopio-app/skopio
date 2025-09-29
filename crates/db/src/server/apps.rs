@@ -1,23 +1,34 @@
 use crate::{error::DBError, models::App, DBContext};
+use chrono::Utc;
 use uuid::Uuid;
 
 impl App {
     /// Finds an existing app by name or inserts a new one, returning its ID.
-    pub async fn find_or_insert(db_context: &DBContext, name: &str) -> Result<uuid::Uuid, DBError> {
+    pub async fn find_or_insert(db_context: &DBContext, name: &str) -> Result<Uuid, DBError> {
         let record = sqlx::query!("SELECT id FROM apps WHERE name = ?", name)
             .fetch_optional(db_context.pool())
             .await?;
 
+        let timestamp = Utc::now().timestamp();
+
         if let Some(row) = record {
+            sqlx::query!(
+                "UPDATE projects SET last_updated = ? WHERE id = ?",
+                timestamp,
+                row.id
+            )
+            .execute(db_context.pool())
+            .await?;
             let id = Uuid::from_slice(&row.id)?;
             return Ok(id);
         }
 
-        let id = uuid::Uuid::now_v7();
+        let id = Uuid::now_v7();
         let result = sqlx::query!(
-            "INSERT INTO apps (id, name) VALUES (?, ?) RETURNING id",
+            "INSERT INTO apps (id, name, last_updated) VALUES (?, ?, ?) RETURNING id",
             id,
-            name
+            name,
+            timestamp
         )
         .fetch_one(db_context.pool())
         .await?;

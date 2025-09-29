@@ -89,8 +89,6 @@ const CirclePackingChart: React.FC<CirclePackingChartProps> = ({ data }) => {
                   ...nodes.map((n) => Number(n.value) || 0),
                 );
 
-                console.log(JSON.stringify(node));
-
                 const isZoomed = zoomedId !== null && zoomedId !== "Total";
                 const minFont = isZoomed ? 12 : 6;
                 const maxFont = isZoomed ? 16 : 14;

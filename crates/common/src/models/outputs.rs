@@ -10,7 +10,7 @@ use uuid::Uuid;
 pub struct PaginatedProjects {
     pub data: Vec<Project>,
     pub total_pages: Option<u32>,
-    pub cursors: Vec<Option<Uuid>>,
+    pub cursors: Vec<String>,
 }
 
 #[derive(Debug, Serialize, Deserialize, specta::Type)]

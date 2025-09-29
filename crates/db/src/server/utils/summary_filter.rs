@@ -1,10 +1,9 @@
-use chrono::{DateTime, Utc};
 use common::{models::Group, time::TimeBucket};
 
 /// A reusable trait for extracting query filters
 pub trait SummaryQueryParams {
-    fn start(&self) -> Option<DateTime<Utc>>;
-    fn end(&self) -> Option<DateTime<Utc>>;
+    fn start(&self) -> Option<i64>;
+    fn end(&self) -> Option<i64>;
     fn apps(&self) -> Option<&Vec<String>>;
     fn projects(&self) -> Option<&Vec<String>>;
     fn categories(&self) -> Option<&Vec<String>>;
@@ -18,8 +17,8 @@ pub trait SummaryQueryParams {
 /// A base struct that holds shared summary query parameters
 #[derive(Debug, Clone, Default)]
 pub struct SummaryFilters {
-    pub start: Option<DateTime<Utc>>,
-    pub end: Option<DateTime<Utc>>,
+    pub start: Option<i64>,
+    pub end: Option<i64>,
     pub apps: Option<Vec<String>>,
     pub projects: Option<Vec<String>>,
     pub categories: Option<Vec<String>>,
@@ -37,11 +36,11 @@ impl SummaryFilters {
 }
 
 impl SummaryQueryParams for SummaryFilters {
-    fn start(&self) -> Option<DateTime<Utc>> {
+    fn start(&self) -> Option<i64> {
         self.start
     }
 
-    fn end(&self) -> Option<DateTime<Utc>> {
+    fn end(&self) -> Option<i64> {
         self.end
     }
 
@@ -85,12 +84,12 @@ pub struct SummaryFiltersBuilder {
 }
 
 impl SummaryFiltersBuilder {
-    pub fn start(mut self, value: DateTime<Utc>) -> Self {
+    pub fn start(mut self, value: i64) -> Self {
         self.filters.start = Some(value);
         self
     }
 
-    pub fn end(mut self, value: DateTime<Utc>) -> Self {
+    pub fn end(mut self, value: i64) -> Self {
         self.filters.end = Some(value);
         self
     }

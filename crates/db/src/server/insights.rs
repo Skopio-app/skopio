@@ -44,7 +44,7 @@ impl InsightProvider for Insights {
                 let rows: Vec<YearResult> = sqlx::query_as!(
                     YearResult,
                     "
-                    SELECT DISTINCT strftime('%Y', datetime(timestamp, 'localtime')) as year
+                    SELECT DISTINCT strftime('%Y', timestamp, 'unixepoch', 'localtime') as year
                     FROM events
                     ORDER BY year DESC
                     "
@@ -106,8 +106,8 @@ impl InsightProvider for Insights {
                 );
 
                 let rows = sqlx::query(&query_string)
-                    .bind(start)
-                    .bind(end)
+                    .bind(start.timestamp())
+                    .bind(end.timestamp())
                     .bind(limit as i64)
                     .fetch_all(db_context.pool())
                     .await?;
@@ -142,27 +142,30 @@ impl InsightProvider for Insights {
                     }
                 }
 
+                let start_epoch = start.timestamp();
+                let end_epoch = end.timestamp();
+
                 let row = sqlx::query!(
                     r#"
                     SELECT
-                        COALESCE(DATE(datetime(timestamp, 'localtime')), '') AS "date: String",
-                        COALESCE(SUM(duration), 0)  AS "total: i64"
+                        DATE(timestamp, 'unixepoch', 'localtime') AS "date!: String",
+                        COALESCE(SUM(duration), 0)  AS "total!: i64"
                     FROM events
                     WHERE timestamp >= ?1 AND timestamp < ?2
-                    GROUP BY DATE(datetime(timestamp, 'localtime'))
+                    GROUP BY 1
                     ORDER BY 2 DESC
                     LIMIT 1
                     "#,
-                    start,
-                    end
+                    start_epoch,
+                    end_epoch
                 )
                 .fetch_optional(db_context.pool())
                 .await?;
 
                 if let Some(value) = row {
                     Ok(InsightResult::MostActiveDay {
-                        date: value.date.unwrap_or_default(),
-                        total_duration: value.total.unwrap_or(0),
+                        date: value.date,
+                        total_duration: value.total,
                     })
                 } else {
                     Ok(InsightResult::MostActiveDay {
@@ -222,7 +225,7 @@ impl InsightProvider for Insights {
                     ),
                     Some(Group::Source) => (
                         "JOIN sources s ON s.id = e.source_id",
-                        ", s.name as source",
+                        ", s.name as label",
                         ", label",
                     ),
                     None => ("", ", '_' as label", ""),
@@ -231,7 +234,7 @@ impl InsightProvider for Insights {
                 let sql = format!(
                     "
                     SELECT
-                        strftime('{bucket_format}', datetime(e.timestamp, 'localtime')) as bucket,
+                        strftime('{bucket_format}', e.timestamp, 'unixepoch', 'localtime') as bucket,
                         ROUND(AVG(e.duration), 2) as avg_duration
                         {label_select}
                     FROM events e
@@ -243,8 +246,8 @@ impl InsightProvider for Insights {
                 );
 
                 let rows = sqlx::query(&sql)
-                    .bind(start)
-                    .bind(end)
+                    .bind(start.timestamp())
+                    .bind(end.timestamp())
                     .fetch_all(db_context.pool())
                     .await?;
 

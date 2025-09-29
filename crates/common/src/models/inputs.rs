@@ -1,6 +1,5 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
-use uuid::Uuid;
 
 use crate::{
     models::{Group, InsightBucket, InsightType},
@@ -74,20 +73,11 @@ pub struct BucketSummaryInput {
 }
 
 #[derive(Serialize, Deserialize, Debug, specta::Type)]
-pub struct PaginationQuery {
-    pub after: Option<Uuid>,
+#[serde(rename_all = "camelCase")]
+pub struct ProjectListQuery {
+    pub after: Option<String>,
     pub limit: Option<u32>,
-}
-
-#[derive(Serialize, Deserialize, Debug, specta::Type)]
-pub struct ProjectQuery {
-    pub id: Uuid,
-}
-
-#[derive(Serialize, Deserialize, Debug, specta::Type)]
-pub struct ProjectSearchQuery {
-    pub name: String,
-    pub limit: u32,
+    pub query: Option<String>,
 }
 
 /// Query payload for insights

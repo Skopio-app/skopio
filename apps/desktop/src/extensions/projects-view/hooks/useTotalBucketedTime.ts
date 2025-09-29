@@ -33,7 +33,7 @@ export const useTotalBucketedTime = (): {
         if (branchData.length > 0) {
           const allKeys = new Set<string>();
           for (const item of branchData) {
-            Object.keys(item.grouped_values ?? {}).forEach((key) => {
+            Object.keys(item.groupedValues ?? {}).forEach((key) => {
               if (key) allKeys.add(key);
             });
           }
@@ -42,7 +42,7 @@ export const useTotalBucketedTime = (): {
           setHasBranchData(allKeys.size > 0);
 
           const branchTotal = branchData.reduce((sum, item) => {
-            const values = Object.values(item.grouped_values ?? {});
+            const values = Object.values(item.groupedValues ?? {});
             return (
               sum +
               values
@@ -60,7 +60,7 @@ export const useTotalBucketedTime = (): {
           if (cancelled) return;
 
           const fallbackTotal = fallbackData.reduce((sum, item) => {
-            const values = Object.values(item.grouped_values ?? {});
+            const values = Object.values(item.groupedValues ?? {});
             return (
               sum +
               values

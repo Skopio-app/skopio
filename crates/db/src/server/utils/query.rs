@@ -1,4 +1,3 @@
-use chrono::{DateTime, Utc};
 use common::{models::Group, time::TimeBucket};
 
 use crate::server::utils::summary_filter::SummaryFilters;
@@ -7,17 +6,17 @@ use crate::server::utils::summary_filter::SummaryFilters;
 /// Dates are formatted as RFC3339 (ISO 8601) to ensure proper string comparison.
 pub fn append_date_range(
     query: &mut String,
-    start: Option<DateTime<Utc>>,
-    end: Option<DateTime<Utc>>,
+    start: Option<i64>,
+    end: Option<i64>,
     start_field: &str,
     end_field: &str,
 ) {
     if let Some(s) = start {
-        query.push_str(&format!(" AND {end_field} > '{}'", s.to_rfc3339()));
+        query.push_str(&format!(" AND {end_field} > '{}'", s));
     }
 
     if let Some(e) = end {
-        query.push_str(&format!(" AND {start_field} < '{}'", e.to_rfc3339()));
+        query.push_str(&format!(" AND {start_field} < '{}'", e));
     }
 }
 
@@ -85,13 +84,6 @@ pub fn append_standard_joins(query: &mut String, inner_join: Option<&str>) {
     ));
 }
 
-/// Optionally appends a GROUP BY clause.
-pub fn append_group_by(query: &mut String, group_by_field: Option<&str>) {
-    if let Some(field) = group_by_field {
-        query.push_str(&format!(" GROUP BY {}", field));
-    }
-}
-
 /// Returns (group_key_sql, inner_join_table_name)
 pub fn group_key_info(group: Option<Group>) -> (&'static str, Option<&'static str>) {
     match group {
@@ -109,11 +101,21 @@ pub fn group_key_info(group: Option<Group>) -> (&'static str, Option<&'static st
 /// Formats a SQLite-compatible time bucket expression based on the bucket type.
 pub fn get_time_bucket_expr(bucket: Option<TimeBucket>) -> &'static str {
     match bucket {
-        Some(TimeBucket::Hour) => "strftime('%Y-%m-%d %H:%M:%S', events.timestamp, 'localtime')",
-        Some(TimeBucket::Day) => "strftime('%Y-%m-%d', events.timestamp, 'localtime')",
-        Some(TimeBucket::Week) => "strftime('%Y-W%W', events.timestamp, 'localtime')",
-        Some(TimeBucket::Month) => "strftime('%Y-%m', events.timestamp, 'localtime')",
-        Some(TimeBucket::Year) => "strftime('%Y', events.timestamp, 'localtime')",
+        Some(TimeBucket::Hour) => {
+            "strftime('%Y-%m-%d %H:%M:%S', datetime(events.timestamp, 'unixepoch', 'localtime'))"
+        }
+        Some(TimeBucket::Day) => {
+            "strftime('%Y-%m-%d', datetime(events.timestamp, 'unixepoch', 'localtime'))"
+        }
+        Some(TimeBucket::Week) => {
+            "strftime('%Y-W%W', datetime(events.timestamp, 'unixepoch', 'localtime'))"
+        }
+        Some(TimeBucket::Month) => {
+            "strftime('%Y-%m', datetime(events.timestamp, 'unixepoch', 'localtime'))"
+        }
+        Some(TimeBucket::Year) => {
+            "strftime('%Y', datetime(events.timestamp, 'unixepoch', 'localtime'))"
+        }
         None => "'Unbucketed'",
     }
 }

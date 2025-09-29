@@ -1,0 +1,38 @@
+{
+  "db_name": "SQLite",
+  "query": "\n                SELECT\n                    id  AS \"id: Uuid\",\n                    name,\n                    root_path,\n                    last_updated\n                FROM projects\n                ORDER BY last_updated DESC\n                LIMIT ?\n                ",
+  "describe": {
+    "columns": [
+      {
+        "name": "id: Uuid",
+        "ordinal": 0,
+        "type_info": "Blob"
+      },
+      {
+        "name": "name",
+        "ordinal": 1,
+        "type_info": "Text"
+      },
+      {
+        "name": "root_path",
+        "ordinal": 2,
+        "type_info": "Text"
+      },
+      {
+        "name": "last_updated",
+        "ordinal": 3,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 1
+    },
+    "nullable": [
+      false,
+      false,
+      true,
+      true
+    ]
+  },
+  "hash": "38e3b69f8b1f8ac8628b5618ccb3210168494a5afe3f311d0007a155d5f8a9cc"
+}

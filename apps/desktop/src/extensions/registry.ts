@@ -21,7 +21,6 @@ class BuiltinExtensionRegistry {
 
     switch (manifest.type) {
       case ExtensionTypeEnum.Tab:
-        console.log("Registering extension: ", extension.manifest.id);
         this.tabExtensions.set(manifest.id, extension);
         break;
       case ExtensionTypeEnum.Widget:
