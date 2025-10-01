@@ -53,7 +53,7 @@ function App() {
           </ContextMenuItem>
           <ContextMenuItem className="text-xs" onClick={reloadWindow}>
             Reload
-            <ContextMenuShortcut>⌘⇧R</ContextMenuShortcut>
+            <ContextMenuShortcut>⌘R</ContextMenuShortcut>
           </ContextMenuItem>
           {isDev() && (
             <ContextMenuItem

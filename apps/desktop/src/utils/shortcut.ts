@@ -168,7 +168,6 @@ export const useGlobalShortcutListener = () => {
 
       const key = e.key;
       const meta = e.metaKey;
-      const shift = e.shiftKey;
       const ctrl = e.ctrlKey;
       const alt = e.altKey;
 
@@ -187,7 +186,7 @@ export const useGlobalShortcutListener = () => {
         await commands.showWindow("settings");
         return;
       }
-      if (meta && shift && key === "r") {
+      if (meta && key === "r") {
         e.preventDefault();
         reloadWindow();
         return;

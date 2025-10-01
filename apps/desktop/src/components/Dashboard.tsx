@@ -85,7 +85,7 @@ const DashboardLayout = () => {
         <SidebarHeader />
         <SidebarContent>
           <SidebarGroup>
-            <SidebarGroupLabel>Builtin Extensions</SidebarGroupLabel>
+            <SidebarGroupLabel>Sections</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
                 {tabExtensions.map((ext) => (
