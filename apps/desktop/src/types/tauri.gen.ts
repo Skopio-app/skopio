@@ -314,7 +314,7 @@ export type SummaryQueryInput = {
   branches?: string[] | null;
   languages?: string[] | null;
 };
-export type Theme = "Light" | "Dark" | "System";
+export type Theme = "light" | "dark" | "system";
 /**
  * A time granularity used for bucketing data in reports
  *

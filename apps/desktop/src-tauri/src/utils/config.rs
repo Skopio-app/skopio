@@ -42,9 +42,13 @@ impl Default for AppConfig {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq, specta::Type)]
+#[serde(rename_all = "camelCase")]
 pub enum Theme {
+    #[serde(alias = "Light")]
     Light,
+    #[serde(alias = "Dark")]
     Dark,
+    #[serde(alias = "System")]
     System,
 }
 
