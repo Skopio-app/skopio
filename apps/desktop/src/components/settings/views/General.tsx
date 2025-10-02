@@ -27,6 +27,7 @@ import { useGlobalShortcut } from "@/hooks/useGlobalShortcut";
 import { commands, OpenApp, TrackedApp, Theme } from "@/types/tauri.gen";
 import { useOpenApps } from "@/hooks/useOpenApps";
 import { Monitor, Moon, Sun } from "lucide-react";
+import { setTheme } from "@tauri-apps/api/app";
 
 const TrackedAppSchema = z.object({
   name: z.string(),
@@ -210,6 +211,7 @@ const General = () => {
             const ok = await form.trigger("theme", { shouldFocus: false });
             if (!ok) return;
             try {
+              await setTheme(next === "system" ? null : next);
               await commands.setTheme(next);
               lastTheme.current = next;
             } catch (e) {
