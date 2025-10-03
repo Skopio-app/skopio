@@ -110,7 +110,7 @@ const DashboardLayout = () => {
         {!isDev() && (
           <SidebarFooter className="space-y-1">
             <Separator />
-            <p className="text-xs text-neutral-500 flex items-center gap-2">
+            <p className="text-xs text-muted-foreground flex items-center gap-2">
               <span
                 className={cn(
                   "inline-block h-2 w-2 rounded-full",
@@ -125,7 +125,7 @@ const DashboardLayout = () => {
             </p>
 
             {status.state === "downloading" && (
-              <div className="mt-1 h-1 w-full bg-neutral-200 rounded">
+              <div className="mt-1 h-1 w-full bg-muted rounded">
                 <div
                   className="h-1 bg-muted-foreground rounded"
                   style={{ width: `${status.percent ?? 0}%` }}

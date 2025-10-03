@@ -19,7 +19,6 @@
     --color-gray-100: oklch(96.7% 0.003 264.542);
     --color-gray-200: oklch(92.8% 0.006 264.531);
     --color-neutral-50: oklch(98.5% 0 0);
-    --color-neutral-100: oklch(97% 0 0);
     --color-neutral-300: oklch(87% 0 0);
     --color-black: #000;
     --color-white: #fff;
@@ -385,10 +384,6 @@
   .size-9 {
     width: calc(var(--spacing) * 9);
     height: calc(var(--spacing) * 9);
-  }
-  .size-10 {
-    width: calc(var(--spacing) * 10);
-    height: calc(var(--spacing) * 10);
   }
   .size-\[--cell-size\] {
     width: --cell-size;
@@ -793,12 +788,6 @@
   .bg-accent {
     background-color: var(--color-accent);
   }
-  .bg-accent\/60 {
-    background-color: var(--color-accent);
-    @supports (color: color-mix(in lab, red, red)) {
-      background-color: color-mix(in oklab, var(--color-accent) 60%, transparent);
-    }
-  }
   .bg-amber-500 {
     background-color: var(--color-amber-500);
   }
@@ -820,26 +809,11 @@
   .bg-destructive {
     background-color: var(--color-destructive);
   }
-  .bg-foreground {
-    background-color: var(--color-foreground);
-  }
-  .bg-gray-100 {
-    background-color: var(--color-gray-100);
-  }
   .bg-green-500 {
     background-color: var(--color-green-500);
   }
   .bg-green-600 {
     background-color: var(--color-green-600);
-  }
-  .bg-input {
-    background-color: var(--color-input);
-  }
-  .bg-input\/30 {
-    background-color: var(--color-input);
-    @supports (color: color-mix(in lab, red, red)) {
-      background-color: color-mix(in oklab, var(--color-input) 30%, transparent);
-    }
   }
   .bg-muted {
     background-color: var(--color-muted);
@@ -849,9 +823,6 @@
     @supports (color: color-mix(in lab, red, red)) {
       background-color: color-mix(in oklab, var(--color-muted) 80%, transparent);
     }
-  }
-  .bg-neutral-50 {
-    background-color: var(--color-neutral-50);
   }
   .bg-popover {
     background-color: var(--color-popover);
@@ -1042,9 +1013,6 @@
   .text-accent-foreground {
     color: var(--color-accent-foreground);
   }
-  .text-background {
-    color: var(--color-background);
-  }
   .text-current {
     color: currentcolor;
   }
@@ -1053,9 +1021,6 @@
   }
   .text-foreground {
     color: var(--color-foreground);
-  }
-  .text-muted {
-    color: var(--color-muted);
   }
   .text-muted-foreground {
     color: var(--color-muted-foreground);
@@ -1068,12 +1033,6 @@
   }
   .text-primary-foreground {
     color: var(--color-primary-foreground);
-  }
-  .text-red-500 {
-    color: var(--color-red-500);
-  }
-  .text-red-700 {
-    color: var(--color-red-700);
   }
   .text-secondary-foreground {
     color: var(--color-secondary-foreground);
@@ -1652,13 +1611,6 @@
       }
     }
   }
-  .hover\:text-muted-foreground {
-    &:hover {
-      @media (hover: hover) {
-        color: var(--color-muted-foreground);
-      }
-    }
-  }
   .hover\:text-primary {
     &:hover {
       @media (hover: hover) {
@@ -2022,11 +1974,6 @@
       color: var(--color-muted-foreground);
     }
   }
-  .data-\[placeholder\]\:text-red-500 {
-    &[data-placeholder] {
-      color: var(--color-red-500);
-    }
-  }
   .data-\[range-end\=true\]\:rounded-md {
     &[data-range-end="true"] {
       border-radius: var(--radius-md);
@@ -2182,11 +2129,6 @@
   .data-\[state\=on\]\:bg-accent {
     &[data-state="on"] {
       background-color: var(--color-accent);
-    }
-  }
-  .data-\[state\=on\]\:bg-neutral-300 {
-    &[data-state="on"] {
-      background-color: var(--color-neutral-300);
     }
   }
   .data-\[state\=on\]\:text-accent-foreground {
@@ -2431,11 +2373,6 @@
       }
     }
   }
-  .dark\:bg-gray-200 {
-    @media (prefers-color-scheme: dark) {
-      background-color: var(--color-gray-200);
-    }
-  }
   .dark\:bg-input\/30 {
     @media (prefers-color-scheme: dark) {
       background-color: var(--color-input);
@@ -2550,11 +2487,6 @@
   .\[\&_svg\:not\(\[class\*\=\'text-\'\]\)\]\:text-muted-foreground {
     & svg:not([class*='text-']) {
       color: var(--color-muted-foreground);
-    }
-  }
-  .\[\&_svg\:not\(\[class\*\=\'text-\'\]\)\]\:text-red-500 {
-    & svg:not([class*='text-']) {
-      color: var(--color-red-500);
     }
   }
   .\[\&\:first-child\[data-selected\=true\]_button\]\:rounded-l-md {
@@ -2701,11 +2633,6 @@
   .\[\[data-slot\=popover-content\]_\&\]\:bg-background {
     [data-slot=popover-content] & {
       background-color: var(--color-background);
-    }
-  }
-  .\[\[data-slot\=popover-content\]_\&\]\:bg-neutral-50 {
-    [data-slot=popover-content] & {
-      background-color: var(--color-neutral-50);
     }
   }
 }

@@ -27,7 +27,6 @@ import { useGlobalShortcut } from "@/hooks/useGlobalShortcut";
 import { commands, OpenApp, TrackedApp, Theme } from "@/types/tauri.gen";
 import { useOpenApps } from "@/hooks/useOpenApps";
 import { Monitor, Moon, Sun } from "lucide-react";
-import { setTheme as setTauriTheme } from "@tauri-apps/api/app";
 import { useTheme } from "@/utils/theme";
 
 const TrackedAppSchema = z.object({
@@ -63,7 +62,7 @@ const General = () => {
 
   const { shortcut, saveShorcut, loading: hotkeyLoading } = useGlobalShortcut();
   const { apps: openApps, fetch: fetchApps } = useOpenApps();
-  const { setTheme: setUITheme } = useTheme();
+  const { setTheme } = useTheme();
 
   const form = useForm<GeneralSettingsValues>({
     resolver: standardSchemaResolver(settingsSchema),
@@ -212,9 +211,7 @@ const General = () => {
             const ok = await form.trigger("theme", { shouldFocus: false });
             if (!ok) return;
             try {
-              setUITheme(next);
-              await setTauriTheme(next === "system" ? null : next);
-              await commands.setTheme(next);
+              setTheme(next);
               lastTheme.current = next;
             } catch (e) {
               console.error("Failed to set theme: ", e);
@@ -232,7 +229,7 @@ const General = () => {
       if (trackedTimer.current) window.clearTimeout(trackedTimer.current);
       if (themeTimer.current) window.clearTimeout(themeTimer.current);
     };
-  }, [form, saveShorcut]);
+  }, [form, saveShorcut, setTheme]);
 
   return (
     <div className="mx-auto w-full max-w-2xl p-2">

@@ -8,6 +8,7 @@ use std::{
 use serde::{Deserialize, Serialize};
 use specta::Type;
 use tauri::{AppHandle, Manager, Runtime};
+use tauri_specta::Event;
 use tokio::sync::{watch, RwLock};
 
 #[derive(Debug, Serialize, Deserialize, Clone, Type)]
@@ -41,7 +42,7 @@ impl Default for AppConfig {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq, specta::Type)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Eq, Copy, Type, Event)]
 #[serde(rename_all = "camelCase")]
 pub enum Theme {
     #[serde(alias = "Light")]
@@ -169,7 +170,11 @@ pub async fn set_theme<R: Runtime>(theme: Theme, app: AppHandle<R>) -> Result<()
             config.theme = theme;
         })
         .await
-        .map_err(|e| e.to_string())
+        .map_err(|e| e.to_string())?;
+
+    theme.emit(&app).unwrap_or_default();
+
+    Ok(())
 }
 
 #[tauri::command]

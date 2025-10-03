@@ -1,47 +1,86 @@
-import { Theme } from "@/types/tauri.gen";
+import { Theme, commands, events } from "@/types/tauri.gen";
 import { ThemeContext } from "@/utils/theme";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { setTheme as setTauriTheme } from "@tauri-apps/api/app";
+import { UnlistenFn } from "@tauri-apps/api/event";
 
 type ThemeProviderProps = {
   children: React.ReactNode;
   defaultTheme?: Theme;
-  storageKey?: string;
 };
 
 export default function ThemeProvider({
   children,
   defaultTheme = "system",
-  storageKey = "skopio-ui-theme",
   ...props
 }: ThemeProviderProps) {
-  const [theme, setTheme] = useState<Theme>(
-    () => (localStorage.getItem(storageKey) as Theme) || defaultTheme,
-  );
+  const [theme, setTheme] = useState<Theme>(defaultTheme);
+  const [hydrated, setHydrated] = useState(false);
+  const isInitialMount = useRef(true);
+
+  const applyThemeToDOM = (t: Theme, isDark: boolean) => {
+    const root = document.documentElement;
+    root.classList.remove("light", "dark");
+    root.classList.add(t === "system" ? (isDark ? "dark" : "light") : t);
+  };
+
+  const applyTheme = async (t: Theme) => {
+    const mql = window.matchMedia("(prefers-color-scheme: dark)");
+    await setTauriTheme(t === "system" ? null : t);
+    applyThemeToDOM(t, mql.matches);
+  };
 
   useEffect(() => {
-    const root = window.document.documentElement;
+    const mql = window.matchMedia("(prefers-color-scheme: dark)");
+    let unlisten: UnlistenFn;
 
-    root.classList.remove("light", "dark");
+    (async () => {
+      try {
+        const cfg = await commands.getConfig();
+        const initial = cfg.theme;
+        setTheme(initial);
+        await applyTheme(initial);
+      } finally {
+        setHydrated(true);
+      }
+    })();
 
-    if (theme === "system") {
-      const systemTheme = window.matchMedia("(prefers-color-scheme: dark)")
-        .matches
-        ? "dark"
-        : "light";
+    const onChange = (e: MediaQueryListEvent) => {
+      if (theme === "system") {
+        applyThemeToDOM("system", e.matches);
+      }
+    };
+    mql.addEventListener("change", onChange);
 
-      root.classList.add(systemTheme);
+    (async () => {
+      unlisten = await events.theme.listen((e) => {
+        setTheme(e.payload);
+      });
+    })();
+
+    return () => {
+      mql.removeEventListener("change", onChange);
+      if (unlisten) unlisten();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (isInitialMount.current) {
+      isInitialMount.current = false;
       return;
     }
 
-    root.classList.add(theme);
-  }, [theme]);
+    if (hydrated) {
+      (async () => {
+        await applyTheme(theme);
+        await commands.setTheme(theme);
+      })();
+    }
+  }, [theme, hydrated]);
 
   const value = {
     theme,
-    setTheme: (theme: Theme) => {
-      localStorage.setItem(storageKey, theme);
-      setTheme(theme);
-    },
+    setTheme: (t: Theme) => setTheme(t),
   };
 
   return (

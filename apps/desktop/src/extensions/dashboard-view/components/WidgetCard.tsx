@@ -64,11 +64,11 @@ const WidgetCard = React.forwardRef<HTMLDivElement, WidgetCardProps>(
             <Button
               variant="ghost"
               size="icon"
-              className="h-6 w-6 text-muted-foreground cursor-grab"
+              className="h-6 w-6 cursor-grab"
               id={draggableHandleId}
               aria-label="Drag"
             >
-              <GripVertical className="h-4 w-4" />
+              <GripVertical className="h-4 w-4 text-muted-foreground" />
             </Button>
             {settingsContent && (
               <Popover onOpenChange={onSettingsOpenChange}>

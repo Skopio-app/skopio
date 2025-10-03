@@ -17,7 +17,7 @@ use crate::{
         tray::TrayExt,
         window::{NotificationPayload, WindowExt, WindowKind},
     },
-    utils::tracing::TracingExt,
+    utils::{config::Theme, tracing::TracingExt},
 };
 
 mod goals_service;
@@ -232,7 +232,7 @@ fn make_specta_builder<R: Runtime>() -> tauri_specta::Builder<R> {
             crate::monitored_app::get_open_apps,
             crate::server::get_server_status::<tauri::Wry>,
         ])
-        .events(tauri_specta::collect_events![ServerStatus])
+        .events(tauri_specta::collect_events![ServerStatus, Theme])
         .error_handling(tauri_specta::ErrorHandlingMode::Throw)
         .typ::<NotificationPayload>();
 

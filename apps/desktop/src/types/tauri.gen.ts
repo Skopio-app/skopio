@@ -92,8 +92,10 @@ export const commands = {
 
 export const events = __makeEvents__<{
   serverStatus: ServerStatus;
+  theme: Theme;
 }>({
   serverStatus: "server-status",
+  theme: "theme",
 });
 
 /** user-defined constants **/
