@@ -1,8 +1,7 @@
-import { Theme, commands, events } from "@/types/tauri.gen";
+import { Theme, commands } from "@/types/tauri.gen";
 import { ThemeContext } from "@/utils/theme";
 import { useEffect, useRef, useState } from "react";
 import { setTheme as setTauriTheme } from "@tauri-apps/api/app";
-import { UnlistenFn } from "@tauri-apps/api/event";
 
 type ThemeProviderProps = {
   children: React.ReactNode;
@@ -32,7 +31,6 @@ export default function ThemeProvider({
 
   useEffect(() => {
     const mql = window.matchMedia("(prefers-color-scheme: dark)");
-    let unlisten: UnlistenFn;
 
     (async () => {
       try {
@@ -52,15 +50,8 @@ export default function ThemeProvider({
     };
     mql.addEventListener("change", onChange);
 
-    (async () => {
-      unlisten = await events.theme.listen((e) => {
-        setTheme(e.payload);
-      });
-    })();
-
     return () => {
       mql.removeEventListener("change", onChange);
-      if (unlisten) unlisten();
     };
   }, []);
 
