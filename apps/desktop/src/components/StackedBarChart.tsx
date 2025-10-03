@@ -2,7 +2,7 @@ import { ResponsiveBarCanvas } from "@nivo/bar";
 import { useRef, useState, useEffect } from "react";
 import ChartTooltipPortal from "@/components/ChartTooltipPortal";
 import { formatDuration } from "@/utils/time";
-import { useChartColor } from "@/hooks/useChartColor";
+import { useChartColor, useCssVarColor } from "@/hooks/useChartColor";
 
 interface StackedBarChartProps {
   data: {
@@ -29,6 +29,8 @@ const StackedBarChart: React.FC<StackedBarChartProps> = ({
   const rafId = useRef<number | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const { getColorForKey } = useChartColor();
+  const axisTextColor = useCssVarColor("--muted-foreground");
+  const gridColor = useCssVarColor("--input");
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
     const x = e.clientX + 5;
@@ -106,6 +108,40 @@ const StackedBarChart: React.FC<StackedBarChartProps> = ({
               }
             : null
         }
+        theme={{
+          axis: {
+            domain: {
+              line: {
+                stroke: axisTextColor,
+                strokeWidth: 1,
+              },
+            },
+            ticks: {
+              line: {
+                stroke: axisTextColor,
+                strokeWidth: 1,
+              },
+              text: {
+                fill: axisTextColor,
+                fontSize: 11,
+              },
+            },
+            legend: {
+              text: {
+                fill: axisTextColor,
+                fontSize: 12,
+                fontWeight: 500,
+              },
+            },
+          },
+          grid: {
+            line: {
+              stroke: gridColor,
+              strokeWidth: 1,
+              strokeDasharray: "2,2",
+            },
+          },
+        }}
         tooltip={({ data }) => {
           const entries = Object.entries(data)
             .filter(([key]) => key !== "label" && typeof data[key] === "number")

@@ -1,7 +1,7 @@
 import { ResponsivePieCanvas } from "@nivo/pie";
 import { useMemo } from "react";
 import { formatDuration } from "@/utils/time";
-import { useChartColor } from "@/hooks/useChartColor";
+import { useChartColor, useCssVarColor } from "@/hooks/useChartColor";
 
 interface CustomPieChartProps {
   data: {
@@ -18,6 +18,8 @@ const CustomPieChart: React.FC<CustomPieChartProps> = ({ data }) => {
   );
 
   const { getColorForKey } = useChartColor();
+
+  const linkTextColor = useCssVarColor("--muted-foreground", "#333333");
 
   if (!chartData.length) {
     return (
@@ -38,7 +40,7 @@ const CustomPieChart: React.FC<CustomPieChartProps> = ({ data }) => {
           cornerRadius={2}
           activeOuterRadiusOffset={8}
           arcLinkLabelsSkipAngle={5}
-          arcLinkLabelsTextColor="#333333"
+          arcLinkLabelsTextColor={linkTextColor}
           arcLinkLabelsThickness={2}
           colors={(bar) => getColorForKey(String(bar.id))}
           arcLinkLabelsDiagonalLength={12}

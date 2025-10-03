@@ -2,6 +2,7 @@ import { PointTooltipProps, ResponsiveLine } from "@nivo/line";
 import { formatDuration } from "@/utils/time";
 import ChartTooltipPortal from "@/components/ChartTooltipPortal";
 import { useEffect, useRef, useState } from "react";
+import { useCssVarColor } from "@/hooks/useChartColor";
 
 interface LineChartProps {
   id: string;
@@ -18,6 +19,8 @@ const LineChart: React.FC<LineChartProps> = ({ id, data }) => {
   const mousePosRef = useRef<{ x: number; y: number } | null>(null);
   const rafId = useRef<number | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const axisTextColor = useCssVarColor("--muted-foreground");
+  const gridColor = useCssVarColor("--input");
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
     const x = e.clientX + 5;
@@ -131,6 +134,40 @@ const LineChart: React.FC<LineChartProps> = ({ id, data }) => {
             legendOffset: -80,
             legendPosition: "middle",
             format: (value) => formatDuration(value),
+          }}
+          theme={{
+            axis: {
+              domain: {
+                line: {
+                  stroke: axisTextColor,
+                  strokeWidth: 1,
+                },
+              },
+              ticks: {
+                line: {
+                  stroke: axisTextColor,
+                  strokeWidth: 1,
+                },
+                text: {
+                  fill: axisTextColor,
+                  fontSize: 11,
+                },
+              },
+              legend: {
+                text: {
+                  fill: axisTextColor,
+                  fontSize: 12,
+                  fontWeight: 500,
+                },
+              },
+            },
+            grid: {
+              line: {
+                stroke: gridColor,
+                strokeWidth: 1,
+                strokeDasharray: "2,2",
+              },
+            },
           }}
         />
       </div>
