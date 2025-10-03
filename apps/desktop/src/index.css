@@ -30,3 +30,33 @@ body,
   top: 0;
   left: 0;
 }
+
+/* Grid lines (minor & major) */
+.vis-time-axis .vis-grid.vis-minor,
+.vis-time-axis .vis-grid.vis-major {
+  border-color: var(--border) !important;
+}
+
+/* Axis labels and ticks */
+.vis-time-axis .vis-text {
+  color: var(--foreground) !important;
+  background: var(--background) !important;
+}
+
+/* Group label column background */
+.vis-panel.vis-left .vis-content {
+  background: var(--background) !important;
+  border-color: var(--border) !important; /* vertical separator line */
+}
+
+/* Individual group label cells */
+.vis-label {
+  background: var(--background) !important;
+  color: var(--foreground) !important;
+  border-color: var(--border) !important;
+}
+
+/* Group label text itself */
+.vis-label .vis-inner {
+  color: var(--foreground) !important;
+}
