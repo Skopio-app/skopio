@@ -115,7 +115,7 @@ const ProjectsView = () => {
       </div>
 
       <div className="flex-1 overflow-auto space-y-6 scroll-hidden">
-        <ul className="divide-y divide-background border">
+        <ul className="divide-y divide-muted-foreground border border-muted-foreground">
           {isLoading ? (
             Array.from({ length: LIMIT }).map((_, i) => (
               <li key={i} className="p-4">

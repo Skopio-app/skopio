@@ -43,7 +43,7 @@ const LineChart: React.FC<LineChartProps> = ({ id, data }) => {
 
   if (!data.length) {
     return (
-      <div className="h-[220px] w-full flex items-center justify-center text-sm text-gray-500">
+      <div className="h-[220px] w-full flex items-center justify-center text-sm text-muted-foreground">
         No data available
       </div>
     );
@@ -102,7 +102,7 @@ const LineChart: React.FC<LineChartProps> = ({ id, data }) => {
                   zIndex: 50,
                 }}
               >
-                <div className="min-w-32 rounded-md border border-gray-200 bg-white px-3 py-2 text-sm shadow-md text-neutral-700">
+                <div className="min-w-32 rounded-md border border-border bg-background px-3 py-2 text-sm shadow-md text-foreground">
                   <h3 className="font-medium text-xs">{formattedLabel}</h3>
                   <p className="text-xs">{formattedTime}</p>
                 </div>
