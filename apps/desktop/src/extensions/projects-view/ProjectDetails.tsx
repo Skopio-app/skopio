@@ -78,7 +78,7 @@ const ProjectDetails = () => {
 
   if (!project) {
     return (
-      <p className="py-30 text-red-500 flex items-center justify-center">
+      <p className="py-30 text-destructive flex items-center justify-center">
         Project not found.
       </p>
     );
@@ -100,7 +100,9 @@ const ProjectDetails = () => {
 
       {!timeLoading ? (
         <p className="text-muted-foreground">
-          <span className="font-medium text-gray-800">{formattedDuration}</span>{" "}
+          <span className="font-medium text-foreground">
+            {formattedDuration}
+          </span>{" "}
           for{" "}
           <RangeSelectionDialog
             selectedRange={selectedRange}
@@ -113,7 +115,8 @@ const ProjectDetails = () => {
             setCustomEnd={setCustomEnd}
             isCustom={isCustom}
           />{" "}
-          in <span className="text-gray-900 font-semibold">{project.name}</span>{" "}
+          in{" "}
+          <span className="text-foreground font-semibold">{project.name}</span>{" "}
           {hasBranchData && (
             <>
               under <BranchSelectionDialog /> branches

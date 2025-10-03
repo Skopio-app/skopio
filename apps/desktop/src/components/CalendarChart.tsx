@@ -15,9 +15,11 @@ const CalendarTooltip: React.FC<CalendarTooltipProps> = ({ day, value }) => {
   const date = new Date(day);
 
   return (
-    <div className="rounded-md bg-white p-2 text-xs shadow-md w-32">
+    <div className="rounded-md bg-background p-2 text-xs shadow-md w-32">
       <div className="font-medium">{format(date, "EEEE, MMM d")}</div>
-      <div className="text-gray-500">{formatDuration(parseInt(value))}</div>
+      <div className="text-muted-foreground">
+        {formatDuration(parseInt(value))}
+      </div>
     </div>
   );
 };

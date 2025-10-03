@@ -90,12 +90,12 @@ const DashboardView = () => {
   return (
     <main className="px-6 space-y-4">
       <h1 className="text-2xl font-bold">
-        <span className="text-gray-900">Activity for </span>
-        <span className="text-gray-500">{formattedRange}</span>
+        <span className="text-foreground">Activity for </span>
+        <span className="text-muted-foreground">{formattedRange}</span>
       </h1>
 
       <p className="text-lg">
-        <span className="text-gray-700 font-medium">
+        <span className="text-accent-foreground font-medium">
           Time logged for{" "}
           <RangeSelectionDialog
             selectedRange={selectedRange}
@@ -111,9 +111,11 @@ const DashboardView = () => {
           :
         </span>{" "}
         {loading ? (
-          <span className="text-gray-400 animate-pulse">Loading...</span>
+          <span className="text-muted-foreground animate-pulse">
+            Loading...
+          </span>
         ) : (
-          <span className="text-gray-500">{formattedDuration}</span>
+          <span className="text-muted-foreground">{formattedDuration}</span>
         )}
       </p>
       {loaded && (

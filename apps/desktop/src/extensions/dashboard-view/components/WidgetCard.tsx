@@ -43,16 +43,14 @@ const WidgetCard = React.forwardRef<HTMLDivElement, WidgetCardProps>(
       <div
         ref={ref}
         className={cn(
-          "relative flex flex-col rounded-2xl border border-muted bg-white shadow-sm",
+          "relative flex flex-col rounded-2xl border border-muted bg-background shadow-sm",
           "transition-shadow hover:shadow-md p-4",
           className,
         )}
       >
         <div className="flex items-center justify-between mb-2">
           {title && (
-            <h2 className="text-sm font-medium text-muted-foreground">
-              {title}
-            </h2>
+            <h2 className="text-sm font-medium text-foreground">{title}</h2>
           )}
           <div className="flex items-center gap-1">
             {tooltip && (
@@ -66,7 +64,7 @@ const WidgetCard = React.forwardRef<HTMLDivElement, WidgetCardProps>(
             <Button
               variant="ghost"
               size="icon"
-              className="h-6 w-6 text-gray-500 hover:text-gray-700 cursor-grab"
+              className="h-6 w-6 text-muted-foreground cursor-grab"
               id={draggableHandleId}
               aria-label="Drag"
             >
@@ -78,7 +76,7 @@ const WidgetCard = React.forwardRef<HTMLDivElement, WidgetCardProps>(
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="h-6 w-6 text-gray-500 hover:text-gray-700"
+                    className="h-6 w-6 text-muted-foreground"
                     aria-label="Settings"
                   >
                     <Settings className="h-4 w-4" />
@@ -97,7 +95,7 @@ const WidgetCard = React.forwardRef<HTMLDivElement, WidgetCardProps>(
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-6 w-6 text-gray-500 hover:text-red-500"
+                className="h-6 w-6 text-muted-foreground hover:text-red-500"
                 onClick={onRemove}
                 aria-label="Close"
               >

@@ -12,7 +12,7 @@ const SectionContainer: React.FC<SectionContainerProps> = ({
   loading,
 }) => {
   return (
-    <div className="relative flex flex-col rounded-2xl w-full border border-neutral-700">
+    <div className="relative flex flex-col rounded-2xl w-full border border-foreground">
       {title && (
         <div className="flex items-center justify-start py-2">
           <h2 className="text-lg font-light text-muted-foreground text-center ml-3">

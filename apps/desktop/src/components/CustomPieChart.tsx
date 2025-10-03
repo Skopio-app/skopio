@@ -21,7 +21,7 @@ const CustomPieChart: React.FC<CustomPieChartProps> = ({ data }) => {
 
   if (!chartData.length) {
     return (
-      <div className="h-[220px] w-full flex items-center justify-center text-sm text-gray-500">
+      <div className="h-[220px] w-full flex items-center justify-center text-sm text-muted-foreground">
         No data available
       </div>
     );
@@ -50,14 +50,14 @@ const CustomPieChart: React.FC<CustomPieChartProps> = ({ data }) => {
           tooltip={({ datum }) => {
             const time = formatDuration(datum.value);
             return (
-              <div className="min-w-36 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm shadow-md text-gray-600 flex items-center gap-2">
+              <div className="min-w-36 rounded-md border border-border bg-background px-3 py-2 text-sm shadow-md text-muted-foreground flex items-center gap-2">
                 <span
                   className="w-2.5 h-2.5 rounded-full inline-block"
                   style={{ backgroundColor: datum.color }}
                 />
                 <div className="flex flex-col">
                   <span className="font-semibold">{datum.id}</span>
-                  <span className="text-xs text-gray-600">{time}</span>
+                  <span className="text-xs text-muted-foreground">{time}</span>
                 </div>
               </div>
             );
@@ -73,11 +73,11 @@ const CustomPieChart: React.FC<CustomPieChartProps> = ({ data }) => {
                 className="w-3 h-3 rounded-full inline-block shrink-0"
                 style={{ backgroundColor: getColorForKey(d.id) }}
               />
-              <span className="truncate text-gray-700 text-xs max-w-[7rem]">
+              <span className="truncate text-foreground text-xs max-w-[7rem]">
                 {d.label}
               </span>
             </div>
-            <span className="truncate text-xs text-gray-500 max-w[5rem] text-right">
+            <span className="truncate text-xs text-muted-foreground max-w[5rem] text-right">
               {formatDuration(d.value)}
             </span>
           </div>
