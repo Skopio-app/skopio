@@ -37,7 +37,7 @@ export const PermissionCard: React.FC<PermissionCardProps> = ({
   return (
     <div
       className={cn(
-        "flex w-full items-center gap-4 rounded-xl border border-border bg-muted/70 p-4 shadow-sm transition-shadow",
+        "flex w-full items-center gap-4 rounded-xl border border-[var(--muted-foreground)] bg-muted/70 p-4 shadow-sm transition-shadow",
         className,
       )}
     >
