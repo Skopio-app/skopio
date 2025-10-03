@@ -79,7 +79,7 @@ export function ChipSelector<V, O = V>({
                 return (
                   <span
                     key={k}
-                    className="group flex items-center gap-1 rounded bg-accent/60 px-2 py-1 text-sm"
+                    className="group flex items-center gap-1 rounded bg-muted hover:bg-accent px-2 py-1 text-sm text-foreground"
                     onClick={(e) => {
                       e.stopPropagation();
                       onRemove(item);
@@ -88,7 +88,7 @@ export function ChipSelector<V, O = V>({
                     <span className="flex items-center gap-1">
                       {renderChip(item)}
                     </span>
-                    <X className="h-3 w-3 opacity-70" aria-label="Remove" />
+                    <X className="h-3 w-3 " aria-label="Remove" />
                   </span>
                 );
               })}
@@ -115,7 +115,7 @@ export function ChipSelector<V, O = V>({
                 if (!isDisabled) onToggle(option);
               }}
               className={cn(
-                "relative flex cursor-pointer select-non items-center gap-2 rounded px-2 py-2 outline-none",
+                "relative flex cursor-pointer text-foreground select-none items-center gap-2 rounded px-2 py-2 outline-none",
                 isDisabled
                   ? "cursor-not-allowed opacity-80 text-muted-foreground"
                   : "cursor-pointer hover:bg-accent focus:bg-accent",
@@ -127,7 +127,7 @@ export function ChipSelector<V, O = V>({
                   {renderOption(option)}
                 </span>
                 {reason ? (
-                  <span className="text-xs leading-snug text-red-500">
+                  <span className="text-xs leading-snug text-destructive">
                     {disabledReason}
                   </span>
                 ) : null}
