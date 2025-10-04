@@ -252,12 +252,12 @@ const GoalDialog: React.FC<GoalDialogProps> = ({
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 bg-foreground/50" />
-        <Dialog.Content className="fixed left-1/2 top-1/2 max-w-xl w-[90vw] max-h-[90vh] h-[600px] overflow-y-auto -translate-x-1/2 -translate-y-1/2 bg-background p-4 rounded-md shadow-lg focus:outline-none z-60">
+        <Dialog.Content className="fixed left-1/2 top-1/2 max-w-xl w-[90vw] max-h-[90vh] h-[600px] overflow-y-auto -translate-x-1/2 -translate-y-1/2 bg-sidebar p-4 rounded-md shadow-lg focus:outline-none z-60 border border-muted">
           <div
             data-slot="dialog-header"
             className="flex justify-between items-start mb-2"
           >
-            <Dialog.Title className="text-xl font-semibold break-words">
+            <Dialog.Title className="text-xl font-semibold break-words text-foreground">
               {goal ? (
                 // TODO: Add edit goal text
                 <div className="space-y-1">
@@ -448,7 +448,7 @@ const GoalDialog: React.FC<GoalDialogProps> = ({
               </div>
             </div>
             <div className="mt-4 flex justify-center">
-              <Button variant="secondary" className="w-56" type="submit">
+              <Button variant="default" className="w-56" type="submit">
                 Save
               </Button>
             </div>

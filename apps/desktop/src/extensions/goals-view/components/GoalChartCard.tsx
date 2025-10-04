@@ -91,7 +91,7 @@ const GoalChartCard: React.FC<GoalChartCardProps> = ({
                   <Pencil className="w-4 h-4 text-muted-foreground" />
                   Edit
                 </DropdownMenu.Item>
-                <DropdownMenu.Separator className="m-2 h-px bg-accent-foreground" />
+                <DropdownMenu.Separator className="m-2 h-px bg-[var(--muted)]" />
                 <DropdownMenu.Item
                   onSelect={onDelete}
                   className="cursor-pointer flex items-center gap-2 rounded px-3 py-2 text-destructive hover:bg-accent text-muted-foreground"

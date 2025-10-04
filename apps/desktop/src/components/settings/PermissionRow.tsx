@@ -15,14 +15,14 @@ type PermissionMeta = {
 const PERMISSIONS: Record<PermissionKind, PermissionMeta> = {
   accessibility: {
     title: "Accessibility",
-    icon: <PersonStanding className="h-5 w-5 text-blue-400" />,
+    icon: <PersonStanding className="h-5 w-5 text-primary" />,
     description:
       "Skopio needs the accessibility permission to detect the frontmost app window.",
     settingsKey: "accessibility",
   },
   inputMonitoring: {
     title: "Input Monitoring",
-    icon: <Keyboard className="h-5 w-5 text-neutral-600" />,
+    icon: <Keyboard className="h-5 w-5 text-muted-foreground" />,
     description:
       "Allows Skopio to detect keyboard/mouse activity to measure idle (AFK) durations.",
     settingsKey: "inputMonitoring",

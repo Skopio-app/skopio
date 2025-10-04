@@ -43,9 +43,7 @@ export function ChipSelector<V, O = V>({
   onRemove,
   disabled,
   reason,
-  placeholder = (
-    <span className="text-sm text-muted-foregorund">Select...</span>
-  ),
+  placeholder = <span className="text-sm">Select...</span>,
   className,
   menuClassName,
   itemClassName,
@@ -68,7 +66,7 @@ export function ChipSelector<V, O = V>({
       <DropDownMenu.Trigger asChild>
         <div
           className={cn(
-            "flex flex-wrap items-center gap-1 px-3 py-1 border rounded cursor-pointer max-w-full",
+            "flex flex-wrap items-center gap-1 px-3 py-1 border rounded cursor-pointer max-w-full text-muted-foreground",
             className,
           )}
         >

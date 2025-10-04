@@ -71,7 +71,7 @@ const GoalTitleDialog: React.FC<GoalTitleDialogProps> = ({
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 bg-foreground/50" />
-        <Dialog.Content className="fixed left-1/2 top-1/2 max-w-xl w-[90vw] max-h-[90vh] h-[200px] overflow-y-auto -translate-x-1/2 -translate-y-1/2 bg-background p-4 rounded-md shadow-lg focus:outline-none z-60">
+        <Dialog.Content className="fixed left-1/2 top-1/2 max-w-xl w-[90vw] max-h-[90vh] h-[200px] overflow-y-auto -translate-x-1/2 -translate-y-1/2 bg-background p-4 rounded-md shadow-lg focus:outline-none z-60 bg-sidebar border border-muted">
           <div className="flex justify-between items-start mb-2">
             <Dialog.Title className="text-xl font-semibold text-foreground">
               Edit Goal Title
