@@ -23,6 +23,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v0.1.4] - 2025-10-04
+
+### Changed
+
+- Return a longer entity path when parsing data.
+- Switch reload shortcut from `Command + Shift + R` to `Command + R`.
+
+### Added
+
+- New appearance setting to switch app appearance.
+
+---
+
 ## [v0.1.3] - 2025-09-30
 
 ### Fixed
