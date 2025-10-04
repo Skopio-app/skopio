@@ -17,16 +17,18 @@ export default function ThemeProvider({
   const [hydrated, setHydrated] = useState(false);
   const isInitialMount = useRef(true);
 
-  const applyThemeToDOM = (t: Theme, isDark: boolean) => {
+  const applyThemeToDOM = (theme: Theme, isDark: boolean) => {
     const root = document.documentElement;
     root.classList.remove("light", "dark");
-    root.classList.add(t === "system" ? (isDark ? "dark" : "light") : t);
+    root.classList.add(
+      theme === "system" ? (isDark ? "dark" : "light") : theme,
+    );
   };
 
-  const applyTheme = async (t: Theme) => {
+  const applyTheme = async (theme: Theme) => {
     const mql = window.matchMedia("(prefers-color-scheme: dark)");
-    await setTauriTheme(t === "system" ? null : t);
-    applyThemeToDOM(t, mql.matches);
+    await setTauriTheme(theme === "system" ? null : theme);
+    applyThemeToDOM(theme, mql.matches);
   };
 
   useEffect(() => {
@@ -71,7 +73,7 @@ export default function ThemeProvider({
 
   const value = {
     theme,
-    setTheme: (t: Theme) => setTheme(t),
+    setTheme: (theme: Theme) => setTheme(theme),
   };
 
   return (
