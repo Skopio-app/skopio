@@ -41,12 +41,12 @@ const PermissionsDialog = () => {
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 bg-foreground/40" />
         <Dialog.Content
-          className="fixed left-1/2 top-1/2 w-[680px] max-w-[90vw] -translate-x-1/2 -translate-y-1/2 rounded-xl bg-background p-5 shadow-xl"
+          className="fixed left-1/2 top-1/2 w-[680px] max-w-[90vw] -translate-x-1/2 -translate-y-1/2 rounded-xl bg-sidebar p-5 shadow-xl border border-muted"
           onEscapeKeyDown={(e) => e.preventDefault()}
           onInteractOutside={(e) => e.preventDefault()}
         >
           <div className="mb-4">
-            <Dialog.Title className="text-lg font-semibold">
+            <Dialog.Title className="text-lg font-semibold text-foreground">
               Permissions required
             </Dialog.Title>
             <Dialog.Description className="text-sm text-muted-foreground">
