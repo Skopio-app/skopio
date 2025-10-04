@@ -15,13 +15,16 @@ const ItemsList: React.FC<ItemsListProps> = ({ title, data, loading }) => {
   return (
     <div className="flex flex-col items-center mb-4">
       <div className="flex flex-col space-y-2 w-fit">
-        <h3 className="font-semibold text-center">{title}</h3>
+        <h3 className="font-semibold text-center text-foreground">{title}</h3>
         {data.length === 0 && !loading && (
-          <p className="text-sm font-light">{`No ${title.toLowerCase()} found`}</p>
+          <p className="text-sm font-light text-muted-foreground">{`No ${title.toLowerCase()} found`}</p>
         )}
         {!loading && data ? (
           data.map((item) => (
-            <div key={item.name} className="flex items-center gap-x-2">
+            <div
+              key={item.name}
+              className="flex items-center gap-x-2 text-muted-foreground"
+            >
               <p className="text-xs font-light w-20 text-right">
                 {formatDuration(item.value)}
               </p>

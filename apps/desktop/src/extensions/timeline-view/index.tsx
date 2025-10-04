@@ -98,11 +98,9 @@ const TimelineExtension = () => {
 
   return (
     <div className="flex-col items-center h-full w-full space-y-4 px-4">
-      <h3 className="font-semibold text-3xl">Timeline</h3>
+      <h3 className="font-semibold text-3xl text-foreground">Timeline</h3>
       <div className="flex flex-wrap justify-start gap-2">
-        <Label htmlFor="timePreset" className="text-neutral-800">
-          Show last
-        </Label>
+        <Label htmlFor="timePreset">Show last</Label>
         <ToggleGroup
           type="single"
           variant="outline"
@@ -132,9 +130,7 @@ const TimelineExtension = () => {
       </div>
 
       <div className="flex flex-wrap justify-start items-center gap-2 mt-4">
-        <Label htmlFor="date-from" className="text-neutral-800">
-          Show from
-        </Label>
+        <Label htmlFor="date-from">Show from</Label>
         <Popover>
           <PopoverTrigger asChild>
             <Button
@@ -162,9 +158,7 @@ const TimelineExtension = () => {
             />
           </PopoverContent>
         </Popover>
-        <Label htmlFor="date-to" className="text-gray-700">
-          to
-        </Label>
+        <Label htmlFor="date-to">to</Label>
         <Popover>
           <PopoverTrigger asChild>
             <Button
@@ -203,9 +197,7 @@ const TimelineExtension = () => {
       </div>
 
       <div className="flex flex-wrap justify-start items-center gap-2 mt-4">
-        <Label htmlFor="filter" className="text-neutral-700">
-          Filter:
-        </Label>
+        <Label htmlFor="filter">Filter:</Label>
         <Select
           value={group}
           onValueChange={(value) => setGroup(value as Group)}

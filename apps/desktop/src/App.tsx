@@ -19,13 +19,14 @@ import { isDev } from "@/utils/environment";
 import { commands } from "@/types/tauri.gen";
 import PermissionsDialog from "@/components/settings/PermissionsDialog";
 import UpdaterToast from "@/components/updater/UpdaterToast";
+import ThemeProvider from "@/components/settings/ThemeProvider";
 
 function App() {
   useGlobalShortcutListener();
   const { canGoBack, canGoForward } = useHistoryControls();
 
   return (
-    <>
+    <ThemeProvider>
       <Toaster richColors />
       <PermissionsDialog />
       <UpdaterToast />
@@ -53,7 +54,7 @@ function App() {
           </ContextMenuItem>
           <ContextMenuItem className="text-xs" onClick={reloadWindow}>
             Reload
-            <ContextMenuShortcut>⌘⇧R</ContextMenuShortcut>
+            <ContextMenuShortcut>⌘R</ContextMenuShortcut>
           </ContextMenuItem>
           {isDev() && (
             <ContextMenuItem
@@ -67,7 +68,7 @@ function App() {
           )}
         </ContextMenuContent>
       </ContextMenu>
-    </>
+    </ThemeProvider>
   );
 }
 

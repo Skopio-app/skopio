@@ -3,6 +3,7 @@ import { ResponsiveBar } from "@nivo/bar";
 import { ResponsiveLine } from "@nivo/line";
 import { formatDuration } from "@/utils/time";
 import { TimeSpan } from "@/types/tauri.gen";
+import { useCssVarColor } from "@/hooks/useChartColor";
 
 interface BasicBarChartProps {
   data: {
@@ -18,9 +19,13 @@ const BarLineChart: React.FC<BasicBarChartProps> = ({
   goalDuration,
   timeSpan,
 }) => {
+  const lineColor = useCssVarColor("--primary");
+  const axisTextColor = useCssVarColor("--muted-foreground");
+  const gridColor = useCssVarColor("--input");
+
   if (!data.length) {
     return (
-      <div className="h-[220px] w-full flex items-center justify-center text-sm text-gray-500">
+      <div className="h-[220px] w-full flex items-center justify-center text-sm text-muted-foreground">
         No data available
       </div>
     );
@@ -71,7 +76,7 @@ const BarLineChart: React.FC<BasicBarChartProps> = ({
             }
 
             return (
-              <div className="min-w-48 rounded-md border border-gray-200 bg-white px-3 py-2 text-sm shadow-md text-gray-700">
+              <div className="min-w-48 rounded-md border border-border bg-background px-3 py-2 text-sm shadow-md text-muted-foreground">
                 <div className="flex items-center gap-2 mb-1">
                   <span
                     className="w-2.5 h-2.5 rounded-full inline-block"
@@ -104,6 +109,40 @@ const BarLineChart: React.FC<BasicBarChartProps> = ({
             legendOffset: -80,
             format: (value) => formatDuration(value),
           }}
+          theme={{
+            axis: {
+              domain: {
+                line: {
+                  stroke: axisTextColor,
+                  strokeWidth: 1,
+                },
+              },
+              ticks: {
+                line: {
+                  stroke: axisTextColor,
+                  strokeWidth: 1,
+                },
+                text: {
+                  fill: axisTextColor,
+                  fontSize: 11,
+                },
+              },
+              legend: {
+                text: {
+                  fill: axisTextColor,
+                  fontSize: 12,
+                  fontWeight: 500,
+                },
+              },
+            },
+            grid: {
+              line: {
+                stroke: gridColor,
+                strokeWidth: 1,
+                strokeDasharray: "2,2",
+              },
+            },
+          }}
           enableLabel={false}
           colors={getBarColor}
           role="application"
@@ -120,11 +159,11 @@ const BarLineChart: React.FC<BasicBarChartProps> = ({
           curve="linear"
           enablePoints={true}
           pointSize={6}
-          pointColor="#3b82f6"
+          pointColor={lineColor}
           pointBorderWidth={2}
-          pointBorderColor="#3b82f6"
+          pointBorderColor={lineColor}
           lineWidth={2}
-          colors={["#3b82f6"]}
+          colors={[lineColor]}
           useMesh={false}
           enableGridX={false}
           enableGridY={false}

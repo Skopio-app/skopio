@@ -70,10 +70,10 @@ const GoalTitleDialog: React.FC<GoalTitleDialogProps> = ({
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 bg-black/50" />
-        <Dialog.Content className="fixed left-1/2 top-1/2 max-w-xl w-[90vw] max-h-[90vh] h-[200px] overflow-y-auto -translate-x-1/2 -translate-y-1/2 bg-white p-4 rounded-md shadow-lg focus:outline-none z-60">
+        <Dialog.Overlay className="fixed inset-0 bg-foreground/50" />
+        <Dialog.Content className="fixed left-1/2 top-1/2 max-w-xl w-[90vw] max-h-[90vh] h-[200px] overflow-y-auto -translate-x-1/2 -translate-y-1/2 bg-background p-4 rounded-md shadow-lg focus:outline-none z-60 bg-sidebar border border-muted">
           <div className="flex justify-between items-start mb-2">
-            <Dialog.Title className="text-xl font-semibold">
+            <Dialog.Title className="text-xl font-semibold text-foreground">
               Edit Goal Title
             </Dialog.Title>
             <Dialog.Description className="sr-only">
@@ -82,7 +82,7 @@ const GoalTitleDialog: React.FC<GoalTitleDialogProps> = ({
             <Dialog.Close asChild>
               <Button
                 variant="ghost"
-                className="text-gray-500 hover:text-black"
+                className="text-muted-foreground hover:text-foreground"
                 aria-label="Close"
               >
                 <X className="w-5 h-5" />
@@ -101,7 +101,7 @@ const GoalTitleDialog: React.FC<GoalTitleDialogProps> = ({
                     });
                   },
                 })}
-                className="mt-1 block w-full rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-primary focus:ring-primary text-sm"
+                className="mt-1 block w-full rounded-md border border-border px-3 py-2 shadow-sm focus:border-primary focus:ring-primary text-sm"
                 autoFocus
                 required
               />

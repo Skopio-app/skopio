@@ -25,10 +25,10 @@ const GoalDeleteConfirmDialog: React.FC<GoalDeleteConfirmDialogProps> = ({
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 bg-black/50 backdrop-blur-sm" />
-        <Dialog.Content className="fixed left-1/2 top-1/2 max-w-md w-[90vw] -translate-x-1/2 -translate-y-1/2 bg-white rounded-md p-6 shadow-xl focus:outline-none z-60">
+        <Dialog.Overlay className="fixed inset-0 bg-foreground/50 backdrop-blur-sm" />
+        <Dialog.Content className="fixed left-1/2 top-1/2 max-w-md w-[90vw] -translate-x-1/2 -translate-y-1/2 bg-background rounded-md p-6 shadow-xl focus:outline-none z-60 bg-sidebar border border-muted">
           <div className="flex justify-between items-center mb-4">
-            <Dialog.Title className="text-lg font-medium">
+            <Dialog.Title className="text-lg font-medium text-foreground">
               Confirm Deletion
             </Dialog.Title>
             <Dialog.Description className="sr-only">
@@ -37,7 +37,7 @@ const GoalDeleteConfirmDialog: React.FC<GoalDeleteConfirmDialogProps> = ({
             <Dialog.Close asChild>
               <Button
                 variant="ghost"
-                className="text-gray-400 hover:text-gray-600"
+                className="text-muted-foreground hover:text-foreground"
                 aria-label="Close"
               >
                 <X className="w-5 h-5" />
@@ -45,7 +45,7 @@ const GoalDeleteConfirmDialog: React.FC<GoalDeleteConfirmDialogProps> = ({
             </Dialog.Close>
           </div>
 
-          <p className="text-sm text-gray-700 mb-6">
+          <p className="text-sm text-foreground mb-6">
             Are you sure you want to delete the goal <strong>{goalName}</strong>
             ? This action cannot be undone.
           </p>

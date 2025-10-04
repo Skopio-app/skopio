@@ -34,22 +34,22 @@ const RangeSelectionDialog: React.FC<DateRangeDialogProps> = ({
   return (
     <Dialog.Root open={open} onOpenChange={setOpen}>
       <Dialog.Trigger asChild>
-        <button className="underline decoration-dotted underline-offset-4 text-blue-600 hover:text-blue-800">
+        <button className="underline decoration-dotted underline-offset-4 text-primary hover:text-primary">
           {selectedRange.toLowerCase()}
         </button>
       </Dialog.Trigger>
 
       <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 bg-black/50 z-50" />
+        <Dialog.Overlay className="fixed inset-0 bg-foreground/50 z-50" />
         <Dialog.Content
           className={cn(
-            "fixed top-1/2 left-1/2 z-50 w-full translate-x-[-50%] translate-y-[-50%] rounded-lg border border-border bg-white p-6 shadow-lg",
+            "fixed top-1/2 left-1/2 z-50 w-full translate-x-[-50%] translate-y-[-50%] rounded-lg border border-border bg-secondary p-6 shadow-lg",
             "grid grid-cols-[auto_1fr] gap-x-8 items-start",
             isCustom ? "max-w-4xl" : "max-w-xl",
           )}
         >
           <div className="flex flex-col gap-2 min-w-[180px] flex-shrink-0">
-            <Dialog.Title className="text-lg font-semibold text-gray-800 mb-2">
+            <Dialog.Title className="text-lg font-semibold text-foreground mb-2">
               Select a date range
             </Dialog.Title>
             <Dialog.Description className="text-sm text-muted-foreground sr-only">
@@ -61,9 +61,9 @@ const RangeSelectionDialog: React.FC<DateRangeDialogProps> = ({
               <button
                 key={range}
                 className={cn(
-                  "text-left w-full px-3 py-1.5 rounded-md hover:bg-muted text-gray-700",
+                  "text-left w-full px-3 py-1.5 rounded-md hover:bg-accent text-muted-foreground",
                   selectedRange === range &&
-                    "bg-muted font-semibold text-gray-900",
+                    "bg-muted font-semibold text-secondary-foreground",
                 )}
                 onClick={() => {
                   setSelectedRange(range);
@@ -82,7 +82,7 @@ const RangeSelectionDialog: React.FC<DateRangeDialogProps> = ({
               {" "}
               <div className="flex gap-6">
                 <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-2 mt-4">
+                  <label className="block text-sm font-medium text-muted-foreground mb-2 mt-4">
                     Start Date
                   </label>
                   <Calendar
@@ -94,7 +94,7 @@ const RangeSelectionDialog: React.FC<DateRangeDialogProps> = ({
                   />
                 </div>
                 <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-2 mt-4">
+                  <label className="block text-sm font-medium text-muted-foreground mb-2 mt-4">
                     End Date
                   </label>
                   <Calendar
@@ -121,16 +121,16 @@ const RangeSelectionDialog: React.FC<DateRangeDialogProps> = ({
                     setOpen(false);
                   }}
                   className={cn(
-                    "mt-2 inline-block px-4 py-2 rounded-md font-medium transition-all text-white",
+                    "mt-2 inline-block px-4 py-2 rounded-md font-medium transition-all text-primary-foreground",
                     pendingStart > pendingEnd
-                      ? "bg-red-400 cursor-not-allowed"
-                      : "bg-blue-600 hover:bg-blue-700",
+                      ? "bg-destructive cursor-not-allowed"
+                      : "bg-primary hover:bg-ring",
                   )}
                 >
                   Apply
                 </button>
                 {pendingStart > pendingEnd && (
-                  <p className="text-sm text-red-500 mt-1">
+                  <p className="text-sm text-destructive mt-1">
                     Start date must be before and equal to end date.
                   </p>
                 )}
@@ -139,7 +139,7 @@ const RangeSelectionDialog: React.FC<DateRangeDialogProps> = ({
           )}
 
           <Dialog.Close asChild>
-            <button className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 rounded-full p-1 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500">
+            <button className="absolute top-4 right-4 text-primary-foreground hover:text-muted-foreground rounded-full p-1 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-ring">
               <XIcon className="w-5 h-5" />
               <span className="sr-only">Close</span>
             </button>

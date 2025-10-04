@@ -37,7 +37,7 @@ export const PermissionCard: React.FC<PermissionCardProps> = ({
   return (
     <div
       className={cn(
-        "flex w-full items-center gap-4 rounded-xl border border-neutral-400/60 bg-muted/70 p-4 shadow-sm transition-shadow",
+        "flex w-full items-center gap-4 rounded-xl border border-[var(--muted-foreground)] bg-muted/70 p-4 shadow-sm transition-shadow",
         className,
       )}
     >
@@ -48,7 +48,9 @@ export const PermissionCard: React.FC<PermissionCardProps> = ({
       <div className="flex flex-1 items-center justify-between gap-4">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
-            <h3 className="text-sm font-semibold leading-tight">{title}</h3>
+            <h3 className="text-sm font-semibold leading-tight text-foreground">
+              {title}
+            </h3>
             <span
               className={cn(
                 "rounded-full px-2 py-0.5 text-xs",
@@ -68,9 +70,7 @@ export const PermissionCard: React.FC<PermissionCardProps> = ({
           ) : null}
 
           {error ? (
-            <p className="mt-2 text-xs text-red-600 dark:text-red-400">
-              {error}
-            </p>
+            <p className="mt-2 text-xs text-destructive">{error}</p>
           ) : null}
         </div>
 

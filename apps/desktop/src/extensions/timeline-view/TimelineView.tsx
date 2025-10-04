@@ -296,7 +296,7 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
 
   if (groupedEvents.length === 0) {
     return (
-      <p className="text-neutral-700 flex items-center justify-center py-10">
+      <p className="text-muted-foreground flex items-center justify-center py-10">
         No events to display for the selected range
       </p>
     );

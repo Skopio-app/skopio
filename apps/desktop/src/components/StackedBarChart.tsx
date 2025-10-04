@@ -2,7 +2,7 @@ import { ResponsiveBarCanvas } from "@nivo/bar";
 import { useRef, useState, useEffect } from "react";
 import ChartTooltipPortal from "@/components/ChartTooltipPortal";
 import { formatDuration } from "@/utils/time";
-import { useChartColor } from "@/hooks/useChartColor";
+import { useChartColor, useCssVarColor } from "@/hooks/useChartColor";
 
 interface StackedBarChartProps {
   data: {
@@ -29,6 +29,8 @@ const StackedBarChart: React.FC<StackedBarChartProps> = ({
   const rafId = useRef<number | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const { getColorForKey } = useChartColor();
+  const axisTextColor = useCssVarColor("--muted-foreground");
+  const gridColor = useCssVarColor("--input");
 
   const handleMouseMove = (e: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
     const x = e.clientX + 5;
@@ -57,7 +59,7 @@ const StackedBarChart: React.FC<StackedBarChartProps> = ({
   // TODO: Reuse not available text
   if (!data.length) {
     return (
-      <p className="h-[220px] w-full flex items-center justify-center text-sm text-gray-500">
+      <p className="h-[220px] w-full flex items-center justify-center text-sm text-muted-foreground">
         No data available
       </p>
     );
@@ -106,6 +108,40 @@ const StackedBarChart: React.FC<StackedBarChartProps> = ({
               }
             : null
         }
+        theme={{
+          axis: {
+            domain: {
+              line: {
+                stroke: axisTextColor,
+                strokeWidth: 1,
+              },
+            },
+            ticks: {
+              line: {
+                stroke: axisTextColor,
+                strokeWidth: 1,
+              },
+              text: {
+                fill: axisTextColor,
+                fontSize: 11,
+              },
+            },
+            legend: {
+              text: {
+                fill: axisTextColor,
+                fontSize: 12,
+                fontWeight: 500,
+              },
+            },
+          },
+          grid: {
+            line: {
+              stroke: gridColor,
+              strokeWidth: 1,
+              strokeDasharray: "2,2",
+            },
+          },
+        }}
         tooltip={({ data }) => {
           const entries = Object.entries(data)
             .filter(([key]) => key !== "label" && typeof data[key] === "number")
@@ -127,7 +163,7 @@ const StackedBarChart: React.FC<StackedBarChartProps> = ({
                 zIndex: 50,
               }}
             >
-              <div className="max-h-96 overflow-y-auto rounded-md border border-gray-300 bg-white px-4 py-3 text-sm shadow-lg text-gray-800 min-w-[200px] max-w-[320px]">
+              <div className="max-h-96 overflow-y-auto rounded-md border border-border bg-background px-4 py-3 text-sm shadow-lg text-foreground min-w-[200px] max-w-[320px]">
                 <div className="font-semibold mb-1">{data.label}</div>
                 {entries.map(({ key, value }) => (
                   <div key={key} className="flex items-center gap-2 py-0.5">
@@ -136,7 +172,7 @@ const StackedBarChart: React.FC<StackedBarChartProps> = ({
                       style={{ backgroundColor: getColorForKey(key) }}
                     />
                     <span className="truncate flex-1 text-xs">{key}</span>
-                    <span className="text-gray-500 text-xs">
+                    <span className="text-muted-foreground text-xs">
                       {formatDuration(value)}
                     </span>
                   </div>

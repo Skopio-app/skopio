@@ -17,7 +17,7 @@ const SettingsPage = () => {
     tab === "general" ? "General" : tab === "permissions" ? "Permissions" : tab;
 
   return (
-    <div className="fixed inset-0 flex w-full items-stretch overflow-hidden">
+    <div className="bg-sidebar fixed inset-0 flex w-full items-stretch overflow-hidden">
       <aside className="flex w-60 flex-none flex-col border-r overflow-hidden">
         <div
           data-tauri-drag-region
@@ -31,14 +31,14 @@ const SettingsPage = () => {
                 to={tab.name}
                 className={({ isActive }) =>
                   cn(
-                    "flex w-full items-center gap-2 rounded-lg p-2 text-sm text-neutral-600 hover:bg-neutral-200",
-                    isActive && "bg-neutral-100 font-medium",
+                    "flex w-full items-center gap-2 rounded-lg p-2 text-sm text-muted-foreground hover:bg-muted",
+                    isActive && "bg-border font-medium",
                   )
                 }
                 end
               >
                 <tab.icon />
-                <span className="text-neutral-900 capitalize">
+                <span className="text-foreground capitalize">
                   {getTabTitle(tab.name)}
                 </span>
               </NavLink>
@@ -54,7 +54,7 @@ const SettingsPage = () => {
         >
           <div className="w-40" data-tauri-drag-region />
           <h1
-            className="text-md font-semibold capitalize"
+            className="text-md font-semibold text-foreground capitalize"
             data-tauri-drag-region
           >
             {getTabTitle(activeTab)}

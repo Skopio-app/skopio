@@ -15,6 +15,7 @@ import {
   Switch,
   Form,
   ChipSelector,
+  cn,
 } from "@skopio/ui";
 import { useEffect, useRef } from "react";
 import { useForm } from "react-hook-form";
@@ -23,13 +24,18 @@ import HotkeyField from "@/components/settings/HotkeyField";
 import { AFK, AFK_KEYS, AFK_SECONDS, AFK_LABELS } from "@/utils/constants";
 import { useAutostart } from "@/hooks/useAutostart";
 import { useGlobalShortcut } from "@/hooks/useGlobalShortcut";
-import { commands, OpenApp, TrackedApp } from "@/types/tauri.gen";
+import { commands, OpenApp, TrackedApp, Theme } from "@/types/tauri.gen";
 import { useOpenApps } from "@/hooks/useOpenApps";
+import { Monitor, Moon, Sun } from "lucide-react";
+import { useTheme } from "@/utils/theme";
 
 const TrackedAppSchema = z.object({
   name: z.string(),
   bundleId: z.string(),
 });
+
+const THEME_OPTIONS = ["light", "dark", "system"] as Theme[];
+type ThemeValue = (typeof THEME_OPTIONS)[number];
 
 const settingsSchema = z.object({
   launchOnStartup: z.boolean(),
@@ -42,6 +48,7 @@ const settingsSchema = z.object({
     }),
   afkSensitivity: z.enum(AFK_KEYS),
   trackedApps: z.array(TrackedAppSchema),
+  theme: z.enum(THEME_OPTIONS),
 });
 
 type GeneralSettingsValues = z.infer<typeof settingsSchema>;
@@ -54,8 +61,8 @@ const General = () => {
   } = useAutostart();
 
   const { shortcut, saveShorcut, loading: hotkeyLoading } = useGlobalShortcut();
-
   const { apps: openApps, fetch: fetchApps } = useOpenApps();
+  const { setTheme } = useTheme();
 
   const form = useForm<GeneralSettingsValues>({
     resolver: standardSchemaResolver(settingsSchema),
@@ -64,6 +71,7 @@ const General = () => {
       globalShortcut: shortcut,
       afkSensitivity: "1m",
       trackedApps: [],
+      theme: "system",
     },
     mode: "onChange",
     reValidateMode: "onChange",
@@ -74,11 +82,13 @@ const General = () => {
   const shortcutTimer = useRef<number | null>(null);
   const afkTimer = useRef<number | null>(null);
   const trackedTimer = useRef<number | null>(null);
+  const themeTimer = useRef<number | null>(null);
 
   const lastAfk = useRef<string>("");
   const lastSaved = useRef<boolean>(false);
   const lastShortcut = useRef<string>("");
   const lastTrackedJSON = useRef<string>("[]");
+  const lastTheme = useRef<ThemeValue>("system");
 
   useEffect(() => {
     const ready = !autoLoading && !hotkeyLoading;
@@ -86,8 +96,10 @@ const General = () => {
 
     (async () => {
       try {
-        const tracked = (await commands.getConfig()).trackedApps ?? [];
-        const afk = (await commands.getConfig()).afkTimeout;
+        const cfg = await commands.getConfig();
+        const tracked = cfg.trackedApps ?? [];
+        const afk = cfg.afkTimeout;
+        const theme = cfg.theme;
         const seconds = AFK_LABELS[afk];
 
         form.reset(
@@ -96,6 +108,7 @@ const General = () => {
             globalShortcut: shortcut || "",
             afkSensitivity: seconds,
             trackedApps: tracked,
+            theme,
           },
           { keepDirty: false, keepTouched: true },
         );
@@ -104,6 +117,7 @@ const General = () => {
         lastSaved.current = autoEnabled;
         lastAfk.current = seconds;
         lastTrackedJSON.current = JSON.stringify([...tracked].sort());
+        lastTheme.current = theme;
         hydratedRef.current = true;
       } catch (e) {
         console.error("Hydration failed: ", e);
@@ -188,6 +202,23 @@ const General = () => {
           }, 250) as number;
         }
       }
+
+      if (info.name === "theme") {
+        const next = v.theme;
+        if (next !== lastTheme.current) {
+          if (themeTimer.current) window.clearTimeout(themeTimer.current);
+          themeTimer.current = window.setTimeout(async () => {
+            const ok = await form.trigger("theme", { shouldFocus: false });
+            if (!ok) return;
+            try {
+              setTheme(next);
+              lastTheme.current = next;
+            } catch (e) {
+              console.error("Failed to set theme: ", e);
+            }
+          }, 200) as number;
+        }
+      }
     });
 
     return () => {
@@ -196,8 +227,9 @@ const General = () => {
       if (shortcutTimer.current) window.clearTimeout(shortcutTimer.current);
       if (afkTimer.current) window.clearTimeout(afkTimer.current);
       if (trackedTimer.current) window.clearTimeout(trackedTimer.current);
+      if (themeTimer.current) window.clearTimeout(themeTimer.current);
     };
-  }, [form, saveShorcut]);
+  }, [form, saveShorcut, setTheme]);
 
   return (
     <div className="mx-auto w-full max-w-2xl p-2">
@@ -263,6 +295,56 @@ const General = () => {
 
           <FormField
             control={form.control}
+            name="theme"
+            render={({ field }) => {
+              const items: {
+                value: ThemeValue;
+                label: string;
+                Icon: React.ComponentType<any>;
+              }[] = [
+                { value: "light", label: "Light", Icon: Sun },
+                { value: "dark", label: "Dark", Icon: Moon },
+                { value: "system", label: "System", Icon: Monitor },
+              ];
+
+              return (
+                <FormItem>
+                  <FormLabel>Appearance</FormLabel>
+                  <FormDescription>Choose Skopio's appearance.</FormDescription>
+                  <FormControl>
+                    <div className="flex items-stretch gap-3">
+                      {items.map(({ value, label, Icon }) => {
+                        const active = field.value === value;
+                        return (
+                          <button
+                            type="button"
+                            key={value}
+                            onClick={() => field.onChange(value)}
+                            className={cn(
+                              "flex w-24 flex-col items-center justify-center rounded-xl border px-3 py-3 transition",
+                              active
+                                ? "border-primary ring-2 ring-primary/40 text-primary"
+                                : "border-muted bg-background hover:bg-accent/40 text-muted-foreground",
+                            )}
+                            aria-pressed={active}
+                          >
+                            <Icon className="h-6 w-6" />
+                            <span className="mt-1 text-xs">{label}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              );
+            }}
+          />
+
+          <Separator />
+
+          <FormField
+            control={form.control}
             name="afkSensitivity"
             render={({ field }) => (
               <FormItem>
@@ -298,7 +380,7 @@ const General = () => {
               <FormItem>
                 <FormLabel>Tracked apps</FormLabel>
                 <FormDescription>
-                  Pick which currently open apps Skopio should track
+                  Pick which currently open apps Skopio should track.
                 </FormDescription>
                 <FormControl>
                   <ChipSelector<TrackedApp, OpenApp>

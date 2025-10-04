@@ -63,15 +63,17 @@ const BranchSelectionDialog = () => {
   return (
     <Dialog.Root open={open} onOpenChange={setOpen}>
       <Dialog.Trigger asChild>
-        <button className="underline decoration-dotted underline-offset-4 text-blue-600 hover:text-blue-800">
+        <button className="underline decoration-dotted underline-offset-4 text-primary hover:text-ring">
           {selectedBranches?.join(", ") ?? "all"}
         </button>
       </Dialog.Trigger>
 
       <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 bg-black/50">
-          <Dialog.Content className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-white p-6 rounded-lg shadow-md w-56">
-            <Dialog.Title>Select branches</Dialog.Title>
+        <Dialog.Overlay className="fixed inset-0 bg-foreground/50">
+          <Dialog.Content className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-background p-6 rounded-lg shadow-md w-56">
+            <Dialog.Title className="text-foreground">
+              Select branches
+            </Dialog.Title>
             <Dialog.Description className="sr-only">
               Choose which branch to display activity for.
             </Dialog.Description>
@@ -102,7 +104,7 @@ const BranchSelectionDialog = () => {
                 )}
               />
 
-              <Separator className="my-2 bg-neutral-900" />
+              <Separator className="my-2 bg-foreground" />
 
               <ScrollArea className="max-h-64 pr-2">
                 <div className="space-y-2">

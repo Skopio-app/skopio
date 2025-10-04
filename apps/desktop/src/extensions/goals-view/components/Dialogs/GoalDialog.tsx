@@ -251,18 +251,18 @@ const GoalDialog: React.FC<GoalDialogProps> = ({
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>
       <Dialog.Portal>
-        <Dialog.Overlay className="fixed inset-0 bg-black/50" />
-        <Dialog.Content className="fixed left-1/2 top-1/2 max-w-xl w-[90vw] max-h-[90vh] h-[600px] overflow-y-auto -translate-x-1/2 -translate-y-1/2 bg-white p-4 rounded-md shadow-lg focus:outline-none z-60">
+        <Dialog.Overlay className="fixed inset-0 bg-foreground/50" />
+        <Dialog.Content className="fixed left-1/2 top-1/2 max-w-xl w-[90vw] max-h-[90vh] h-[600px] overflow-y-auto -translate-x-1/2 -translate-y-1/2 bg-sidebar p-4 rounded-md shadow-lg focus:outline-none z-60 border border-muted">
           <div
             data-slot="dialog-header"
             className="flex justify-between items-start mb-2"
           >
-            <Dialog.Title className="text-xl font-semibold break-words">
+            <Dialog.Title className="text-xl font-semibold break-words text-foreground">
               {goal ? (
                 // TODO: Add edit goal text
                 <div className="space-y-1">
-                  <p className="text-gray-600 text-base">{goal.name}</p>
-                  <p className="text-black font-light">{summaryText}</p>
+                  <p className="text-muted-foreground text-base">{goal.name}</p>
+                  <p className="text-foreground font-light">{summaryText}</p>
                 </div>
               ) : (
                 summaryText
@@ -276,7 +276,7 @@ const GoalDialog: React.FC<GoalDialogProps> = ({
               <Button
                 variant="ghost"
                 type="button"
-                className="text-gray-500 hover:text-black"
+                className="text-muted-foreground hover:text-foreground"
                 aria-label="Close"
               >
                 <X className="w-5 h-5" />
@@ -289,7 +289,7 @@ const GoalDialog: React.FC<GoalDialogProps> = ({
             className="space-y-6 py-4 overflow-hidden"
           >
             <div className="text-lg font-medium flex flex-wrap gap-2 items-center">
-              <span>I want to achieve</span>
+              <span className="text-foreground">I want to achieve</span>
               <Input
                 type="number"
                 step={0.01}
@@ -317,7 +317,7 @@ const GoalDialog: React.FC<GoalDialogProps> = ({
               >
                 {watch("timeUnit")}
               </Button>
-              <span>in</span>
+              <span className="text-foreground">in</span>
               {(useApps || useCategories) && (
                 <ChipSelector<App | Category>
                   values={
@@ -371,7 +371,7 @@ const GoalDialog: React.FC<GoalDialogProps> = ({
                   }}
                 />
               )}
-              <span>per</span>
+              <span className="text-foreground">per</span>
               <Button
                 size="sm"
                 type="button"
@@ -387,7 +387,7 @@ const GoalDialog: React.FC<GoalDialogProps> = ({
 
             {timeSpan === "day" && (
               <div>
-                <p className="mb-2 font-medium">except for</p>
+                <p className="mb-2 font-medium text-foreground">except for</p>
                 <ChipSelector<Day, Day>
                   options={dayOptions}
                   values={excludedDays}
@@ -448,7 +448,7 @@ const GoalDialog: React.FC<GoalDialogProps> = ({
               </div>
             </div>
             <div className="mt-4 flex justify-center">
-              <Button variant="secondary" className="w-56" type="submit">
+              <Button variant="default" className="w-56" type="submit">
                 Save
               </Button>
             </div>

@@ -60,32 +60,29 @@ const DashboardLayout = () => {
         data-tauri-drag-region
         className={cn(
           "fixed left-0 top-0 z-40 flex h-9 w-full items-center",
-          "bg-neutral-50 border border-neutral-50 shadow-sm select-none px-4",
+          "bg-background border border-none shadow-sm select-none px-4",
         )}
       >
         <div className="w-16 h-full" />
 
         <div className="absolute left-23 top-1.5 flex flex-row space-x-3">
-          <SidebarTrigger className="w-5 h-5 cursor-pointer hover:bg-neutral-200" />
+          <SidebarTrigger className="w-5 h-5 cursor-pointer hover:bg-background" />
           <Button
-            className="h-5 w-5 hover:bg-neutral-200"
+            className="h-5 w-5 text-foreground hover:bg-background"
             variant="ghost"
             size="icon"
             onClick={async () => await commands.showWindow("settings")}
           >
-            <Cog size={30} />
+            <Cog />
           </Button>
         </div>
       </div>
 
-      <Sidebar
-        collapsible="offcanvas"
-        className="pt-4 border-neutral-300 shadow-md"
-      >
+      <Sidebar collapsible="offcanvas" className="pt-4 border-border shadow-md">
         <SidebarHeader />
         <SidebarContent>
           <SidebarGroup>
-            <SidebarGroupLabel>Builtin Extensions</SidebarGroupLabel>
+            <SidebarGroupLabel>Sections</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
                 {tabExtensions.map((ext) => (
@@ -113,14 +110,14 @@ const DashboardLayout = () => {
         {!isDev() && (
           <SidebarFooter className="space-y-1">
             <Separator />
-            <p className="text-xs text-neutral-500 flex items-center gap-2">
+            <p className="text-xs text-muted-foreground flex items-center gap-2">
               <span
                 className={cn(
                   "inline-block h-2 w-2 rounded-full",
                   status.state === "running"
                     ? "bg-green-500 animate-pulse"
                     : status.state === "offline" || status.state === "error"
-                      ? "bg-red-500"
+                      ? "bg-destructive"
                       : "bg-yellow-500 animate-pulse",
                 )}
               />
@@ -128,9 +125,9 @@ const DashboardLayout = () => {
             </p>
 
             {status.state === "downloading" && (
-              <div className="mt-1 h-1 w-full bg-neutral-200 rounded">
+              <div className="mt-1 h-1 w-full bg-muted rounded">
                 <div
-                  className="h-1 bg-neutral-500 rounded"
+                  className="h-1 bg-muted-foreground rounded"
                   style={{ width: `${status.percent ?? 0}%` }}
                 />
               </div>

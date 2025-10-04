@@ -42,7 +42,7 @@ const InsightsView = () => {
 
   return (
     <div className="flex flex-col mx-3 mb-4 space-y-5">
-      <h2 className="text-neutral-800 font-semibold mb-4 mt-3 text-lg">
+      <h2 className="text-foreground font-semibold mb-4 mt-3 text-lg">
         Insights
       </h2>
       <Select
