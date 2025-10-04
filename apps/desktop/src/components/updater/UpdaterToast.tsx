@@ -24,7 +24,7 @@ const mdComponents: Components = {
   h2: (p: any) => <h2 className="mt-3 text-sm font-semibold" {...p} />,
   h3: (p: any) => <h3 className="mt-3 text-sm font-medium" {...p} />,
   p: (p: any) => (
-    <p className="mt-2 text-xs leading-relaxed text-neutral-700" {...p} />
+    <p className="mt-2 text-xs leading-relaxed text-muted-foreground" {...p} />
   ),
   ul: (p: any) => (
     <ul className="mt-2 ml-4 list-disc space-y-1 text-xs" {...p} />
@@ -32,22 +32,22 @@ const mdComponents: Components = {
   ol: (p: any) => (
     <ol className="mt-2 ml-4 list-decimal space-y-1 text-xs" {...p} />
   ),
-  li: (p: any) => <li className="marker:text-neutral-500" {...p} />,
+  li: (p: any) => <li className="marker:text-muted-foreground" {...p} />,
   a: (p: any) => (
     <a className="underline underline-offset-2 hover:opacity-80" {...p} />
   ),
-  hr: () => <div className="my-3 h-px w-full bg-neutral-200" />,
+  hr: () => <div className="my-3 h-px w-full bg-background" />,
   code: ({ inline, className, children, ...props }: any) =>
     inline ? (
       <code
-        className="rounded bg-neutral-100 px-1 py-0.5 text-[11px]"
+        className="rounded bg-background px-1 py-0.5 text-[11px]"
         {...props}
       >
         {children}
       </code>
     ) : (
       <pre
-        className="mt-2 max-h-56 overflow-auto rounded bg-neutral-900 p-2 text-[11px] text-neutral-100"
+        className="mt-2 max-h-56 overflow-auto rounded bg-[var(--foreground)] p-2 text-[11px] text-primary-foreground"
         {...props}
       >
         <code className={className}>{children}</code>
@@ -55,7 +55,7 @@ const mdComponents: Components = {
     ),
   blockquote: (p: any) => (
     <blockquote
-      className="mt-2 border-l-2 border-neutral-300 pl-2 text-xs italic text-neutral-600"
+      className="mt-2 border-l-2 border-border pl-2 text-xs italic text-muted-foreground"
       {...p}
     />
   ),
@@ -89,14 +89,14 @@ const showUpdaterToast = (meta: {
   const render = () =>
     toast.custom(
       () => (
-        <div className="w-[28rem] max-w-[90vw] rounded-xl border bg-neutral-50 p-3 shadow-lg">
+        <div className="w-[28rem] max-w-[90vw] rounded-xl border bg-sidebar p-3 shadow-lg">
           <div className="flex items-start gap-2">
             <div className="flex-1">
-              <p className="text-sm font-semibold text-neutral-900">
+              <p className="text-sm font-semibold text-foreground">
                 Update available - v{state.version}
               </p>
               {state.notes && (
-                <div className="mt-1 prose prose-invert text-xs text-neutral-800 max-w-none">
+                <div className="mt-1 prose prose-invert text-xs text-foreground max-w-none">
                   <Markdown
                     components={mdComponents}
                     remarkPlugins={[remarkGfm]}
@@ -110,13 +110,13 @@ const showUpdaterToast = (meta: {
 
           {state.phase !== "idle" && (
             <div className="mt-3 space-y-1.5">
-              <div className="h-2 w-full overflow-hidden rounded-full bg-neutral-200">
+              <div className="h-2 w-full overflow-hidden rounded-full bg-background">
                 <div
-                  className="h-full rounded-full bg-neutral-900 transition-[width]"
+                  className="h-full rounded-full bg-secondary-foreground transition-[width]"
                   style={{ width: `${state.pct}%` }}
                 />
               </div>
-              <div className="flex items-center justify-between text-xs text-neutral-600">
+              <div className="flex items-center justify-between text-xs text-muted-foreground">
                 <span className="animate-pulse">
                   {state.phase === "downloading" && "Downloading..."}
                   {state.phase === "installing" && "Installing..."}
@@ -143,7 +143,7 @@ const showUpdaterToast = (meta: {
                   variant="ghost"
                   size="sm"
                   onClick={() => toast.dismiss(id)}
-                  className="text-neutral-600"
+                  className="text-muted-foreground"
                 >
                   Later
                 </Button>
@@ -159,7 +159,7 @@ const showUpdaterToast = (meta: {
                   variant="ghost"
                   size="sm"
                   onClick={() => toast.dismiss(id)}
-                  className="text-neutral-600"
+                  className="text-muted-foreground"
                 >
                   Close
                 </Button>
@@ -179,7 +179,7 @@ const showUpdaterToast = (meta: {
                   variant="ghost"
                   size="sm"
                   onClick={() => toast.dismiss(id)}
-                  className="text-neutral-600"
+                  className="text-muted-foreground"
                 >
                   Dismiss
                 </Button>
@@ -191,7 +191,7 @@ const showUpdaterToast = (meta: {
           </div>
 
           {state.phase === "error" && state.error && (
-            <p className="mt-2 text-xs text-red-600">{state.error}</p>
+            <p className="mt-2 text-xs text-destructive">{state.error}</p>
           )}
         </div>
       ),

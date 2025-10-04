@@ -2,6 +2,7 @@ import {
   Input,
   Pagination,
   PaginationContent,
+  PaginationEllipsis,
   PaginationItem,
   PaginationLink,
   PaginationNext,
@@ -164,7 +165,7 @@ const ProjectsView = () => {
                   </PaginationItem>
                   {start > 1 && (
                     <PaginationItem>
-                      <span className="px-2">...</span>
+                      <PaginationEllipsis />
                     </PaginationItem>
                   )}
                 </>
@@ -188,7 +189,7 @@ const ProjectsView = () => {
                 <>
                   {end < totalPages - 1 && (
                     <PaginationItem>
-                      <span className="px-2">...</span>
+                      <PaginationEllipsis />
                     </PaginationItem>
                   )}
                   <PaginationItem>
