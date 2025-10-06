@@ -9,14 +9,11 @@ use serde::Serialize;
 use strum_macros::{Display, EnumString};
 
 use crate::{
-    trackers::window_tracker::WindowTracker,
-    utils::{
-        app::{get_browser_active_tab, get_xcode_project_details, run_osascript},
-        config::TrackedApp,
-    },
+    trackers::{ax::types::AxSnapshot, window_tracker::WindowTracker},
+    utils::{app::run_osascript, config::TrackedApp},
 };
 
-static BROWSER_APPS: LazyLock<HashSet<MonitoredApp>> = LazyLock::new(|| {
+pub static BROWSER_APPS: LazyLock<HashSet<MonitoredApp>> = LazyLock::new(|| {
     HashSet::from([
         MonitoredApp::Brave,
         MonitoredApp::Chrome,
@@ -26,6 +23,7 @@ static BROWSER_APPS: LazyLock<HashSet<MonitoredApp>> = LazyLock::new(|| {
         MonitoredApp::SafariPreview,
         MonitoredApp::Firefox,
         MonitoredApp::ArcBrowser,
+        MonitoredApp::Dia,
     ])
 });
 
@@ -126,6 +124,8 @@ pub enum MonitoredApp {
     Notion,
     #[strum(serialize = "company.thebrowser.Browser")]
     ArcBrowser,
+    #[strum(serialize = "company.thebrowser.dia")]
+    Dia,
     #[strum(serialize = "dev.warp.Warp-Stable")]
     Warp,
     #[strum(serialize = "us.zoom.xos")]
@@ -279,27 +279,31 @@ pub fn resolve_app_details(
     app_name: &str,
     app_path: &str,
     entity: &str,
+    snapshot: &AxSnapshot,
 ) -> AppDetails {
     match app {
         MonitoredApp::Xcode => {
-            let (project_name, project_path, entity, lang) = get_xcode_project_details();
+            let xi = snapshot.xcode.clone().unwrap_or_default();
+            let language = detect_language(&xi.entity_path);
+            // let (project_name, project_path, entity, lang) = get_xcode_project_details();
             AppDetails {
-                project_name,
-                project_path,
-                entity: entity.clone(),
-                language: lang,
+                project_name: xi.project_name,
+                project_path: xi.project_path,
+                entity: xi.entity_path.clone(),
+                language,
                 entity_type: Entity::File,
-                category: get_category_for_app(app, Some(&entity), None),
+                category: get_category_for_app(app, Some(&xi.entity_path), None),
             }
         }
         _ if BROWSER_APPS.contains(app) => {
-            let (domain, url, tab) = get_browser_active_tab(app);
+            let bi = snapshot.browser.clone().unwrap_or_default();
+            // let (domain, url, tab) = get_browser_active_tab(app);
             AppDetails {
-                project_name: Some(domain),
-                project_path: Some(url.clone()),
-                entity: tab,
+                project_name: Some(bi.domain),
+                project_path: Some(bi.url.clone()),
+                entity: bi.title,
                 language: None,
-                category: get_category_for_app(app, None, Some(&url)),
+                category: get_category_for_app(app, None, Some(&bi.url)),
                 entity_type: get_entity_for_app(app),
             }
         }

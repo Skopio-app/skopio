@@ -1,5 +1,5 @@
 use db::DBContext;
-use std::sync::Arc;
+use std::{sync::Arc, time::Duration};
 use sync_service::BufferedTrackingService;
 use tauri::{AppHandle, Manager, Runtime};
 use tracing::error;
@@ -13,6 +13,10 @@ use utils::{config::ConfigStore, db::get_db_path};
 use crate::{
     goals_service::GoalService,
     server::ServerStatus,
+    trackers::ax::{
+        cache::{AxSnapshotCache, AxSnapshotCacheConfig},
+        provider::SystemAxProvider,
+    },
     ui::{
         tray::TrayExt,
         window::{NotificationPayload, WindowExt, WindowKind},
@@ -120,6 +124,14 @@ async fn setup_trackers(app_handle: &AppHandle) -> Result<(), anyhow::Error> {
     let config_store = ConfigStore::new(app_handle).await?;
     app_handle.manage(config_store.clone());
 
+    let ax_provider = Arc::new(SystemAxProvider);
+    let ax_cache = Arc::new(AxSnapshotCache::new(
+        ax_provider,
+        AxSnapshotCacheConfig {
+            max_age: Duration::from_millis(700),
+        },
+    ));
+
     let db_path = get_db_path(app_handle);
     let db_url = format!("sqlite://{}", db_path.to_str().unwrap());
 
@@ -172,6 +184,7 @@ async fn setup_trackers(app_handle: &AppHandle) -> Result<(), anyhow::Error> {
         Arc::clone(&keyboard_tracker),
         Arc::clone(&service_trait),
         tracked_apps_rx,
+        ax_cache.clone(),
     ));
     app_handle.manage(Arc::clone(&event_tracker));
 

@@ -1,4 +1,5 @@
 pub mod afk_tracker;
+pub mod ax;
 pub mod event_tracker;
 pub mod keyboard_tracker;
 pub mod mouse_tracker;

@@ -1,4 +1,6 @@
 use crate::monitored_app::{resolve_app_details, Category, Entity, MonitoredApp, IGNORED_APPS};
+use crate::trackers::ax::cache::AxSnapshotCache;
+use crate::trackers::ax::provider::SystemAxProvider;
 use crate::trackers::SOURCE;
 use crate::tracking_service::TrackingService;
 use crate::utils::config::TrackedApp;
@@ -39,6 +41,7 @@ pub struct EventTracker {
     tracker: Arc<dyn TrackingService>,
     tracked_apps_rx: watch::Receiver<Vec<TrackedApp>>,
     allowed_ids: Arc<RwLock<HashSet<String>>>,
+    ax_cache: Arc<AxSnapshotCache<SystemAxProvider>>,
 }
 
 impl EventTracker {
@@ -47,6 +50,7 @@ impl EventTracker {
         keyboard_tracker: Arc<KeyboardTracker>,
         tracker: Arc<dyn TrackingService>,
         tracked_apps_rx: watch::Receiver<Vec<TrackedApp>>,
+        ax_cache: Arc<AxSnapshotCache<SystemAxProvider>>,
     ) -> Self {
         let initial_allowed: HashSet<String> = tracked_apps_rx
             .borrow()
@@ -62,6 +66,7 @@ impl EventTracker {
             tracker,
             tracked_apps_rx,
             allowed_ids: Arc::new(RwLock::new(initial_allowed)),
+            ax_cache,
         }
     }
 
@@ -88,7 +93,8 @@ impl EventTracker {
         }
 
         let now = Utc::now();
-        let app_details = resolve_app_details(&bundle_id, app_name, app_path, entity);
+        let snapshot = self.ax_cache.snapshot().await;
+        let app_details = resolve_app_details(&bundle_id, app_name, app_path, entity, &snapshot);
 
         let branch_name = if app_name == "Xcode" {
             app_details.project_path.as_ref().and_then(find_git_branch)
