@@ -86,6 +86,7 @@ static APP_CATEGORIES: LazyLock<HashSet<(MonitoredApp, Category)>> = LazyLock::n
         (MonitoredApp::Postman, Category::Debugging),
         (MonitoredApp::Warp, Category::Coding),
         (MonitoredApp::Terminal, Category::Coding),
+        (MonitoredApp::Iterm, Category::Coding),
     ])
 });
 
@@ -118,6 +119,8 @@ pub enum MonitoredApp {
     SafariPreview,
     #[strum(serialize = "com.apple.Terminal")]
     Terminal,
+    #[strum(serialize = "com.googlecode.iterm2")]
+    Iterm,
     #[strum(serialize = "com.apple.dt.Xcode")]
     Xcode,
     #[strum(serialize = "notion.id")]
