@@ -1,7 +1,7 @@
 use objc2::{msg_send, rc::Retained, runtime::AnyClass};
 use objc2_app_kit::{NSRunningApplication, NSWorkspace};
 use objc2_foundation::{NSString, NSURL};
-use url::Url;
+use url::{Position, Url};
 
 use crate::{
     monitored_app::{MonitoredApp, BROWSER_APPS},
@@ -92,29 +92,28 @@ impl AxProvider for SystemAxProvider {
             }
             let win = ax_focused_window(app_el).ok_or(AxError::NoFocusedWindow)?;
             let web_area = ax_find_descendant(win, "AXWebArea", 12);
-            let (url, title) = match web_area {
-                Some(wa) => {
-                    let u = ax_url(wa).unwrap_or_default();
-                    let t = ax_title(wa).or_else(|| ax_title(win)).unwrap_or_default();
-                    (u, t)
-                }
-                None => {
-                    let u = ax_url(win).unwrap_or_default();
-                    let t = ax_title(win).unwrap_or_default();
-                    (u, t)
-                }
+            let url = match web_area {
+                Some(wa) => ax_url(wa).unwrap_or_default(),
+                None => ax_url(win).unwrap_or_default(),
             };
 
             if url.is_empty() {
                 return Err(AxError::NotAvailable);
             }
 
-            let domain = Url::parse(&url)
-                .ok()
-                .and_then(|u| u.domain().map(|s| s.to_string()))
-                .unwrap_or_else(|| "unknown".to_string());
+            let parsed = Url::parse(&url).map_err(AxError::ParseError)?;
 
-            Ok(BrowserInfo { domain, url, title })
+            let domain = parsed
+                .domain()
+                .map(|s| s.to_string())
+                .unwrap_or_else(|| "unknown".to_string());
+            let path = &parsed[Position::BeforePath..];
+
+            Ok(BrowserInfo {
+                domain,
+                url,
+                path: path.to_string(),
+            })
         }
     }
 

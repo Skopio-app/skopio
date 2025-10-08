@@ -304,7 +304,7 @@ pub fn resolve_app_details(
             AppDetails {
                 project_name: Some(bi.domain),
                 project_path: Some(bi.url.clone()),
-                entity: bi.title,
+                entity: bi.path,
                 language: None,
                 category: get_category_for_app(app, None, Some(&bi.url)),
                 entity_type: get_entity_for_app(app),

@@ -18,27 +18,56 @@ pub fn normalize_file(input: &str) -> Option<String> {
 }
 
 pub fn infer_xcode_root(entity: &str) -> Option<PathBuf> {
+    let markers = [
+        "xcworkspace",
+        "xcodeproj",
+        "Package.swift",
+        "project.pbxproj",
+    ];
+
     let mut cur = Path::new(entity).parent()?;
-    while let Some(dir) = Some(cur) {
-        if let Ok(read) = std::fs::read_dir(dir) {
+
+    loop {
+        let found = if let Ok(read) = std::fs::read_dir(cur) {
+            let mut hit: Option<PathBuf> = None;
+
             for entry in read.flatten() {
-                let p = entry.path();
-                match p.extension().and_then(|e| e.to_str()) {
-                    Some("xcworkspace") | Some("xcodeproj") => return Some(p),
-                    _ => {}
+                let path = entry.path();
+
+                let file_name = path
+                    .file_name()
+                    .and_then(|s| s.to_str())
+                    .unwrap_or_default();
+                let ext = path
+                    .extension()
+                    .and_then(|s| s.to_str())
+                    .unwrap_or_default();
+
+                if markers.iter().any(|m| *m == file_name || *m == ext) {
+                    let root = match file_name {
+                        "Package.swift" | "project.pbxproj" => cur.to_path_buf(),
+                        _ => path,
+                    };
+                    hit = Some(root);
+                    break;
                 }
             }
+            hit
+        } else {
+            None
+        };
+
+        if let Some(root) = found {
+            return Some(root);
         }
-        cur = dir.parent()?;
+
+        cur = cur.parent()?;
     }
-    None
 }
 
 pub fn derive_xcode_project_name<P: AsRef<Path>>(path: P) -> Option<String> {
-    if let Some(stem) = path.as_ref().file_stem() {
-        return Some(stem.to_string_lossy().to_string());
-    }
     path.as_ref()
-        .file_name()
-        .map(|n| n.to_string_lossy().to_string())
+        .file_stem()
+        .or_else(|| path.as_ref().file_name())
+        .map(|name| name.to_string_lossy().to_string())
 }

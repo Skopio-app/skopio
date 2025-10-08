@@ -1,4 +1,5 @@
 use thiserror::Error;
+use url::ParseError;
 
 #[derive(Debug, Error)]
 pub enum AxError {
@@ -20,8 +21,9 @@ pub enum AxError {
     #[error("Requested info not available")]
     NotAvailable,
 
-    // #[error("Parse error: {0}")]
-    // ParseError(&'static str),
+    #[error("Parse error: {0}")]
+    ParseError(#[from] ParseError),
+
     #[error("Unknown AX error")]
     Unknown,
 }
@@ -38,7 +40,7 @@ pub struct ActiveApp {
 pub struct BrowserInfo {
     pub domain: String,
     pub url: String,
-    pub title: String,
+    pub path: String,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
