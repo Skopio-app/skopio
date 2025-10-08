@@ -19,10 +19,12 @@ pub fn normalize_file(input: &str) -> Option<String> {
 
 pub fn infer_xcode_root(entity: &str) -> Option<PathBuf> {
     let markers = [
-        "xcworkspace",
-        "xcodeproj",
-        "Package.swift",
-        "project.pbxproj",
+        "xcworkspace",     // Xcode workspace
+        "xcodeproj",       // Xcode project
+        "Package.swift",   // Swift Package
+        "project.pbxproj", // Legacy/bare project file
+        "playground",      // Xcode Playground
+        "xcplayground",    // Xcode Playground (alternative extension)
     ];
 
     let mut cur = Path::new(entity).parent()?;

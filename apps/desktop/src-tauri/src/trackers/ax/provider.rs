@@ -78,10 +78,10 @@ impl AxProvider for SystemAxProvider {
     }
 
     fn browser_info(&self, bundle_id: &str, pid: i32) -> Result<BrowserInfo, AxError> {
-        let browser_bundle_id = bundle_id
+        let monitored_browser = bundle_id
             .parse::<MonitoredApp>()
             .unwrap_or(MonitoredApp::Unknown);
-        if !BROWSER_APPS.contains(&browser_bundle_id) {
+        if !BROWSER_APPS.contains(&monitored_browser) {
             return Err(AxError::UnsupportedApp);
         }
 
@@ -92,10 +92,13 @@ impl AxProvider for SystemAxProvider {
             }
             let win = ax_focused_window(app_el).ok_or(AxError::NoFocusedWindow)?;
             let web_area = ax_find_descendant(win, "AXWebArea", 12);
+
             let url = match web_area {
                 Some(wa) => ax_url(wa).unwrap_or_default(),
                 None => ax_url(win).unwrap_or_default(),
-            };
+            }
+            .trim()
+            .to_string();
 
             if url.is_empty() {
                 return Err(AxError::NotAvailable);
@@ -105,8 +108,11 @@ impl AxProvider for SystemAxProvider {
 
             let domain = parsed
                 .domain()
-                .map(|s| s.to_string())
-                .unwrap_or_else(|| "unknown".to_string());
+                .map(str::to_string)
+                .or_else(|| parsed.host_str().map(str::to_string))
+                .filter(|s| !s.is_empty())
+                .unwrap_or_else(|| parsed.scheme().to_string());
+
             let path = &parsed[Position::BeforePath..];
 
             Ok(BrowserInfo {

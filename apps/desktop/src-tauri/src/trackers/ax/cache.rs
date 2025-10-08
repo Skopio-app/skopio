@@ -59,8 +59,16 @@ impl<P: AxProvider> AxSnapshotCache<P> {
         if let Some(ref a) = app {
             out.window_title = self.provider.focused_window_title(a.pid).ok();
 
-            if let Ok(bi) = self.provider.browser_info(&a.bundle_id, a.pid) {
-                out.browser = Some(bi);
+            match self.provider.browser_info(&a.bundle_id, a.pid) {
+                Ok(bi) => {
+                    out.browser = Some(bi);
+                }
+                Err(_) => {
+                    let inner = self.inner.read().await;
+                    if let Some(ref last_snap) = inner.last {
+                        out.browser = last_snap.browser.clone();
+                    }
+                }
             }
 
             if a.bundle_id
