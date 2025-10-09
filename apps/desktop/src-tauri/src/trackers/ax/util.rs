@@ -1,6 +1,5 @@
-use std::path::{Path, PathBuf};
-
 use percent_encoding::percent_decode_str;
+use std::path::{Path, PathBuf};
 
 pub fn normalize_file(input: &str) -> Option<String> {
     if input.is_empty() {
@@ -19,42 +18,34 @@ pub fn normalize_file(input: &str) -> Option<String> {
 
 pub fn infer_xcode_root(entity: &str) -> Option<PathBuf> {
     let markers = [
-        "xcworkspace",     // Xcode workspace
-        "xcodeproj",       // Xcode project
-        "Package.swift",   // Swift Package
-        "project.pbxproj", // Legacy/bare project file
-        "playground",      // Xcode Playground
-        "xcplayground",    // Xcode Playground (alternative extension)
+        "xcworkspace",
+        "xcodeproj",
+        "Package.swift",
+        "project.pbxproj",
+        "playground",
+        "xcplayground",
     ];
 
     let mut cur = Path::new(entity).parent()?;
 
     loop {
         let found = if let Ok(read) = std::fs::read_dir(cur) {
-            let mut hit: Option<PathBuf> = None;
-
             for entry in read.flatten() {
                 let path = entry.path();
-
-                let file_name = path
-                    .file_name()
-                    .and_then(|s| s.to_str())
-                    .unwrap_or_default();
+                let file_name = path.file_name()?.to_str()?;
                 let ext = path
                     .extension()
                     .and_then(|s| s.to_str())
                     .unwrap_or_default();
 
                 if markers.iter().any(|m| *m == file_name || *m == ext) {
-                    let root = match file_name {
+                    return Some(match file_name {
                         "Package.swift" | "project.pbxproj" => cur.to_path_buf(),
                         _ => path,
-                    };
-                    hit = Some(root);
-                    break;
+                    });
                 }
             }
-            hit
+            None
         } else {
             None
         };
@@ -63,8 +54,14 @@ pub fn infer_xcode_root(entity: &str) -> Option<PathBuf> {
             return Some(root);
         }
 
-        cur = cur.parent()?;
+        cur = match cur.parent() {
+            Some(p) => p,
+            None => break,
+        };
     }
+
+    let file = Path::new(entity);
+    file.parent().map(|p| p.to_path_buf())
 }
 
 pub fn derive_xcode_project_name<P: AsRef<Path>>(path: P) -> Option<String> {
