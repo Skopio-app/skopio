@@ -13,15 +13,17 @@ use utils::{config::ConfigStore, db::get_db_path};
 use crate::{
     goals_service::GoalService,
     server::ServerStatus,
-    trackers::ax::{
-        cache::{AxSnapshotCache, AxSnapshotCacheConfig},
-        provider::SystemAxProvider,
-    },
     ui::{
         tray::TrayExt,
         window::{NotificationPayload, WindowExt, WindowKind},
     },
-    utils::tracing::TracingExt,
+    utils::{
+        ax::{
+            cache::{AxSnapshotCache, AxSnapshotCacheConfig},
+            provider::SystemAxProvider,
+        },
+        tracing::TracingExt,
+    },
 };
 
 mod goals_service;

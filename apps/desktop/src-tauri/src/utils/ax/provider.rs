@@ -5,9 +5,9 @@ use url::{Position, Url};
 
 use crate::{
     monitored_app::{MonitoredApp, BROWSER_APPS},
-    trackers::ax::{
-        ffi::{ax_app, ax_document, ax_find_descendant, ax_focused_window, ax_title, ax_url},
-        types::*,
+    utils::ax::{
+        ffi::AxElement,
+        types::{ActiveApp, AxError, BrowserInfo, XcodeInfo},
         util::{derive_xcode_project_name, infer_xcode_root, normalize_file},
     },
 };
@@ -67,12 +67,9 @@ impl AxProvider for SystemAxProvider {
 
     fn focused_window_title(&self, pid: i32) -> Result<String, AxError> {
         unsafe {
-            let app_el = ax_app(pid);
-            if app_el.is_null() {
-                return Err(AxError::AccessibilityNotGranted);
-            }
-            let win = ax_focused_window(app_el).ok_or(AxError::NoFocusedWindow)?;
-            let title = ax_title(win).ok_or(AxError::AxTraversalFailed("AXTitle"))?;
+            let app = AxElement::app(pid).ok_or(AxError::AccessibilityNotGranted)?;
+            let win = app.focused_window().ok_or(AxError::NoFocusedWindow)?;
+            let title = win.title().ok_or(AxError::AxTraversalFailed("AXTitle"))?;
             Ok(title)
         }
     }
@@ -86,17 +83,15 @@ impl AxProvider for SystemAxProvider {
         }
 
         unsafe {
-            let app_el = ax_app(pid);
-            if app_el.is_null() {
-                return Err(AxError::AccessibilityNotGranted);
-            }
-            let win = ax_focused_window(app_el).ok_or(AxError::NoFocusedWindow)?;
-            let web_area = ax_find_descendant(win, "AXWebArea", 12);
+            let app = AxElement::app(pid).ok_or(AxError::AccessibilityNotGranted)?;
+            let win = app.focused_window().ok_or(AxError::NoFocusedWindow)?;
+            let web_area = win.find_descendant("AXWebArea", 12);
 
             let url = match web_area {
-                Some(wa) => ax_url(wa).unwrap_or_default(),
-                None => ax_url(win).unwrap_or_default(),
+                Some(wa) => wa.url(),
+                None => win.url(),
             }
+            .unwrap_or_default()
             .trim()
             .to_string();
 
@@ -135,12 +130,9 @@ impl AxProvider for SystemAxProvider {
                 return Err(AxError::UnsupportedApp);
             }
 
-            let app_el = ax_app(pid);
-            if app_el.is_null() {
-                return Err(AxError::AccessibilityNotGranted);
-            }
-            let win = ax_focused_window(app_el).ok_or(AxError::NoFocusedWindow)?;
-            let raw = ax_document(win).unwrap_or_default();
+            let app = AxElement::app(pid).ok_or(AxError::AccessibilityNotGranted)?;
+            let win = app.focused_window().ok_or(AxError::NoFocusedWindow)?;
+            let raw = win.document().unwrap_or_default();
 
             let entity_path = normalize_file(&raw).unwrap_or_else(|| "unknown".into());
             let project_path = if entity_path != "unknown" {

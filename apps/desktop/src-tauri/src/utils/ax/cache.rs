@@ -7,7 +7,7 @@ use tokio::sync::RwLock;
 
 use crate::{
     monitored_app::MonitoredApp,
-    trackers::ax::{provider::AxProvider, types::AxSnapshot},
+    utils::ax::{provider::AxProvider, types::AxSnapshot},
 };
 
 #[derive(Clone, Copy, Debug)]

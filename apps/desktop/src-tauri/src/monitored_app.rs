@@ -9,8 +9,8 @@ use serde::Serialize;
 use strum_macros::{Display, EnumString};
 
 use crate::{
-    trackers::{ax::types::AxSnapshot, window_tracker::WindowTracker},
-    utils::{app::run_osascript, config::TrackedApp},
+    trackers::window_tracker::WindowTracker,
+    utils::{app::run_osascript, ax::types::AxSnapshot, config::TrackedApp},
 };
 
 pub static BROWSER_APPS: LazyLock<HashSet<MonitoredApp>> = LazyLock::new(|| {
@@ -288,7 +288,6 @@ pub fn resolve_app_details(
         MonitoredApp::Xcode => {
             let xi = snapshot.xcode.clone().unwrap_or_default();
             let language = detect_language(&xi.entity_path);
-            // let (project_name, project_path, entity, lang) = get_xcode_project_details();
             AppDetails {
                 project_name: xi.project_name,
                 project_path: xi.project_path,
@@ -300,7 +299,6 @@ pub fn resolve_app_details(
         }
         _ if BROWSER_APPS.contains(app) => {
             let bi = snapshot.browser.clone().unwrap_or_default();
-            // let (domain, url, tab) = get_browser_active_tab(app);
             AppDetails {
                 project_name: Some(bi.domain),
                 project_path: Some(bi.url.clone()),
