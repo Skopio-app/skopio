@@ -4,7 +4,6 @@ use std::{
 };
 
 use tokio::sync::{watch, RwLock};
-use tracing::debug;
 
 use crate::{
     monitored_app::MonitoredApp,
@@ -76,7 +75,6 @@ impl<P: AxProvider> AxSnapshotCache<P> {
             out.app = Some(app.clone());
             out.window_title = {
                 let title = w.title.as_ref();
-                debug!("The title: {}", title);
                 if !title.is_empty() && title != "unknown" {
                     Some(title.to_string())
                 } else {
