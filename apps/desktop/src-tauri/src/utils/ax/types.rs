@@ -1,19 +1,15 @@
 use thiserror::Error;
 use url::ParseError;
 
+use crate::trackers::window_tracker::Window;
+
 #[derive(Debug, Error)]
 pub enum AxError {
     #[error("Accessibility permission not granted")]
     AccessibilityNotGranted,
 
-    #[error("No frontmost application")]
-    NoFrontmostApplication,
-
     #[error("No focused window")]
     NoFocusedWindow,
-
-    #[error("AX traversal failed: {0}")]
-    AxTraversalFailed(&'static str),
 
     #[error("Unsupported application for this query")]
     UnsupportedApp,
@@ -23,9 +19,6 @@ pub enum AxError {
 
     #[error("Parse error: {0}")]
     ParseError(#[from] ParseError),
-
-    #[error("Unknown AX error")]
-    Unknown,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -56,4 +49,15 @@ pub struct AxSnapshot {
     pub window_title: Option<String>,
     pub browser: Option<BrowserInfo>,
     pub xcode: Option<XcodeInfo>,
+}
+
+impl From<&Window> for ActiveApp {
+    fn from(window: &Window) -> Self {
+        ActiveApp {
+            name: window.app_name.to_string(),
+            bundle_id: window.bundle_id.to_string(),
+            pid: window.pid,
+            path: window.path.to_string(),
+        }
+    }
 }

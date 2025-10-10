@@ -85,7 +85,7 @@ impl WindowTracker {
         autoreleasepool(|_| unsafe {
             let class_name = c"NSWorkspace";
             let workspace_class = AnyClass::get(class_name)?;
-            let workspace: Retained<AnyObject> = msg_send![workspace_class, sharedWorkspace];
+            let workspace: Retained<NSWorkspace> = msg_send![workspace_class, sharedWorkspace];
 
             let front_app_ptr: *mut AnyObject = msg_send![&*workspace, frontmostApplication];
             if front_app_ptr.is_null() {

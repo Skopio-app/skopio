@@ -3,11 +3,16 @@ use std::{
     time::{Duration, Instant},
 };
 
-use tokio::sync::RwLock;
+use tokio::sync::{watch, RwLock};
+use tracing::debug;
 
 use crate::{
     monitored_app::MonitoredApp,
-    utils::ax::{provider::AxProvider, types::AxSnapshot},
+    trackers::window_tracker::Window,
+    utils::ax::{
+        provider::AxProvider,
+        types::{ActiveApp, AxSnapshot},
+    },
 };
 
 #[derive(Clone, Copy, Debug)]
@@ -17,6 +22,7 @@ pub struct AxSnapshotCacheConfig {
 
 pub struct AxSnapshotCache<P: AxProvider> {
     provider: Arc<P>,
+    windows_rx: watch::Receiver<Option<Window>>,
     cfg: AxSnapshotCacheConfig,
     inner: RwLock<CacheInner>,
 }
@@ -28,9 +34,14 @@ struct CacheInner {
 }
 
 impl<P: AxProvider> AxSnapshotCache<P> {
-    pub fn new(provider: Arc<P>, cfg: AxSnapshotCacheConfig) -> Self {
+    pub fn new(
+        provider: Arc<P>,
+        windows_rx: watch::Receiver<Option<Window>>,
+        cfg: AxSnapshotCacheConfig,
+    ) -> Self {
         Self {
             provider,
+            windows_rx,
             cfg,
             inner: RwLock::new(CacheInner::default()),
         }
@@ -58,18 +69,29 @@ impl<P: AxProvider> AxSnapshotCache<P> {
             let i = self.inner.read().await;
             i.last.clone()
         };
+        let current_window = self.windows_rx.borrow().clone();
 
-        let app = self.provider.frontmost_app().ok();
-
-        if let Some(ref a) = app {
-            out.window_title = self.provider.focused_window_title(a.pid).ok();
+        if let Some(ref w) = current_window {
+            let app: ActiveApp = w.into();
+            out.app = Some(app.clone());
+            out.window_title = {
+                let title = w.title.as_ref();
+                debug!("The title: {}", title);
+                if !title.is_empty() && title != "unknown" {
+                    Some(title.to_string())
+                } else {
+                    None
+                }
+            };
 
             let app_changed = prev
                 .as_ref()
                 .and_then(|p| p.app.as_ref())
-                .map_or(true, |pa| pa.bundle_id != a.bundle_id || pa.pid != a.pid);
+                .map_or(true, |pa| {
+                    pa.bundle_id != app.bundle_id || pa.pid != app.pid
+                });
 
-            let same_window_title = match (
+            let same_title = match (
                 &prev.as_ref().and_then(|p| p.window_title.clone()),
                 &out.window_title,
             ) {
@@ -77,30 +99,32 @@ impl<P: AxProvider> AxSnapshotCache<P> {
                 _ => false,
             };
 
-            match self.provider.browser_info(&a.bundle_id, a.pid) {
+            match self.provider.browser_info(&app.bundle_id, app.pid) {
                 Ok(bi) => {
                     out.browser = Some(bi);
                 }
                 Err(_) => {
-                    if !app_changed && same_window_title {
-                        out.browser = prev.as_ref().and_then(|p| p.browser.clone());
+                    if !app_changed && same_title {
+                        out.browser = prev.and_then(|p| p.browser);
                     } else {
                         out.browser = None;
                     }
                 }
             }
 
-            if a.bundle_id
+            if app
+                .bundle_id
                 .parse::<MonitoredApp>()
                 .unwrap_or(MonitoredApp::Unknown)
                 == MonitoredApp::Xcode
             {
-                if let Ok(xi) = self.provider.xcode_info(a.pid) {
+                if let Ok(xi) = self.provider.xcode_info(app.pid) {
                     out.xcode = Some(xi);
                 }
             }
+        } else {
+            out.app = None;
         }
-        out.app = app;
 
         let mut inner = self.inner.write().await;
         inner.last = Some(out.clone());

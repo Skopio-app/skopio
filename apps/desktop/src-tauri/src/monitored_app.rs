@@ -265,7 +265,7 @@ pub unsafe fn is_xcode_compiling(pid: i32) -> Result<bool, AxError> {
         None => return Ok(false),
     };
 
-    if let Some(toolbar) = win.find_descendant("AXToolbar", 6) {
+    if let Some(toolbar) = win.find_descendants("AXToolbar", 6) {
         let mut stack = vec![toolbar.clone()];
         while let Some(node) = stack.pop() {
             if let Some(role) = node.role() {
@@ -305,7 +305,7 @@ pub unsafe fn is_xcode_compiling(pid: i32) -> Result<bool, AxError> {
     }
 
     if let Some(text) = win
-        .find_descendant("AXStaticText", 12)
+        .find_descendants("AXStaticText", 12)
         .and_then(|el| el.title().or_else(|| el.string_attr("AXDescription")))
     {
         if text.contains("Building") || text.contains("Compiling") || text.contains("Linking") {
@@ -323,7 +323,7 @@ pub unsafe fn is_xcode_debugging(pid: i32) -> Result<bool, AxError> {
         None => return Ok(false),
     };
 
-    if let Some(toolbar) = win.find_descendant("AXToolbar", 6) {
+    if let Some(toolbar) = win.find_descendants("AXToolbar", 6) {
         let mut stack = vec![toolbar.clone()];
         while let Some(node) = stack.pop() {
             if let Some(role) = node.role() {

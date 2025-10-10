@@ -1,20 +1,15 @@
-use objc2::{msg_send, rc::Retained, runtime::AnyClass};
-use objc2_app_kit::{NSRunningApplication, NSWorkspace};
-use objc2_foundation::{NSString, NSURL};
 use url::{Position, Url};
 
 use crate::{
     monitored_app::{MonitoredApp, BROWSER_APPS},
     utils::ax::{
         ffi::AxElement,
-        types::{ActiveApp, AxError, BrowserInfo, XcodeInfo},
+        types::{AxError, BrowserInfo, XcodeInfo},
         util::{derive_xcode_project_name, infer_xcode_root, normalize_file},
     },
 };
 
 pub trait AxProvider: Send + Sync {
-    fn frontmost_app(&self) -> Result<ActiveApp, AxError>;
-    fn focused_window_title(&self, pid: i32) -> Result<String, AxError>;
     fn browser_info(&self, bundle_id: &str, pid: i32) -> Result<BrowserInfo, AxError>;
     fn xcode_info(&self, pid: i32) -> Result<XcodeInfo, AxError>;
 }
@@ -23,57 +18,6 @@ pub trait AxProvider: Send + Sync {
 pub struct SystemAxProvider;
 
 impl AxProvider for SystemAxProvider {
-    fn frontmost_app(&self) -> Result<ActiveApp, AxError> {
-        unsafe {
-            let cls = AnyClass::get(c"NSWorkspace").ok_or(AxError::Unknown)?;
-            let ws: Retained<NSWorkspace> = msg_send![cls, sharedWorkspace];
-
-            let app: Option<Retained<NSRunningApplication>> = msg_send![&*ws, frontmostApplication];
-            let app = app.ok_or(AxError::NoFrontmostApplication)?;
-
-            // name
-            let name: String = {
-                let s: Option<Retained<NSString>> = msg_send![&*app, localizedName];
-                s.map(|s| s.to_string()).unwrap_or_else(|| "unknown".into())
-            };
-
-            // bundle id
-            let bundle_id: String = {
-                let s: Option<Retained<NSString>> = msg_send![&*app, bundleIdentifier];
-                s.map(|s| s.to_string()).unwrap_or_else(|| "unknown".into())
-            };
-
-            let pid: i32 = msg_send![&*app, processIdentifier];
-
-            // path
-            let path: String = {
-                let url: Option<Retained<NSURL>> = msg_send![&*app, executableURL];
-                if let Some(url) = url {
-                    let p: Option<Retained<NSString>> = msg_send![&*url, path];
-                    p.map(|p| p.to_string()).unwrap_or_else(|| "unknown".into())
-                } else {
-                    "unknown".into()
-                }
-            };
-
-            Ok(ActiveApp {
-                name,
-                bundle_id,
-                pid,
-                path,
-            })
-        }
-    }
-
-    fn focused_window_title(&self, pid: i32) -> Result<String, AxError> {
-        unsafe {
-            let app = AxElement::app(pid).ok_or(AxError::AccessibilityNotGranted)?;
-            let win = app.focused_window().ok_or(AxError::NoFocusedWindow)?;
-            let title = win.title().ok_or(AxError::AxTraversalFailed("AXTitle"))?;
-            Ok(title)
-        }
-    }
-
     fn browser_info(&self, bundle_id: &str, pid: i32) -> Result<BrowserInfo, AxError> {
         let monitored_browser = bundle_id
             .parse::<MonitoredApp>()
@@ -85,7 +29,7 @@ impl AxProvider for SystemAxProvider {
         unsafe {
             let app = AxElement::app(pid).ok_or(AxError::AccessibilityNotGranted)?;
             let win = app.focused_window().ok_or(AxError::NoFocusedWindow)?;
-            let web_area = win.find_descendant("AXWebArea", 12);
+            let web_area = win.find_descendants("AXWebArea", 12);
 
             let url = match web_area {
                 Some(wa) => wa.url(),
@@ -120,16 +64,6 @@ impl AxProvider for SystemAxProvider {
 
     fn xcode_info(&self, pid: i32) -> Result<XcodeInfo, AxError> {
         unsafe {
-            let app = self.frontmost_app()?;
-            if app
-                .bundle_id
-                .parse::<MonitoredApp>()
-                .unwrap_or(MonitoredApp::Unknown)
-                != MonitoredApp::Xcode
-            {
-                return Err(AxError::UnsupportedApp);
-            }
-
             let app = AxElement::app(pid).ok_or(AxError::AccessibilityNotGranted)?;
             let win = app.focused_window().ok_or(AxError::NoFocusedWindow)?;
             let raw = win.document().unwrap_or_default();

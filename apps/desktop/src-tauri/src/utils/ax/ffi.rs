@@ -109,7 +109,7 @@ impl AxElement {
         self.copy_attr("AXFocusedWindow").map(|p| Self(p as _))
     }
 
-    pub unsafe fn find_descendant(&self, role: &str, max_depth: usize) -> Option<Self> {
+    pub unsafe fn find_descendants(&self, role: &str, max_depth: usize) -> Option<Self> {
         fn dfs(node: &AxElement, role: &str, depth: usize, max_depth: usize) -> Option<AxElement> {
             if depth > max_depth {
                 return None;
