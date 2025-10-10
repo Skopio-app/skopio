@@ -10,7 +10,13 @@ use strum_macros::{Display, EnumString};
 
 use crate::{
     trackers::window_tracker::WindowTracker,
-    utils::{app::run_osascript, ax::types::AxSnapshot, config::TrackedApp},
+    utils::{
+        ax::{
+            ffi::AxElement,
+            types::{AxError, AxSnapshot},
+        },
+        config::TrackedApp,
+    },
 };
 
 pub static BROWSER_APPS: LazyLock<HashSet<MonitoredApp>> = LazyLock::new(|| {
@@ -179,6 +185,7 @@ pub struct OpenApp {
     block_reason: Option<String>,
 }
 
+#[derive(Debug)]
 pub struct AppDetails {
     pub project_name: Option<String>,
     pub project_path: Option<String>,
@@ -188,13 +195,38 @@ pub struct AppDetails {
     pub language: Option<String>,
 }
 
-fn get_entity_for_app(app: &MonitoredApp) -> Entity {
-    if BROWSER_APPS.contains(app) {
-        Entity::Url
-    } else if *app == MonitoredApp::Xcode {
-        Entity::File
-    } else {
-        Entity::App
+impl MonitoredApp {
+    fn get_category(&self, entity: Option<&str>, url: Option<&str>, pid: i32) -> Category {
+        if let Some(category) = APP_CATEGORIES
+            .iter()
+            .find(|(a, _)| a == self)
+            .map(|(_, c)| c)
+        {
+            return category.clone();
+        }
+
+        if BROWSER_APPS.contains(self) {
+            if let Some(url) = url {
+                return get_browser_category(url);
+            }
+            return Category::Browsing;
+        }
+
+        if *self == MonitoredApp::Xcode {
+            return get_xcode_category(entity.unwrap_or_default(), pid);
+        }
+
+        Category::Other
+    }
+
+    fn get_entity_type(&self) -> Entity {
+        if BROWSER_APPS.contains(self) {
+            Entity::Url
+        } else if *self == MonitoredApp::Xcode {
+            Entity::File
+        } else {
+            Entity::App
+        }
     }
 }
 
@@ -226,17 +258,120 @@ fn get_browser_category(url: &str) -> Category {
     Category::Browsing
 }
 
-fn get_xcode_category(entity: &str) -> Category {
-    let is_compling = run_osascript("tell application \"Xcode\" to get build status") == "Building";
+pub unsafe fn is_xcode_compiling(pid: i32) -> Result<bool, AxError> {
+    let app = AxElement::app(pid).ok_or(AxError::AccessibilityNotGranted)?;
+    let win = match app.focused_window() {
+        Some(w) => w,
+        None => return Ok(false),
+    };
 
-    if is_compling {
-        return Category::Compiling;
+    if let Some(toolbar) = win.find_descendant("AXToolbar", 6) {
+        let mut stack = vec![toolbar.clone()];
+        while let Some(node) = stack.pop() {
+            if let Some(role) = node.role() {
+                if role == "AXProgressIndicator" {
+                    if let Some(v) = node.number_attr_f64("AXValue") {
+                        if v.is_finite() && v > 0.0 && v <= 1.0 {
+                            return Ok(true);
+                        }
+                    }
+
+                    if node
+                        .string_attr("AXDescription")
+                        .or_else(|| node.title())
+                        .map(|s| s.contains("Build") || s.contains("Compile") || s.contains("Link"))
+                        .unwrap_or(false)
+                    {
+                        return Ok(true);
+                    }
+                }
+
+                if role == "AXStaticText"
+                    && node
+                        .title()
+                        .or_else(|| node.string_attr("AXDescription"))
+                        .map(|s| {
+                            s.contains("Building")
+                                || s.contains("Compiling")
+                                || s.contains("Linking")
+                        })
+                        .unwrap_or(false)
+                {
+                    return Ok(true);
+                }
+            }
+            stack.extend(node.children());
+        }
     }
 
-    let is_debugging = run_osascript("tell application \"Xcode\" to get run state") == "Running";
+    if let Some(text) = win
+        .find_descendant("AXStaticText", 12)
+        .and_then(|el| el.title().or_else(|| el.string_attr("AXDescription")))
+    {
+        if text.contains("Building") || text.contains("Compiling") || text.contains("Linking") {
+            return Ok(true);
+        }
+    }
 
-    if is_debugging {
-        return Category::Debugging;
+    Ok(false)
+}
+
+pub unsafe fn is_xcode_debugging(pid: i32) -> Result<bool, AxError> {
+    let app = AxElement::app(pid).ok_or(AxError::AccessibilityNotGranted)?;
+    let win = match app.focused_window() {
+        Some(w) => w,
+        None => return Ok(false),
+    };
+
+    if let Some(toolbar) = win.find_descendant("AXToolbar", 6) {
+        let mut stack = vec![toolbar.clone()];
+        while let Some(node) = stack.pop() {
+            if let Some(role) = node.role() {
+                if role == "AXButton" {
+                    if let Some(id) = node.identifier() {
+                        if (id.contains("Debugger") && id.contains("Stop"))
+                            && node.enabled().unwrap_or(false)
+                        {
+                            return Ok(true);
+                        }
+                    }
+
+                    let labeled_stop = node
+                        .title()
+                        .or_else(|| node.string_attr("AXDescription"))
+                        .map(|s| s.contains("Stop"))
+                        .unwrap_or(false);
+                    if labeled_stop && node.enabled().unwrap_or(false) {
+                        return Ok(true);
+                    }
+                }
+
+                if role == "AXStaticText"
+                    && node
+                        .title()
+                        .or_else(|| node.string_attr("AXDescription"))
+                        .map(|s| s.contains("Running"))
+                        .unwrap_or(false)
+                {
+                    return Ok(true);
+                }
+            }
+            stack.extend(node.children());
+        }
+    }
+
+    Ok(false)
+}
+
+fn get_xcode_category(entity: &str, pid: i32) -> Category {
+    unsafe {
+        if is_xcode_compiling(pid).unwrap_or(false) {
+            return Category::Compiling;
+        }
+
+        if is_xcode_debugging(pid).unwrap_or(false) {
+            return Category::Debugging;
+        }
     }
 
     if is_documentation_entity(entity) {
@@ -254,35 +389,13 @@ fn is_documentation_entity(entity_path: &str) -> bool {
     false
 }
 
-fn get_category_for_app(app: &MonitoredApp, entity: Option<&str>, url: Option<&str>) -> Category {
-    if let Some(category) = APP_CATEGORIES
-        .iter()
-        .find(|(a, _)| a == app)
-        .map(|(_, c)| c)
-    {
-        return category.clone();
-    }
-
-    if BROWSER_APPS.contains(app) {
-        if let Some(url) = url {
-            return get_browser_category(url);
-        }
-        return Category::Browsing;
-    }
-
-    if *app == MonitoredApp::Xcode {
-        return get_xcode_category(entity.unwrap_or_default());
-    }
-
-    Category::Other
-}
-
 pub fn resolve_app_details(
     app: &MonitoredApp,
     app_name: &str,
     app_path: &str,
     entity: &str,
     snapshot: &AxSnapshot,
+    pid: i32,
 ) -> AppDetails {
     match app {
         MonitoredApp::Xcode => {
@@ -315,8 +428,8 @@ pub fn resolve_app_details(
                 project_path: xi.project_path,
                 entity: xi.entity_path.clone(),
                 language,
-                entity_type: Entity::File,
-                category: get_category_for_app(app, Some(&xi.entity_path), None),
+                entity_type: app.get_entity_type(),
+                category: app.get_category(Some(&xi.entity_path), None, pid),
             }
         }
         _ if BROWSER_APPS.contains(app) => {
@@ -330,8 +443,8 @@ pub fn resolve_app_details(
                     project_path: Some(bi.url.clone()),
                     entity: bi.path,
                     language: None,
-                    category: get_category_for_app(app, None, Some(&bi.url)),
-                    entity_type: get_entity_for_app(app),
+                    category: app.get_category(None, Some(&bi.url), pid),
+                    entity_type: app.get_entity_type(),
                 }
             } else {
                 AppDetails {
@@ -339,7 +452,7 @@ pub fn resolve_app_details(
                     project_path: Some(app_path.to_string()),
                     entity: entity.to_string(),
                     language: None,
-                    category: get_category_for_app(app, None, None),
+                    category: app.get_category(None, None, pid),
                     entity_type: Entity::App,
                 }
             }
@@ -348,8 +461,8 @@ pub fn resolve_app_details(
             project_name: Some(app_name.to_lowercase()),
             project_path: Some(app_path.to_string()),
             entity: entity.to_string(),
-            entity_type: Entity::App,
-            category: get_category_for_app(app, None, None),
+            entity_type: app.get_entity_type(),
+            category: app.get_category(None, None, pid),
             language: None,
         },
     }

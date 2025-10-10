@@ -21,6 +21,7 @@ pub struct Window {
     pub bundle_id: Arc<str>,
     /// Refers to the executable path of the app binary
     pub path: Arc<str>,
+    pub pid: i32,
 }
 
 #[derive(Clone)]
@@ -165,6 +166,7 @@ impl WindowTracker {
                 title,
                 bundle_id,
                 path,
+                pid,
             };
 
             Some(window)

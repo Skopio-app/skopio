@@ -5,6 +5,10 @@ use std::{ffi::c_void, ptr};
 use core_foundation::{
     array::CFArrayRef,
     base::{CFGetTypeID, CFRelease, CFRetain, CFTypeRef, TCFType},
+    number::{
+        kCFNumberFloatType, CFBooleanGetTypeID, CFBooleanGetValue, CFBooleanRef, CFNumberGetTypeID,
+        CFNumberGetValue, CFNumberRef,
+    },
     string::CFString,
     url::CFURL,
 };
@@ -136,6 +140,49 @@ impl AxElement {
                 s.to_string()
             }
         })
+    }
+
+    pub unsafe fn string_attr(&self, name: &str) -> Option<String> {
+        self.copy_attr(name).map(|t| {
+            let s = CFString::wrap_under_create_rule(t as _);
+            s.to_string()
+        })
+    }
+
+    pub unsafe fn bool_attr(&self, name: &str) -> Option<bool> {
+        self.copy_attr(name).and_then(|t| {
+            if CFGetTypeID(t) == CFBooleanGetTypeID() {
+                let b = t as CFBooleanRef;
+                Some(CFBooleanGetValue(b))
+            } else {
+                None
+            }
+        })
+    }
+
+    pub unsafe fn number_attr_f64(&self, name: &str) -> Option<f64> {
+        self.copy_attr(name).and_then(|t| {
+            if CFGetTypeID(t) == CFNumberGetTypeID() {
+                let n = t as CFNumberRef;
+                let mut out: f64 = 0.0;
+                let ok = CFNumberGetValue(n, kCFNumberFloatType, &mut out as *mut _ as *mut _);
+                if ok {
+                    Some(out)
+                } else {
+                    None
+                }
+            } else {
+                None
+            }
+        })
+    }
+
+    pub unsafe fn identifier(&self) -> Option<String> {
+        self.string_attr("AXIdentifier")
+    }
+
+    pub unsafe fn enabled(&self) -> Option<bool> {
+        self.bool_attr("AXEnabled")
     }
 }
 

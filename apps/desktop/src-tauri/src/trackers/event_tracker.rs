@@ -76,6 +76,7 @@ impl EventTracker {
         app_bundle_id: &str,
         app_path: &str,
         entity: &str,
+        pid: i32,
     ) {
         let bundle_id = app_bundle_id
             .parse::<MonitoredApp>()
@@ -94,7 +95,8 @@ impl EventTracker {
 
         let now = Utc::now();
         let snapshot = self.ax_cache.snapshot().await;
-        let app_details = resolve_app_details(&bundle_id, app_name, app_path, entity, &snapshot);
+        let app_details =
+            resolve_app_details(&bundle_id, app_name, app_path, entity, &snapshot, pid);
 
         let branch_name = if app_name == "Xcode" {
             app_details.project_path.as_ref().and_then(find_git_branch)
@@ -200,10 +202,11 @@ impl EventTracker {
                             None => continue,
                         };
 
-                        let app_name = window.app_name.clone();
-                        let bundle_id = window.bundle_id.clone();
-                        let file = window.title.clone();
-                        let app_path = window.path.clone();
+                        let app_name = window.app_name;
+                        let bundle_id = window.bundle_id;
+                        let file = window.title;
+                        let app_path = window.path;
+                        let pid = window.pid;
 
                         let activity_detected = {
                             let mouse_buttons = self.cursor_tracker.get_pressed_mouse_buttons();
@@ -221,7 +224,7 @@ impl EventTracker {
 
                         if changed {
                             last_state = Some((app_name.clone(), file.clone()));
-                            self.track_event(&app_name, &bundle_id, &app_path, &file).await;
+                            self.track_event(&app_name, &bundle_id, &app_path, &file, pid).await;
                         }
 
                         if activity_detected {
