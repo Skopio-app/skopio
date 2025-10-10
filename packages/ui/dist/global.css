@@ -1029,9 +1029,6 @@
   .text-primary-foreground {
     color: var(--color-primary-foreground);
   }
-  .text-red-500 {
-    color: var(--color-red-500);
-  }
   .text-secondary-foreground {
     color: var(--color-secondary-foreground);
   }
