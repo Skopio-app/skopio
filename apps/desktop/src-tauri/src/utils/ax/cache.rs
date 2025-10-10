@@ -54,19 +54,38 @@ impl<P: AxProvider> AxSnapshotCache<P> {
     pub async fn refresh_now(&self) -> AxSnapshot {
         let mut out = AxSnapshot::default();
 
+        let prev = {
+            let i = self.inner.read().await;
+            i.last.clone()
+        };
+
         let app = self.provider.frontmost_app().ok();
 
         if let Some(ref a) = app {
             out.window_title = self.provider.focused_window_title(a.pid).ok();
+
+            let app_changed = prev
+                .as_ref()
+                .and_then(|p| p.app.as_ref())
+                .map_or(true, |pa| pa.bundle_id != a.bundle_id || pa.pid != a.pid);
+
+            let same_window_title = match (
+                &prev.as_ref().and_then(|p| p.window_title.clone()),
+                &out.window_title,
+            ) {
+                (Some(pt), Some(nt)) => *pt == *nt,
+                _ => false,
+            };
 
             match self.provider.browser_info(&a.bundle_id, a.pid) {
                 Ok(bi) => {
                     out.browser = Some(bi);
                 }
                 Err(_) => {
-                    let inner = self.inner.read().await;
-                    if let Some(ref last_snap) = inner.last {
-                        out.browser = last_snap.browser.clone();
+                    if !app_changed && same_window_title {
+                        out.browser = prev.as_ref().and_then(|p| p.browser.clone());
+                    } else {
+                        out.browser = None;
                     }
                 }
             }

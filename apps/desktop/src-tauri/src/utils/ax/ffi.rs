@@ -137,10 +137,6 @@ impl AxElement {
             }
         })
     }
-
-    // pub fn as_raw(&self) -> *const c_void {
-    //     self.0
-    // }
 }
 
 impl Clone for AxElement {

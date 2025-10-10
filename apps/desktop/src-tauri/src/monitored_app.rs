@@ -286,7 +286,29 @@ pub fn resolve_app_details(
 ) -> AppDetails {
     match app {
         MonitoredApp::Xcode => {
-            let xi = snapshot.xcode.clone().unwrap_or_default();
+            let mut xi = snapshot.xcode.clone().unwrap_or_default();
+            if xi.entity_path.trim().is_empty() || xi.entity_path == "unknown" {
+                xi.entity_path = snapshot
+                    .window_title
+                    .clone()
+                    .unwrap_or_else(|| "unknown".into());
+            }
+            if xi
+                .project_path
+                .as_deref()
+                .map(str::is_empty)
+                .unwrap_or(true)
+            {
+                xi.project_path = Some(app_path.to_string());
+            }
+            if xi
+                .project_name
+                .as_deref()
+                .map(str::is_empty)
+                .unwrap_or(true)
+            {
+                xi.project_name = Some(app_name.to_lowercase())
+            }
             let language = detect_language(&xi.entity_path);
             AppDetails {
                 project_name: xi.project_name,
@@ -298,14 +320,28 @@ pub fn resolve_app_details(
             }
         }
         _ if BROWSER_APPS.contains(app) => {
-            let bi = snapshot.browser.clone().unwrap_or_default();
-            AppDetails {
-                project_name: Some(bi.domain),
-                project_path: Some(bi.url.clone()),
-                entity: bi.path,
-                language: None,
-                category: get_category_for_app(app, None, Some(&bi.url)),
-                entity_type: get_entity_for_app(app),
+            if let Some(bi) = snapshot
+                .browser
+                .clone()
+                .filter(|b| !b.url.is_empty() && !b.domain.is_empty())
+            {
+                AppDetails {
+                    project_name: Some(bi.domain),
+                    project_path: Some(bi.url.clone()),
+                    entity: bi.path,
+                    language: None,
+                    category: get_category_for_app(app, None, Some(&bi.url)),
+                    entity_type: get_entity_for_app(app),
+                }
+            } else {
+                AppDetails {
+                    project_name: Some(app_name.to_lowercase()),
+                    project_path: Some(app_path.to_string()),
+                    entity: entity.to_string(),
+                    language: None,
+                    category: get_category_for_app(app, None, None),
+                    entity_type: Entity::App,
+                }
             }
         }
         _ => AppDetails {
