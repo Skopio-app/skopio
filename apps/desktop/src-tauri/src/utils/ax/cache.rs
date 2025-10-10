@@ -1,4 +1,5 @@
 use std::{
+    str::FromStr,
     sync::Arc,
     time::{Duration, Instant},
 };
@@ -6,7 +7,7 @@ use std::{
 use tokio::sync::{watch, RwLock};
 
 use crate::{
-    monitored_app::MonitoredApp,
+    monitored_app::{MonitoredApp, BROWSER_APPS},
     trackers::window_tracker::Window,
     utils::ax::{
         provider::AxProvider,
@@ -97,15 +98,21 @@ impl<P: AxProvider> AxSnapshotCache<P> {
                 _ => false,
             };
 
-            match self.provider.browser_info(&app.bundle_id, app.pid) {
-                Ok(bi) => {
-                    out.browser = Some(bi);
-                }
-                Err(_) => {
-                    if !app_changed && same_title {
-                        out.browser = prev.and_then(|p| p.browser);
-                    } else {
-                        out.browser = None;
+            let is_browser = MonitoredApp::from_str(&app.bundle_id)
+                .map(|b| BROWSER_APPS.contains(&b))
+                .unwrap_or(false);
+
+            if is_browser {
+                match self.provider.browser_info(&app.bundle_id, app.pid) {
+                    Ok(bi) => {
+                        out.browser = Some(bi);
+                    }
+                    Err(_) => {
+                        if !app_changed && same_title {
+                            out.browser = prev.and_then(|p| p.browser);
+                        } else {
+                            out.browser = None;
+                        }
                     }
                 }
             }
