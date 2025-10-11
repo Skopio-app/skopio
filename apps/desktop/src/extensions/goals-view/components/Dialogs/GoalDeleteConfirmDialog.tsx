@@ -35,11 +35,7 @@ const GoalDeleteConfirmDialog: React.FC<GoalDeleteConfirmDialogProps> = ({
               Confirmation dialog for whether to proceed with goal deletion.
             </Dialog.Description>
             <Dialog.Close asChild>
-              <Button
-                variant="ghost"
-                className="text-muted-foreground hover:text-foreground"
-                aria-label="Close"
-              >
+              <Button variant="ghost" aria-label="Close">
                 <X className="w-5 h-5" />
               </Button>
             </Dialog.Close>

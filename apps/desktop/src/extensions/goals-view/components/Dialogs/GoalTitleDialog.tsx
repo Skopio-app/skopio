@@ -80,11 +80,7 @@ const GoalTitleDialog: React.FC<GoalTitleDialogProps> = ({
               Edit goal name
             </Dialog.Description>
             <Dialog.Close asChild>
-              <Button
-                variant="ghost"
-                className="text-muted-foreground hover:text-foreground"
-                aria-label="Close"
-              >
+              <Button variant="ghost" aria-label="Close">
                 <X className="w-5 h-5" />
               </Button>
             </Dialog.Close>
