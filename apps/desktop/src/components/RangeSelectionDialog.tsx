@@ -1,6 +1,6 @@
 import * as Dialog from "@radix-ui/react-dialog";
-import { Calendar, cn } from "@skopio/ui";
-import { XIcon } from "lucide-react";
+import { Button, Calendar, cn } from "@skopio/ui";
+import { X } from "lucide-react";
 import { DATE_RANGE_LABELS, DateRangeType } from "@/utils/time";
 import { addDays, startOfDay } from "date-fns";
 import { useState } from "react";
@@ -139,10 +139,14 @@ const RangeSelectionDialog: React.FC<DateRangeDialogProps> = ({
           )}
 
           <Dialog.Close asChild>
-            <button className="absolute top-4 right-4 text-primary-foreground hover:text-muted-foreground rounded-full p-1 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-ring">
-              <XIcon className="w-5 h-5" />
-              <span className="sr-only">Close</span>
-            </button>
+            <Button
+              variant="ghost"
+              type="button"
+              aria-label="Close"
+              className="absolute top-4 right-4"
+            >
+              <X className="w-5 h-5" />
+            </Button>
           </Dialog.Close>
         </Dialog.Content>
       </Dialog.Portal>

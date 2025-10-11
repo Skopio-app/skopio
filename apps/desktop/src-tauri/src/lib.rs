@@ -1,5 +1,5 @@
 use db::DBContext;
-use std::sync::Arc;
+use std::{sync::Arc, time::Duration};
 use sync_service::BufferedTrackingService;
 use tauri::{AppHandle, Manager, Runtime};
 use tracing::error;
@@ -17,18 +17,24 @@ use crate::{
         tray::TrayExt,
         window::{NotificationPayload, WindowExt, WindowKind},
     },
-    utils::tracing::TracingExt,
+    utils::{
+        ax::{
+            cache::{AxSnapshotCache, AxSnapshotCacheConfig},
+            provider::SystemAxProvider,
+        },
+        tracing::TracingExt,
+    },
 };
 
 mod goals_service;
-mod monitored_app;
+pub mod monitored_app;
 mod network;
 mod server;
 mod sync_service;
-mod trackers;
+pub mod trackers;
 mod tracking_service;
 mod ui;
-mod utils;
+pub mod utils;
 
 #[tokio::main]
 pub async fn run() {
@@ -120,6 +126,21 @@ async fn setup_trackers(app_handle: &AppHandle) -> Result<(), anyhow::Error> {
     let config_store = ConfigStore::new(app_handle).await?;
     app_handle.manage(config_store.clone());
 
+    let window_tracker = app_handle.state::<Arc<WindowTracker>>();
+    let window_tracker_ref = Arc::clone(&window_tracker);
+    window_tracker_ref.start_tracking();
+
+    let ax_cache_rx = window_tracker.subscribe();
+
+    let ax_provider = Arc::new(SystemAxProvider);
+    let ax_cache = Arc::new(AxSnapshotCache::new(
+        ax_provider,
+        ax_cache_rx,
+        AxSnapshotCacheConfig {
+            max_age: Duration::from_millis(700),
+        },
+    ));
+
     let db_path = get_db_path(app_handle);
     let db_url = format!("sqlite://{}", db_path.to_str().unwrap());
 
@@ -154,7 +175,6 @@ async fn setup_trackers(app_handle: &AppHandle) -> Result<(), anyhow::Error> {
 
     let service_trait: Arc<dyn TrackingService> = buffered_service.clone();
 
-    let window_tracker = app_handle.state::<Arc<WindowTracker>>();
     let cursor_tracker = app_handle.state::<Arc<MouseTracker>>();
     let keyboard_tracker = app_handle.state::<Arc<KeyboardTracker>>();
     let afk_timeout_rx = config_store.subscribe_afk_timeout();
@@ -172,11 +192,9 @@ async fn setup_trackers(app_handle: &AppHandle) -> Result<(), anyhow::Error> {
         Arc::clone(&keyboard_tracker),
         Arc::clone(&service_trait),
         tracked_apps_rx,
+        ax_cache.clone(),
     ));
     app_handle.manage(Arc::clone(&event_tracker));
-
-    let window_tracker_ref = Arc::clone(&window_tracker);
-    window_tracker_ref.start_tracking();
 
     let event_window_rx = window_tracker.subscribe();
 

@@ -1,31 +1,17 @@
 #![cfg(target_os = "macos")]
 
-use core_foundation::base::{CFRelease, TCFType};
-use core_foundation::string::CFString;
 use objc2::msg_send;
 use objc2::rc::{autoreleasepool, Retained};
 use objc2::runtime::{AnyClass, AnyObject};
 use objc2_app_kit::{NSApplicationActivationPolicy, NSRunningApplication, NSWorkspace};
 use objc2_foundation::{NSArray, NSString};
-use std::os::raw::c_void;
-use std::ptr;
 use std::sync::Arc;
 use tokio::sync::{watch, Notify};
 use tokio::time::{interval, Duration};
 use tracing::{debug, info, warn};
 
+use crate::utils::ax::ffi::AxElement;
 use crate::utils::config::TrackedApp;
-
-#[link(name = "ApplicationServices", kind = "framework")]
-extern "C" {
-    fn AXUIElementCopyAttributeValue(
-        element: *const c_void,
-        attribute: *const c_void,
-        value: *mut *const c_void,
-    ) -> i32;
-
-    fn AXUIElementCreateApplication(pid: i32) -> *const c_void;
-}
 
 /// Represents an actively tracked app window.
 #[derive(Clone, PartialEq, Debug)]
@@ -35,6 +21,7 @@ pub struct Window {
     pub bundle_id: Arc<str>,
     /// Refers to the executable path of the app binary
     pub path: Arc<str>,
+    pub pid: i32,
 }
 
 #[derive(Clone)]
@@ -98,7 +85,7 @@ impl WindowTracker {
         autoreleasepool(|_| unsafe {
             let class_name = c"NSWorkspace";
             let workspace_class = AnyClass::get(class_name)?;
-            let workspace: Retained<AnyObject> = msg_send![workspace_class, sharedWorkspace];
+            let workspace: Retained<NSWorkspace> = msg_send![workspace_class, sharedWorkspace];
 
             let front_app_ptr: *mut AnyObject = msg_send![&*workspace, frontmostApplication];
             if front_app_ptr.is_null() {
@@ -179,6 +166,7 @@ impl WindowTracker {
                 title,
                 bundle_id,
                 path,
+                pid,
             };
 
             Some(window)
@@ -186,52 +174,11 @@ impl WindowTracker {
     }
 
     fn get_active_window_title(pid: i32) -> Option<String> {
-        autoreleasepool(|_| unsafe {
-            let app_element = AXUIElementCreateApplication(pid);
-            if app_element.is_null() {
-                return None;
-            }
-
-            let mut focused_window: *const c_void = ptr::null_mut();
-            let err = AXUIElementCopyAttributeValue(
-                app_element,
-                CFString::new("AXFocusedWindow").as_concrete_TypeRef() as *const _,
-                &mut focused_window,
-            );
-
-            if err != 0 || focused_window.is_null() {
-                CFRelease(app_element);
-                return None;
-            }
-
-            let mut title_value: *const c_void = ptr::null_mut();
-            let err = AXUIElementCopyAttributeValue(
-                focused_window,
-                CFString::new("AXTitle").as_concrete_TypeRef() as *const _,
-                &mut title_value,
-            );
-
-            if err != 0 || title_value.is_null() {
-                CFRelease(focused_window);
-                CFRelease(app_element);
-                return None;
-            }
-
-            let cf_title: CFString = CFString::wrap_under_create_rule(
-                title_value as *mut core_foundation::string::__CFString,
-            );
-
-            let title = cf_title.to_string();
-
-            CFRelease(focused_window);
-            CFRelease(app_element);
-
-            if title.trim().is_empty() {
-                None
-            } else {
-                Some(title)
-            }
-        })
+        unsafe {
+            let app = AxElement::app(pid)?;
+            let win = app.focused_window()?;
+            win.title()
+        }
     }
 
     pub fn list_open_apps() -> Vec<TrackedApp> {
@@ -269,6 +216,12 @@ impl WindowTracker {
 
     pub fn stop_tracking(&self) {
         self.shutdown.notify_one();
+    }
+}
+
+impl Default for WindowTracker {
+    fn default() -> Self {
+        Self::new()
     }
 }
 

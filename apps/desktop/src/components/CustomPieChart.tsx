@@ -18,8 +18,7 @@ const CustomPieChart: React.FC<CustomPieChartProps> = ({ data }) => {
   );
 
   const { getColorForKey } = useChartColor();
-
-  const linkTextColor = useCssVarColor("--muted-foreground", "#333333");
+  const linkTextColor = useCssVarColor("--muted-foreground");
 
   if (!chartData.length) {
     return (
@@ -47,7 +46,7 @@ const CustomPieChart: React.FC<CustomPieChartProps> = ({ data }) => {
           arcLinkLabelsColor={{ from: "color" }}
           arcLabelsSkipAngle={10}
           arcLabelsTextColor={{ from: "color", modifiers: [["darker", 2]] }}
-          legends={[]}
+          legends={undefined}
           enableArcLabels={false}
           tooltip={({ datum }) => {
             const time = formatDuration(datum.value);

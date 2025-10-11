@@ -1,6 +1,8 @@
-use crate::monitored_app::{resolve_app_details, Category, Entity, MonitoredApp, IGNORED_APPS};
+use crate::monitored_app::{resolve_app_details, BundleIdExt, Category, Entity};
 use crate::trackers::SOURCE;
 use crate::tracking_service::TrackingService;
+use crate::utils::ax::cache::AxSnapshotCache;
+use crate::utils::ax::provider::SystemAxProvider;
 use crate::utils::config::TrackedApp;
 use chrono::{DateTime, Utc};
 use common::git::find_git_branch;
@@ -39,6 +41,7 @@ pub struct EventTracker {
     tracker: Arc<dyn TrackingService>,
     tracked_apps_rx: watch::Receiver<Vec<TrackedApp>>,
     allowed_ids: Arc<RwLock<HashSet<String>>>,
+    ax_cache: Arc<AxSnapshotCache<SystemAxProvider>>,
 }
 
 impl EventTracker {
@@ -47,6 +50,7 @@ impl EventTracker {
         keyboard_tracker: Arc<KeyboardTracker>,
         tracker: Arc<dyn TrackingService>,
         tracked_apps_rx: watch::Receiver<Vec<TrackedApp>>,
+        ax_cache: Arc<AxSnapshotCache<SystemAxProvider>>,
     ) -> Self {
         let initial_allowed: HashSet<String> = tracked_apps_rx
             .borrow()
@@ -62,6 +66,7 @@ impl EventTracker {
             tracker,
             tracked_apps_rx,
             allowed_ids: Arc::new(RwLock::new(initial_allowed)),
+            ax_cache,
         }
     }
 
@@ -71,12 +76,9 @@ impl EventTracker {
         app_bundle_id: &str,
         app_path: &str,
         entity: &str,
+        pid: i32,
     ) {
-        let bundle_id = app_bundle_id
-            .parse::<MonitoredApp>()
-            .unwrap_or(MonitoredApp::Unknown);
-
-        if IGNORED_APPS.contains_key(&bundle_id) {
+        if app_bundle_id.is_ignored_bundle() {
             return;
         }
 
@@ -88,7 +90,9 @@ impl EventTracker {
         }
 
         let now = Utc::now();
-        let app_details = resolve_app_details(&bundle_id, app_name, app_path, entity);
+        let snapshot = self.ax_cache.snapshot().await;
+        let app_details =
+            resolve_app_details(app_bundle_id, app_name, app_path, entity, &snapshot, pid);
 
         let branch_name = if app_name == "Xcode" {
             app_details.project_path.as_ref().and_then(find_git_branch)
@@ -194,10 +198,11 @@ impl EventTracker {
                             None => continue,
                         };
 
-                        let app_name = window.app_name.clone();
-                        let bundle_id = window.bundle_id.clone();
-                        let file = window.title.clone();
-                        let app_path = window.path.clone();
+                        let app_name = window.app_name;
+                        let bundle_id = window.bundle_id;
+                        let file = window.title;
+                        let app_path = window.path;
+                        let pid = window.pid;
 
                         let activity_detected = {
                             let mouse_buttons = self.cursor_tracker.get_pressed_mouse_buttons();
@@ -215,7 +220,7 @@ impl EventTracker {
 
                         if changed {
                             last_state = Some((app_name.clone(), file.clone()));
-                            self.track_event(&app_name, &bundle_id, &app_path, &file).await;
+                            self.track_event(&app_name, &bundle_id, &app_path, &file, pid).await;
                         }
 
                         if activity_detected {

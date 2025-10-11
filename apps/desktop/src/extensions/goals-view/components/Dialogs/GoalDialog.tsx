@@ -273,12 +273,7 @@ const GoalDialog: React.FC<GoalDialogProps> = ({
               apps or categories.
             </Dialog.Description>
             <Dialog.Close asChild>
-              <Button
-                variant="ghost"
-                type="button"
-                className="text-muted-foreground hover:text-foreground"
-                aria-label="Close"
-              >
+              <Button variant="ghost" type="button" aria-label="Close">
                 <X className="w-5 h-5" />
               </Button>
             </Dialog.Close>

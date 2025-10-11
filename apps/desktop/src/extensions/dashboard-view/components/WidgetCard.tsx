@@ -9,7 +9,7 @@ import {
   TooltipTrigger,
 } from "@skopio/ui";
 import { GripVertical, Info, Settings, X } from "lucide-react";
-import SkeletonChart from "../../../components/SkeletonChart";
+import SkeletonChart from "@/components/SkeletonChart";
 import React from "react";
 
 export interface WidgetCardProps {
@@ -95,7 +95,7 @@ const WidgetCard = React.forwardRef<HTMLDivElement, WidgetCardProps>(
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-6 w-6 text-muted-foreground hover:text-red-500"
+                className="h-6 w-6 text-muted-foreground hover:text-destructive"
                 onClick={onRemove}
                 aria-label="Close"
               >
