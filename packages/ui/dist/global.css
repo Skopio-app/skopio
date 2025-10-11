@@ -729,6 +729,9 @@
   .border-amber-600 {
     border-color: var(--color-amber-600);
   }
+  .border-border {
+    border-color: var(--color-border);
+  }
   .border-green-500 {
     border-color: var(--color-green-500);
   }

@@ -95,7 +95,7 @@ export function ChipSelector<V, O = V>({
 
       <DropDownMenu.Content
         className={cn(
-          "z-50 mt-1 w-64 max-h-96 overflow-y-auto rounded border bg-popover p-1 shadow",
+          "z-50 mt-1 w-64 max-h-96 overflow-y-auto rounded border border-border bg-popover p-1 shadow",
           menuClassName,
         )}
       >
