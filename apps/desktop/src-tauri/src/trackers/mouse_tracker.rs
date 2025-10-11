@@ -140,3 +140,9 @@ impl MouseTracker {
         }
     }
 }
+
+impl Default for MouseTracker {
+    fn default() -> Self {
+        Self::new()
+    }
+}

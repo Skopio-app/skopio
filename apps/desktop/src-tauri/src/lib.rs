@@ -27,14 +27,14 @@ use crate::{
 };
 
 mod goals_service;
-mod monitored_app;
+pub mod monitored_app;
 mod network;
 mod server;
 mod sync_service;
-mod trackers;
+pub mod trackers;
 mod tracking_service;
 mod ui;
-mod utils;
+pub mod utils;
 
 #[tokio::main]
 pub async fn run() {

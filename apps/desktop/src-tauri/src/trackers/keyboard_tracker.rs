@@ -128,3 +128,9 @@ fn flag_for_modifier(key_code: i64) -> Option<CGEventFlags> {
         _ => None,
     }
 }
+
+impl Default for KeyboardTracker {
+    fn default() -> Self {
+        Self::new()
+    }
+}

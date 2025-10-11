@@ -219,6 +219,12 @@ impl WindowTracker {
     }
 }
 
+impl Default for WindowTracker {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 unsafe fn nsstring_to_string(ns: Option<Retained<NSString>>) -> Option<String> {
     ns.map(|s| s.to_string())
 }

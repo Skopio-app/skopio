@@ -258,6 +258,16 @@ fn get_browser_category(url: &str) -> Category {
     Category::Browsing
 }
 
+/// Determines whether Xcode is currently compiling or building a project.
+///
+/// This function uses macOS Accessibility (AX) APIs to inspect the UI hierarchy of Xcode's
+/// frontmost window and looks for indicators of a build in progress.
+///
+/// ### Safety
+/// - Uses raw Accessibility (AX) APIs and CoreFoundation objects, which are inherently unsafe
+/// - Must be called only for valid Xcode process IDs.
+/// - AX trees are dynamic; elements may disappear during traversal, so results are best-effort.
+/// - The function must be run on macOS with the app having `AXIsProcessTrusted()` privileges.
 pub unsafe fn is_xcode_compiling(pid: i32) -> Result<bool, AxError> {
     let app = AxElement::app(pid).ok_or(AxError::AccessibilityNotGranted)?;
     let win = match app.focused_window() {
@@ -316,6 +326,17 @@ pub unsafe fn is_xcode_compiling(pid: i32) -> Result<bool, AxError> {
     Ok(false)
 }
 
+/// Determines whether Xcode is currently debugging a target.
+///
+/// This function inspects the Accessibility (AX) hierarchy of the Xcode window to
+/// detect the presence of a **running or debugging state**.
+///
+/// ### Safety
+/// - Directly interacts with macOS AXUIElement APIs; must only be used if the calling process
+///   is Accessibility-trusted
+/// - Assumes `pid` corresponds to a running Xcode process.
+/// - AX structures are volatile; missing nodes are not considered errors.
+/// - Returned `bool` is best-effort, based on current visible UI.
 pub unsafe fn is_xcode_debugging(pid: i32) -> Result<bool, AxError> {
     let app = AxElement::app(pid).ok_or(AxError::AccessibilityNotGranted)?;
     let win = match app.focused_window() {
