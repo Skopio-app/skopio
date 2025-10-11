@@ -23,6 +23,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v0.1.5] -2025-10-11
+
+### Fixed
+
+- Update various components' dark mode styling.
+- Prevent Xcode and browsers from saving empty projects and entities.
+- Detect debugging and compiling states in Xcode on a best-effort basis.
+- Handle non-project files being opened in Xcode.
+
+### Added
+
+- General tracking support for most browser apps.
+- More VSCode variants are accounted for in ignore list.
+
+### Removed
+
+- Applescript logic for tracking xcode and browser activity.
+
+---
+
 ## [v0.1.4] - 2025-10-04
 
 ### Changed
