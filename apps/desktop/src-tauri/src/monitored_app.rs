@@ -19,7 +19,7 @@ use crate::{
     },
 };
 
-pub static BROWSER_APPS: LazyLock<HashSet<MonitoredApp>> = LazyLock::new(|| {
+static BROWSER_APPS: LazyLock<HashSet<MonitoredApp>> = LazyLock::new(|| {
     HashSet::from([
         MonitoredApp::Brave,
         MonitoredApp::Chrome,
@@ -56,21 +56,32 @@ static LEARNING_URLS: LazyLock<HashSet<&'static str>> = LazyLock::new(|| {
     ])
 });
 
-pub static IGNORED_APPS: LazyLock<HashMap<MonitoredApp, &'static str>> = LazyLock::new(|| {
-    HashMap::from([
-        (
-            MonitoredApp::Code,
-            "An editor extension for Visual Studio Code is available to capture more accurate data",
-        ),
-        (
-            MonitoredApp::Windsurf,
-            "An editor extension for Windsurf is available to capture more accurate data",
-        ),
-        (
-            MonitoredApp::Cursor,
-            "An editor extension for Cursor is available to capture more accurate data",
-        ),
-    ])
+const CODE_IGNORE: &str =
+    "An editor extension for Visual Studio Code is available to capture more accurate data";
+const CODE_VARIANTS: &[MonitoredApp] = &[
+    MonitoredApp::Code,
+    MonitoredApp::CodeInsiders,
+    MonitoredApp::CodeExploration,
+    MonitoredApp::CodeOSS,
+    MonitoredApp::VSCodium,
+];
+
+static IGNORED_APPS: LazyLock<HashMap<MonitoredApp, &'static str>> = LazyLock::new(|| {
+    let mut m = HashMap::new();
+
+    for &v in CODE_VARIANTS {
+        m.insert(v, CODE_IGNORE);
+    }
+
+    m.insert(
+        MonitoredApp::Windsurf,
+        "An editor extension for Windsurf is available to capture more accurate data",
+    );
+    m.insert(
+        MonitoredApp::Cursor,
+        "An editor extension for Cursor is available to capture more accurate data",
+    );
+    m
 });
 
 static CODING_URLS: LazyLock<HashSet<&'static str>> = LazyLock::new(|| {
@@ -152,6 +163,8 @@ pub enum MonitoredApp {
     CodeInsiders,
     #[strum(serialize = "com.microsoft.VSCodeExploration")]
     CodeExploration,
+    #[strum(serialize = "com.visualstudio.code.oss")]
+    CodeOSS,
     #[strum(serialize = "com.vscodium")]
     VSCodium,
     #[strum(serialize = "com.figma.Desktop")]
