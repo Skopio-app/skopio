@@ -1,12 +1,11 @@
 use std::{
     collections::HashMap,
-    str::FromStr,
     sync::{Arc, Mutex},
     time::Duration,
 };
 
 use skopio_desktop_lib::{
-    monitored_app::{MonitoredApp, BROWSER_APPS},
+    monitored_app::BundleIdExt,
     trackers::window_tracker::Window,
     utils::ax::{
         cache::{AxSnapshotCache, AxSnapshotCacheConfig},
@@ -77,20 +76,13 @@ fn mk_window(name: &str, bundle: &str, path: &str, title: &str, pid: i32) -> Win
     }
 }
 
-fn is_browser_bundle(bundle: &str) -> bool {
-    MonitoredApp::from_str(bundle)
-        .ok()
-        .map(|b| BROWSER_APPS.contains(&b))
-        .unwrap_or(false)
-}
-
 #[tokio::test]
 async fn cache_returns_cached_within_max_age() {
     let (tx, rx) = watch::channel::<Option<Window>>(None);
 
     let pid = 111;
     let chrome = "com.google.Chrome";
-    assert!(is_browser_bundle(chrome));
+    assert!(chrome.is_browser_bundle());
 
     let provider = MockProvider::default().with_browser(
         chrome,

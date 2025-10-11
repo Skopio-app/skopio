@@ -1,7 +1,7 @@
 use url::{Position, Url};
 
 use crate::{
-    monitored_app::{MonitoredApp, BROWSER_APPS},
+    monitored_app::BundleIdExt,
     utils::ax::{
         ffi::AxElement,
         types::{AxError, BrowserInfo, XcodeInfo},
@@ -19,10 +19,7 @@ pub struct SystemAxProvider;
 
 impl AxProvider for SystemAxProvider {
     fn browser_info(&self, bundle_id: &str, pid: i32) -> Result<BrowserInfo, AxError> {
-        let monitored_browser = bundle_id
-            .parse::<MonitoredApp>()
-            .unwrap_or(MonitoredApp::Unknown);
-        if !BROWSER_APPS.contains(&monitored_browser) {
+        if !bundle_id.is_browser_bundle() {
             return Err(AxError::UnsupportedApp);
         }
 

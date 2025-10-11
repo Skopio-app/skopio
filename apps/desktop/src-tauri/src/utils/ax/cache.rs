@@ -1,5 +1,4 @@
 use std::{
-    str::FromStr,
     sync::Arc,
     time::{Duration, Instant},
 };
@@ -7,7 +6,7 @@ use std::{
 use tokio::sync::{watch, RwLock};
 
 use crate::{
-    monitored_app::{MonitoredApp, BROWSER_APPS},
+    monitored_app::BundleIdExt,
     trackers::window_tracker::Window,
     utils::ax::{
         provider::AxProvider,
@@ -98,9 +97,7 @@ impl<P: AxProvider> AxSnapshotCache<P> {
                 _ => false,
             };
 
-            let is_browser = MonitoredApp::from_str(&app.bundle_id)
-                .map(|b| BROWSER_APPS.contains(&b))
-                .unwrap_or(false);
+            let is_browser = app.bundle_id.is_browser_bundle();
 
             if is_browser {
                 match self.provider.browser_info(&app.bundle_id, app.pid) {
@@ -117,12 +114,7 @@ impl<P: AxProvider> AxSnapshotCache<P> {
                 }
             }
 
-            if app
-                .bundle_id
-                .parse::<MonitoredApp>()
-                .unwrap_or(MonitoredApp::Unknown)
-                == MonitoredApp::Xcode
-            {
+            if app.bundle_id.is_xcode_bundle() {
                 if let Ok(xi) = self.provider.xcode_info(app.pid) {
                     out.xcode = Some(xi);
                 }

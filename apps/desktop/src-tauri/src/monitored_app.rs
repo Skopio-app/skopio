@@ -96,6 +96,43 @@ static APP_CATEGORIES: LazyLock<HashSet<(MonitoredApp, Category)>> = LazyLock::n
     ])
 });
 
+/// Extension trait for checking monitored app bundle identifiers.
+pub trait BundleIdExt {
+    /// Returns true if this bundle identifier corresponds to an ignored app.
+    fn is_ignored_bundle(&self) -> bool;
+
+    /// Parses into a [`MonitoredApp`], falling back to `MonitoredApp::Unknown`.
+    fn as_monitored_app(&self) -> MonitoredApp;
+
+    /// Returns true if this bundle identifier corresponds to an Xcode app.
+    fn is_xcode_bundle(&self) -> bool;
+
+    /// Returns true if this bundle identifier corresponds to a browser app.
+    fn is_browser_bundle(&self) -> bool;
+}
+
+impl BundleIdExt for str {
+    fn is_ignored_bundle(&self) -> bool {
+        let app = self.as_monitored_app();
+        IGNORED_APPS.contains_key(&app)
+    }
+
+    fn as_monitored_app(&self) -> MonitoredApp {
+        self.parse::<MonitoredApp>()
+            .unwrap_or(MonitoredApp::Unknown)
+    }
+
+    fn is_xcode_bundle(&self) -> bool {
+        let app = self.as_monitored_app();
+        app == MonitoredApp::Xcode || app == MonitoredApp::XcodeBeta
+    }
+
+    fn is_browser_bundle(&self) -> bool {
+        let app = self.as_monitored_app();
+        BROWSER_APPS.contains(&app)
+    }
+}
+
 /// A list of monitored applications for tracking user activity.
 ///
 /// Each variant corresponds to an application identified by its bundle ID
@@ -111,6 +148,12 @@ pub enum MonitoredApp {
     ChromeCanary,
     #[strum(serialize = "com.microsoft.VSCode")]
     Code,
+    #[strum(serialize = "com.microsoft.VSCodeInsiders")]
+    CodeInsiders,
+    #[strum(serialize = "com.microsoft.VSCodeExploration")]
+    CodeExploration,
+    #[strum(serialize = "com.vscodium")]
+    VSCodium,
     #[strum(serialize = "com.figma.Desktop")]
     Figma,
     #[strum(serialize = "org.mozilla.firefox")]
@@ -129,6 +172,8 @@ pub enum MonitoredApp {
     Iterm,
     #[strum(serialize = "com.apple.dt.Xcode")]
     Xcode,
+    #[strum(serialize = "com.apple.dt.XcodeBeta")]
+    XcodeBeta,
     #[strum(serialize = "notion.id")]
     Notion,
     #[strum(serialize = "company.thebrowser.Browser")]
@@ -411,13 +456,14 @@ fn is_documentation_entity(entity_path: &str) -> bool {
 }
 
 pub fn resolve_app_details(
-    app: &MonitoredApp,
+    bundle_id: &str,
     app_name: &str,
     app_path: &str,
     entity: &str,
     snapshot: &AxSnapshot,
     pid: i32,
 ) -> AppDetails {
+    let app = bundle_id.as_monitored_app();
     match app {
         MonitoredApp::Xcode => {
             let mut xi = snapshot.xcode.clone().unwrap_or_default();
@@ -453,7 +499,7 @@ pub fn resolve_app_details(
                 category: app.get_category(Some(&xi.entity_path), None, pid),
             }
         }
-        _ if BROWSER_APPS.contains(app) => {
+        _ if BROWSER_APPS.contains(&app) => {
             if let Some(bi) = snapshot
                 .browser
                 .clone()
