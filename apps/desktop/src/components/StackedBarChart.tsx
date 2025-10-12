@@ -3,6 +3,7 @@ import { useRef, useState, useEffect } from "react";
 import ChartTooltipPortal from "@/components/ChartTooltipPortal";
 import { formatDuration } from "@/utils/time";
 import { useChartColor, useCssVarColor } from "@/hooks/useChartColor";
+import { truncateValue } from "@/utils/data";
 
 interface StackedBarChartProps {
   data: {
@@ -165,18 +166,26 @@ const StackedBarChart: React.FC<StackedBarChartProps> = ({
             >
               <div className="max-h-96 overflow-y-auto rounded-md border border-border bg-background px-4 py-3 text-sm shadow-lg text-foreground min-w-[200px] max-w-[320px]">
                 <div className="font-semibold mb-1">{data.label}</div>
-                {entries.map(({ key, value }) => (
-                  <div key={key} className="flex items-center gap-2 py-0.5">
-                    <span
-                      className="w-2.5 h-2.5 rounded-full inline-block shrink-0"
-                      style={{ backgroundColor: getColorForKey(key) }}
-                    />
-                    <span className="truncate flex-1 text-xs">{key}</span>
-                    <span className="text-muted-foreground text-xs">
-                      {formatDuration(value)}
-                    </span>
-                  </div>
-                ))}
+                {entries.map(({ key, value }) => {
+                  const truncatedKey = truncateValue(key, 25);
+                  return (
+                    <div
+                      key={truncatedKey}
+                      className="flex items-center gap-2 py-0.5"
+                    >
+                      <span
+                        className="w-2.5 h-2.5 rounded-full inline-block shrink-0"
+                        style={{
+                          backgroundColor: getColorForKey(truncatedKey),
+                        }}
+                      />
+                      <span className="flex-1 text-xs">{truncatedKey}</span>
+                      <span className="text-muted-foreground text-xs">
+                        {formatDuration(value)}
+                      </span>
+                    </div>
+                  );
+                })}
               </div>
             </ChartTooltipPortal>
           );
