@@ -1,10 +1,16 @@
 use axum::http::StatusCode;
 use axum::response::IntoResponse;
 use axum::routing::get;
-use axum::Router;
+use axum::{Json, Router};
+use common::models::outputs::HealthStatus;
 
 pub async fn health_check() -> impl IntoResponse {
-    (StatusCode::OK, "Server is running 🚀")
+    (
+        StatusCode::OK,
+        Json(HealthStatus {
+            status: "ok".into(),
+        }),
+    )
 }
 
 pub fn health_routes() -> Router {

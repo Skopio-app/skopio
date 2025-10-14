@@ -3,8 +3,10 @@ use std::io::{Read, Write};
 use std::os::unix::fs::PermissionsExt;
 use std::path::Path;
 use std::process::Command;
+use std::time::{Duration, Instant};
 use std::{io, path::PathBuf};
 
+use common::models::outputs::HealthStatus;
 use futures_util::StreamExt;
 use reqwest::Client;
 use semver::Version;
@@ -17,6 +19,8 @@ use thiserror::Error;
 use tokio::{fs as tokiofs, io::AsyncWriteExt};
 use zip::result::ZipError;
 use zip::ZipArchive;
+
+use crate::network;
 
 #[derive(Error, Debug)]
 pub enum ServerCtlError {
@@ -417,20 +421,24 @@ pub async fn ensure_server_ready(app: &AppHandle) -> Result<(), ServerCtlError> 
     set_status(app, ServerStatus::Checking);
 
     let is_running = status().is_ok();
+    let max_wait = Duration::from_secs(15);
 
     match check_and_update(app).await {
         Ok(true) => {
+            set_status(app, ServerStatus::Starting);
+            check_server_ready(max_wait).await?;
             set_status(app, ServerStatus::Running);
+            reload_window(app)?;
             Ok(())
         }
         Ok(false) => {
-            if is_running {
-                set_status(app, ServerStatus::Running);
-            } else {
-                set_status(app, ServerStatus::Starting);
+            set_status(app, ServerStatus::Starting);
+            if !is_running {
                 start(app)?;
-                set_status(app, ServerStatus::Running);
             }
+            check_server_ready(max_wait).await?;
+            set_status(app, ServerStatus::Running);
+            reload_window(app)?;
             Ok(())
         }
         Err(e) => {
@@ -464,14 +472,40 @@ fn write_installed_version(app: &AppHandle, ver: &str) -> Result<(), ServerCtlEr
     Ok(())
 }
 
+async fn check_server_ready(max_wait: Duration) -> Result<(), ServerCtlError> {
+    let start = Instant::now();
+    let mut delay = Duration::from_millis(100);
+
+    loop {
+        if Instant::now().saturating_duration_since(start) >= max_wait {
+            return Err(ServerCtlError::Io(io::Error::other(
+                "Server readiness timed out",
+            )));
+        }
+
+        match network::req_json::<HealthStatus, ()>("/health", None).await {
+            Ok(h) if h.status.eq_ignore_ascii_case("ok") => return Ok(()),
+            _ => {
+                tokio::time::sleep(delay).await;
+                delay = (delay * 2).min(Duration::from_secs(1));
+            }
+        }
+    }
+}
+
+fn reload_window(app: &AppHandle) -> Result<(), ServerCtlError> {
+    app.get_webview_window("main").unwrap().reload()?;
+    Ok(())
+}
+
 #[tauri::command]
 #[specta::specta]
-pub fn get_server_status<R: Runtime>(app: AppHandle<R>) -> Result<ServerStatus, String> {
+pub async fn get_server_status<R: Runtime>(app: AppHandle<R>) -> Result<ServerStatus, String> {
     let bin = server_bin_path(&app).map_err(|e| e.to_string())?;
     if !bin.exists() {
         return Ok(ServerStatus::Offline);
     }
-    match status() {
+    match check_server_ready(Duration::from_secs(15)).await {
         Ok(_) => Ok(ServerStatus::Running),
         Err(_) => Ok(ServerStatus::Offline),
     }
