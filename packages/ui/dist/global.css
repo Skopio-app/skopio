@@ -1487,6 +1487,11 @@
       color: var(--color-foreground);
     }
   }
+  .placeholder\:text-muted-foreground {
+    &::placeholder {
+      color: var(--color-muted-foreground);
+    }
+  }
   .after\:absolute {
     &::after {
       content: var(--tw-content);
