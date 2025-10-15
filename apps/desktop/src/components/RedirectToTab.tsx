@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate } from "react-router";
 import { builtinExtensionRegistry } from "@/extensions/registry";
 import { LAST_ACTIVE_TAB } from "@/utils/constants";
 

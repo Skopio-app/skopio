@@ -210,7 +210,7 @@ const useSummaryDataImpl = (
     };
 
     fetchData();
-  }, [options.groupBy, options.mode, JSON.stringify(preset)]);
+  }, [options, preset]);
 
   switch (options.mode) {
     case "line": {

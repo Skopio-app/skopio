@@ -76,8 +76,13 @@ const ProjectsView = () => {
         setList(data);
 
         if (!searching) {
-          setCursors(res.cursors ?? []);
-          setTotalPages(res.totalPages ?? 0);
+          const nextCursors = res.cursors ?? [];
+          const changed =
+            nextCursors.length !== cursors.length ||
+            nextCursors.some((v, i) => v !== cursors[i]);
+          if (changed) setCursors(nextCursors);
+          const nextTotal = res.totalPages ?? 0;
+          if (nextTotal !== totalPages) setTotalPages(nextTotal);
         }
       } catch (err) {
         if (!controller.signal.aborted) {
@@ -93,7 +98,7 @@ const ProjectsView = () => {
 
     run();
     return () => controller.abort();
-  }, [currentPage, query]);
+  }, [currentPage, query, cursors, totalPages]);
 
   const { start, end } = useMemo(() => {
     const total = totalPages;

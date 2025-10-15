@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState } from "react";
+import { useLayoutEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 
 const tooltipRoot = typeof window !== "undefined" ? document.body : null;
@@ -8,39 +8,44 @@ const ChartTooltipPortal: React.FC<{
   style?: React.CSSProperties;
 }> = ({ children, style }) => {
   const ref = useRef<HTMLDivElement>(null);
-  const [adjustedStyle, setAdjustedStyle] = useState<React.CSSProperties>();
 
   useLayoutEffect(() => {
-    if (!ref.current || !style) return;
+    if (!ref.current || !style || typeof window === "undefined") return;
 
-    const tooltipRect = ref.current.getBoundingClientRect();
-    const viewportWidth = window.innerWidth;
-    const viewportHeight = window.innerHeight;
+    const el = ref.current;
+    el.style.visibility = "hidden";
 
-    let top =
+    el.style.position = "fixed";
+    el.style.pointerEvents = "none";
+    el.style.transition = "opacity 100ms ease-out";
+    el.style.zIndex = String(style.zIndex ?? 999);
+
+    const reqTop =
       typeof style.top === "number"
         ? style.top
         : parseFloat(String(style.top ?? 0));
-    let left =
+    const reqLeft =
       typeof style.left === "number"
         ? style.left
         : parseFloat(String(style.left ?? 0));
 
-    // Flip horizontally if overflowing
-    if (left + tooltipRect.width > viewportWidth) {
-      left = Math.max(0, viewportWidth - tooltipRect.width - 8);
-    }
+    el.style.top = `${reqTop}px`;
+    el.style.left = `${reqLeft}px`;
 
-    // Flip vertically if overflowing
-    if (top + tooltipRect.height > viewportHeight) {
-      top = Math.max(0, top - tooltipRect.height - 16);
-    }
+    const rect = el.getBoundingClientRect();
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
 
-    setAdjustedStyle({
-      ...style,
-      top,
-      left,
-    });
+    let top = reqTop;
+    let left = reqLeft;
+
+    if (left + rect.width > vw) left = Math.max(0, vw - rect.width - 8);
+    if (top + rect.height > vh) top = Math.max(0, top - rect.height - 16);
+
+    el.style.top = `${top}px`;
+    el.style.left = `${left}px`;
+
+    el.style.visibility = "visible";
   }, [style]);
 
   if (!tooltipRoot || !style) return null;
@@ -52,10 +57,9 @@ const ChartTooltipPortal: React.FC<{
         position: "fixed",
         pointerEvents: "none",
         zIndex: 999,
-        visibility: adjustedStyle ? "visible" : "hidden",
-        transition: "opacity 100ms ease-out",
-        maxHeight: Math.min(400, window.innerHeight * 0.5),
-        ...adjustedStyle,
+        visibility: "hidden",
+        maxHeight: "50vh",
+        ...style,
       }}
     >
       {children}

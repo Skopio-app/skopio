@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 "use client";
 
 import * as React from "react";
@@ -606,10 +607,17 @@ function SidebarMenuSkeleton({
 }: React.ComponentProps<"div"> & {
   showIcon?: boolean;
 }) {
-  // Random width between 50 to 90%.
+  const id = React.useId();
+
   const width = React.useMemo(() => {
-    return `${Math.floor(Math.random() * 40) + 50}%`;
-  }, []);
+    let h = 0;
+    for (let i = 0; i < id.length; i++) {
+      h = (h * 31 + id.charCodeAt(i)) | 0;
+    }
+    const normalized = (Math.abs(h) % 1000) / 1000;
+    const pct = 50 + Math.floor(normalized * 40);
+    return `${pct}%`;
+  }, [id]);
 
   return (
     <div

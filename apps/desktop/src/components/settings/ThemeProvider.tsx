@@ -1,6 +1,6 @@
 import { Theme, commands } from "@/types/tauri.gen";
 import { ThemeContext } from "@/utils/theme";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { setTheme as setTauriTheme } from "@tauri-apps/api/app";
 
 type ThemeProviderProps = {
@@ -16,20 +16,25 @@ export default function ThemeProvider({
   const [theme, setTheme] = useState<Theme>(defaultTheme);
   const [hydrated, setHydrated] = useState(false);
   const isInitialMount = useRef(true);
+  const themeRef = useRef(theme);
+  themeRef.current = theme;
 
-  const applyThemeToDOM = (theme: Theme, isDark: boolean) => {
+  const applyThemeToDOM = useCallback((theme: Theme, isDark: boolean) => {
     const root = document.documentElement;
     root.classList.remove("light", "dark");
     root.classList.add(
       theme === "system" ? (isDark ? "dark" : "light") : theme,
     );
-  };
+  }, []);
 
-  const applyTheme = async (theme: Theme) => {
-    const mql = window.matchMedia("(prefers-color-scheme: dark)");
-    await setTauriTheme(theme === "system" ? null : theme);
-    applyThemeToDOM(theme, mql.matches);
-  };
+  const applyTheme = useCallback(
+    async (theme: Theme) => {
+      const mql = window.matchMedia("(prefers-color-scheme: dark)");
+      await setTauriTheme(theme === "system" ? null : theme);
+      applyThemeToDOM(theme, mql.matches);
+    },
+    [applyThemeToDOM],
+  );
 
   useEffect(() => {
     const mql = window.matchMedia("(prefers-color-scheme: dark)");
@@ -46,7 +51,7 @@ export default function ThemeProvider({
     })();
 
     const onChange = (e: MediaQueryListEvent) => {
-      if (theme === "system") {
+      if (themeRef.current === "system") {
         applyThemeToDOM("system", e.matches);
       }
     };
@@ -55,7 +60,7 @@ export default function ThemeProvider({
     return () => {
       mql.removeEventListener("change", onChange);
     };
-  }, []);
+  }, [applyTheme, applyThemeToDOM]);
 
   useEffect(() => {
     if (isInitialMount.current) {
@@ -69,7 +74,7 @@ export default function ThemeProvider({
         await commands.setTheme(theme);
       })();
     }
-  }, [theme, hydrated]);
+  }, [theme, hydrated, applyTheme]);
 
   const value = {
     theme,

@@ -64,6 +64,9 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
   const timelineRef = useRef<Timeline | null>(null);
   const dataSetRef = useRef<DataSet<TimelineDataItem> | null>(null);
   const animationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const rangeChangedDebounceRef = useRef<ReturnType<typeof _.debounce> | null>(
+    null,
+  );
 
   const ANIMATION_INACTIVITY_DELAY_MS = 5000;
 
@@ -113,16 +116,6 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
       animationTimeoutRef.current = null;
     }
   }, []);
-
-  const handleRangeChanged = useMemo(() => {
-    return _.debounce(({ start, end }: { start: Date; end: Date }) => {
-      if (!dataSetRef.current || !timelineRef.current) return;
-      console.debug(
-        `Range changed: ${format(start, "MMM d, yyyy HH:mm")} to ${format(end, "MMM d, yyyy HH:mm")}`,
-      );
-      clearAnimationTimeout();
-    }, 500);
-  }, [clearAnimationTimeout]);
 
   const formatTimelineTitle = ({
     start,
@@ -198,12 +191,29 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
       end: initialMax,
     });
 
-    timelineRef.current.on("rangechanged", handleRangeChanged);
+    const onRangeChanged = ({ start, end }: { start: Date; end: Date }) => {
+      if (!dataSetRef.current || !timelineRef.current) return;
+      console.debug(
+        `Range changed: ${format(start, "MMM d, yyyy HH:mm")} to ${format(end, "MMM d, yyyy HH:mm")}`,
+      );
+      clearAnimationTimeout();
+    };
+
+    const debounced = _.debounce(onRangeChanged, 500);
+    rangeChangedDebounceRef.current = debounced;
+
+    timelineRef.current.on("rangechanged", debounced);
 
     return () => {
       if (timelineRef.current) {
-        timelineRef.current.off("rangechanged", handleRangeChanged);
-        handleRangeChanged.cancel();
+        if (rangeChangedDebounceRef.current) {
+          timelineRef.current.off(
+            "rangechanged",
+            rangeChangedDebounceRef.current,
+          );
+          rangeChangedDebounceRef.current.cancel();
+          rangeChangedDebounceRef.current = null;
+        }
         timelineRef.current.destroy();
         timelineRef.current = null;
       }
@@ -215,14 +225,7 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
 
       clearAnimationTimeout();
     };
-  }, [
-    groups,
-    durationMinutes,
-    handleRangeChanged,
-    customStart,
-    customEnd,
-    clearAnimationTimeout,
-  ]);
+  }, [groups, durationMinutes, customStart, customEnd, clearAnimationTimeout]);
 
   useEffect(() => {
     if (!dataSetRef.current || !timelineRef.current) {

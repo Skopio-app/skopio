@@ -3,7 +3,7 @@ import * as Dialog from "@radix-ui/react-dialog";
 import { X } from "lucide-react";
 import { useEffect, useState } from "react";
 import z from "zod/v4";
-import { FieldErrors, useForm } from "react-hook-form";
+import { FieldErrors, useForm, useWatch } from "react-hook-form";
 import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import {
   App,
@@ -132,7 +132,6 @@ const GoalDialog: React.FC<GoalDialogProps> = ({
   const { addGoal, updateGoal } = useGoalStore();
   const [allCategories, setAllCategories] = useState<Category[]>([]);
   const [allApps, setAllApps] = useState<App[]>([]);
-  const [formError, setFormError] = useState<string | null>(null);
 
   const form = useForm<z.infer<typeof goalFormSchema>>({
     resolver: standardSchemaResolver(goalFormSchema),
@@ -151,7 +150,7 @@ const GoalDialog: React.FC<GoalDialogProps> = ({
     },
   });
 
-  const { register, handleSubmit, watch, setValue } = form;
+  const { register, handleSubmit, setValue } = form;
 
   useEffect(() => {
     const fetch = async () => {
@@ -218,21 +217,21 @@ const GoalDialog: React.FC<GoalDialogProps> = ({
     }
   };
 
-  useEffect(() => {
-    const subscription = watch(() => {
-      if (formError) setFormError(null);
-    });
-    return () => subscription.unsubscribe();
-  }, [watch, formError]);
-
-  const selectedApps = watch("apps");
-  const selectedCategories = watch("categories");
-  const useApps = watch("useApps");
-  const useCategories = watch("useCategories");
-  const timeSpan = watch("timeSpan");
-  const excludedDays = watch("excludedDays") || [];
-  const hours = watch("hours");
-  const timeUnit = watch("timeUnit");
+  const timeUnitValue = useWatch({ control: form.control, name: "timeUnit" });
+  const timeSpanValue = useWatch({ control: form.control, name: "timeSpan" });
+  const selectedApps = useWatch({ control: form.control, name: "apps" });
+  const selectedCategories = useWatch({
+    control: form.control,
+    name: "categories",
+  });
+  const useApps = useWatch({ control: form.control, name: "useApps" });
+  const useCategories = useWatch({
+    control: form.control,
+    name: "useCategories",
+  });
+  const excludedDays =
+    useWatch({ control: form.control, name: "excludedDays" }) ?? [];
+  const hours = useWatch({ control: form.control, name: "hours" });
 
   const dayOptions = daySchema.options;
 
@@ -241,10 +240,10 @@ const GoalDialog: React.FC<GoalDialogProps> = ({
     : selectedCategories.join(", ");
 
   const summaryText =
-    `I want to achieve ${hours} ${timeUnit}${
+    `I want to achieve ${hours} ${timeUnitValue}${
       subject ? ` in ${subject}` : ""
-    } per ${timeSpan}` +
-    (timeSpan === "day" && excludedDays.length
+    } per ${timeSpanValue}` +
+    (timeSpanValue === "day" && excludedDays.length
       ? `, except for ${excludedDays.join(", ")}`
       : "");
 
@@ -305,12 +304,14 @@ const GoalDialog: React.FC<GoalDialogProps> = ({
                 type="button"
                 variant="secondary"
                 onClick={() => {
-                  const current = watch("timeUnit");
-                  const next = cycleEnum(Object.values(TimeUnit), current);
+                  const next = cycleEnum(
+                    Object.values(TimeUnit),
+                    timeUnitValue,
+                  );
                   setValue("timeUnit", next, { shouldValidate: true });
                 }}
               >
-                {watch("timeUnit")}
+                {timeUnitValue}
               </Button>
               <span className="text-foreground">in</span>
               {(useApps || useCategories) && (
@@ -372,15 +373,15 @@ const GoalDialog: React.FC<GoalDialogProps> = ({
                 type="button"
                 variant="secondary"
                 onClick={() => {
-                  const next = cycleEnum(TIME_SPANS, timeSpan);
+                  const next = cycleEnum(TIME_SPANS, timeSpanValue);
                   setValue("timeSpan", next, { shouldValidate: true });
                 }}
               >
-                {timeSpan}
+                {timeSpanValue}
               </Button>
             </div>
 
-            {timeSpan === "day" && (
+            {timeSpanValue === "day" && (
               <div>
                 <p className="mb-2 font-medium text-foreground">except for</p>
                 <ChipSelector<Day, Day>

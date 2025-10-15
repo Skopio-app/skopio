@@ -1,6 +1,6 @@
 import { Card, cn, Hotkey, Input } from "@skopio/ui";
 import { PartyPopper } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { commands, NotificationPayload } from "@/types/tauri.gen";
 import { isDev } from "@/utils/environment";
 import { resolveResource } from "@tauri-apps/api/path";
@@ -9,10 +9,23 @@ import confetti from "canvas-confetti";
 
 export const NotificationPanel = () => {
   const invisibleInputRef = useRef<HTMLInputElement | null>(null);
-  const [payload, setPayload] = useState<NotificationPayload | null>(null);
   const [isExiting, setIsExiting] = useState(false);
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const iconRef = useRef<SVGSVGElement | null>(null);
+
+  const [payload] = useState<NotificationPayload | null>(() => {
+    if (typeof window === "undefined") return null;
+    try {
+      const urlParams = new URLSearchParams(window.location.search);
+      const raw = urlParams.get("payload");
+      if (!raw) return null;
+      const decoded = decodeURIComponent(raw);
+      return JSON.parse(decoded) as NotificationPayload;
+    } catch (err) {
+      console.error("Failed to decode payload:", err);
+      return null;
+    }
+  });
 
   useEffect(() => {
     if (!payload || !iconRef.current) return;
@@ -29,23 +42,6 @@ export const NotificationPanel = () => {
     });
   }, [payload]);
 
-  useEffect(() => {
-    try {
-      const urlParams = new URLSearchParams(window.location.search);
-      const raw = urlParams.get("payload");
-
-      if (raw) {
-        const decoded = decodeURIComponent(raw);
-        const parsed: NotificationPayload = JSON.parse(decoded);
-        setPayload(parsed);
-      } else {
-        console.warn("No payload found in query string");
-      }
-    } catch (err) {
-      console.error("Failed to decode payload: ", err);
-    }
-  }, []);
-
   const dismiss = () => {
     setIsExiting(true);
     setTimeout(() => {
@@ -61,7 +57,7 @@ export const NotificationPanel = () => {
     return convertFileSrc(resourcePath);
   };
 
-  const playSound = async () => {
+  const playSound = useCallback(async () => {
     if (!payload?.soundFile) return;
     const soundPath = await getSoundPath(payload.soundFile);
     const audio = new Audio(soundPath);
@@ -72,7 +68,7 @@ export const NotificationPanel = () => {
     };
 
     audio.addEventListener("canplaythrough", handleCanPlay, { once: true });
-  };
+  }, [payload]);
 
   useEffect(() => {
     if (!payload) return;
@@ -95,7 +91,7 @@ export const NotificationPanel = () => {
         audioRef.current = null;
       }
     };
-  }, [payload]);
+  }, [payload, playSound]);
 
   if (!payload) return null;
 

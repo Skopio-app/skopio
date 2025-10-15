@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
-import { Controller, useForm } from "react-hook-form";
+import { Controller, useForm, useWatch } from "react-hook-form";
 import { Button, Checkbox, Label, ScrollArea, Separator } from "@skopio/ui";
 import { toast } from "sonner";
 import { usePresetFilter } from "../stores/usePresetFilter";
@@ -24,17 +24,15 @@ const BranchSelectionDialog = () => {
     [branches, selectedBranches],
   );
 
-  const { control, watch, setValue, handleSubmit, reset } = useForm<FormValues>(
-    {
-      defaultValues,
-    },
-  );
+  const { control, setValue, handleSubmit, reset } = useForm<FormValues>({
+    defaultValues,
+  });
 
   useEffect(() => {
     reset(defaultValues);
   }, [defaultValues, reset]);
 
-  const selectedMap = watch("selectedBranches");
+  const selectedMap = useWatch({ control, name: "selectedBranches" });
 
   const allSelected =
     branches.length > 0 && branches.every((b) => !!selectedMap?.[b]);

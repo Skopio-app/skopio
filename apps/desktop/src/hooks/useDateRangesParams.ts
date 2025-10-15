@@ -5,7 +5,7 @@ import {
   mapRangeToPreset,
 } from "@/utils/time";
 import { addDays, startOfDay } from "date-fns";
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router";
 
 export type UseDateRangeParams = {
@@ -42,25 +42,47 @@ export const useDateRangeParams = (): UseDateRangeParams => {
     useState<DateRangeType>(initialRange);
 
   // Custom range state
-  const [customStart, setCustomStart] = useState<Date>(new Date());
-  const [customEnd, setCustomEnd] = useState<Date>(new Date());
+  const [customStart, _setCustomStart] = useState<Date>(new Date());
+  const [customEnd, _setCustomEnd] = useState<Date>(new Date());
   const [pendingStart, setPendingStart] = useState<Date>(customStart);
   const [pendingEnd, setPendingEnd] = useState<Date>(customEnd);
 
   const isCustom = selectedRange === DateRangeType.Custom;
 
   useEffect(() => {
-    const params = new URLSearchParams(searchParams);
-    params.set("range", selectedRange);
-    setSearchParams(params, { replace: true });
-  }, [selectedRange]);
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        if (next.get("range") === selectedRange) return prev;
+        next.set("range", selectedRange);
+        return next;
+      },
+      { replace: true },
+    );
+  }, [selectedRange, setSearchParams]);
 
-  // Clamp custom end within 30 days of start
-  useEffect(() => {
-    if (!isCustom) return;
-    const maxEnd = addDays(startOfDay(customStart ?? 0), 30);
-    if (customEnd > maxEnd) setCustomEnd(maxEnd);
-  }, [customStart, customEnd, isCustom]);
+  const setCustomStart = useCallback(
+    (d: Date) => {
+      _setCustomStart(d);
+      if (isCustom) {
+        const maxEnd = addDays(startOfDay(d), 30);
+        _setCustomEnd((prev) => (prev > maxEnd ? maxEnd : prev));
+      }
+    },
+    [isCustom],
+  );
+
+  const setCustomEnd = useCallback(
+    (d: Date) => {
+      if (!isCustom) {
+        _setCustomEnd(d);
+        return;
+      }
+      const maxEnd = addDays(startOfDay(customStart), 30);
+      _setCustomEnd(d > maxEnd ? maxEnd : d);
+    },
+    [isCustom, customStart],
+  );
 
   const [startDate, endDate] = useMemo(
     () => getRangeDates(selectedRange, customStart, customEnd),

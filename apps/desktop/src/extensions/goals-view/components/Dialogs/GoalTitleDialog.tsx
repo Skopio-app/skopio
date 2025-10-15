@@ -6,7 +6,6 @@ import { GoalUpdateInput } from "@/types/tauri.gen";
 import { useGoalStore } from "../../stores/useGoalStore";
 import { FieldErrors, useForm } from "react-hook-form";
 import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
-import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 interface GoalTitleDialogProps {
@@ -31,7 +30,6 @@ const GoalTitleDialog: React.FC<GoalTitleDialogProps> = ({
   title,
 }) => {
   const { updateGoal } = useGoalStore();
-  const [formError, setFormError] = useState<string | null>(null);
 
   const form = useForm<z.infer<typeof titleFormSchema>>({
     resolver: standardSchemaResolver(titleFormSchema),
@@ -40,7 +38,7 @@ const GoalTitleDialog: React.FC<GoalTitleDialogProps> = ({
     },
   });
 
-  const { register, handleSubmit, watch, setValue } = form;
+  const { register, handleSubmit, setValue } = form;
 
   const onSubmit = async (data: z.infer<typeof titleFormSchema>) => {
     const input: GoalUpdateInput = {
@@ -59,13 +57,6 @@ const GoalTitleDialog: React.FC<GoalTitleDialogProps> = ({
       toast.error("Please fix the highlighted errors.");
     }
   };
-
-  useEffect(() => {
-    const subscription = watch(() => {
-      if (formError) setFormError(null);
-    });
-    return () => subscription.unsubscribe();
-  }, [watch, formError]);
 
   return (
     <Dialog.Root open={open} onOpenChange={onOpenChange}>

@@ -36,15 +36,14 @@ const GoalDisplay = ({ goal }: { goal: Goal }) => {
     }
   };
 
-  const query: BucketSummaryInput = {
-    preset: timeRangeToPreset(goal.timeSpan),
-    apps: goal.useApps ? goal.apps : null,
-    categories: goal.useCategories ? goal.categories : null,
-  };
-
   useEffect(() => {
     const fetchData = async () => {
       try {
+        const query: BucketSummaryInput = {
+          preset: timeRangeToPreset(goal.timeSpan),
+          apps: goal.useApps ? goal.apps : null,
+          categories: goal.useCategories ? goal.categories : null,
+        };
         const summary = await commands.fetchBucketedSummary(query);
         setData(summary);
       } catch (e) {
@@ -55,7 +54,7 @@ const GoalDisplay = ({ goal }: { goal: Goal }) => {
     };
 
     fetchData();
-  }, [goal.id]);
+  }, [goal]);
 
   const chartData = data.map((item) => ({
     label: item.bucket,
