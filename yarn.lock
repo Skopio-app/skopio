@@ -2939,31 +2939,31 @@ __metadata:
     "@types/canvas-confetti": "npm:^1"
     "@types/lodash": "npm:^4.17.17"
     "@types/node": "npm:^24.7.2"
-    "@types/react-grid-layout": "npm:^1"
+    "@types/react-grid-layout": "npm:^1.3.5"
     "@vitejs/plugin-react-swc": "npm:^4.1.0"
     canvas-confetti: "npm:^1.9.3"
-    color: "npm:^5.0.0"
+    color: "npm:^5.0.2"
     date-fns: "npm:^4.1.0"
-    dexie: "npm:^4.0.11"
+    dexie: "npm:^4.2.1"
     eslint: "npm:^9.37.0"
     eslint-plugin-react-hooks: "npm:^7.0.0"
     eslint-plugin-react-refresh: "npm:^0.4.23"
     globals: "npm:^16.4.0"
     lucide-react: "npm:^0.516.0"
     prettier: "npm:^3.6.2"
-    react-grid-layout: "npm:^1.5.1"
+    react-grid-layout: "npm:^1.5.2"
     react-markdown: "npm:^10.1.0"
     react-router: "npm:^7.9.4"
     remark-gfm: "npm:^4.0.1"
-    sonner: "npm:^2.0.6"
+    sonner: "npm:^2.0.7"
     tailwindcss: "npm:^4.1.11"
     typescript: "npm:^5.9.3"
     typescript-eslint: "npm:^8.46.1"
     vis-timeline: "npm:^7.7.4"
     vite: "npm:^7.1.10"
     vite-tsconfig-paths: "npm:^5.1.4"
-    zod: "npm:^4.1.8"
-    zustand: "npm:^5.0.5"
+    zod: "npm:^4.1.12"
+    zustand: "npm:^5.0.8"
   languageName: unknown
   linkType: soft
 
@@ -3737,7 +3737,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"@types/react-grid-layout@npm:^1":
+"@types/react-grid-layout@npm:^1.3.5":
   version: 1.3.5
   resolution: "@types/react-grid-layout@npm:1.3.5"
   dependencies:
@@ -4224,7 +4224,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"clsx@npm:^2.0.0, clsx@npm:^2.1.1":
+"clsx@npm:^2.1.1":
   version: 2.1.1
   resolution: "clsx@npm:2.1.1"
   checksum: 10c0/c4c8eb865f8c82baab07e71bfa8897c73454881c4f99d6bc81585aecd7c441746c1399d08363dc096c550cceaf97bd4ce1e8854e1771e9998d9f94c4fe075839
@@ -4272,13 +4272,13 @@ __metadata:
   languageName: node
   linkType: hard
 
-"color@npm:^5.0.0":
-  version: 5.0.0
-  resolution: "color@npm:5.0.0"
+"color@npm:^5.0.2":
+  version: 5.0.2
+  resolution: "color@npm:5.0.2"
   dependencies:
     color-convert: "npm:^3.0.1"
     color-string: "npm:^2.0.0"
-  checksum: 10c0/fa5f2e84add2e1622abe016b917cca739535fc9845305db32043a5bde4b8164033f179fd1807ac3fe52c9ee7888f82d80e5ff90d1e2652454a2341ab3d23d086
+  checksum: 10c0/a5eeee197651a5fe84ab578a8477827e2c2e56b82832aae2b6c60469240be3bc1f03f99686223b1c4e48107c9e20b980475524faab7e6bab1cb9104313910f0e
   languageName: node
   linkType: hard
 
@@ -4588,10 +4588,10 @@ __metadata:
   languageName: node
   linkType: hard
 
-"dexie@npm:^4.0.11":
-  version: 4.0.11
-  resolution: "dexie@npm:4.0.11"
-  checksum: 10c0/f8f18e17fe99fd3d4bd80a4ff76c0a543be128bb65a11b6b34297c6ab2d7426989567a8eac09b0de6b483bfb776cbbb32bebe3eedcd5c572ddda80224aac1fa1
+"dexie@npm:^4.2.1":
+  version: 4.2.1
+  resolution: "dexie@npm:4.2.1"
+  checksum: 10c0/2e96bb21fc559290e545b740d943cdaa0cad4281f89e7355c332a8bc83870fc05ae9460be586fdb4b55f3860489070b17234a41a78cf469ed6464f6e0616125b
   languageName: node
   linkType: hard
 
@@ -6871,7 +6871,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"react-draggable@npm:^4.0.3, react-draggable@npm:^4.4.5":
+"react-draggable@npm:^4.0.3":
   version: 4.4.6
   resolution: "react-draggable@npm:4.4.6"
   dependencies:
@@ -6884,20 +6884,33 @@ __metadata:
   languageName: node
   linkType: hard
 
-"react-grid-layout@npm:^1.5.1":
-  version: 1.5.1
-  resolution: "react-grid-layout@npm:1.5.1"
+"react-draggable@npm:^4.4.6":
+  version: 4.5.0
+  resolution: "react-draggable@npm:4.5.0"
   dependencies:
-    clsx: "npm:^2.0.0"
+    clsx: "npm:^2.1.1"
+    prop-types: "npm:^15.8.1"
+  peerDependencies:
+    react: ">= 16.3.0"
+    react-dom: ">= 16.3.0"
+  checksum: 10c0/6f7591fe450555218bf0d9e31984be02451bf3f678fb121f51ac0a0a645d01a1b5ea8248ef9afddcd24239028911fd88032194b9c00b30ad5ece76ea13397fc3
+  languageName: node
+  linkType: hard
+
+"react-grid-layout@npm:^1.5.2":
+  version: 1.5.2
+  resolution: "react-grid-layout@npm:1.5.2"
+  dependencies:
+    clsx: "npm:^2.1.1"
     fast-equals: "npm:^4.0.3"
     prop-types: "npm:^15.8.1"
-    react-draggable: "npm:^4.4.5"
+    react-draggable: "npm:^4.4.6"
     react-resizable: "npm:^3.0.5"
     resize-observer-polyfill: "npm:^1.5.1"
   peerDependencies:
     react: ">= 16.3.0"
     react-dom: ">= 16.3.0"
-  checksum: 10c0/32df5e44bc7485f12be0994722b76d74bd672bfa85ffd69a47bccefd6a03114a01781a9c5cbb93e65d4146573e30bcad738d711581667d934336196215d2d736
+  checksum: 10c0/b6605d1435fe116c3720d168100a5a08da924c6905686fe8a486c33b82abbde8ccacbb59e5c6243fa52f5e808ad393a7bdf0c09a3446ebf76efe43f29d9f13ee
   languageName: node
   linkType: hard
 
@@ -7412,13 +7425,13 @@ __metadata:
   languageName: node
   linkType: hard
 
-"sonner@npm:^2.0.6":
-  version: 2.0.6
-  resolution: "sonner@npm:2.0.6"
+"sonner@npm:^2.0.7":
+  version: 2.0.7
+  resolution: "sonner@npm:2.0.7"
   peerDependencies:
     react: ^18.0.0 || ^19.0.0 || ^19.0.0-rc
     react-dom: ^18.0.0 || ^19.0.0 || ^19.0.0-rc
-  checksum: 10c0/df6ab28ebc53d612ea9caa3b9ac2d12b7b15b619750c5bcf6c4e064a720cb24b383fd5ce074f5fe5183115c69d7f505226649cf157e25e954447ec4ed8749291
+  checksum: 10c0/6966ab5e892ed6aab579a175e4a24f3b48747f0fc21cb68c3e33cb41caa7a0eebeb098c210545395e47a18d585eb8734ae7dd12d2bd18c8a3294a1ee73f997d9
   languageName: node
   linkType: hard
 
@@ -8206,7 +8219,7 @@ __metadata:
   languageName: node
   linkType: hard
 
-"zod@npm:^3.22.4 || ^4.0.0":
+"zod@npm:^3.22.4 || ^4.0.0, zod@npm:^4.1.12":
   version: 4.1.12
   resolution: "zod@npm:4.1.12"
   checksum: 10c0/b64c1feb19e99d77075261eaf613e0b2be4dfcd3551eff65ad8b4f2a079b61e379854d066f7d447491fcf193f45babd8095551a9d47973d30b46b6d8e2c46774
@@ -8220,16 +8233,9 @@ __metadata:
   languageName: node
   linkType: hard
 
-"zod@npm:^4.1.8":
-  version: 4.1.8
-  resolution: "zod@npm:4.1.8"
-  checksum: 10c0/5eae39da09d7bd0564a30dfd2348811e4e2e7dd15955d8f3444f8e196f35e5422b1482eda234b722fafb0738f4a8b718adb042b860936bfdd2cc19cdbdac8a9a
-  languageName: node
-  linkType: hard
-
-"zustand@npm:^5.0.5":
-  version: 5.0.5
-  resolution: "zustand@npm:5.0.5"
+"zustand@npm:^5.0.8":
+  version: 5.0.8
+  resolution: "zustand@npm:5.0.8"
   peerDependencies:
     "@types/react": ">=18.0.0"
     immer: ">=9.0.6"
@@ -8244,7 +8250,7 @@ __metadata:
       optional: true
     use-sync-external-store:
       optional: true
-  checksum: 10c0/76228022ad589c8ef29227f184d8852277509f88c80afd537de0506a6ded2e7ecc01d21bb79f426867560e4d59553c526e88d01abc46bd32b133d97ff337e19b
+  checksum: 10c0/e865a6f7f1c0e03571701db5904151aaa7acefd6f85541a117085e129bf16e8f60b11f8cc82f277472de5c7ad5dcb201e1b0a89035ea0b40c9d9aab3cd24c8ad
   languageName: node
   linkType: hard
 

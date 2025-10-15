@@ -1016,6 +1016,9 @@
   .whitespace-nowrap {
     white-space: nowrap;
   }
+  .text-accent {
+    color: var(--color-accent);
+  }
   .text-accent-foreground {
     color: var(--color-accent-foreground);
   }
@@ -1027,6 +1030,9 @@
   }
   .text-foreground {
     color: var(--color-foreground);
+  }
+  .text-muted {
+    color: var(--color-muted);
   }
   .text-muted-foreground {
     color: var(--color-muted-foreground);
@@ -1607,6 +1613,13 @@
     &:hover {
       @media (hover: hover) {
         background-color: var(--color-sidebar-accent);
+      }
+    }
+  }
+  .hover\:text-accent {
+    &:hover {
+      @media (hover: hover) {
+        color: var(--color-accent);
       }
     }
   }
