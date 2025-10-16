@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import {
   BucketSummaryInput,
   BucketTimeSummary,
@@ -8,9 +8,10 @@ import {
 import { usePresetFilter } from "../stores/usePresetFilter";
 import { BarChartData, LineChartData, PieChartData } from "@/types/chart";
 import { getEntityName } from "@/utils/data";
+import { useQuery } from "@tanstack/react-query";
 
 export interface UseSummaryOptions {
-  group_by?: Group;
+  groupBy?: Group;
   mode: "bar" | "line" | "list" | "pie";
 }
 
@@ -102,39 +103,48 @@ const useProjectSummaryDataImpl = (
   | ParsedPieChartResult => {
   const options = useMemo(
     () => ({
-      group_by: rawOptions.group_by,
+      groupBy: rawOptions.groupBy,
       mode: rawOptions.mode,
     }),
-    [rawOptions.group_by, rawOptions.mode],
+    [rawOptions.groupBy, rawOptions.mode],
   );
 
   const { preset, project, branches } = usePresetFilter();
-  const [loading, setLoading] = useState(true);
-  const [rawData, setRawData] = useState<BucketTimeSummary[]>([]);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
+  const queryKey = useMemo(
+    () => [
+      "bucketedSummary",
+      {
+        preset,
+        project,
+        branches,
+        groupBy: options.groupBy,
+      },
+    ],
+    [preset, project, branches, options.groupBy],
+  );
 
+  const {
+    data: rawData = [],
+    isPending,
+    isFetching,
+  } = useQuery({
+    queryKey,
+    queryFn: async () => {
       const query: BucketSummaryInput = {
         preset,
         projects: [project],
-        branches: branches,
-        groupBy: options.group_by,
+        branches,
+        groupBy: options.groupBy,
       };
+      return commands.fetchBucketedSummary(query);
+    },
+    staleTime: 60_000, // 1 minute
+    retry: 2,
+    enabled: Boolean(project),
+  });
 
-      try {
-        const summary = await commands.fetchBucketedSummary(query);
-        setRawData(summary);
-      } catch (err) {
-        console.error("Error fetching summary data: ", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-  }, [options.group_by, options.mode, project, branches, preset]);
+  const loading = isPending || isFetching;
 
   switch (options.mode) {
     case "line": {
