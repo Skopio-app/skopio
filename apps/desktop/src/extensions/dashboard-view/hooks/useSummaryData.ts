@@ -197,7 +197,7 @@ const useSummaryDataImpl = (
     isPending,
     isFetching,
   } = useQuery({
-    queryKey: ["dashboardSummary", { preset, groupBy: keyGroupBy }],
+    queryKey: ["dashboardSummary", preset, keyGroupBy],
     queryFn: async (): Promise<BucketTimeSummary[]> => {
       const query: BucketSummaryInput = {
         preset,

@@ -18,11 +18,7 @@ pub struct PaginatedProjects {
 pub enum InsightResult {
     ActiveYears(Vec<i32>),
     TopN(Vec<(String, i64)>),
-    #[serde(rename_all = "camelCase")]
-    MostActiveDay {
-        date: String,
-        total_duration: i64,
-    },
+    MostActiveDay { date: String, total_duration: i64 },
     AggregatedAverage(BTreeMap<String, Vec<(String, f64)>>),
 }
 

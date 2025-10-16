@@ -28,12 +28,12 @@ const MostActiveDaySection = () => {
       if (!("mostActiveDay" in result)) {
         return { day: null, time: null };
       }
-      const formattedDate = format(result.mostActiveDay.date, "EEE, MMM d");
+      const formattedDay = format(result.mostActiveDay.date, "EEE, MMM d");
       const formattedDuration = formatDuration(
-        result.mostActiveDay.totalDuration,
+        result.mostActiveDay.total_duration,
       );
 
-      return { day: formattedDate, time: formattedDuration };
+      return { day: formattedDay, time: formattedDuration };
     },
     enabled: Boolean(year),
   });
