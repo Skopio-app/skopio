@@ -46,11 +46,6 @@ export const useTotalBucketedTime = (): {
     [baseInput, selectedBranches],
   );
 
-  const projectInput = useMemo<BucketSummaryInput>(
-    () => ({ ...baseInput, groupBy: "project" }),
-    [baseInput],
-  );
-
   const { data, isPending, isFetching } = useQuery({
     queryKey: [
       "bucketedSummary",
@@ -67,7 +62,7 @@ export const useTotalBucketedTime = (): {
         return { usedBranch: true as const, buckets: branchData };
       }
 
-      const projectData = await commands.fetchBucketedSummary(projectInput);
+      const projectData = await commands.fetchBucketedSummary(baseInput);
       return { usedBranch: false as const, buckets: projectData };
     },
     staleTime: 60_000,
