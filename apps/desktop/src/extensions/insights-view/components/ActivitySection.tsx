@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import CalendarChart from "@/components/CalendarChart";
 import SectionContainer from "./SectionContainer";
 import { CalendarChartData } from "@/types/chart";
@@ -6,9 +6,9 @@ import { BucketSummaryInput, commands, TimeBucket } from "@/types/tauri.gen";
 import { endOfYear, startOfYear } from "date-fns";
 import { useYearFilter } from "../stores/useYearFilter";
 import { toast } from "sonner";
+import { useQuery } from "@tanstack/react-query";
 
 const ActivitySection = () => {
-  const [data, setData] = useState<CalendarChartData[]>([]);
   const { year } = useYearFilter();
 
   const yearConfig = useMemo(() => {
@@ -31,35 +31,37 @@ const ActivitySection = () => {
     };
   }, [year]);
 
-  useEffect(() => {
-    const fetchActivityData = async () => {
-      try {
-        const input: BucketSummaryInput = {
-          preset: yearConfig.preset,
-        };
+  const {
+    data: calendarData = [],
+    isFetching,
+    isPending,
+    error,
+  } = useQuery<CalendarChartData[]>({
+    queryKey: ["activityInsight", yearConfig.preset],
+    queryFn: async () => {
+      const input: BucketSummaryInput = {
+        preset: yearConfig.preset,
+      };
+      const result = await commands.fetchBucketedSummary(input);
+      return result.map(({ bucket, groupedValues }) => ({
+        day: bucket,
+        value: groupedValues["Total"] ?? 0,
+      }));
+    },
+  });
 
-        const result = await commands.fetchBucketedSummary(input);
-        if (!Array.isArray(result)) return;
+  if (error) {
+    toast.error(
+      `Error fetching activity section data: ${(error as Error).message}`,
+    );
+  }
 
-        const values: CalendarChartData[] = result.map(
-          ({ bucket, groupedValues }) => ({
-            day: bucket,
-            value: groupedValues["Total"] ?? 0,
-          }),
-        );
-        setData(values);
-      } catch (err) {
-        toast.error(`Error fetching activity section data: ${err}`);
-      }
-    };
-
-    fetchActivityData();
-  }, [yearConfig.preset]);
+  const loading = isFetching || isPending;
 
   return (
-    <SectionContainer title="Activity" loading={false}>
+    <SectionContainer title="Activity" loading={loading}>
       <CalendarChart
-        data={data}
+        data={calendarData}
         start={yearConfig.start}
         end={yearConfig.end}
       />
