@@ -111,8 +111,12 @@ const useProjectSummaryDataImpl = (
 
   const { preset, project, branches } = usePresetFilter();
 
-  const queryKey = useMemo(
-    () => [
+  const {
+    data: rawData = [],
+    isPending,
+    isFetching,
+  } = useQuery({
+    queryKey: [
       "projectSummary",
       {
         preset,
@@ -121,15 +125,6 @@ const useProjectSummaryDataImpl = (
         groupBy: options.groupBy,
       },
     ],
-    [preset, project, branches, options.groupBy],
-  );
-
-  const {
-    data: rawData = [],
-    isPending,
-    isFetching,
-  } = useQuery({
-    queryKey,
     queryFn: async () => {
       const query: BucketSummaryInput = {
         preset,
