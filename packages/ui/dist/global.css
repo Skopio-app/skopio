@@ -914,6 +914,15 @@
   .px-6 {
     padding-inline: calc(var(--spacing) * 6);
   }
+  .px-8 {
+    padding-inline: calc(var(--spacing) * 8);
+  }
+  .px-9 {
+    padding-inline: calc(var(--spacing) * 9);
+  }
+  .px-10 {
+    padding-inline: calc(var(--spacing) * 10);
+  }
   .px-\[--cell-size\] {
     padding-inline: --cell-size;
   }
@@ -1016,9 +1025,6 @@
   .whitespace-nowrap {
     white-space: nowrap;
   }
-  .text-accent {
-    color: var(--color-accent);
-  }
   .text-accent-foreground {
     color: var(--color-accent-foreground);
   }
@@ -1030,9 +1036,6 @@
   }
   .text-foreground {
     color: var(--color-foreground);
-  }
-  .text-muted {
-    color: var(--color-muted);
   }
   .text-muted-foreground {
     color: var(--color-muted-foreground);
@@ -1613,13 +1616,6 @@
     &:hover {
       @media (hover: hover) {
         background-color: var(--color-sidebar-accent);
-      }
-    }
-  }
-  .hover\:text-accent {
-    &:hover {
-      @media (hover: hover) {
-        color: var(--color-accent);
       }
     }
   }

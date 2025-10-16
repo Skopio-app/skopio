@@ -139,8 +139,6 @@ const useProjectSummaryDataImpl = (
       };
       return commands.fetchBucketedSummary(query);
     },
-    staleTime: 60_000, // 1 minute
-    retry: 2,
     enabled: Boolean(project),
   });
 

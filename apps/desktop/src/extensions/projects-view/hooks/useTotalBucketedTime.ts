@@ -65,8 +65,6 @@ export const useTotalBucketedTime = (): {
       const projectData = await commands.fetchBucketedSummary(baseInput);
       return { usedBranch: false as const, buckets: projectData };
     },
-    staleTime: 60_000,
-    retry: 2,
     enabled: Boolean(project),
   });
 

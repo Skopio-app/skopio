@@ -8,7 +8,11 @@ import {
 } from "@skopio/ui";
 import { Outlet } from "react-router";
 import { Toaster } from "sonner";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import {
+  keepPreviousData,
+  QueryClient,
+  QueryClientProvider,
+} from "@tanstack/react-query";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import {
   goBack,
@@ -23,7 +27,19 @@ import PermissionsDialog from "@/components/settings/PermissionsDialog";
 import UpdaterToast from "@/components/updater/UpdaterToast";
 import ThemeProvider from "@/components/settings/ThemeProvider";
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      networkMode: "always",
+      retry: 2,
+      staleTime: 60_000,
+      placeholderData: keepPreviousData,
+    },
+    mutations: {
+      networkMode: "always",
+    },
+  },
+});
 
 function App() {
   useGlobalShortcutListener();

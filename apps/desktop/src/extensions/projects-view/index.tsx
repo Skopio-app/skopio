@@ -9,96 +9,65 @@ import {
   PaginationPrevious,
   Skeleton,
 } from "@skopio/ui";
-import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
+import { useDeferredValue, useMemo, useState } from "react";
 import { commands, PaginatedProjects, Project } from "@/types/tauri.gen";
 import { useNavigate, useParams } from "react-router";
 import { SearchIcon } from "lucide-react";
 import z from "zod/v4";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import { standardSchemaResolver } from "@hookform/resolvers/standard-schema";
 import { toast } from "sonner";
+import { useQuery } from "@tanstack/react-query";
 
 const schema = z.object({ query: z.string() });
 const LIMIT = 15;
 const PAGE_WINDOW = 7;
 
+const sortProjects = (list: Project[]) =>
+  [...(list ?? [])].sort((a, b) => (b.lastUpdated ?? 0) - (a.lastUpdated ?? 0));
+
 const ProjectsView = () => {
-  const [list, setList] = useState<Project[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState<number>(0);
-  const [cursors, setCursors] = useState<(string | null)[]>([]);
-  const [totalPages, setTotalPages] = useState<number>(0);
 
   const { id: tabId } = useParams();
   const navigate = useNavigate();
 
-  const { register, watch } = useForm<z.infer<typeof schema>>({
+  const { register, control } = useForm<z.infer<typeof schema>>({
     resolver: standardSchemaResolver(schema),
     defaultValues: { query: "" },
   });
 
-  const rawQuery = watch("query");
+  const rawQuery = useWatch({ control, name: "query" });
   const query = useDeferredValue(rawQuery);
-  const prevQueryRef = useRef<string>("");
+  const isSearching = query.trim().length > 0;
 
-  useEffect(() => {
-    const controller = new AbortController();
-    const run = async () => {
-      try {
-        setIsLoading(true);
+  const effectivePage = isSearching ? 0 : currentPage;
 
-        const searching = query.trim().length > 0;
-        const after = searching ? null : (cursors[currentPage] ?? null);
+  const { data, isPending, isFetching, error } = useQuery({
+    queryKey: [
+      "projects",
+      { query: isSearching ? query : null, page: effectivePage, limit: LIMIT },
+    ],
+    queryFn: async (): Promise<PaginatedProjects> => {
+      const after = isSearching
+        ? null
+        : (data?.cursors?.[effectivePage] ?? null);
+      return commands.fetchProjects({
+        query: isSearching ? query : null,
+        after,
+        limit: LIMIT,
+      });
+    },
+  });
 
-        if (searching && prevQueryRef.current.trim().length === 0) {
-          setCurrentPage(0);
-        }
+  if (error) {
+    toast.error((error as Error)?.message ?? "Failed to fetch projects");
+  }
 
-        const res: PaginatedProjects = await commands
-          .fetchProjects({
-            query: searching ? query : null,
-            after,
-            limit: LIMIT,
-          })
-          .catch((e) => {
-            if (!controller.signal.aborted) throw e;
-            return null as any;
-          });
+  const list = useMemo(() => sortProjects(data?.data ?? []), [data]);
+  const isLoading = isPending || isFetching;
 
-        if (controller.signal.aborted || !res) return;
-
-        const data = (res.data ?? []).slice().sort((a, b) => {
-          const la = a.lastUpdated ?? 0;
-          const lb = b.lastUpdated ?? 0;
-          return lb - la;
-        });
-
-        setList(data);
-
-        if (!searching) {
-          const nextCursors = res.cursors ?? [];
-          const changed =
-            nextCursors.length !== cursors.length ||
-            nextCursors.some((v, i) => v !== cursors[i]);
-          if (changed) setCursors(nextCursors);
-          const nextTotal = res.totalPages ?? 0;
-          if (nextTotal !== totalPages) setTotalPages(nextTotal);
-        }
-      } catch (err) {
-        if (!controller.signal.aborted) {
-          toast.error((err as Error)?.message ?? "Failed to fetch projects");
-        }
-      } finally {
-        if (!controller.signal.aborted) {
-          setIsLoading(false);
-          prevQueryRef.current = query;
-        }
-      }
-    };
-
-    run();
-    return () => controller.abort();
-  }, [currentPage, query, cursors, totalPages]);
+  const totalPages = !isSearching ? (data?.totalPages ?? 0) : 0;
 
   const { start, end } = useMemo(() => {
     const total = totalPages;
@@ -106,8 +75,6 @@ const ProjectsView = () => {
     const end = Math.min(total, start + PAGE_WINDOW);
     return { start, end };
   }, [currentPage, totalPages]);
-
-  const isSearching = query.trim().length > 0;
 
   return (
     <div className="flex flex-col h-full mx-4 space-y-4">
