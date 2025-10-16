@@ -53,6 +53,7 @@ const AverageDaySection = () => {
 
       return { rows, keys };
     },
+    enabled: Boolean(year),
   });
 
   const loading = isFetching || isPending;

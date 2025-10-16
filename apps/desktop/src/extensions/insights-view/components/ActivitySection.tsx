@@ -48,6 +48,7 @@ const ActivitySection = () => {
         value: groupedValues["Total"] ?? 0,
       }));
     },
+    enabled: Boolean(yearConfig.preset),
   });
 
   if (error) {
