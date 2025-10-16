@@ -22,10 +22,8 @@ const sumBucketed = (data: BucketTimeSummary[]): number => {
 const collectKeys = (data: BucketTimeSummary[]) => {
   const set = new Set<string>();
   for (const item of data) {
-    console.log("The item: ", item);
     for (const key of Object.keys(item.groupedValues ?? {})) {
       if (key) set.add(key);
-      console.log("The key: ", key);
     }
   }
   return [...set];
@@ -80,7 +78,6 @@ export const useTotalBucketedTime = (): {
   useEffect(() => {
     if (!data?.usedBranch) return;
     const keys = collectKeys(data.buckets);
-    console.log("The keys: ", keys);
     usePresetFilter.setState({ branches: keys });
   }, [data]);
 

@@ -4,7 +4,7 @@ import CirclePackingChart from "../CirclePackingChart";
 import { useProjectSummaryData } from "../../hooks/useProjectSummaryData";
 
 const CirclePackingChartSection = () => {
-  const options = { group_by: "entity" as Group, mode: "list" as const };
+  const options = { groupBy: "entity" as Group, mode: "list" as const };
   const { data, loading } = useProjectSummaryData(options);
 
   return (

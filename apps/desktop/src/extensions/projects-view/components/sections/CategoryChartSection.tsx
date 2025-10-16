@@ -4,7 +4,7 @@ import { useProjectSummaryData } from "../../hooks/useProjectSummaryData";
 import { Group } from "@/types/tauri.gen";
 
 const CategoryChartSection = () => {
-  const options = { group_by: "category" as Group, mode: "bar" as const };
+  const options = { groupBy: "category" as Group, mode: "bar" as const };
   const { loading, data, keys } = useProjectSummaryData(options);
 
   return (

@@ -4,7 +4,7 @@ import CustomPieChart from "@/components/CustomPieChart";
 import { useProjectSummaryData } from "../../hooks/useProjectSummaryData";
 
 const LanguagePieChartSection = () => {
-  const options = { group_by: "language" as Group, mode: "pie" as const };
+  const options = { groupBy: "language" as Group, mode: "pie" as const };
 
   const { data, loading } = useProjectSummaryData(options);
 
