@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   BucketSummaryInput,
   BucketTimeSummary,
@@ -12,10 +12,9 @@ import GoalChartCard from "./GoalChartCard";
 import GoalTitleDialog from "./Dialogs/GoalTitleDialog";
 import GoalDeleteConfirmDialog from "./Dialogs/GoalDeleteConfirmDialog";
 import GoalDialog from "./Dialogs/GoalDialog";
+import { useQuery } from "@tanstack/react-query";
 
 const GoalDisplay = ({ goal }: { goal: Goal }) => {
-  const [data, setData] = useState<BucketTimeSummary[]>([]);
-  const [loading, setLoading] = useState(true);
   const [showEditNameDialog, setShowEditNameDialog] = useState<boolean>(false);
   const [showGoalDeleteDialog, setShowGoalDeleteDialog] =
     useState<boolean>(false);
@@ -36,27 +35,28 @@ const GoalDisplay = ({ goal }: { goal: Goal }) => {
     }
   };
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const query: BucketSummaryInput = {
-          preset: timeRangeToPreset(goal.timeSpan),
-          apps: goal.useApps ? goal.apps : null,
-          categories: goal.useCategories ? goal.categories : null,
-        };
-        const summary = await commands.fetchBucketedSummary(query);
-        setData(summary);
-      } catch (e) {
-        console.error("Error fetching summary for goal: ", goal.id, e);
-      } finally {
-        setLoading(false);
-      }
-    };
+  const { data, isPending, isFetching } = useQuery({
+    queryKey: [
+      "goalSummary",
+      goal.id,
+      goal.timeSpan,
+      goal.useApps ? goal.apps : null,
+      goal.useCategories ? goal.categories : null,
+    ],
+    queryFn: async (): Promise<BucketTimeSummary[]> => {
+      const query: BucketSummaryInput = {
+        preset: timeRangeToPreset(goal.timeSpan),
+        apps: goal.useApps ? goal.apps : null,
+        categories: goal.useCategories ? goal.categories : null,
+      };
+      return commands.fetchBucketedSummary(query);
+    },
+    enabled: Boolean(goal),
+  });
 
-    fetchData();
-  }, [goal]);
+  const loading = isPending || isFetching;
 
-  const chartData = data.map((item) => ({
+  const chartData = data?.map((item) => ({
     label: item.bucket,
     value: item.groupedValues["Total"] ?? 0,
   }));
@@ -70,7 +70,7 @@ const GoalDisplay = ({ goal }: { goal: Goal }) => {
       onEdit={() => setShowGoalDialog(true)}
     >
       <BarLineChart
-        data={chartData}
+        data={chartData ?? []}
         goalDuration={goal.targetSeconds}
         timeSpan={goal.timeSpan}
       />

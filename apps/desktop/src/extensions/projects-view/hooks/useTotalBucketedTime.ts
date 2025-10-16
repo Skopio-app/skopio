@@ -48,7 +48,7 @@ export const useTotalBucketedTime = (): {
 
   const { data, isPending, isFetching } = useQuery({
     queryKey: [
-      "bucketedSummary",
+      "timeSummary",
       {
         preset,
         project,

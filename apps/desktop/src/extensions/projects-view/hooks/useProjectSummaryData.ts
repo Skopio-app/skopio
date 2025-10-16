@@ -113,7 +113,7 @@ const useProjectSummaryDataImpl = (
 
   const queryKey = useMemo(
     () => [
-      "bucketedSummary",
+      "projectSummary",
       {
         preset,
         project,
