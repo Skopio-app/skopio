@@ -8,6 +8,8 @@ import {
 } from "@skopio/ui";
 import { Outlet } from "react-router";
 import { Toaster } from "sonner";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import {
   goBack,
   goForward,
@@ -21,54 +23,59 @@ import PermissionsDialog from "@/components/settings/PermissionsDialog";
 import UpdaterToast from "@/components/updater/UpdaterToast";
 import ThemeProvider from "@/components/settings/ThemeProvider";
 
+const queryClient = new QueryClient();
+
 function App() {
   useGlobalShortcutListener();
   const { canGoBack, canGoForward } = useHistoryControls();
 
   return (
-    <ThemeProvider>
-      <Toaster richColors />
-      <PermissionsDialog />
-      <UpdaterToast />
-      <ContextMenu>
-        <ContextMenuTrigger className="block min-h-screen w-full">
-          <Outlet />
-        </ContextMenuTrigger>
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider>
+        <Toaster richColors />
+        <PermissionsDialog />
+        <UpdaterToast />
+        <ContextMenu>
+          <ContextMenuTrigger className="block min-h-screen w-full">
+            <Outlet />
+          </ContextMenuTrigger>
 
-        <ContextMenuContent className={cn("w-42", isDev() ? "h-32" : "h-24")}>
-          <ContextMenuItem
-            className="text-xs"
-            disabled={!canGoBack}
-            onClick={goBack}
-          >
-            Back
-            <ContextMenuShortcut>⌘[</ContextMenuShortcut>
-          </ContextMenuItem>
-          <ContextMenuItem
-            className="text-xs"
-            disabled={!canGoForward}
-            onClick={goForward}
-          >
-            Forward
-            <ContextMenuShortcut>⌘]</ContextMenuShortcut>
-          </ContextMenuItem>
-          <ContextMenuItem className="text-xs" onClick={reloadWindow}>
-            Reload
-            <ContextMenuShortcut>⌘R</ContextMenuShortcut>
-          </ContextMenuItem>
-          {isDev() && (
+          <ContextMenuContent className={cn("w-42", isDev() ? "h-32" : "h-24")}>
             <ContextMenuItem
-              inset
               className="text-xs"
-              disabled={!isDev()}
-              onClick={() => commands.openDevtools()}
+              disabled={!canGoBack}
+              onClick={goBack}
             >
-              Inspect Element
+              Back
+              <ContextMenuShortcut>⌘[</ContextMenuShortcut>
             </ContextMenuItem>
-          )}
-        </ContextMenuContent>
-      </ContextMenu>
-    </ThemeProvider>
+            <ContextMenuItem
+              className="text-xs"
+              disabled={!canGoForward}
+              onClick={goForward}
+            >
+              Forward
+              <ContextMenuShortcut>⌘]</ContextMenuShortcut>
+            </ContextMenuItem>
+            <ContextMenuItem className="text-xs" onClick={reloadWindow}>
+              Reload
+              <ContextMenuShortcut>⌘R</ContextMenuShortcut>
+            </ContextMenuItem>
+            {isDev() && (
+              <ContextMenuItem
+                inset
+                className="text-xs"
+                disabled={!isDev()}
+                onClick={() => commands.openDevtools()}
+              >
+                Inspect Element
+              </ContextMenuItem>
+            )}
+          </ContextMenuContent>
+        </ContextMenu>
+      </ThemeProvider>
+      <ReactQueryDevtools initialIsOpen={false} />
+    </QueryClientProvider>
   );
 }
 
