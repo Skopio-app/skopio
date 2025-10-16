@@ -1,18 +1,21 @@
-import { useEffect, useState } from "react";
 import TextSectionItem from "./TextSectionItem";
 import { useYearFilter } from "../stores/useYearFilter";
 import { commands, SummaryQueryInput } from "@/types/tauri.gen";
 import { formatDuration } from "@/utils/time";
-import { toast } from "sonner";
+
 import { endOfYear, startOfYear } from "date-fns";
+import { useQuery } from "@tanstack/react-query";
 
 const TotalTimeSection = () => {
-  const [loading, setLoading] = useState(false);
   const { year } = useYearFilter();
-  const [time, setTime] = useState<string | null>(null);
 
-  useEffect(() => {
-    const fetchTotalTime = async () => {
+  const {
+    data: time = null,
+    isFetching,
+    isPending,
+  } = useQuery({
+    queryKey: ["totalTime", year],
+    queryFn: async () => {
       const parsedYear = year
         ? parseInt(year.toString(), 10)
         : new Date().getFullYear();
@@ -23,19 +26,15 @@ const TotalTimeSection = () => {
         start: start.toISOString(),
         end: end.toISOString(),
       };
+      return commands.fetchTotalTime(input);
+    },
+    select: (result): string => {
+      return formatDuration(result);
+    },
+    enabled: Boolean(year),
+  });
 
-      commands
-        .fetchTotalTime(input)
-        .then((time) => {
-          const formattedTime = formatDuration(time);
-          setTime(formattedTime);
-        })
-        .catch(toast.error)
-        .finally(() => setLoading(false));
-    };
-
-    fetchTotalTime();
-  }, [year]);
+  const loading = isFetching || isPending;
 
   return (
     <TextSectionItem

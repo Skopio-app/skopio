@@ -248,7 +248,7 @@ export type InsightQueryPayload = {
 export type InsightResult =
   | { activeYears: number[] }
   | { topN: [string, number][] }
-  | { mostActiveDay: { date: string; total_duration: number } }
+  | { mostActiveDay: { date: string; totalDuration: number } }
   | { aggregatedAverage: Partial<{ [key in string]: [string, number][] }> };
 export type InsightType =
   | "activeYears"

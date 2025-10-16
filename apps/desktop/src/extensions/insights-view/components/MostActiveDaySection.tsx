@@ -30,7 +30,7 @@ const MostActiveDaySection = () => {
       }
       const formattedDate = format(result.mostActiveDay.date, "EEE, MMM d");
       const formattedDuration = formatDuration(
-        result.mostActiveDay.total_duration,
+        result.mostActiveDay.totalDuration,
       );
 
       return { day: formattedDate, time: formattedDuration };
