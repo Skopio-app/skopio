@@ -10,11 +10,7 @@ const MostActiveDaySection = () => {
 
   type ActiveDay = { day: string | null; time: string | null };
 
-  const {
-    data = { day: null, time: null },
-    isFetching,
-    isPending,
-  } = useQuery({
+  const { data = { day: null, time: null }, isLoading } = useQuery({
     queryKey: ["mostActiveDay", year],
     queryFn: async () => {
       const query: InsightQueryPayload = {
@@ -38,8 +34,6 @@ const MostActiveDaySection = () => {
     enabled: Boolean(year),
   });
 
-  const loading = isFetching || isPending;
-
   return (
     <TextSectionItem
       title="Most Active Day"
@@ -48,7 +42,7 @@ const MostActiveDaySection = () => {
           ? `Your most active day was ${data.day} with ${data.time} of activity`
           : "No data found"
       }
-      loading={loading}
+      loading={isLoading}
     />
   );
 };

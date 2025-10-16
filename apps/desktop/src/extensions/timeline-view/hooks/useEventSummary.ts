@@ -40,7 +40,7 @@ export const useEventSummary = (
   const hasValidCustom =
     !!customRange && !!customRange.start && !!customRange.end;
 
-  const { data, isPending, isFetching } = useQuery({
+  const { data, isLoading } = useQuery({
     queryKey: [
       "eventSummary",
       {
@@ -66,7 +66,5 @@ export const useEventSummary = (
     select: (res): EventGroup[] => ("Grouped" in res ? res.Grouped : []),
   });
 
-  const loading = isPending || isFetching;
-
-  return { events: data ?? [], loading };
+  return { events: data ?? [], loading: isLoading };
 };

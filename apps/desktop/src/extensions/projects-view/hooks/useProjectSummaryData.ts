@@ -111,11 +111,7 @@ const useProjectSummaryDataImpl = (
 
   const { preset, project, branches } = usePresetFilter();
 
-  const {
-    data: rawData = [],
-    isPending,
-    isFetching,
-  } = useQuery({
+  const { data: rawData = [], isLoading } = useQuery({
     queryKey: [
       "projectSummary",
       {
@@ -137,7 +133,7 @@ const useProjectSummaryDataImpl = (
     enabled: Boolean(project),
   });
 
-  const loading = isPending || isFetching;
+  const loading = isLoading;
 
   switch (options.mode) {
     case "line": {

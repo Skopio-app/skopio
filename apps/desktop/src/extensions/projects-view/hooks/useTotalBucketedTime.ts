@@ -46,7 +46,7 @@ export const useTotalBucketedTime = (): {
     [baseInput, selectedBranches],
   );
 
-  const { data, isPending, isFetching } = useQuery({
+  const { data, isLoading } = useQuery({
     queryKey: [
       "timeSummary",
       {
@@ -74,8 +74,7 @@ export const useTotalBucketedTime = (): {
     usePresetFilter.setState({ branches: keys });
   }, [data]);
 
-  const loading = isPending || isFetching;
   const total = sumBucketed(data?.buckets ?? []);
   const hasBranchData = Boolean(data?.usedBranch);
-  return { total, loading, hasBranchData };
+  return { total, loading: isLoading, hasBranchData };
 };

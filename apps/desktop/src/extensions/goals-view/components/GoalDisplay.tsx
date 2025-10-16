@@ -35,7 +35,7 @@ const GoalDisplay = ({ goal }: { goal: Goal }) => {
     }
   };
 
-  const { data, isPending, isFetching } = useQuery({
+  const { data, isLoading } = useQuery({
     queryKey: [
       "goalSummary",
       goal.id,
@@ -54,8 +54,6 @@ const GoalDisplay = ({ goal }: { goal: Goal }) => {
     enabled: Boolean(goal),
   });
 
-  const loading = isPending || isFetching;
-
   const chartData = data?.map((item) => ({
     label: item.bucket,
     value: item.groupedValues["Total"] ?? 0,
@@ -64,7 +62,7 @@ const GoalDisplay = ({ goal }: { goal: Goal }) => {
   return (
     <GoalChartCard
       title={goal.name}
-      loading={loading}
+      loading={isLoading}
       onRename={() => setShowEditNameDialog(true)}
       onDelete={() => setShowGoalDeleteDialog(true)}
       onEdit={() => setShowGoalDialog(true)}

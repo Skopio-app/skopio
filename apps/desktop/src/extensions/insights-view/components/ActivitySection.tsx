@@ -33,8 +33,7 @@ const ActivitySection = () => {
 
   const {
     data: calendarData = [],
-    isFetching,
-    isPending,
+    isLoading,
     error,
   } = useQuery<CalendarChartData[]>({
     queryKey: ["activityInsight", yearConfig.preset],
@@ -57,10 +56,8 @@ const ActivitySection = () => {
     );
   }
 
-  const loading = isFetching || isPending;
-
   return (
-    <SectionContainer title="Activity" loading={loading}>
+    <SectionContainer title="Activity" loading={isLoading}>
       <CalendarChart
         data={calendarData}
         start={yearConfig.start}

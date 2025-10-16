@@ -10,35 +10,31 @@ import {
 import AverageDaySection from "./components/AverageDaySection";
 import ActivitySection from "./components/ActivitySection";
 import TopProjectsSection from "./components/TopProjectsSection";
-import { useEffect, useState } from "react";
-import { commands, InsightQueryPayload } from "@/types/tauri.gen";
+import {
+  commands,
+  InsightQueryPayload,
+  InsightResult,
+} from "@/types/tauri.gen";
 import { useYearFilter } from "./stores/useYearFilter";
 import TopLanguagesSection from "./components/TopLanguagesSection";
 import MostActiveDaySection from "./components/MostActiveDaySection";
 import TotalTimeSection from "./components/TotalTimeSection";
+import { useQuery } from "@tanstack/react-query";
 
 const InsightsView = () => {
-  const [years, setYears] = useState<number[]>([]);
-  const [selectedYear, setSelectedYear] = useState<string | null>(null);
+  const { year } = useYearFilter();
 
-  useEffect(() => {
-    const query: InsightQueryPayload = {
-      insightType: "activeYears",
-    };
-
-    commands
-      .fetchInsights(query)
-      .then((result) => {
-        if ("activeYears" in result) {
-          setYears(result.activeYears);
-          if (result.activeYears.length > 0) {
-            useYearFilter.setState({ year: String(result.activeYears[0]) });
-            setSelectedYear(String(result.activeYears[0]));
-          }
-        }
-      })
-      .catch(console.error);
-  }, []);
+  const { data: years = [], isLoading } = useQuery({
+    queryKey: ["activeYears"],
+    queryFn: (): Promise<InsightResult> => {
+      const query: InsightQueryPayload = {
+        insightType: "activeYears",
+      };
+      return commands.fetchInsights(query);
+    },
+    select: (result): number[] =>
+      "activeYears" in result ? result.activeYears : [],
+  });
 
   return (
     <div className="flex flex-col mx-3 mb-4 space-y-5">
@@ -46,11 +42,11 @@ const InsightsView = () => {
         Insights
       </h2>
       <Select
-        value={String(selectedYear)}
+        value={year}
         onValueChange={(year) => {
-          setSelectedYear(year);
           useYearFilter.setState({ year });
         }}
+        disabled={isLoading}
       >
         <SelectTrigger className="w-[180px]">
           <SelectValue placeholder="Select a year" />

@@ -18,7 +18,7 @@ export const useTopNInsights = ({
   const { year } = useYearFilter();
 
   type TopN = [string, number][];
-  const { data, isFetching, isPending, error } = useQuery({
+  const { data, isLoading, error } = useQuery({
     queryKey: ["topN", year, limit, groupBy],
     queryFn: async (): Promise<InsightResult> => {
       const query: InsightQueryPayload = {
@@ -37,9 +37,7 @@ export const useTopNInsights = ({
   if (error) {
     toast.error(`Failed to fetch topN insights: ${(error as Error).message}`);
   }
-
-  const loading = isFetching || isPending;
   const parsed = data ?? [];
 
-  return { data: parsed, loading };
+  return { data: parsed, loading: isLoading };
 };

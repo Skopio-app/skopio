@@ -9,11 +9,7 @@ import { useQuery } from "@tanstack/react-query";
 const TotalTimeSection = () => {
   const { year } = useYearFilter();
 
-  const {
-    data: time = null,
-    isFetching,
-    isPending,
-  } = useQuery({
+  const { data: time = null, isLoading } = useQuery({
     queryKey: ["totalTime", year],
     queryFn: async () => {
       const parsedYear = year
@@ -34,15 +30,13 @@ const TotalTimeSection = () => {
     enabled: Boolean(year),
   });
 
-  const loading = isFetching || isPending;
-
   return (
     <TextSectionItem
       title="Total time logged"
       text={
         time !== null ? `Total active time logged is ${time}` : "No data found"
       }
-      loading={loading}
+      loading={isLoading}
     />
   );
 };

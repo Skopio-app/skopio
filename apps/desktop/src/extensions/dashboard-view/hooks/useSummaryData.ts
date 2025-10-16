@@ -192,11 +192,7 @@ const useSummaryDataImpl = (
   const preset = options.presetOverride ?? dashboardPreset;
   const keyGroupBy = options.presetOverride ? null : options.groupBy;
 
-  const {
-    data: rawData = [],
-    isPending,
-    isFetching,
-  } = useQuery({
+  const { data: rawData = [], isLoading } = useQuery({
     queryKey: ["dashboardSummary", preset, keyGroupBy],
     queryFn: async (): Promise<BucketTimeSummary[]> => {
       const query: BucketSummaryInput = {
@@ -208,7 +204,7 @@ const useSummaryDataImpl = (
     enabled: Boolean(preset),
   });
 
-  const loading = isPending || isFetching;
+  const loading = isLoading;
 
   switch (options.mode) {
     case "line": {

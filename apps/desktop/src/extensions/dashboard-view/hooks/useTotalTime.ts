@@ -5,11 +5,7 @@ export const useTotalTime = (
   start: Date,
   end: Date,
 ): { total: number; loading: boolean } => {
-  const {
-    data: total = 0,
-    isPending,
-    isFetching,
-  } = useQuery({
+  const { data: total = 0, isLoading } = useQuery({
     queryKey: ["totalTime", start.toISOString(), end.toISOString()],
     queryFn: async (): Promise<number> => {
       const input: SummaryQueryInput = {
@@ -21,7 +17,5 @@ export const useTotalTime = (
     enabled: !!start && !!end,
   });
 
-  const loading = isPending || isFetching;
-
-  return { total, loading };
+  return { total, loading: isLoading };
 };

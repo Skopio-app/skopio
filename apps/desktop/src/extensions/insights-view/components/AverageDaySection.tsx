@@ -11,11 +11,7 @@ const weekdayOrder = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 const AverageDaySection = () => {
   const { year } = useYearFilter();
 
-  const {
-    data = { rows: [], keys: [] },
-    isFetching,
-    isPending,
-  } = useQuery({
+  const { data = { rows: [], keys: [] }, isLoading } = useQuery({
     queryKey: ["aggregatedAverage", year],
     queryFn: async () => {
       const query: InsightQueryPayload = {
@@ -56,10 +52,8 @@ const AverageDaySection = () => {
     enabled: Boolean(year),
   });
 
-  const loading = isFetching || isPending;
-
   return (
-    <SectionContainer title="Weekday average" loading={loading}>
+    <SectionContainer title="Weekday average" loading={isLoading}>
       <StackedBarChart keys={data.keys} data={data.rows} />
     </SectionContainer>
   );

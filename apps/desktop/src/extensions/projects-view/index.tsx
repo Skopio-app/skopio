@@ -43,7 +43,7 @@ const ProjectsView = () => {
 
   const effectivePage = isSearching ? 0 : currentPage;
 
-  const { data, isPending, isFetching, error } = useQuery({
+  const { data, isLoading, error } = useQuery({
     queryKey: [
       "projects",
       { query: isSearching ? query : null, page: effectivePage, limit: LIMIT },
@@ -65,7 +65,6 @@ const ProjectsView = () => {
   }
 
   const list = useMemo(() => sortProjects(data?.data ?? []), [data]);
-  const isLoading = isPending || isFetching;
 
   const totalPages = !isSearching ? (data?.totalPages ?? 0) : 0;
 

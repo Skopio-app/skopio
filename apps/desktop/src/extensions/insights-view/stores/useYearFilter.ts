@@ -6,6 +6,6 @@ interface YearFilterState {
 }
 
 export const useYearFilter = create<YearFilterState>((set) => ({
-  year: "",
+  year: new Date().getFullYear().toString(),
   setYear: (year) => set({ year }),
 }));
