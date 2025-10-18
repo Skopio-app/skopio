@@ -3,7 +3,7 @@ import ItemsList from "../ItemsList";
 import { useProjectSummaryData } from "../../hooks/useProjectSummaryData";
 
 const EntityList = () => {
-  const options = { group_by: "entity" as Group, mode: "list" as const };
+  const options = { groupBy: "entity" as Group, mode: "list" as const };
   const { data, loading } = useProjectSummaryData(options);
 
   return <ItemsList title="Entities" data={data} loading={loading} />;

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import * as Dialog from "@radix-ui/react-dialog";
-import { Controller, useForm } from "react-hook-form";
+import { Controller, useForm, useWatch } from "react-hook-form";
 import { Button, Checkbox, Label, ScrollArea, Separator } from "@skopio/ui";
 import { toast } from "sonner";
 import { usePresetFilter } from "../stores/usePresetFilter";
@@ -24,17 +24,15 @@ const BranchSelectionDialog = () => {
     [branches, selectedBranches],
   );
 
-  const { control, watch, setValue, handleSubmit, reset } = useForm<FormValues>(
-    {
-      defaultValues,
-    },
-  );
+  const { control, setValue, handleSubmit, reset } = useForm<FormValues>({
+    defaultValues,
+  });
 
   useEffect(() => {
     reset(defaultValues);
   }, [defaultValues, reset]);
 
-  const selectedMap = watch("selectedBranches");
+  const selectedMap = useWatch({ control, name: "selectedBranches" });
 
   const allSelected =
     branches.length > 0 && branches.every((b) => !!selectedMap?.[b]);
@@ -70,7 +68,7 @@ const BranchSelectionDialog = () => {
 
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 bg-foreground/50">
-          <Dialog.Content className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-background p-6 rounded-lg shadow-md w-56">
+          <Dialog.Content className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 bg-background border border-border p-6 rounded-lg shadow-md w-56">
             <Dialog.Title className="text-foreground">
               Select branches
             </Dialog.Title>

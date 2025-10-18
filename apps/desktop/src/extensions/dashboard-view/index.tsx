@@ -120,7 +120,7 @@ const DashboardView = () => {
       </p>
       {loaded && (
         <ResponsiveGridLayout
-          className="mt-4"
+          className="mt-4 scroll-hidden"
           layouts={layouts}
           breakpoints={{ lg: 1024, md: 768, sm: 480 }}
           cols={{ lg: 12, md: 10, sm: 6 }}

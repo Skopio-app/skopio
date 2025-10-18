@@ -9,7 +9,7 @@ import {
   TooltipTrigger,
 } from "@skopio/ui";
 import { GripVertical, Info, Settings, X } from "lucide-react";
-import SkeletonChart from "@/components/SkeletonChart";
+import SkeletonChart from "@/components/loading/SkeletonChart";
 import React from "react";
 
 export interface WidgetCardProps {

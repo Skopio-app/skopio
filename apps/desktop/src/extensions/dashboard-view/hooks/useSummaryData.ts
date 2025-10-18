@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import {
   BucketSummaryInput,
   BucketTimeSummary,
@@ -15,6 +15,7 @@ import {
 import { useDashboardFilter } from "../stores/useDashboardFilter";
 import { format, parseISO } from "date-fns";
 import { getEntityName } from "@/utils/data";
+import { useQuery } from "@tanstack/react-query";
 
 export interface UseSummaryOptions {
   groupBy?: Group;
@@ -188,29 +189,22 @@ const useSummaryDataImpl = (
   );
 
   const { preset: dashboardPreset } = useDashboardFilter();
-  const [loading, setLoading] = useState(true);
-  const [rawData, setRawData] = useState<BucketTimeSummary[]>([]);
   const preset = options.presetOverride ?? dashboardPreset;
+  const keyGroupBy = options.presetOverride ? null : options.groupBy;
 
-  useEffect(() => {
-    const fetchData = async () => {
+  const { data: rawData = [], isLoading } = useQuery({
+    queryKey: ["dashboardSummary", preset, keyGroupBy],
+    queryFn: async (): Promise<BucketTimeSummary[]> => {
       const query: BucketSummaryInput = {
         preset,
-        groupBy: options.presetOverride ? null : options.groupBy,
+        groupBy: keyGroupBy,
       };
+      return commands.fetchBucketedSummary(query);
+    },
+    enabled: Boolean(preset),
+  });
 
-      try {
-        const summary = await commands.fetchBucketedSummary(query);
-        setRawData(summary);
-      } catch (err) {
-        console.error("Error fetching summary data: ", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-  }, [options.groupBy, options.mode, JSON.stringify(preset)]);
+  const loading = isLoading;
 
   switch (options.mode) {
     case "line": {

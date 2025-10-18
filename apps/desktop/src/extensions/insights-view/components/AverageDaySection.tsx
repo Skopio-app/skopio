@@ -1,79 +1,60 @@
-import { useEffect, useState } from "react";
 import { useYearFilter } from "../stores/useYearFilter";
 import { commands, InsightQueryPayload } from "@/types/tauri.gen";
 import SectionContainer from "./SectionContainer";
 import StackedBarChart from "@/components/StackedBarChart";
-import { toast } from "sonner";
+import { useQuery } from "@tanstack/react-query";
+
+type Row = { label: string; [key: string]: string | number };
+type SelectResult = { rows: Row[]; keys: string[] };
+const weekdayOrder = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
 
 const AverageDaySection = () => {
-  const [results, setResults] = useState<
-    { label: string; [key: string]: string | number }[]
-  >([]);
-  const [keys, setKeys] = useState<string[]>([]);
   const { year } = useYearFilter();
-  const [loading, setLoading] = useState<boolean>(true);
 
-  useEffect(() => {
-    const query: InsightQueryPayload = {
-      insightType: "aggregatedAverage",
-      groupBy: "category",
-      limit: 3,
-      bucket: "day",
-      insightRange: year,
-    };
+  const { data = { rows: [], keys: [] }, isLoading } = useQuery({
+    queryKey: ["aggregatedAverage", year],
+    queryFn: async () => {
+      const query: InsightQueryPayload = {
+        insightType: "aggregatedAverage",
+        groupBy: "category",
+        limit: 3,
+        bucket: "day",
+        insightRange: year,
+      };
+      return commands.fetchInsights(query);
+    },
+    select: (result): SelectResult => {
+      if (!("aggregatedAverage" in result)) return { rows: [], keys: [] };
+      const raw = result.aggregatedAverage;
 
-    if (year.length === 0) return;
-    commands
-      .fetchInsights(query)
-      .then((result) => {
-        if ("aggregatedAverage" in result) {
-          const raw = result.aggregatedAverage;
+      const sortedDays = Object.entries(raw).sort(([a], [b]) => {
+        return weekdayOrder.indexOf(a) - weekdayOrder.indexOf(b);
+      });
 
-          const days = Object.entries(raw);
-
-          const weekdayOrder = [
-            "Mon",
-            "Tue",
-            "Wed",
-            "Thu",
-            "Fri",
-            "Sat",
-            "Sun",
-          ];
-
-          const sortedDays = [...Object.entries(raw)].sort(([a], [b]) => {
-            return weekdayOrder.indexOf(a) - weekdayOrder.indexOf(b);
-          });
-
-          const chartData: { label: string; [key: string]: string | number }[] =
-            sortedDays.map(([day, groups]) => {
-              const row: { label: string; [key: string]: string | number } = {
-                label: day,
-              };
-              for (const [group, value] of groups ?? []) {
-                row[group] = value;
-              }
-              return row;
-            });
-
-          const allKeys = new Set<string>();
-          for (const [, groups] of days) {
-            for (const [group] of groups ?? []) {
-              allKeys.add(group);
-            }
-          }
-
-          setResults(chartData);
-          setKeys(Array.from(allKeys));
+      const rows: Row[] = sortedDays.map(([day, groups]) => {
+        const row: Row = { label: day };
+        for (const [group, value] of groups ?? []) {
+          row[group] = value;
         }
-      })
-      .catch(toast.error)
-      .finally(() => setLoading(false));
-  }, [year]);
+        return row;
+      });
+
+      const keys = Array.from(
+        new Set(
+          Object.values(raw)
+            .flatMap((pairs) => pairs ?? [])
+            .map(([g]) => g),
+        ),
+      );
+
+      return { rows, keys };
+    },
+    enabled: Boolean(year),
+  });
 
   return (
-    <SectionContainer title="Weekday average" loading={loading}>
-      <StackedBarChart keys={keys} data={results} />
+    <SectionContainer title="Weekday average" loading={isLoading}>
+      <StackedBarChart keys={data.keys} data={data.rows} />
     </SectionContainer>
   );
 };

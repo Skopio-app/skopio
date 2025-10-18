@@ -12,7 +12,7 @@ use utils::{config::ConfigStore, db::get_db_path};
 
 use crate::{
     goals_service::GoalService,
-    server::ServerStatus,
+    server::{ServerManagerExt, ServerStatus},
     ui::{
         tray::TrayExt,
         window::{NotificationPayload, WindowExt, WindowKind},
@@ -67,7 +67,7 @@ pub async fn run() {
                 }
 
                 if !cfg!(debug_assertions) {
-                    if let Err(e) = server::ensure_server_ready(&app_handle_clone.clone()).await {
+                    if let Err(e) = app_handle_clone.ensure_server_ready().await {
                         error!("Server manager error: {e}")
                     }
                 }

@@ -1,30 +1,24 @@
-import { useCallback, useEffect, useState } from "react";
 import { OpenApp, commands } from "@/types/tauri.gen";
+import { useQuery } from "@tanstack/react-query";
 
 export const useOpenApps = () => {
-  const [apps, setApps] = useState<OpenApp[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<unknown>(null);
-
-  const fetch = useCallback(async () => {
-    try {
-      setLoading(true);
-      const apps = await commands.getOpenApps();
-      setApps(apps ?? []);
-    } catch (e) {
-      setError(e);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    void fetch();
-  }, [fetch]);
+  const {
+    data: apps = [],
+    isLoading,
+    error,
+    refetch: fetch,
+  } = useQuery({
+    queryKey: ["openApps"],
+    queryFn: (): Promise<OpenApp[]> => {
+      return commands.getOpenApps();
+    },
+    refetchOnWindowFocus: false,
+    staleTime: Infinity,
+  });
 
   return {
     apps,
-    loading,
+    loading: isLoading,
     error,
     fetch,
   };

@@ -23,9 +23,9 @@ import {
   isValid as isValidDate,
   subDays,
 } from "date-fns";
-import SkeletonChart from "@/components/SkeletonChart";
+import SkeletonChart from "@/components/loading/SkeletonChart";
 import { toast } from "sonner";
-import { useEventFetcher } from "./hooks/useEventFetcher";
+import { useEventSummary } from "./hooks/useEventSummary";
 
 const durations = [
   { label: "15m", minutes: 15 },
@@ -73,7 +73,7 @@ const TimelineExtension = () => {
     };
   }, [isCustom, dateRange.from, dateRange.to]);
 
-  const { events, loading } = useEventFetcher(group, duration, customRange);
+  const { events, loading } = useEventSummary(group, duration, customRange);
 
   const handleApplyCustomRange = () => {
     const { from, to } = dateRange;

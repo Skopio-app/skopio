@@ -18,7 +18,7 @@ import {
   cn,
 } from "@skopio/ui";
 import { useEffect, useRef } from "react";
-import { useForm } from "react-hook-form";
+import { useForm, useWatch } from "react-hook-form";
 import * as z from "zod/v4";
 import HotkeyField from "@/components/settings/HotkeyField";
 import { AFK, AFK_KEYS, AFK_SECONDS, AFK_LABELS } from "@/utils/constants";
@@ -60,7 +60,11 @@ const General = () => {
     setAutostart,
   } = useAutostart();
 
-  const { shortcut, saveShorcut, loading: hotkeyLoading } = useGlobalShortcut();
+  const {
+    shortcut,
+    saveShortcut,
+    loading: hotkeyLoading,
+  } = useGlobalShortcut();
   const { apps: openApps, fetch: fetchApps } = useOpenApps();
   const { setTheme } = useTheme();
 
@@ -125,111 +129,118 @@ const General = () => {
     })();
   }, [autoLoading, hotkeyLoading, autoEnabled, shortcut, form]);
 
+  const launchOnStartup = useWatch({
+    control: form.control,
+    name: "launchOnStartup",
+  });
+  const globalShortcut = useWatch({
+    control: form.control,
+    name: "globalShortcut",
+  });
+  const afkSensitivity = useWatch({
+    control: form.control,
+    name: "afkSensitivity",
+  });
+  const trackedApps = useWatch({ control: form.control, name: "trackedApps" });
+  const themeValue = useWatch({ control: form.control, name: "theme" });
+
+  // Launch on startup
   useEffect(() => {
-    const sub = form.watch((values, info) => {
-      const v = values as GeneralSettingsValues;
-
-      if (saveTimer.current) window.clearTimeout(saveTimer.current);
-      saveTimer.current = window.setTimeout(async () => {
-        const ok = await form.trigger("launchOnStartup", {
-          shouldFocus: false,
-        });
-        if (!ok) return;
-        const snap = v.launchOnStartup;
-        if (snap === lastSaved.current) return;
-        lastSaved.current = snap;
-
-        form.reset(v, {
-          keepValues: true,
-          keepDirty: false,
-          keepTouched: true,
-        });
-      }, 300) as number;
-
-      if (info.name === "globalShortcut") {
-        const next = v.globalShortcut;
-        if (next !== lastShortcut.current) {
-          if (shortcutTimer.current) window.clearTimeout(shortcutTimer.current);
-          shortcutTimer.current = window.setTimeout(async () => {
-            const ok = await form.trigger("globalShortcut", {
-              shouldFocus: false,
-            });
-            if (!ok) return;
-            saveShorcut(next);
-            lastShortcut.current = next;
-          }, 250) as number;
-        }
-      }
-
-      if (info.name === "afkSensitivity") {
-        const nextKey = v.afkSensitivity;
-        if (nextKey !== lastAfk.current) {
-          if (afkTimer.current) window.clearTimeout(afkTimer.current);
-          afkTimer.current = window.setTimeout(async () => {
-            const ok = await form.trigger("afkSensitivity", {
-              shouldFocus: false,
-            });
-            if (!ok) return;
-
-            const seconds = AFK_SECONDS[nextKey];
-            try {
-              await commands.setAfkTimeout(seconds);
-              lastAfk.current = nextKey;
-            } catch (e) {
-              console.error("Failed to set AFK timeout: ", e);
-            }
-          }, 250) as number;
-        }
-      }
-
-      if (info.name === "trackedApps") {
-        const nextList = v.trackedApps;
-        const nextSnap = JSON.stringify([...nextList].sort());
-        if (nextSnap !== lastTrackedJSON.current) {
-          if (trackedTimer.current) window.clearTimeout(trackedTimer.current);
-          trackedTimer.current = window.setTimeout(async () => {
-            const ok = await form.trigger("trackedApps", {
-              shouldFocus: false,
-            });
-            if (!ok) return;
-
-            try {
-              await commands.setTrackedApps(nextList);
-              lastTrackedJSON.current = nextSnap;
-            } catch (e) {
-              console.error("Failed to save tracked apps: ", e);
-            }
-          }, 250) as number;
-        }
-      }
-
-      if (info.name === "theme") {
-        const next = v.theme;
-        if (next !== lastTheme.current) {
-          if (themeTimer.current) window.clearTimeout(themeTimer.current);
-          themeTimer.current = window.setTimeout(async () => {
-            const ok = await form.trigger("theme", { shouldFocus: false });
-            if (!ok) return;
-            try {
-              setTheme(next);
-              lastTheme.current = next;
-            } catch (e) {
-              console.error("Failed to set theme: ", e);
-            }
-          }, 200) as number;
-        }
-      }
-    });
+    if (!hydratedRef.current) return;
+    if (saveTimer.current) window.clearTimeout(saveTimer.current);
+    saveTimer.current = window.setTimeout(async () => {
+      const ok = await form.trigger("launchOnStartup", { shouldFocus: false });
+      if (!ok) return;
+      if (launchOnStartup === lastSaved.current) return;
+      lastSaved.current = launchOnStartup;
+      form.reset(form.getValues(), {
+        keepValues: true,
+        keepDirty: false,
+        keepTouched: true,
+      });
+    }, 300) as number;
 
     return () => {
-      sub.unsubscribe();
       if (saveTimer.current) window.clearTimeout(saveTimer.current);
+    };
+  }, [launchOnStartup, form]);
+
+  // Global shortcut
+  useEffect(() => {
+    if (!hydratedRef.current) return;
+    if (globalShortcut === lastShortcut.current) return;
+    if (shortcutTimer.current) window.clearTimeout(shortcutTimer.current);
+    shortcutTimer.current = window.setTimeout(async () => {
+      const ok = await form.trigger("globalShortcut", { shouldFocus: false });
+      if (!ok) return;
+      saveShortcut(globalShortcut);
+      lastShortcut.current = globalShortcut;
+    }, 250) as number;
+    return () => {
       if (shortcutTimer.current) window.clearTimeout(shortcutTimer.current);
+    };
+  }, [globalShortcut, form, saveShortcut]);
+
+  // AFK sensitivity
+  useEffect(() => {
+    if (!hydratedRef.current) return;
+    if (afkSensitivity === lastAfk.current) return;
+    if (afkTimer.current) window.clearTimeout(afkTimer.current);
+    afkTimer.current = window.setTimeout(async () => {
+      const ok = await form.trigger("afkSensitivity", { shouldFocus: false });
+      if (!ok) return;
+      try {
+        await commands.setAfkTimeout(AFK_SECONDS[afkSensitivity]);
+        lastAfk.current = afkSensitivity;
+      } catch (e) {
+        console.error("Failed to set AFK timeout: ", e);
+      }
+    }, 250) as number;
+    return () => {
       if (afkTimer.current) window.clearTimeout(afkTimer.current);
+    };
+  }, [afkSensitivity, form]);
+
+  // Tracked apps
+  useEffect(() => {
+    if (!hydratedRef.current) return;
+    const snap = JSON.stringify([...(trackedApps ?? [])].sort());
+    if (snap === lastTrackedJSON.current) return;
+    if (trackedTimer.current) window.clearTimeout(trackedTimer.current);
+    trackedTimer.current = window.setTimeout(async () => {
+      const ok = await form.trigger("trackedApps", { shouldFocus: false });
+      if (!ok) return;
+      try {
+        await commands.setTrackedApps(trackedApps ?? []);
+        lastTrackedJSON.current = snap;
+      } catch (e) {
+        console.error("Failed to save tracked apps: ", e);
+      }
+    }, 250) as number;
+    return () => {
       if (trackedTimer.current) window.clearTimeout(trackedTimer.current);
+    };
+  }, [trackedApps, form]);
+
+  // Theme
+  useEffect(() => {
+    if (!hydratedRef.current) return;
+    if (themeValue === lastTheme.current) return;
+    if (themeTimer.current) window.clearTimeout(themeTimer.current);
+    themeTimer.current = window.setTimeout(async () => {
+      const ok = await form.trigger("theme", { shouldFocus: false });
+      if (!ok) return;
+      try {
+        setTheme(themeValue);
+        lastTheme.current = themeValue;
+      } catch (e) {
+        console.error("Failed to set theme: ", e);
+      }
+    }, 200) as number;
+    return () => {
       if (themeTimer.current) window.clearTimeout(themeTimer.current);
     };
-  }, [form, saveShorcut, setTheme]);
+  }, [themeValue, form, setTheme]);
 
   return (
     <div className="mx-auto w-full max-w-2xl p-2">

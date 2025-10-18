@@ -2,42 +2,37 @@ import * as Dialog from "@radix-ui/react-dialog";
 import { usePermissions } from "@/hooks/usePermissions";
 import { Button } from "@skopio/ui";
 import { PermissionRow } from "./PermissionRow";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { isGranted } from "@/utils/data";
 
 const LOCALSTORAGE_KEY = "permission-dialog-seen";
 
+const readSeen = () => {
+  if (typeof window === "undefined") return false;
+  return !!localStorage.getItem(LOCALSTORAGE_KEY);
+};
+
 const PermissionsDialog = () => {
   const { summary, loading } = usePermissions();
-  const [open, setOpen] = useState(false);
+  const [seen, setSeen] = useState(readSeen);
 
-  useEffect(() => {
-    if (loading || !summary) return;
-
-    const needsAccessibility = !isGranted(summary.accessibility);
-    const needsInput = !isGranted(summary.inputMonitoring);
-    const needsBoth = needsAccessibility && needsInput;
-
-    if (needsBoth || !localStorage.getItem(LOCALSTORAGE_KEY)) {
-      setOpen(true);
-    }
-  }, [loading, summary]);
-
-  const handleClose = () => {
-    localStorage.setItem(LOCALSTORAGE_KEY, "1");
-    setOpen(false);
-  };
-
-  if (loading || !summary) return null;
-
-  const needsAccessibility = !isGranted(summary.accessibility);
-  const needsInput = !isGranted(summary.inputMonitoring);
+  const needsAccessibility = !!summary && !isGranted(summary.accessibility);
+  const needsInput = !!summary && !isGranted(summary.inputMonitoring);
   const needsAny = needsAccessibility || needsInput;
 
-  if (!needsAny) return null;
+  const shouldOpen = (needsAccessibility && needsInput) || !seen;
+
+  if (loading || !summary || !needsAny) return null;
+
+  const handleOpenChange = (nextOpen: boolean) => {
+    if (!nextOpen) {
+      localStorage.setItem(LOCALSTORAGE_KEY, "1");
+      setSeen(true);
+    }
+  };
 
   return (
-    <Dialog.Root defaultOpen open={open} onOpenChange={handleClose}>
+    <Dialog.Root defaultOpen open={shouldOpen} onOpenChange={handleOpenChange}>
       <Dialog.Portal>
         <Dialog.Overlay className="fixed inset-0 bg-foreground/40" />
         <Dialog.Content

@@ -1,4 +1,4 @@
-import SkeletonChart from "@/components/SkeletonChart";
+import SkeletonChart from "@/components/loading/SkeletonChart";
 
 interface ChartContainerProps {
   title?: string;

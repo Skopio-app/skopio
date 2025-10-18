@@ -1,8 +1,10 @@
 import { ResponsiveBarCanvas } from "@nivo/bar";
-import { useRef, useState, useEffect } from "react";
+import { useRef, useState, useEffect, useMemo, useCallback } from "react";
 import ChartTooltipPortal from "@/components/ChartTooltipPortal";
 import { formatDuration } from "@/utils/time";
 import { useChartColor, useCssVarColor } from "@/hooks/useChartColor";
+import { truncateValue } from "@/utils/data";
+import { BarChartData } from "@/types/chart";
 
 interface StackedBarChartProps {
   data: {
@@ -14,6 +16,8 @@ interface StackedBarChartProps {
   axisBottom?: boolean;
   axisLeft?: boolean;
 }
+
+const MAX_TOOLTIP_ENTRIES = 10;
 
 const StackedBarChart: React.FC<StackedBarChartProps> = ({
   data,
@@ -54,7 +58,72 @@ const StackedBarChart: React.FC<StackedBarChartProps> = ({
     };
   }, []);
 
-  const MAX_TOOLTIP_ENTRIES = 10;
+  const entriesByLabel = useMemo(() => {
+    const map = new Map<
+      string,
+      Array<{ key: string; value: number; displayKey: string }>
+    >();
+
+    for (const row of data) {
+      const label = row.label;
+      const entries = keys
+        .map((k) => ({ key: k, value: Number(row[k] ?? 0) }))
+        .filter(({ value }) => value > 0)
+        .sort((a, b) => b.value - a.value)
+        .slice(0, MAX_TOOLTIP_ENTRIES)
+        .map(({ key, value }) => ({
+          key,
+          value,
+          displayKey: truncateValue(key, 25),
+        }));
+
+      map.set(label, entries);
+    }
+    return map;
+  }, [data, keys]);
+
+  const renderTooltip = useCallback(
+    ({ data: pointData }: { data: BarChartData }) => {
+      if (!mousePos) return null;
+
+      const label = pointData.label;
+      const entries = entriesByLabel.get(label) ?? [];
+
+      return (
+        <ChartTooltipPortal
+          style={{
+            top: mousePos.y,
+            left: mousePos.x,
+            zIndex: 50,
+          }}
+        >
+          <div className="max-h-96 overflow-y-auto rounded-md border border-border bg-background px-4 py-3 text-sm shadow-lg text-foreground min-w-[200px] max-w-[320px]">
+            <div className="font-semibold mb-1">{label}</div>
+            {entries.map(({ value, displayKey }) => {
+              return (
+                <div
+                  key={displayKey}
+                  className="flex items-center gap-2 py-0.5"
+                >
+                  <span
+                    className="w-2.5 h-2.5 rounded-full inline-block shrink-0"
+                    style={{
+                      backgroundColor: getColorForKey(displayKey),
+                    }}
+                  />
+                  <span className="flex-1 text-xs">{displayKey}</span>
+                  <span className="text-muted-foreground text-xs">
+                    {formatDuration(value)}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </ChartTooltipPortal>
+      );
+    },
+    [entriesByLabel, getColorForKey, mousePos],
+  );
 
   // TODO: Reuse not available text
   if (!data.length) {
@@ -142,45 +211,7 @@ const StackedBarChart: React.FC<StackedBarChartProps> = ({
             },
           },
         }}
-        tooltip={({ data }) => {
-          const entries = Object.entries(data)
-            .filter(([key]) => key !== "label" && typeof data[key] === "number")
-            .map(([key, value]) => ({
-              key,
-              value: Number(value),
-            }))
-            .filter(({ value }) => value > 0)
-            .sort((a, b) => b.value - a.value)
-            .slice(0, MAX_TOOLTIP_ENTRIES);
-
-          if (!mousePos) return null;
-
-          return (
-            <ChartTooltipPortal
-              style={{
-                top: mousePos.y,
-                left: mousePos.x,
-                zIndex: 50,
-              }}
-            >
-              <div className="max-h-96 overflow-y-auto rounded-md border border-border bg-background px-4 py-3 text-sm shadow-lg text-foreground min-w-[200px] max-w-[320px]">
-                <div className="font-semibold mb-1">{data.label}</div>
-                {entries.map(({ key, value }) => (
-                  <div key={key} className="flex items-center gap-2 py-0.5">
-                    <span
-                      className="w-2.5 h-2.5 rounded-full inline-block shrink-0"
-                      style={{ backgroundColor: getColorForKey(key) }}
-                    />
-                    <span className="truncate flex-1 text-xs">{key}</span>
-                    <span className="text-muted-foreground text-xs">
-                      {formatDuration(value)}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </ChartTooltipPortal>
-          );
-        }}
+        tooltip={renderTooltip}
         enableLabel={false}
         labelSkipWidth={12}
         labelSkipHeight={12}

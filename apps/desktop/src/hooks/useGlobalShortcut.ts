@@ -28,7 +28,7 @@ export const useGlobalShortcut = () => {
     };
   }, []);
 
-  const saveShorcut = (text: string) => {
+  const saveShortcut = (text: string) => {
     setError(null);
     setShortcut(text);
     if (debounceRef.current) window.clearTimeout(debounceRef.current);
@@ -45,5 +45,5 @@ export const useGlobalShortcut = () => {
     }, 250) as number;
   };
 
-  return { shortcut, saveShorcut, loading, error };
+  return { shortcut, saveShortcut, loading, error };
 };

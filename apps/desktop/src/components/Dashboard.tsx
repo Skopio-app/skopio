@@ -13,6 +13,7 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarMenuSkeleton,
   SidebarProvider,
   SidebarTrigger,
 } from "@skopio/ui";
@@ -22,7 +23,6 @@ import { LAST_ACTIVE_TAB } from "@/utils/constants";
 import { Cog } from "lucide-react";
 import { commands, ServerStatus } from "@/types/tauri.gen";
 import { useServerStatus } from "@/hooks/useServerStatus";
-import { isDev } from "@/utils/environment";
 
 const DashboardLayout = () => {
   const navigate = useNavigate();
@@ -87,53 +87,60 @@ const DashboardLayout = () => {
               <SidebarMenu>
                 {tabExtensions.map((ext) => (
                   <SidebarMenuItem key={ext.manifest.id}>
-                    <SidebarMenuButton
-                      tooltip={{
-                        children: ext.manifest.description,
-                        hidden: true,
-                      }}
-                      isActive={location.pathname === "/tab/" + ext.manifest.id}
-                      onClick={() => {
-                        localStorage.setItem(LAST_ACTIVE_TAB, ext.manifest.id);
-                        navigate("/tab/" + ext.manifest.id);
-                      }}
-                    >
-                      <ext.manifest.icon />
-                      <span>{ext.manifest.name}</span>
-                    </SidebarMenuButton>
+                    {status.state === "running" ? (
+                      <SidebarMenuButton
+                        tooltip={{
+                          children: ext.manifest.description,
+                          hidden: true,
+                        }}
+                        isActive={
+                          location.pathname === "/tab/" + ext.manifest.id
+                        }
+                        onClick={() => {
+                          localStorage.setItem(
+                            LAST_ACTIVE_TAB,
+                            ext.manifest.id,
+                          );
+                          navigate("/tab/" + ext.manifest.id);
+                        }}
+                      >
+                        <ext.manifest.icon />
+                        <span>{ext.manifest.name}</span>
+                      </SidebarMenuButton>
+                    ) : (
+                      <SidebarMenuSkeleton />
+                    )}
                   </SidebarMenuItem>
                 ))}
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
         </SidebarContent>
-        {!isDev() && (
-          <SidebarFooter className="space-y-1">
-            <Separator />
-            <p className="text-xs text-muted-foreground flex items-center gap-2">
-              <span
-                className={cn(
-                  "inline-block h-2 w-2 rounded-full",
-                  status.state === "running"
-                    ? "bg-green-500 animate-pulse"
-                    : status.state === "offline" || status.state === "error"
-                      ? "bg-destructive"
-                      : "bg-yellow-500 animate-pulse",
-                )}
-              />
-              Server status: {renderStatus(status)}
-            </p>
+        <SidebarFooter className="space-y-1">
+          <Separator />
+          <p className="text-xs text-muted-foreground flex items-center gap-2">
+            <span
+              className={cn(
+                "inline-block h-2 w-2 rounded-full",
+                status.state === "running"
+                  ? "bg-green-500 animate-pulse"
+                  : status.state === "offline" || status.state === "error"
+                    ? "bg-destructive"
+                    : "bg-yellow-500 animate-pulse",
+              )}
+            />
+            Server status: {renderStatus(status)}
+          </p>
 
-            {status.state === "downloading" && (
-              <div className="mt-1 h-1 w-full bg-muted rounded">
-                <div
-                  className="h-1 bg-muted-foreground rounded"
-                  style={{ width: `${status.percent ?? 0}%` }}
-                />
-              </div>
-            )}
-          </SidebarFooter>
-        )}
+          {status.state === "downloading" && (
+            <div className="mt-1 h-1 w-full bg-muted rounded">
+              <div
+                className="h-1 bg-muted-foreground rounded"
+                style={{ width: `${status.percent ?? 0}%` }}
+              />
+            </div>
+          )}
+        </SidebarFooter>
       </Sidebar>
 
       <SidebarInset className="pt-10 h-dvh overflow-auto overscroll-contain">

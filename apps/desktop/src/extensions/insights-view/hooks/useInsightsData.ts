@@ -1,6 +1,11 @@
-import { useEffect, useState } from "react";
-import { commands, Group, InsightQueryPayload } from "@/types/tauri.gen";
+import {
+  commands,
+  Group,
+  InsightQueryPayload,
+  InsightResult,
+} from "@/types/tauri.gen";
 import { useYearFilter } from "../stores/useYearFilter";
+import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 export const useTopNInsights = ({
@@ -10,12 +15,12 @@ export const useTopNInsights = ({
   groupBy: Group;
   limit?: number;
 }) => {
-  const [data, setData] = useState<[string, number][]>([]);
-  const [loading, setLoading] = useState(true);
   const { year } = useYearFilter();
 
-  useEffect(() => {
-    const fetch = async () => {
+  type TopN = [string, number][];
+  const { data, isLoading, error } = useQuery({
+    queryKey: ["topN", year, limit, groupBy],
+    queryFn: async (): Promise<InsightResult> => {
       const query: InsightQueryPayload = {
         insightType: "topN",
         insightRange: year,
@@ -23,21 +28,16 @@ export const useTopNInsights = ({
         groupBy,
       };
 
-      try {
-        if (year.length === 0) return;
-        const result = await commands.fetchInsights(query);
-        if ("topN" in result) {
-          setData(result.topN);
-        }
-      } catch (err) {
-        toast.error(`Failed to fetch topN insights: ${err}`);
-      } finally {
-        setLoading(false);
-      }
-    };
+      return commands.fetchInsights(query);
+    },
+    select: (res): TopN => ("topN" in res ? res.topN : []),
+    enabled: Boolean(year),
+  });
 
-    fetch();
-  }, [limit, groupBy, year]);
+  if (error) {
+    toast.error(`Failed to fetch topN insights: ${(error as Error).message}`);
+  }
+  const parsed = data ?? [];
 
-  return { data, loading };
+  return { data: parsed, loading: isLoading };
 };

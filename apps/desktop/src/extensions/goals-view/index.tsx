@@ -11,7 +11,7 @@ const GoalsView = () => {
 
   useEffect(() => {
     fetchGoals();
-  }, []);
+  }, [fetchGoals]);
 
   if (loading) {
     return (
@@ -32,7 +32,9 @@ const GoalsView = () => {
 
       <div className="flex flex-col space-y-4 pl-3">
         {goals.length > 0 ? (
-          goals.map((goal) => <GoalDisplay key={goal.id} goal={goal} />)
+          goals
+            .sort((a, b) => a.id - b.id)
+            .map((goal) => <GoalDisplay key={goal.id} goal={goal} />)
         ) : (
           <p className="h-64 w-full flex items-center justify-center text-sm text-gray-500">
             No goals found

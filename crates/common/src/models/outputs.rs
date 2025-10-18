@@ -63,3 +63,8 @@ pub enum EventGroupResult {
     /// Events grouped by a group key (e.g., category, app, project, source, etc.)
     Grouped(Vec<EventGroup>),
 }
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct HealthStatus {
+    pub status: String,
+}

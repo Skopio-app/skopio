@@ -25,3 +25,4 @@ export * from "./components/popover";
 export * from "./components/slider";
 export * from "./components/context-menu";
 export * from "./components/form";
+export * from "./components/matrix";

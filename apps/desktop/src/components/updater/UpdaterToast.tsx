@@ -89,7 +89,7 @@ const showUpdaterToast = (meta: {
   const render = () =>
     toast.custom(
       () => (
-        <div className="w-[28rem] max-w-[90vw] rounded-xl border bg-sidebar p-3 shadow-lg">
+        <div className="w-[28rem] max-w-[90vw] rounded-xl border border-border bg-sidebar p-3 shadow-lg">
           <div className="flex items-start gap-2">
             <div className="flex-1">
               <p className="text-sm font-semibold text-foreground">
