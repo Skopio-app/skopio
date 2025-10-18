@@ -431,7 +431,6 @@ pub async fn ensure_server_ready(app: &AppHandle) -> Result<(), ServerCtlError> 
             set_status(app, ServerStatus::Starting);
             check_server_ready(MAX_WAIT).await?;
             set_status(app, ServerStatus::Running);
-            reload_window(app)?;
             Ok(())
         }
         Ok(false) => {
@@ -441,7 +440,6 @@ pub async fn ensure_server_ready(app: &AppHandle) -> Result<(), ServerCtlError> 
             }
             check_server_ready(MAX_WAIT).await?;
             set_status(app, ServerStatus::Running);
-            reload_window(app)?;
             Ok(())
         }
         Err(e) => {
@@ -515,11 +513,6 @@ async fn check_server_ready(max_wait: Duration) -> Result<(), ServerCtlError> {
         tokio::time::sleep(delay.min(remaining)).await;
         delay = (delay * 2).min(Duration::from_secs(1));
     }
-}
-
-fn reload_window(app: &AppHandle) -> Result<(), ServerCtlError> {
-    app.get_webview_window("main").unwrap().reload()?;
-    Ok(())
 }
 
 #[tauri::command]
