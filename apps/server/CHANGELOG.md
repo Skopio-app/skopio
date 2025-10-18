@@ -23,6 +23,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v0.1.4] - 2025-10-19
+
+### Changed
+
+- Add health status object in `/health` route to enhance server readiness check.
+
+---
+
 ## [v0.1.3] - 2025-09-30
 
 ### Fixed

@@ -23,6 +23,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v0.1.6] -2025-10-19
+
+### Added
+
+- Server readiness check and loading UI to avoid displaying an empty dashboard.
+- Stale data check to reload data display when window resumes focus.
+
+### Fixed
+
+- Branch selection dialog dark mode styling.
+
+---
+
 ## [v0.1.5] -2025-10-11
 
 ### Fixed
