@@ -821,6 +821,9 @@
   .bg-destructive {
     background-color: var(--color-destructive);
   }
+  .bg-foreground {
+    background-color: var(--color-foreground);
+  }
   .bg-green-500 {
     background-color: var(--color-green-500);
   }
@@ -829,6 +832,9 @@
   }
   .bg-muted {
     background-color: var(--color-muted);
+  }
+  .bg-muted-foreground {
+    background-color: var(--color-muted-foreground);
   }
   .bg-muted\/80 {
     background-color: var(--color-muted);

@@ -23,7 +23,7 @@ import {
   isValid as isValidDate,
   subDays,
 } from "date-fns";
-import SkeletonChart from "@/components/SkeletonChart";
+import SkeletonChart from "@/components/loading/SkeletonChart";
 import { toast } from "sonner";
 import { useEventSummary } from "./hooks/useEventSummary";
 

@@ -13,6 +13,7 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  SidebarMenuSkeleton,
   SidebarProvider,
   SidebarTrigger,
 } from "@skopio/ui";
@@ -87,20 +88,29 @@ const DashboardLayout = () => {
               <SidebarMenu>
                 {tabExtensions.map((ext) => (
                   <SidebarMenuItem key={ext.manifest.id}>
-                    <SidebarMenuButton
-                      tooltip={{
-                        children: ext.manifest.description,
-                        hidden: true,
-                      }}
-                      isActive={location.pathname === "/tab/" + ext.manifest.id}
-                      onClick={() => {
-                        localStorage.setItem(LAST_ACTIVE_TAB, ext.manifest.id);
-                        navigate("/tab/" + ext.manifest.id);
-                      }}
-                    >
-                      <ext.manifest.icon />
-                      <span>{ext.manifest.name}</span>
-                    </SidebarMenuButton>
+                    {status.state === "running" ? (
+                      <SidebarMenuButton
+                        tooltip={{
+                          children: ext.manifest.description,
+                          hidden: true,
+                        }}
+                        isActive={
+                          location.pathname === "/tab/" + ext.manifest.id
+                        }
+                        onClick={() => {
+                          localStorage.setItem(
+                            LAST_ACTIVE_TAB,
+                            ext.manifest.id,
+                          );
+                          navigate("/tab/" + ext.manifest.id);
+                        }}
+                      >
+                        <ext.manifest.icon />
+                        <span>{ext.manifest.name}</span>
+                      </SidebarMenuButton>
+                    ) : (
+                      <SidebarMenuSkeleton />
+                    )}
                   </SidebarMenuItem>
                 ))}
               </SidebarMenu>
