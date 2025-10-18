@@ -26,7 +26,7 @@ import { commands } from "@/types/tauri.gen";
 import PermissionsDialog from "@/components/settings/PermissionsDialog";
 import UpdaterToast from "@/components/updater/UpdaterToast";
 import ThemeProvider from "@/components/settings/ThemeProvider";
-import BorderBeam from "./components/BorderBeam";
+// import DinoLoading from "./components/DinoLoading";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -92,8 +92,8 @@ function App() {
         </ContextMenu>
       </ThemeProvider>
       <ReactQueryDevtools initialIsOpen={false} />
-      <BorderBeam loading={false} />
     </QueryClientProvider>
+    // <DinoLoading />
   );
 }
 
