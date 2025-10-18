@@ -16,7 +16,9 @@ use specta::Type;
 use tauri::{AppHandle, Manager, Runtime};
 use tauri_specta::Event;
 use thiserror::Error;
+use tokio::time::timeout;
 use tokio::{fs as tokiofs, io::AsyncWriteExt};
+use tracing::{debug, error};
 use zip::result::ZipError;
 use zip::ZipArchive;
 
@@ -129,6 +131,8 @@ struct ManifestAssets {
     #[allow(dead_code)]
     darwin_x86_64: Option<Asset>,
 }
+
+const MAX_WAIT: Duration = Duration::from_secs(120);
 
 fn server_root<R: Runtime>(app: &AppHandle<R>) -> Result<PathBuf, ServerCtlError> {
     let base = app.path().app_data_dir()?;
@@ -421,12 +425,11 @@ pub async fn ensure_server_ready(app: &AppHandle) -> Result<(), ServerCtlError> 
     set_status(app, ServerStatus::Checking);
 
     let is_running = status().is_ok();
-    let max_wait = Duration::from_secs(15);
 
     match check_and_update(app).await {
         Ok(true) => {
             set_status(app, ServerStatus::Starting);
-            check_server_ready(max_wait).await?;
+            check_server_ready(MAX_WAIT).await?;
             set_status(app, ServerStatus::Running);
             reload_window(app)?;
             Ok(())
@@ -436,7 +439,7 @@ pub async fn ensure_server_ready(app: &AppHandle) -> Result<(), ServerCtlError> 
             if !is_running {
                 start(app)?;
             }
-            check_server_ready(max_wait).await?;
+            check_server_ready(MAX_WAIT).await?;
             set_status(app, ServerStatus::Running);
             reload_window(app)?;
             Ok(())
@@ -477,19 +480,40 @@ async fn check_server_ready(max_wait: Duration) -> Result<(), ServerCtlError> {
     let mut delay = Duration::from_millis(100);
 
     loop {
-        if Instant::now().saturating_duration_since(start) >= max_wait {
+        if start.elapsed() >= max_wait {
             return Err(ServerCtlError::Io(io::Error::other(
                 "Server readiness timed out",
             )));
         }
 
-        match network::req_json::<HealthStatus, ()>("/health", None).await {
-            Ok(h) if h.status.eq_ignore_ascii_case("ok") => return Ok(()),
-            _ => {
-                tokio::time::sleep(delay).await;
-                delay = (delay * 2).min(Duration::from_secs(1));
+        let remaining = max_wait.saturating_sub(start.elapsed());
+        let per_attempt = remaining.min(Duration::from_secs(5));
+
+        let probe = timeout(
+            per_attempt,
+            network::req_json::<HealthStatus, ()>("/health", None),
+        )
+        .await;
+
+        match probe {
+            Err(_elapsed) => {
+                debug!(
+                    "Health probe timed out after {:?} (remaining budget {:?})",
+                    per_attempt, remaining
+                );
+            }
+            Ok(Err(e)) => {
+                error!("Health probe failed: {e}");
+            }
+            Ok(Ok(h)) => {
+                if h.status.eq_ignore_ascii_case("ok") {
+                    return Ok(());
+                }
             }
         }
+
+        tokio::time::sleep(delay.min(remaining)).await;
+        delay = (delay * 2).min(Duration::from_secs(1));
     }
 }
 
@@ -505,8 +529,8 @@ pub async fn get_server_status<R: Runtime>(app: AppHandle<R>) -> Result<ServerSt
     if !bin.exists() {
         return Ok(ServerStatus::Offline);
     }
-    match check_server_ready(Duration::from_secs(15)).await {
+    match check_server_ready(MAX_WAIT).await {
         Ok(_) => Ok(ServerStatus::Running),
-        Err(_) => Ok(ServerStatus::Offline),
+        Err(e) => Err(e.to_string()),
     }
 }

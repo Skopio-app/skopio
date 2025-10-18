@@ -26,7 +26,6 @@ import { commands } from "@/types/tauri.gen";
 import PermissionsDialog from "@/components/settings/PermissionsDialog";
 import UpdaterToast from "@/components/updater/UpdaterToast";
 import ThemeProvider from "@/components/settings/ThemeProvider";
-// import DinoLoading from "./components/DinoLoading";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -93,7 +92,6 @@ function App() {
       </ThemeProvider>
       <ReactQueryDevtools initialIsOpen={false} />
     </QueryClientProvider>
-    // <DinoLoading />
   );
 }
 

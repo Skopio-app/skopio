@@ -9,8 +9,15 @@ export const useServerStatus = () => {
     let unlisten: UnlistenFn;
 
     (async () => {
-      const current = await commands.getServerStatus();
-      setStatus(current);
+      try {
+        const current = await commands.getServerStatus();
+        setStatus(current);
+      } catch (err) {
+        setStatus({
+          state: "error",
+          message: err instanceof Error ? err.message : String(err),
+        });
+      }
 
       unlisten = await events.serverStatus.listen((e) => {
         setStatus(e.payload);
