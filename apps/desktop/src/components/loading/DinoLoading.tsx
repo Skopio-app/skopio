@@ -20,7 +20,7 @@ const dino = [
   [0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
   [0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
   [0, 0, 0, 0, 0, 1, 1, 1, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-  [0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+  [0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], // 18
   [0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
   [0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
 ];
@@ -93,9 +93,9 @@ const DinoLoading = ({
   const config = useMemo(
     () => ({
       dinoX: 5,
-      dinoBaseY: stageRows - 1 - dino.length - 1,
+      dinoBaseY: stageRows - 1 - dino.length,
       obstacleGap: Math.floor(stageCols / 2.5),
-      jumpArc: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 9, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0],
+      jumpArc: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0],
     }),
     [stageCols, stageRows],
   );
@@ -172,7 +172,7 @@ const DinoLoading = ({
 
     // Dino with jump logic
     let jumpOffset = 0;
-    const dinoFrontX = config.dinoX + 12;
+    const dinoFrontX = config.dinoX + 15;
     for (let rep = 0; rep < 3; rep++) {
       obstacles.forEach((_obs, i) => {
         const obsX =
