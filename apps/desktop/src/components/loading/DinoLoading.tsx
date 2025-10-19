@@ -20,7 +20,7 @@ const dino = [
   [0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
   [0, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
   [0, 0, 0, 0, 0, 1, 1, 1, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-  [0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0], // 18
+  [0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
   [0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
   [0, 0, 0, 0, 0, 1, 1, 0, 0, 0, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0],
 ];
@@ -172,7 +172,9 @@ const DinoLoading = ({
 
     // Dino with jump logic
     let jumpOffset = 0;
-    const dinoFrontX = config.dinoX + 15;
+    // Offset to the front of the dino sprite for collision detection (number of columns from dinoX)
+    const DINO_FRONT_OFFSET = 15;
+    const dinoFrontX = config.dinoX + DINO_FRONT_OFFSET;
     for (let rep = 0; rep < 3; rep++) {
       obstacles.forEach((_obs, i) => {
         const obsX =
