@@ -1,6 +1,6 @@
 [package]
 name = "Skopio"
-version = "0.1.5"
+version = "0.1.6"
 description = "A productivity tool to help track general app usage and coding stats."
 edition.workspace = true
 license.workspace = true
