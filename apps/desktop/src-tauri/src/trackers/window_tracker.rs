@@ -61,8 +61,8 @@ impl WindowTracker {
 
                     if should_send {
                         debug!(
-                            "Window switched to {} with title {}",
-                            window.app_name, window.title
+                            "Window switched to {} ({}) with title {}",
+                            window.app_name, window.bundle_id, window.title
                         );
                     }
                     last_window = Some(window.clone());

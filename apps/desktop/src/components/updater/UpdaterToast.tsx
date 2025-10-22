@@ -36,7 +36,7 @@ const mdComponents: Components = {
   a: (p: any) => (
     <a className="underline underline-offset-2 hover:opacity-80" {...p} />
   ),
-  hr: () => <div className="my-3 h-px w-full bg-background" />,
+  hr: () => <div className="my-3 h-px w-full bg-muted" />,
   code: ({ inline, className, children, ...props }: any) =>
     inline ? (
       <code
@@ -112,7 +112,7 @@ const showUpdaterToast = (meta: {
             <div className="mt-3 space-y-1.5">
               <div className="h-2 w-full overflow-hidden rounded-full bg-background">
                 <div
-                  className="h-full rounded-full bg-secondary-foreground transition-[width]"
+                  className="h-full rounded-full bg-foreground transition-[width]"
                   style={{ width: `${state.pct}%` }}
                 />
               </div>

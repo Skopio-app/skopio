@@ -1,5 +1,5 @@
 import { format } from "date-fns";
-import { useEffect, useMemo } from "react";
+import { Ref, useEffect, useMemo } from "react";
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
 import { Layout, Responsive, WidthProvider } from "react-grid-layout";
@@ -15,6 +15,7 @@ import { useTotalTime } from "./hooks/useTotalTime";
 import { usePersistentLayout } from "./hooks/usePersistentLayout";
 import { formatDuration } from "@/utils/time";
 import { useDateRangeParams } from "@/hooks/useDateRangesParams";
+import { ChevronRight } from "lucide-react";
 
 const ResponsiveGridLayout = WidthProvider(
   Responsive,
@@ -129,6 +130,14 @@ const DashboardView = () => {
           isDraggable
           useCSSTransforms
           draggableHandle="#widget-drag-handle"
+          resizeHandle={(_handleAxis: any, ref: Ref<HTMLDivElement>) => (
+            <div
+              ref={ref}
+              className="absolute bottom-1 right-1 w-3 h-3 text-muted-foreground rounded cursor-se-resize"
+            >
+              <ChevronRight className="rotate-45 size-3" strokeWidth={3.5} />
+            </div>
+          )}
           onLayoutChange={(currLayout: Layout[]) => saveLayout(currLayout)}
         >
           {layoutChildren}

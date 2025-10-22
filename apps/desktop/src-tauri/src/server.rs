@@ -59,7 +59,7 @@ pub enum ServerManagerError {
 }
 
 #[derive(Debug, Clone, Serialize, Type, Event)]
-#[serde(tag = "state", rename_all = "kebab-case")]
+#[serde(tag = "state", rename_all = "camelCase")]
 pub enum ServerStatus {
     Offline,
     Checking,
