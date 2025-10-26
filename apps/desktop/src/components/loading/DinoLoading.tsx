@@ -216,7 +216,6 @@ const DinoLoading = ({
     return frame;
   }, [worldX, stageCols, stageRows, config]);
 
-  // Simple SVG renderer
   const cellSize = size;
   const cellGap = gap;
   const width = stageCols * (cellSize + cellGap) - cellGap;
