@@ -7,6 +7,7 @@ use common::{
     },
     time::{TimeBucket, TimeRange},
 };
+use sqlx::{QueryBuilder, Sqlite};
 
 use crate::{
     error::DBError,
@@ -200,23 +201,25 @@ impl SummaryQueryBuilder {
     /// Executes a query that returns only the total time (in seconds)
     /// for the current filters
     pub async fn execute_total_time(&self, db: &DBContext) -> Result<i64, DBError> {
-        let mut query = String::from("SELECT SUM(duration) as total_seconds FROM events");
-        append_standard_joins(&mut query, None);
-        query.push_str(" WHERE 1=1");
+        let mut qb =
+            QueryBuilder::<Sqlite>::new("SELECT SUM(duration) as total_seconds FROM events");
+
+        qb.push(" ");
+        append_standard_joins(&mut qb, None);
+        qb.push(" WHERE 1=1");
 
         append_date_range(
-            &mut query,
+            &mut qb,
             self.filters.start,
             self.filters.end,
             "events.timestamp",
             "events.end_timestamp",
         );
 
-        append_all_filters(&mut query, self.filters.clone());
+        append_all_filters(&mut qb, &self.filters);
 
-        let result = sqlx::query_scalar::<_, Option<i64>>(&query)
-            .fetch_one(db.pool())
-            .await?;
+        let query = qb.build_query_scalar::<Option<i64>>();
+        let result = query.fetch_one(db.pool()).await?;
 
         Ok(result.unwrap_or(0))
     }
@@ -238,32 +241,37 @@ impl SummaryQueryBuilder {
             " , NULL AS group_meta "
         };
 
-        let mut base_query = format!(
-            "SELECT {time_bucket_expr} AS bucket, \
-                    {group_key} AS group_key, \
-                    SUM(duration) as total_seconds \
-                    {meta_select} \
-            FROM events",
-        );
-        append_standard_joins(&mut base_query, inner_tbl);
-        base_query.push_str(" WHERE 1=1");
+        let mut qb = QueryBuilder::<Sqlite>::new("SELECT ");
+        qb.push(time_bucket_expr)
+            .push(" AS bucket, ")
+            .push(group_key)
+            .push(" AS group_key, SUM(duration) AS total_seconds")
+            .push(meta_select)
+            .push(" FROM events ");
+
+        append_standard_joins(&mut qb, inner_tbl);
+        qb.push(" WHERE 1=1");
 
         append_date_range(
-            &mut base_query,
+            &mut qb,
             self.filters.start,
             self.filters.end,
             "events.timestamp",
             "events.end_timestamp",
         );
-        append_all_filters(&mut base_query, self.filters.clone());
+        append_all_filters(&mut qb, &self.filters);
 
-        base_query.push_str(&format!(" GROUP BY {time_bucket_expr}, {group_key}"));
+        qb.push(" GROUP BY ")
+            .push(time_bucket_expr)
+            .push(", ")
+            .push(group_key);
 
-        let rows = sqlx::query_as::<_, RawBucketRow>(&base_query)
+        let rows = qb
+            .build_query_as::<RawBucketRow>()
             .fetch_all(db.pool())
             .await?;
 
-        let mut records = Vec::new();
+        let mut records = Vec::with_capacity(rows.len());
 
         for row in rows {
             let mut grouped_values = HashMap::new();
