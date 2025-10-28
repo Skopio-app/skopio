@@ -15,7 +15,7 @@ use crate::{
     server::utils::{
         query::{
             append_all_filters, append_date_range, append_standard_joins, get_time_bucket_expr,
-            group_key_info,
+            group_key_info, push_overlap_bind,
         },
         summary_filter::SummaryFilters,
     },
@@ -201,10 +201,13 @@ impl SummaryQueryBuilder {
     /// Executes a query that returns only the total time (in seconds)
     /// for the current filters
     pub async fn execute_total_time(&self, db: &DBContext) -> Result<i64, DBError> {
-        let mut qb =
-            QueryBuilder::<Sqlite>::new("SELECT SUM(duration) as total_seconds FROM events");
+        let start = self.filters.start.unwrap_or(i64::MIN);
+        let end = self.filters.end.unwrap_or(i64::MAX);
 
-        qb.push(" ");
+        let mut qb = QueryBuilder::<Sqlite>::new("SELECT SUM(");
+        push_overlap_bind(&mut qb, start, end);
+        qb.push(") AS total_seconds FROM events ");
+
         append_standard_joins(&mut qb, None);
         qb.push(" WHERE 1=1");
 

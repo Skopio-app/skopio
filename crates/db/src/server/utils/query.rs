@@ -130,3 +130,55 @@ pub fn get_time_bucket_expr(bucket: Option<TimeBucket>) -> &'static str {
         None => "'Unbucketed'",
     }
 }
+
+pub fn push_overlap_bind(qb: &mut QueryBuilder<Sqlite>, start: i64, end: i64) {
+    qb.push("max(0, min(events.end_timestamp, ")
+        .push_bind(end)
+        .push(") - max(events.timestamp, ")
+        .push_bind(start)
+        .push("))");
+}
+
+pub fn push_overlap_expr<'qb>(
+    qb: &mut QueryBuilder<'qb, Sqlite>,
+    start_expr: &'qb str,
+    end_expr: &'qb str,
+) {
+    qb.push("max(0, min(events.end_timestamp, ")
+        .push(end_expr)
+        .push(") - max(events.timestamp, ")
+        .push(start_expr)
+        .push("))");
+}
+
+pub fn bucket_step_seconds(bucket: Option<TimeBucket>) -> i64 {
+    match bucket {
+        Some(TimeBucket::Hour) => 3600,
+        Some(TimeBucket::Day) => 86400,
+        Some(TimeBucket::Week) => 604800,
+        Some(TimeBucket::Month) => 2419200,
+        Some(TimeBucket::Year) => 29030400,
+        _ => 86400,
+    }
+}
+
+pub fn push_bucket_label_expr(qb: &mut QueryBuilder<Sqlite>, bucket: Option<TimeBucket>) {
+    match bucket {
+        Some(TimeBucket::Hour) => qb.push(
+            "strftime('%Y-%m-%d %H:00:00', datetime(buckets.start_ts,'unixepoch','localtime'))",
+        ),
+        Some(TimeBucket::Day) => {
+            qb.push("strftime('%Y-%m-%d', datetime(buckets.start_ts,'unixepoch','localtime'))")
+        }
+        Some(TimeBucket::Week) => {
+            qb.push("strftime('%Y-W%W', datetime(buckets.start_ts,'unixepoch','localtime'))")
+        }
+        Some(TimeBucket::Month) => {
+            qb.push("strftime('%Y-%m', datetime(buckets.start_ts,'unixepoch','localtime'))")
+        }
+        Some(TimeBucket::Year) => {
+            qb.push("strftime('%Y', datetime(buckets.start_ts,'unixepoch','localtime'))")
+        }
+        None => qb.push("'Unbucketed'"),
+    };
+}
