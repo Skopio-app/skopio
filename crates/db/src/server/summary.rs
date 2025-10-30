@@ -14,8 +14,8 @@ use crate::{
     models::BucketTimeSummary,
     server::utils::{
         query::{
-            append_all_filters, append_date_range, append_standard_joins, get_time_bucket_expr,
-            group_key_info, push_overlap_bind,
+            append_all_filters, append_date_range, append_standard_joins, bucket_step_seconds,
+            group_key_info, push_bucket_label_expr, push_overlap_bind, push_overlap_expr,
         },
         summary_filter::SummaryFilters,
     },
@@ -234,25 +234,63 @@ impl SummaryQueryBuilder {
         db: &DBContext,
     ) -> Result<Vec<BucketTimeSummary>, DBError> {
         let (group_key, inner_tbl) = group_key_info(self.filters.group_by);
-
-        let time_bucket_expr = get_time_bucket_expr(self.filters.time_bucket);
-
         let needs_entity_type = matches!(self.filters.group_by, Some(Group::Entity));
-        let meta_select = if needs_entity_type {
-            ", entities.type AS group_meta "
-        } else {
-            " , NULL AS group_meta "
-        };
 
-        let mut qb = QueryBuilder::<Sqlite>::new("SELECT ");
-        qb.push(time_bucket_expr)
-            .push(" AS bucket, ")
+        let range_start = self.filters.start.unwrap_or(i64::MIN);
+        let range_end = self.filters.end.unwrap_or(i64::MAX);
+        let step = bucket_step_seconds(self.filters.time_bucket);
+
+        let mut qb = QueryBuilder::<Sqlite>::new(
+            "WITH RECURSIVE buckets(start_ts, end_ts) AS ( \
+             SELECT ",
+        );
+        qb.push_bind(range_start)
+            .push(", MIN(")
+            .push_bind(range_end)
+            .push(", ")
+            .push_bind(range_start)
+            .push(" + ")
+            .push(step)
+            .push(
+                ") \
+         UNION ALL \
+             SELECT end_ts, MIN(",
+            )
+            .push_bind(range_end)
+            .push(", end_ts + ")
+            .push(step)
+            .push(
+                ") \
+             FROM buckets \
+             WHERE end_ts < ",
+            )
+            .push_bind(range_end)
+            .push(") ");
+
+        qb.push("SELECT ");
+        push_bucket_label_expr(&mut qb, self.filters.time_bucket);
+        qb.push(" AS bucket, ")
             .push(group_key)
-            .push(" AS group_key, SUM(duration) AS total_seconds")
-            .push(meta_select)
-            .push(" FROM events ");
+            .push(" AS group_key, ")
+            .push("SUM(");
+        push_overlap_expr(&mut qb, "buckets.start_ts", "buckets.end_ts");
+        qb.push(") AS total_seconds");
+
+        if needs_entity_type {
+            qb.push(", entities.type AS group_meta ");
+        } else {
+            qb.push(", NULL AS group_meta ");
+        }
+
+        qb.push(
+            " FROM buckets \
+              JOIN events \
+                ON events.end_timestamp > buckets.start_ts \
+               AND events.timestamp    < buckets.end_ts ",
+        );
 
         append_standard_joins(&mut qb, inner_tbl);
+
         qb.push(" WHERE 1=1");
 
         append_date_range(
@@ -262,12 +300,12 @@ impl SummaryQueryBuilder {
             "events.timestamp",
             "events.end_timestamp",
         );
+
         append_all_filters(&mut qb, &self.filters);
 
-        qb.push(" GROUP BY ")
-            .push(time_bucket_expr)
-            .push(", ")
-            .push(group_key);
+        qb.push(" GROUP BY ");
+        push_bucket_label_expr(&mut qb, self.filters.time_bucket);
+        qb.push(", ").push(group_key);
 
         let rows = qb
             .build_query_as::<RawBucketRow>()
@@ -275,7 +313,6 @@ impl SummaryQueryBuilder {
             .await?;
 
         let mut records = Vec::with_capacity(rows.len());
-
         for row in rows {
             let mut grouped_values = HashMap::new();
             grouped_values.insert(row.group_key, row.total_seconds);
