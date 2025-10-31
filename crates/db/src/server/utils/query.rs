@@ -129,46 +129,24 @@ pub fn group_key_info(group: Option<Group>) -> (&'static str, Option<&'static st
     }
 }
 
-/// Formats a SQLite-compatible time bucket expression based on the bucket type.
-pub fn get_time_bucket_expr(bucket: Option<TimeBucket>) -> &'static str {
-    match bucket {
-        Some(TimeBucket::Hour) => {
-            "strftime('%Y-%m-%d %H:%M:%S', datetime(events.timestamp, 'unixepoch', 'localtime'))"
-        }
-        Some(TimeBucket::Day) => {
-            "strftime('%Y-%m-%d', datetime(events.timestamp, 'unixepoch', 'localtime'))"
-        }
-        Some(TimeBucket::Week) => {
-            "strftime('%Y-W%W', datetime(events.timestamp, 'unixepoch', 'localtime'))"
-        }
-        Some(TimeBucket::Month) => {
-            "strftime('%Y-%m', datetime(events.timestamp, 'unixepoch', 'localtime'))"
-        }
-        Some(TimeBucket::Year) => {
-            "strftime('%Y', datetime(events.timestamp, 'unixepoch', 'localtime'))"
-        }
-        None => "'Unbucketed'",
-    }
-}
-
-pub fn push_overlap_bind(qb: &mut QueryBuilder<Sqlite>, start: i64, end: i64) {
-    qb.push("max(0, min(events.end_timestamp, ")
-        .push_bind(end)
-        .push(") - max(events.timestamp, ")
-        .push_bind(start)
-        .push("))");
-}
-
-pub fn push_overlap_expr<'qb>(
-    qb: &mut QueryBuilder<'qb, Sqlite>,
-    start_expr: &'qb str,
-    end_expr: &'qb str,
-) {
-    qb.push("max(0, min(events.end_timestamp, ")
-        .push(end_expr)
-        .push(") - max(events.timestamp, ")
-        .push(start_expr)
-        .push("))");
+/// Appends an SQL expression that computes the time overlap (in seconds)
+/// between an event’s active range (`events.timestamp` .. `events.end_timestamp`)
+/// and a given interval defined by `push_start` and `push_end`.
+/// The expression yields `max(0, min(end_event, end_range) - max(start_event, start_range))`,
+/// ensuring only positive (actual overlapping) durations are counted.
+pub fn push_overlap_with<FStart, FEnd>(
+    qb: &mut QueryBuilder<Sqlite>,
+    push_start: FStart,
+    push_end: FEnd,
+) where
+    FStart: FnOnce(&mut QueryBuilder<Sqlite>),
+    FEnd: FnOnce(&mut QueryBuilder<Sqlite>),
+{
+    qb.push("max(0, min(events.end_timestamp, ");
+    push_end(qb);
+    qb.push(") - max(events.timestamp, ");
+    push_start(qb);
+    qb.push("))");
 }
 
 pub fn bucket_step(bucket: Option<TimeBucket>) -> BucketStep {
@@ -182,6 +160,7 @@ pub fn bucket_step(bucket: Option<TimeBucket>) -> BucketStep {
     }
 }
 
+/// Formats a SQLite-compatible time bucket expression based on the bucket type.
 pub fn push_bucket_label_expr(qb: &mut QueryBuilder<Sqlite>, bucket: Option<TimeBucket>) {
     match bucket {
         Some(TimeBucket::Hour) => qb.push(
@@ -203,36 +182,24 @@ pub fn push_bucket_label_expr(qb: &mut QueryBuilder<Sqlite>, bucket: Option<Time
     };
 }
 
-/// Pushes an expression that computes the next bucket end from a *column/expression*.
-/// Example output (Month): strftime('%s', datetime(buckets.start_ts,'unixepoch','localtime','+1 month'))
-pub fn push_next_end_from_expr(qb: &mut QueryBuilder<Sqlite>, start_expr: &str, step: &BucketStep) {
+/// Appends an SQL expression that computes the next bucket’s end timestamp
+/// based on a given start (pushed by `push_start`) and a `BucketStep`.
+/// Supports both fixed‐interval (seconds) and calendar‐aligned (`+1 month`, `+1 year`, etc.) steps.
+pub fn push_next_end_with<F>(qb: &mut QueryBuilder<Sqlite>, push_start: F, step: &BucketStep)
+where
+    F: FnOnce(&mut QueryBuilder<Sqlite>),
+{
     match step {
         BucketStep::Seconds(n) => {
-            qb.push(start_expr).push(" + ").push(*n);
+            push_start(qb);
+            qb.push(" + ").push(*n);
         }
         BucketStep::Calendar(modif) => {
-            qb.push("strftime('%s', datetime(")
-                .push(start_expr)
-                .push(", 'unixepoch', 'localtime', '")
+            qb.push("strftime('%s', datetime(");
+            push_start(qb);
+            qb.push(", 'unixepoch', 'localtime', '")
                 .push(modif)
-                .push("'))'");
-        }
-    }
-}
-
-/// Pushes an expression that computes the next bucket end from a *bound value*.
-/// Example output (Month): strftime('%s', datetime(?,'unixepoch','localtime','+1 month'))
-pub fn push_next_end_from_bind(qb: &mut QueryBuilder<Sqlite>, start_bind: i64, step: &BucketStep) {
-    match step {
-        BucketStep::Seconds(n) => {
-            qb.push_bind(start_bind).push(" + ").push(*n);
-        }
-        BucketStep::Calendar(modif) => {
-            qb.push("strftime('%s', datetime(")
-                .push_bind(start_bind)
-                .push(", 'unixepoch', 'localtime', '")
-                .push(modif)
-                .push("'))'");
+                .push("'))");
         }
     }
 }

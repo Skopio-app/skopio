@@ -14,8 +14,8 @@ use crate::{
     models::BucketTimeSummary,
     server::utils::{
         query::{
-            bucket_step, group_key_info, push_bucket_label_expr, push_next_end_from_bind,
-            push_next_end_from_expr, push_overlap_bind, push_overlap_expr, QueryBuilderExt,
+            bucket_step, group_key_info, push_bucket_label_expr, push_next_end_with,
+            push_overlap_with, QueryBuilderExt,
         },
         summary_filter::SummaryFilters,
     },
@@ -205,7 +205,15 @@ impl SummaryQueryBuilder {
         let end = self.filters.end.unwrap_or(i64::MAX);
 
         let mut qb = QueryBuilder::<Sqlite>::new("SELECT SUM(");
-        push_overlap_bind(&mut qb, start, end);
+        push_overlap_with(
+            &mut qb,
+            |q| {
+                q.push_bind(start);
+            },
+            |q| {
+                q.push_bind(end);
+            },
+        );
         qb.push(") AS total_seconds FROM events ");
 
         qb.append_standard_joins(None);
@@ -245,7 +253,13 @@ impl SummaryQueryBuilder {
             .push(", MIN(")
             .push_bind(range_end)
             .push(", ");
-        push_next_end_from_bind(&mut qb, range_start, &step);
+        push_next_end_with(
+            &mut qb,
+            |q| {
+                q.push_bind(range_start);
+            },
+            &step,
+        );
         qb.push(
             ") \
          UNION ALL \
@@ -254,7 +268,13 @@ impl SummaryQueryBuilder {
         .push_bind(range_end)
         .push(", ");
 
-        push_next_end_from_expr(&mut qb, "end_ts", &step);
+        push_next_end_with(
+            &mut qb,
+            |q| {
+                q.push("end_ts");
+            },
+            &step,
+        );
         qb.push(
             ") \
              FROM buckets \
@@ -269,7 +289,15 @@ impl SummaryQueryBuilder {
             .push(group_key)
             .push(" AS group_key, ")
             .push("SUM(");
-        push_overlap_expr(&mut qb, "buckets.start_ts", "buckets.end_ts");
+        push_overlap_with(
+            &mut qb,
+            |q| {
+                q.push("buckets.start_ts");
+            },
+            |q| {
+                q.push("buckets.end_ts");
+            },
+        );
         qb.push(") AS total_seconds");
 
         if needs_entity_type {
