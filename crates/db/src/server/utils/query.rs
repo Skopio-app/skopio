@@ -8,96 +8,111 @@ pub enum BucketStep {
     Calendar(&'static str), // SQLite date modifier "+7 days" | "+1 month" | "+1 year"
 }
 
-/// Appends a date range filter to the query using the specified start and end field names.
-/// Dates are formatted as RFC3339 (ISO 8601) to ensure proper string comparison.
-pub fn append_date_range(
-    qb: &mut QueryBuilder<Sqlite>,
-    start: Option<i64>,
-    end: Option<i64>,
-    start_field: &str,
-    end_field: &str,
-) {
-    if start.is_some() || end.is_some() {
-        qb.push(" AND (1=1");
-        if let Some(s) = start {
-            qb.push(" AND ").push(end_field).push(" > ").push_bind(s);
-        }
-        if let Some(e) = end {
-            qb.push(" AND ").push(start_field).push(" < ").push_bind(e);
-        }
-        qb.push(")");
-    }
+pub trait QueryBuilderExt<'qb> {
+    fn append_date_range(
+        &mut self,
+        start: Option<i64>,
+        end: Option<i64>,
+        start_field: &str,
+        end_field: &str,
+    );
+
+    fn append_filter_list(&mut self, field: &str, values: &'qb [String]);
+    fn append_all_filters(&mut self, filters: &'qb SummaryFilters);
+    fn append_standard_joins(&mut self, inner_join: Option<&str>);
 }
 
-/// Appends an `IN (...)` filter to the query if the list is not empty.
-pub fn append_filter_list<'qb>(
-    qb: &mut QueryBuilder<'qb, Sqlite>,
-    field: &str,
-    values: &'qb [String],
-) {
-    if values.is_empty() {
-        return;
-    }
-
-    qb.push(" AND ").push(field).push(" IN (");
-    {
-        let mut sep = qb.separated(", ");
-        for v in values {
-            sep.push_bind(v);
+impl<'qb> QueryBuilderExt<'qb> for QueryBuilder<'qb, Sqlite> {
+    /// Appends a date range filter to the query using the specified start and end field names.
+    /// Dates are formatted as RFC3339 (ISO 8601) to ensure proper string comparison.
+    fn append_date_range(
+        &mut self,
+        start: Option<i64>,
+        end: Option<i64>,
+        start_field: &str,
+        end_field: &str,
+    ) {
+        if start.is_some() || end.is_some() {
+            self.push(" AND (1=1");
+            if let Some(s) = start {
+                self.push(" AND ").push(end_field).push(" > ").push_bind(s);
+            }
+            if let Some(e) = end {
+                self.push(" AND ")
+                    .push(start_field)
+                    .push(" < ")
+                    .push_bind(e);
+            }
+            self.push(")");
         }
     }
-    qb.push(")");
-}
 
-/// Appends a full set of optional filters (apps, projects, categories, etc.)
-/// using the appropriate field names.
-pub fn append_all_filters<'qb>(qb: &mut QueryBuilder<'qb, Sqlite>, filters: &'qb SummaryFilters) {
-    if let Some(apps) = &filters.apps {
-        append_filter_list(qb, "apps.name", apps);
-    }
-    if let Some(projects) = &filters.projects {
-        append_filter_list(qb, "projects.name", projects);
-    }
-    if let Some(categories) = &filters.categories {
-        append_filter_list(qb, "categories.name", categories);
-    }
-    if let Some(branches) = &filters.branches {
-        append_filter_list(qb, "branches.name", branches);
-    }
-    if let Some(entities) = &filters.entities {
-        append_filter_list(qb, "entities.name", entities);
-    }
-    if let Some(languages) = &filters.languages {
-        append_filter_list(qb, "languages.name", languages);
-    }
-}
-
-/// Appends JOIN clauses for events to resolve all foreign keys.
-/// `inner_join` indicates which related table (if any) should be INNER JOINed
-/// instead of LEFT JOINed (i.e., the table that supplies the group_key).
-pub fn append_standard_joins(qb: &mut QueryBuilder<Sqlite>, inner_join: Option<&str>) {
-    let j = |tbl: &str| {
-        if inner_join == Some(tbl) {
-            " JOIN "
-        } else {
-            " LEFT JOIN "
+    /// Appends an `IN (...)` filter to the query if the list is not empty.
+    fn append_filter_list(&mut self, field: &str, values: &'qb [String]) {
+        if values.is_empty() {
+            return;
         }
-    };
 
-    qb.push(j("apps"))
-        .push("apps ON events.app_id = apps.id")
-        .push(j("projects"))
-        .push("projects ON events.project_id = projects.id")
-        .push(j("entities"))
-        .push("entities ON events.entity_id = entities.id")
-        .push(j("branches"))
-        .push("branches ON events.branch_id = branches.id")
-        .push(j("categories"))
-        .push("categories ON events.category_id = categories.id")
-        .push(j("languages"))
-        .push("languages ON events.language_id = languages.id")
-        .push(j("sources"))
-        .push("sources ON events.source_id = sources.id");
+        self.push(" AND ").push(field).push(" IN (");
+        {
+            let mut sep = self.separated(", ");
+            for v in values {
+                sep.push_bind(v);
+            }
+        }
+        self.push(")");
+    }
+
+    /// Appends a full set of optional filters (apps, projects, categories, etc.)
+    /// using the appropriate field names.
+    fn append_all_filters(&mut self, filters: &'qb SummaryFilters) {
+        if let Some(apps) = &filters.apps {
+            self.append_filter_list("apps.name", apps);
+        }
+        if let Some(projects) = &filters.projects {
+            self.append_filter_list("projects.name", projects);
+        }
+        if let Some(categories) = &filters.categories {
+            self.append_filter_list("categories.name", categories);
+        }
+        if let Some(branches) = &filters.branches {
+            self.append_filter_list("branches.name", branches);
+        }
+        if let Some(entities) = &filters.entities {
+            self.append_filter_list("entities.name", entities);
+        }
+        if let Some(languages) = &filters.languages {
+            self.append_filter_list("languages.name", languages);
+        }
+    }
+
+    /// Appends JOIN clauses for events to resolve all foreign keys.
+    /// `inner_join` indicates which related table (if any) should be INNER JOINed
+    /// instead of LEFT JOINed (i.e., the table that supplies the group_key).
+    fn append_standard_joins(&mut self, inner_join: Option<&str>) {
+        let j = |tbl: &str| {
+            if inner_join == Some(tbl) {
+                " JOIN "
+            } else {
+                " LEFT JOIN "
+            }
+        };
+
+        self.push(j("apps"))
+            .push("apps ON events.app_id = apps.id")
+            .push(j("projects"))
+            .push("projects ON events.project_id = projects.id")
+            .push(j("entities"))
+            .push("entities ON events.entity_id = entities.id")
+            .push(j("branches"))
+            .push("branches ON events.branch_id = branches.id")
+            .push(j("categories"))
+            .push("categories ON events.category_id = categories.id")
+            .push(j("languages"))
+            .push("languages ON events.language_id = languages.id")
+            .push(j("sources"))
+            .push("sources ON events.source_id = sources.id");
+    }
 }
 
 /// Returns (group_key_sql, inner_join_table_name)
@@ -188,6 +203,8 @@ pub fn push_bucket_label_expr(qb: &mut QueryBuilder<Sqlite>, bucket: Option<Time
     };
 }
 
+/// Pushes an expression that computes the next bucket end from a *column/expression*.
+/// Example output (Month): strftime('%s', datetime(buckets.start_ts,'unixepoch','localtime','+1 month'))
 pub fn push_next_end_from_expr(qb: &mut QueryBuilder<Sqlite>, start_expr: &str, step: &BucketStep) {
     match step {
         BucketStep::Seconds(n) => {
@@ -203,6 +220,8 @@ pub fn push_next_end_from_expr(qb: &mut QueryBuilder<Sqlite>, start_expr: &str, 
     }
 }
 
+/// Pushes an expression that computes the next bucket end from a *bound value*.
+/// Example output (Month): strftime('%s', datetime(?,'unixepoch','localtime','+1 month'))
 pub fn push_next_end_from_bind(qb: &mut QueryBuilder<Sqlite>, start_bind: i64, step: &BucketStep) {
     match step {
         BucketStep::Seconds(n) => {

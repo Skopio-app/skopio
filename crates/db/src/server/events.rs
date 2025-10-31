@@ -11,9 +11,7 @@ use crate::{
     error::DBError,
     server::{
         summary::SummaryQueryBuilder,
-        utils::query::{
-            append_all_filters, append_date_range, append_standard_joins, group_key_info,
-        },
+        utils::query::{group_key_info, QueryBuilderExt},
     },
     DBContext,
 };
@@ -106,17 +104,16 @@ impl SummaryQueryBuilder {
         }
 
         qb.push(" FROM events ");
-        append_standard_joins(&mut qb, inner_tbl);
+        qb.append_standard_joins(inner_tbl);
 
         qb.push(" WHERE 1=1");
-        append_date_range(
-            &mut qb,
+        qb.append_date_range(
             self.filters.start,
             self.filters.end,
             "events.timestamp",
             "events.end_timestamp",
         );
-        append_all_filters(&mut qb, &self.filters);
+        qb.append_all_filters(&self.filters);
 
         qb.push(" ORDER BY ");
         if is_grouped {

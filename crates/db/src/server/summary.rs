@@ -14,9 +14,8 @@ use crate::{
     models::BucketTimeSummary,
     server::utils::{
         query::{
-            append_all_filters, append_date_range, append_standard_joins, bucket_step,
-            group_key_info, push_bucket_label_expr, push_next_end_from_bind,
-            push_next_end_from_expr, push_overlap_bind, push_overlap_expr,
+            bucket_step, group_key_info, push_bucket_label_expr, push_next_end_from_bind,
+            push_next_end_from_expr, push_overlap_bind, push_overlap_expr, QueryBuilderExt,
         },
         summary_filter::SummaryFilters,
     },
@@ -209,18 +208,17 @@ impl SummaryQueryBuilder {
         push_overlap_bind(&mut qb, start, end);
         qb.push(") AS total_seconds FROM events ");
 
-        append_standard_joins(&mut qb, None);
+        qb.append_standard_joins(None);
         qb.push(" WHERE 1=1");
 
-        append_date_range(
-            &mut qb,
+        qb.append_date_range(
             self.filters.start,
             self.filters.end,
             "events.timestamp",
             "events.end_timestamp",
         );
 
-        append_all_filters(&mut qb, &self.filters);
+        qb.append_all_filters(&self.filters);
 
         let query = qb.build_query_scalar::<Option<i64>>();
         let result = query.fetch_one(db.pool()).await?;
@@ -287,19 +285,18 @@ impl SummaryQueryBuilder {
                AND events.timestamp    < buckets.end_ts ",
         );
 
-        append_standard_joins(&mut qb, inner_tbl);
+        qb.append_standard_joins(inner_tbl);
 
         qb.push(" WHERE 1=1");
 
-        append_date_range(
-            &mut qb,
+        qb.append_date_range(
             self.filters.start,
             self.filters.end,
             "events.timestamp",
             "events.end_timestamp",
         );
 
-        append_all_filters(&mut qb, &self.filters);
+        qb.append_all_filters(&self.filters);
 
         qb.push(" GROUP BY ");
         push_bucket_label_expr(&mut qb, self.filters.time_bucket);
