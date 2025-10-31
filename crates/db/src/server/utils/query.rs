@@ -3,6 +3,11 @@ use sqlx::{QueryBuilder, Sqlite};
 
 use crate::server::utils::summary_filter::SummaryFilters;
 
+pub enum BucketStep {
+    Seconds(i64),           // for Hour/Day (fixed length)
+    Calendar(&'static str), // SQLite date modifier "+7 days" | "+1 month" | "+1 year"
+}
+
 /// Appends a date range filter to the query using the specified start and end field names.
 /// Dates are formatted as RFC3339 (ISO 8601) to ensure proper string comparison.
 pub fn append_date_range(
@@ -151,14 +156,14 @@ pub fn push_overlap_expr<'qb>(
         .push("))");
 }
 
-pub fn bucket_step_seconds(bucket: Option<TimeBucket>) -> i64 {
+pub fn bucket_step(bucket: Option<TimeBucket>) -> BucketStep {
     match bucket {
-        Some(TimeBucket::Hour) => 3600,
-        Some(TimeBucket::Day) => 86400,
-        Some(TimeBucket::Week) => 604800,
-        Some(TimeBucket::Month) => 2419200,
-        Some(TimeBucket::Year) => 29030400,
-        _ => 86400,
+        Some(TimeBucket::Hour) => BucketStep::Seconds(3600),
+        Some(TimeBucket::Day) => BucketStep::Seconds(86_400),
+        Some(TimeBucket::Week) => BucketStep::Calendar("+7 days"),
+        Some(TimeBucket::Month) => BucketStep::Calendar("+1 month"),
+        Some(TimeBucket::Year) => BucketStep::Calendar("+1 year"),
+        None => BucketStep::Seconds(86_400),
     }
 }
 
@@ -181,4 +186,34 @@ pub fn push_bucket_label_expr(qb: &mut QueryBuilder<Sqlite>, bucket: Option<Time
         }
         None => qb.push("'Unbucketed'"),
     };
+}
+
+pub fn push_next_end_from_expr(qb: &mut QueryBuilder<Sqlite>, start_expr: &str, step: &BucketStep) {
+    match step {
+        BucketStep::Seconds(n) => {
+            qb.push(start_expr).push(" + ").push(*n);
+        }
+        BucketStep::Calendar(modif) => {
+            qb.push("strftime('%s', datetime(")
+                .push(start_expr)
+                .push(", 'unixepoch', 'localtime', '")
+                .push(modif)
+                .push("'))'");
+        }
+    }
+}
+
+pub fn push_next_end_from_bind(qb: &mut QueryBuilder<Sqlite>, start_bind: i64, step: &BucketStep) {
+    match step {
+        BucketStep::Seconds(n) => {
+            qb.push_bind(start_bind).push(" + ").push(*n);
+        }
+        BucketStep::Calendar(modif) => {
+            qb.push("strftime('%s', datetime(")
+                .push_bind(start_bind)
+                .push(", 'unixepoch', 'localtime', '")
+                .push(modif)
+                .push("'))'");
+        }
+    }
 }

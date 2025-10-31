@@ -14,8 +14,9 @@ use crate::{
     models::BucketTimeSummary,
     server::utils::{
         query::{
-            append_all_filters, append_date_range, append_standard_joins, bucket_step_seconds,
-            group_key_info, push_bucket_label_expr, push_overlap_bind, push_overlap_expr,
+            append_all_filters, append_date_range, append_standard_joins, bucket_step,
+            group_key_info, push_bucket_label_expr, push_next_end_from_bind,
+            push_next_end_from_expr, push_overlap_bind, push_overlap_expr,
         },
         summary_filter::SummaryFilters,
     },
@@ -238,34 +239,31 @@ impl SummaryQueryBuilder {
 
         let range_start = self.filters.start.unwrap_or(i64::MIN);
         let range_end = self.filters.end.unwrap_or(i64::MAX);
-        let step = bucket_step_seconds(self.filters.time_bucket);
+        let step = bucket_step(self.filters.time_bucket);
 
-        let mut qb = QueryBuilder::<Sqlite>::new(
-            "WITH RECURSIVE buckets(start_ts, end_ts) AS ( \
-             SELECT ",
-        );
+        let mut qb =
+            QueryBuilder::<Sqlite>::new("WITH RECURSIVE buckets(start_ts, end_ts) AS ( SELECT ");
         qb.push_bind(range_start)
             .push(", MIN(")
             .push_bind(range_end)
-            .push(", ")
-            .push_bind(range_start)
-            .push(" + ")
-            .push(step)
-            .push(
-                ") \
+            .push(", ");
+        push_next_end_from_bind(&mut qb, range_start, &step);
+        qb.push(
+            ") \
          UNION ALL \
              SELECT end_ts, MIN(",
-            )
-            .push_bind(range_end)
-            .push(", end_ts + ")
-            .push(step)
-            .push(
-                ") \
+        )
+        .push_bind(range_end)
+        .push(", ");
+
+        push_next_end_from_expr(&mut qb, "end_ts", &step);
+        qb.push(
+            ") \
              FROM buckets \
              WHERE end_ts < ",
-            )
-            .push_bind(range_end)
-            .push(") ");
+        )
+        .push_bind(range_end)
+        .push(") ");
 
         qb.push("SELECT ");
         push_bucket_label_expr(&mut qb, self.filters.time_bucket);
