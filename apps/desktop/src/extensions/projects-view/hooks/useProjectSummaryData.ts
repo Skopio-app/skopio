@@ -111,6 +111,7 @@ const useProjectSummaryDataImpl = (
 
   const { preset, project, branches } = usePresetFilter();
 
+  // TODO: Fetch on window resume is finicky
   const { data: rawData = [], isLoading } = useQuery({
     queryKey: [
       "projectSummary",

@@ -30,6 +30,10 @@ static BROWSER_APPS: LazyLock<HashSet<MonitoredApp>> = LazyLock::new(|| {
         MonitoredApp::Firefox,
         MonitoredApp::ArcBrowser,
         MonitoredApp::Dia,
+        MonitoredApp::Zen,
+        MonitoredApp::Helium,
+        MonitoredApp::Atlas,
+        MonitoredApp::Comet,
     ])
 });
 
@@ -193,6 +197,14 @@ pub enum MonitoredApp {
     ArcBrowser,
     #[strum(serialize = "company.thebrowser.dia")]
     Dia,
+    #[strum(serialize = "app.zen-browser.zen")]
+    Zen,
+    #[strum(serialize = "net.imput.helium")]
+    Helium,
+    #[strum(serialize = "com.openai.atlas")]
+    Atlas,
+    #[strum(serialize = "ai.perplexity.comet")]
+    Comet,
     #[strum(serialize = "dev.warp.Warp-Stable")]
     Warp,
     #[strum(serialize = "us.zoom.xos")]

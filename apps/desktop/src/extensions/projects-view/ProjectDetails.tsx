@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router";
+import { useNavigate, useParams } from "react-router";
 import { commands, Project } from "@/types/tauri.gen";
 import {
   Breadcrumb,
@@ -28,6 +28,7 @@ const ProjectDetails = () => {
   const { projectId } = useParams();
   const [project, setProject] = useState<Project | null>(null);
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
 
   const {
     selectedRange,
@@ -89,7 +90,9 @@ const ProjectDetails = () => {
       <Breadcrumb>
         <BreadcrumbList className="text-lg">
           <BreadcrumbItem>
-            <BreadcrumbLink href="/">Projects</BreadcrumbLink>
+            <BreadcrumbLink onClick={() => navigate(-1)}>
+              Projects
+            </BreadcrumbLink>
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>

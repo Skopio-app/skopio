@@ -17,6 +17,8 @@ pub struct AFKTracker {
     cursor_tracker: Arc<MouseTracker>,
     keyboard_tracker: Arc<KeyboardTracker>,
     tracker: Arc<dyn TrackingService>,
+    afk_state_tx: watch::Sender<bool>,
+    afk_state_rx: watch::Receiver<bool>,
 }
 
 impl AFKTracker {
@@ -26,6 +28,7 @@ impl AFKTracker {
         afk_timeout_rx: watch::Receiver<u64>,
         tracker: Arc<dyn TrackingService>,
     ) -> Self {
+        let (afk_state_tx, afk_state_rx) = watch::channel(false);
         Self {
             last_activity: Arc::new(RwLock::new(Utc::now())),
             afk_start: Arc::new(Mutex::new(None)),
@@ -33,6 +36,8 @@ impl AFKTracker {
             cursor_tracker,
             keyboard_tracker,
             tracker,
+            afk_state_tx,
+            afk_state_rx,
         }
     }
 
@@ -52,7 +57,6 @@ impl AFKTracker {
                 let last_activity_time = *last_activity.read().await;
                 let mut afk_time = afk_start.lock().await;
 
-                // TODO: Add reusable activity detected helper method
                 // Detect user activity (mouse/keyboard)
                 let mouse_buttons = cursor_tracker.get_pressed_mouse_buttons();
                 let keys_pressed = keyboard_tracker.get_pressed_keys();
@@ -88,6 +92,7 @@ impl AFKTracker {
                             .await
                             .unwrap_or_else(|error| error!("Failed to batch afk event: {}", error));
                     }
+                    self.update_state(false);
                     *afk_time = None;
                 } else {
                     // Dynamically retrieve afk timeout from app settings config
@@ -96,6 +101,7 @@ impl AFKTracker {
                     if idle_duration >= afk_threshold.as_secs() as i64 && afk_time.is_none() {
                         info!("User went AFK at: {}", now);
                         *afk_time = Some(now);
+                        self.update_state(true);
                     }
                 }
             }
@@ -129,5 +135,15 @@ impl AFKTracker {
         } else {
             info!("AFK tracker stopping. No AFK event to flush.");
         }
+    }
+
+    fn update_state(&self, state: bool) {
+        if let Err(e) = self.afk_state_tx.send(state) {
+            error!("Error sending AFK state: {}", e);
+        }
+    }
+
+    pub fn subscribe_state(&self) -> watch::Receiver<bool> {
+        self.afk_state_rx.clone()
     }
 }

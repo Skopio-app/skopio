@@ -7,14 +7,14 @@ use common::{
     },
     time::{TimeBucket, TimeRange},
 };
+use sqlx::{QueryBuilder, Sqlite};
 
 use crate::{
     error::DBError,
     models::BucketTimeSummary,
     server::utils::{
         query::{
-            append_all_filters, append_date_range, append_standard_joins, get_time_bucket_expr,
-            group_key_info,
+            bucket_step, group_key_info, push_next_end_with, push_overlap_with, QueryBuilderExt,
         },
         summary_filter::SummaryFilters,
     },
@@ -200,23 +200,35 @@ impl SummaryQueryBuilder {
     /// Executes a query that returns only the total time (in seconds)
     /// for the current filters
     pub async fn execute_total_time(&self, db: &DBContext) -> Result<i64, DBError> {
-        let mut query = String::from("SELECT SUM(duration) as total_seconds FROM events");
-        append_standard_joins(&mut query, None);
-        query.push_str(" WHERE 1=1");
+        let start = self.filters.start.unwrap_or(i64::MIN);
+        let end = self.filters.end.unwrap_or(i64::MAX);
 
-        append_date_range(
-            &mut query,
+        let mut qb = QueryBuilder::<Sqlite>::new("SELECT SUM(");
+        push_overlap_with(
+            &mut qb,
+            |q| {
+                q.push_bind(start);
+            },
+            |q| {
+                q.push_bind(end);
+            },
+        );
+        qb.push(") AS total_seconds FROM events ");
+
+        qb.append_standard_joins(None);
+        qb.push(" WHERE 1=1");
+
+        qb.append_date_range(
             self.filters.start,
             self.filters.end,
             "events.timestamp",
             "events.end_timestamp",
         );
 
-        append_all_filters(&mut query, self.filters.clone());
+        qb.append_all_filters(&self.filters);
 
-        let result = sqlx::query_scalar::<_, Option<i64>>(&query)
-            .fetch_one(db.pool())
-            .await?;
+        let query = qb.build_query_scalar::<Option<i64>>();
+        let result = query.fetch_one(db.pool()).await?;
 
         Ok(result.unwrap_or(0))
     }
@@ -228,43 +240,101 @@ impl SummaryQueryBuilder {
         db: &DBContext,
     ) -> Result<Vec<BucketTimeSummary>, DBError> {
         let (group_key, inner_tbl) = group_key_info(self.filters.group_by);
-
-        let time_bucket_expr = get_time_bucket_expr(self.filters.time_bucket);
-
         let needs_entity_type = matches!(self.filters.group_by, Some(Group::Entity));
-        let meta_select = if needs_entity_type {
-            ", entities.type AS group_meta "
-        } else {
-            " , NULL AS group_meta "
-        };
 
-        let mut base_query = format!(
-            "SELECT {time_bucket_expr} AS bucket, \
-                    {group_key} AS group_key, \
-                    SUM(duration) as total_seconds \
-                    {meta_select} \
-            FROM events",
+        let range_start = self.filters.start.unwrap_or(i64::MIN);
+        let range_end = self.filters.end.unwrap_or(i64::MAX);
+        let step = bucket_step(self.filters.time_bucket);
+
+        let mut qb =
+            QueryBuilder::<Sqlite>::new("WITH RECURSIVE buckets(start_ts, end_ts) AS ( SELECT ");
+        qb.push_bind(range_start)
+            .push(", MIN(")
+            .push_bind(range_end)
+            .push(", ");
+        push_next_end_with(
+            &mut qb,
+            |q| {
+                q.push_bind(range_start);
+            },
+            &step,
         );
-        append_standard_joins(&mut base_query, inner_tbl);
-        base_query.push_str(" WHERE 1=1");
+        qb.push(
+            ") \
+         UNION ALL \
+             SELECT end_ts, MIN(",
+        )
+        .push_bind(range_end)
+        .push(", ");
 
-        append_date_range(
-            &mut base_query,
+        push_next_end_with(
+            &mut qb,
+            |q| {
+                q.push("end_ts");
+            },
+            &step,
+        );
+        qb.push(
+            ") \
+             FROM buckets \
+             WHERE end_ts < ",
+        )
+        .push_bind(range_end)
+        .push(") ");
+
+        qb.push("SELECT ");
+        qb.push_bucket_label_expr(self.filters.time_bucket);
+        qb.push(" AS bucket, ")
+            .push(group_key)
+            .push(" AS group_key, ")
+            .push("SUM(");
+        push_overlap_with(
+            &mut qb,
+            |q| {
+                q.push("buckets.start_ts");
+            },
+            |q| {
+                q.push("buckets.end_ts");
+            },
+        );
+        qb.push(") AS total_seconds");
+
+        if needs_entity_type {
+            qb.push(", entities.type AS group_meta ");
+        } else {
+            qb.push(", NULL AS group_meta ");
+        }
+
+        qb.push(
+            " FROM buckets \
+              JOIN events \
+                ON events.end_timestamp > buckets.start_ts \
+               AND events.timestamp < buckets.end_ts ",
+        );
+
+        qb.append_standard_joins(inner_tbl);
+
+        qb.push(" WHERE 1=1");
+
+        qb.append_date_range(
             self.filters.start,
             self.filters.end,
             "events.timestamp",
             "events.end_timestamp",
         );
-        append_all_filters(&mut base_query, self.filters.clone());
 
-        base_query.push_str(&format!(" GROUP BY {time_bucket_expr}, {group_key}"));
+        qb.append_all_filters(&self.filters);
 
-        let rows = sqlx::query_as::<_, RawBucketRow>(&base_query)
+        qb.push(" GROUP BY ");
+        qb.push_bucket_label_expr(self.filters.time_bucket);
+        qb.push(", ").push(group_key);
+
+        let rows = qb
+            .build_query_as::<RawBucketRow>()
             .fetch_all(db.pool())
             .await?;
 
-        let mut records = Vec::new();
-
+        let mut records = Vec::with_capacity(rows.len());
         for row in rows {
             let mut grouped_values = HashMap::new();
             grouped_values.insert(row.group_key, row.total_seconds);

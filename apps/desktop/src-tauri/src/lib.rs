@@ -175,11 +175,11 @@ async fn setup_trackers(app_handle: &AppHandle) -> Result<(), anyhow::Error> {
 
     let service_trait: Arc<dyn TrackingService> = buffered_service.clone();
 
-    let cursor_tracker = app_handle.state::<Arc<MouseTracker>>();
+    let mouse_tracker = app_handle.state::<Arc<MouseTracker>>();
     let keyboard_tracker = app_handle.state::<Arc<KeyboardTracker>>();
     let afk_timeout_rx = config_store.subscribe_afk_timeout();
     let afk_tracker = Arc::new(AFKTracker::new(
-        Arc::clone(&cursor_tracker),
+        Arc::clone(&mouse_tracker),
         Arc::clone(&keyboard_tracker),
         afk_timeout_rx,
         Arc::clone(&service_trait),
@@ -187,9 +187,9 @@ async fn setup_trackers(app_handle: &AppHandle) -> Result<(), anyhow::Error> {
     app_handle.manage(Arc::clone(&afk_tracker));
 
     let tracked_apps_rx = config_store.subscribe_tracked_apps();
+    let afk_state_rx = afk_tracker.subscribe_state();
+
     let event_tracker = Arc::new(EventTracker::new(
-        Arc::clone(&cursor_tracker),
-        Arc::clone(&keyboard_tracker),
         Arc::clone(&service_trait),
         tracked_apps_rx,
         ax_cache.clone(),
@@ -198,7 +198,7 @@ async fn setup_trackers(app_handle: &AppHandle) -> Result<(), anyhow::Error> {
 
     let event_window_rx = window_tracker.subscribe();
 
-    cursor_tracker.start_tracking();
+    mouse_tracker.start_tracking();
 
     afk_tracker.start_tracking();
 
@@ -209,7 +209,7 @@ async fn setup_trackers(app_handle: &AppHandle) -> Result<(), anyhow::Error> {
     tokio::spawn({
         async move {
             if let Err(e) = event_tracker
-                .start_tracking(event_window_rx, afk_timeout_rx_event)
+                .start_tracking(event_window_rx, afk_timeout_rx_event, afk_state_rx)
                 .await
             {
                 error!("Event tracker failed: {}", e);

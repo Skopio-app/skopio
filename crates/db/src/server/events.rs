@@ -5,15 +5,13 @@ use common::models::outputs::{EventGroup, EventGroupResult, FullEvent};
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
-use sqlx::Row;
+use sqlx::{QueryBuilder, Row, Sqlite};
 
 use crate::{
     error::DBError,
     server::{
         summary::SummaryQueryBuilder,
-        utils::query::{
-            append_all_filters, append_date_range, append_standard_joins, group_key_info,
-        },
+        utils::query::{group_key_info, QueryBuilderExt},
     },
     DBContext,
 };
@@ -83,13 +81,7 @@ impl SummaryQueryBuilder {
         let is_grouped = self.filters.group_by.is_some();
         let (group_key, inner_tbl) = group_key_info(self.filters.group_by);
 
-        let select_group = if is_grouped {
-            format!(", {group_key} AS group_key")
-        } else {
-            String::new()
-        };
-
-        let mut query = format!(
+        let mut qb = QueryBuilder::<Sqlite>::new(
             "
             SELECT
                 events.id,
@@ -104,30 +96,32 @@ impl SummaryQueryBuilder {
                 branches.name AS branch,
                 languages.name AS language,
                 sources.name AS source
-                {select_group}
-            FROM events
-            "
+            ",
         );
 
-        append_standard_joins(&mut query, inner_tbl);
-        query.push_str(" WHERE 1=1");
+        if is_grouped {
+            qb.push(", ").push(group_key).push(" AS group_key");
+        }
 
-        append_date_range(
-            &mut query,
+        qb.push(" FROM events ");
+        qb.append_standard_joins(inner_tbl);
+
+        qb.push(" WHERE 1=1");
+        qb.append_date_range(
             self.filters.start,
             self.filters.end,
             "events.timestamp",
             "events.end_timestamp",
         );
-        append_all_filters(&mut query, self.filters.clone());
+        qb.append_all_filters(&self.filters);
 
-        if self.filters.group_by.is_some() {
-            query.push_str(&format!(" ORDER BY {}, events.timestamp", group_key));
-        } else {
-            query.push_str(" ORDER BY events.timestamp");
+        qb.push(" ORDER BY ");
+        if is_grouped {
+            qb.push(group_key).push(", ");
         }
+        qb.push("events.timestamp");
 
-        let rows = sqlx::query(&query).fetch_all(db.pool()).await?;
+        let rows = qb.build().fetch_all(db.pool()).await?;
 
         let mut flat_events = Vec::new();
         let mut grouped_events: HashMap<String, Vec<FullEvent>> = HashMap::new();
