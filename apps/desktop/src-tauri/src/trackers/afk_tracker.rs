@@ -47,7 +47,6 @@ impl AFKTracker {
         let cursor_tracker = Arc::clone(&self.cursor_tracker);
         let keyboard_tracker = Arc::clone(&self.keyboard_tracker);
         let buffer_tracker = Arc::clone(&self.tracker);
-        let afk_state = self.afk_state_tx.clone();
 
         tokio::spawn(async move {
             let mut interval = interval(Duration::from_secs(1));
@@ -93,7 +92,7 @@ impl AFKTracker {
                             .await
                             .unwrap_or_else(|error| error!("Failed to batch afk event: {}", error));
                     }
-                    let _ = afk_state.send(false);
+                    self.update_state(false);
                     *afk_time = None;
                 } else {
                     // Dynamically retrieve afk timeout from app settings config
@@ -102,7 +101,7 @@ impl AFKTracker {
                     if idle_duration >= afk_threshold.as_secs() as i64 && afk_time.is_none() {
                         info!("User went AFK at: {}", now);
                         *afk_time = Some(now);
-                        let _ = afk_state.send(true);
+                        self.update_state(true);
                     }
                 }
             }
@@ -135,6 +134,12 @@ impl AFKTracker {
             *afk_time = None;
         } else {
             info!("AFK tracker stopping. No AFK event to flush.");
+        }
+    }
+
+    fn update_state(&self, state: bool) {
+        if let Err(e) = self.afk_state_tx.send(state) {
+            error!("Error sending AFK state: {}", e);
         }
     }
 
