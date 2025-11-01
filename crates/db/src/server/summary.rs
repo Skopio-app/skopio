@@ -14,8 +14,7 @@ use crate::{
     models::BucketTimeSummary,
     server::utils::{
         query::{
-            bucket_step, group_key_info, push_bucket_label_expr, push_next_end_with,
-            push_overlap_with, QueryBuilderExt,
+            bucket_step, group_key_info, push_next_end_with, push_overlap_with, QueryBuilderExt,
         },
         summary_filter::SummaryFilters,
     },
@@ -284,7 +283,7 @@ impl SummaryQueryBuilder {
         .push(") ");
 
         qb.push("SELECT ");
-        push_bucket_label_expr(&mut qb, self.filters.time_bucket);
+        qb.push_bucket_label_expr(self.filters.time_bucket);
         qb.push(" AS bucket, ")
             .push(group_key)
             .push(" AS group_key, ")
@@ -310,7 +309,7 @@ impl SummaryQueryBuilder {
             " FROM buckets \
               JOIN events \
                 ON events.end_timestamp > buckets.start_ts \
-               AND events.timestamp    < buckets.end_ts ",
+               AND events.timestamp < buckets.end_ts ",
         );
 
         qb.append_standard_joins(inner_tbl);
@@ -327,7 +326,7 @@ impl SummaryQueryBuilder {
         qb.append_all_filters(&self.filters);
 
         qb.push(" GROUP BY ");
-        push_bucket_label_expr(&mut qb, self.filters.time_bucket);
+        qb.push_bucket_label_expr(self.filters.time_bucket);
         qb.push(", ").push(group_key);
 
         let rows = qb

@@ -20,6 +20,7 @@ pub trait QueryBuilderExt<'qb> {
     fn append_filter_list(&mut self, field: &str, values: &'qb [String]);
     fn append_all_filters(&mut self, filters: &'qb SummaryFilters);
     fn append_standard_joins(&mut self, inner_join: Option<&str>);
+    fn push_bucket_label_expr(&mut self, bucket: Option<TimeBucket>);
 }
 
 impl<'qb> QueryBuilderExt<'qb> for QueryBuilder<'qb, Sqlite> {
@@ -113,6 +114,27 @@ impl<'qb> QueryBuilderExt<'qb> for QueryBuilder<'qb, Sqlite> {
             .push(j("sources"))
             .push("sources ON events.source_id = sources.id");
     }
+
+    /// Formats a SQLite-compatible time bucket expression based on the bucket type.
+    fn push_bucket_label_expr(&mut self, bucket: Option<TimeBucket>) {
+        match bucket {
+            Some(TimeBucket::Hour) => self.push(
+                "strftime('%Y-%m-%d %H:00:00', datetime(buckets.start_ts,'unixepoch','localtime'))",
+            ),
+            Some(TimeBucket::Day) => self
+                .push("strftime('%Y-%m-%d', datetime(buckets.start_ts,'unixepoch','localtime'))"),
+            Some(TimeBucket::Week) => {
+                self.push("strftime('%Y-W%W', datetime(buckets.start_ts,'unixepoch','localtime'))")
+            }
+            Some(TimeBucket::Month) => {
+                self.push("strftime('%Y-%m', datetime(buckets.start_ts,'unixepoch','localtime'))")
+            }
+            Some(TimeBucket::Year) => {
+                self.push("strftime('%Y', datetime(buckets.start_ts,'unixepoch','localtime'))")
+            }
+            None => self.push("'Unbucketed'"),
+        };
+    }
 }
 
 /// Returns (group_key_sql, inner_join_table_name)
@@ -158,28 +180,6 @@ pub fn bucket_step(bucket: Option<TimeBucket>) -> BucketStep {
         Some(TimeBucket::Year) => BucketStep::Calendar("+1 year"),
         None => BucketStep::Seconds(86_400),
     }
-}
-
-/// Formats a SQLite-compatible time bucket expression based on the bucket type.
-pub fn push_bucket_label_expr(qb: &mut QueryBuilder<Sqlite>, bucket: Option<TimeBucket>) {
-    match bucket {
-        Some(TimeBucket::Hour) => qb.push(
-            "strftime('%Y-%m-%d %H:00:00', datetime(buckets.start_ts,'unixepoch','localtime'))",
-        ),
-        Some(TimeBucket::Day) => {
-            qb.push("strftime('%Y-%m-%d', datetime(buckets.start_ts,'unixepoch','localtime'))")
-        }
-        Some(TimeBucket::Week) => {
-            qb.push("strftime('%Y-W%W', datetime(buckets.start_ts,'unixepoch','localtime'))")
-        }
-        Some(TimeBucket::Month) => {
-            qb.push("strftime('%Y-%m', datetime(buckets.start_ts,'unixepoch','localtime'))")
-        }
-        Some(TimeBucket::Year) => {
-            qb.push("strftime('%Y', datetime(buckets.start_ts,'unixepoch','localtime'))")
-        }
-        None => qb.push("'Unbucketed'"),
-    };
 }
 
 /// Appends an SQL expression that computes the next bucket’s end timestamp
