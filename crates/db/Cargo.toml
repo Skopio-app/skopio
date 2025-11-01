@@ -22,11 +22,14 @@ sqlx = { workspace = true, features = [
     "macros",
     "migrate",
     "derive",
-    "uuid"
+    "uuid",
 ] }
-libsqlite3-sys = { workspace = true, features = ["bundled-sqlcipher"]}
+libsqlite3-sys = { workspace = true, features = ["bundled-sqlcipher"] }
 specta = { workspace = true, features = ["uuid"] }
 common = { path = "../common" }
 thiserror = { workspace = true }
 async-trait = { workspace = true }
 uuid = { workspace = true, features = ["v7", "fast-rng", "serde"] }
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }
