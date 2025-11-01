@@ -9,13 +9,12 @@ use common::git::find_git_branch;
 use db::desktop::events::Event as DBEvent;
 
 use std::collections::HashSet;
+use std::pin::Pin;
 use std::sync::Arc;
 use tokio::sync::{watch, Mutex, RwLock};
-use tokio::time::{Duration, Instant};
+use tokio::time::{self, Duration, Instant, Sleep};
 use tracing::{error, info};
 
-use super::keyboard_tracker::KeyboardTracker;
-use super::mouse_tracker::MouseTracker;
 use super::window_tracker::Window;
 
 #[derive(Debug, Clone)]
@@ -36,8 +35,6 @@ pub struct Event {
 pub struct EventTracker {
     active_event: Arc<Mutex<Option<Event>>>,
     last_activity: Arc<Mutex<Instant>>,
-    cursor_tracker: Arc<MouseTracker>,
-    keyboard_tracker: Arc<KeyboardTracker>,
     tracker: Arc<dyn TrackingService>,
     tracked_apps_rx: watch::Receiver<Vec<TrackedApp>>,
     allowed_ids: Arc<RwLock<HashSet<String>>>,
@@ -46,8 +43,6 @@ pub struct EventTracker {
 
 impl EventTracker {
     pub fn new(
-        cursor_tracker: Arc<MouseTracker>,
-        keyboard_tracker: Arc<KeyboardTracker>,
         tracker: Arc<dyn TrackingService>,
         tracked_apps_rx: watch::Receiver<Vec<TrackedApp>>,
         ax_cache: Arc<AxSnapshotCache<SystemAxProvider>>,
@@ -61,8 +56,6 @@ impl EventTracker {
         Self {
             active_event: Arc::new(Mutex::new(None)),
             last_activity: Arc::new(Mutex::new(Instant::now())),
-            cursor_tracker,
-            keyboard_tracker,
             tracker,
             tracked_apps_rx,
             allowed_ids: Arc::new(RwLock::new(initial_allowed)),
@@ -168,19 +161,37 @@ impl EventTracker {
         self: Arc<Self>,
         mut window_rx: watch::Receiver<Option<Window>>,
         mut afk_timeout_rx: watch::Receiver<u64>,
+        mut afk_state_rx: watch::Receiver<bool>,
     ) -> tokio::task::JoinHandle<()> {
         let mut tracked_rx = self.tracked_apps_rx.clone();
         let allowed_ids = Arc::clone(&self.allowed_ids);
 
         tokio::spawn(async move {
             let mut last_state = None;
-            let mut last_check = Instant::now();
+            let afk_timeout_secs = *afk_timeout_rx.borrow_and_update();
+            let mut afk_threshold = Duration::from_secs(afk_timeout_secs);
+            let mut sleep: Pin<Box<Sleep>> = Box::pin(time::sleep(afk_threshold));
+
+            sleep.as_mut().reset(Instant::now() + afk_threshold);
 
             loop {
-                let afk_timeout_secs = *afk_timeout_rx.borrow_and_update();
-                let afk_threshold = Duration::from_secs(afk_timeout_secs);
-
                 tokio::select! {
+                    // Config changed: update AFK threshold and reset the timer.
+                    changed = afk_timeout_rx.changed() => {
+                        if changed.is_err() { break; }
+                        afk_threshold = Duration::from_secs(*afk_timeout_rx.borrow());
+                        sleep.as_mut().reset(Instant::now() + afk_threshold);
+                    }
+                    // AFK state changed: if AFK started, end right away.
+                    changed = afk_state_rx.changed() => {
+                        if changed.is_err() { break; }
+                        if *afk_state_rx.borrow() {
+                            self.end_active_event().await;
+                            last_state = None;
+                        } else {
+                            sleep.as_mut().reset(Instant::now() + afk_threshold);
+                        }
+                    }
                     changed = tracked_rx.changed() => {
                         if changed.is_ok() {
                             let latest = tracked_rx.borrow().clone();
@@ -204,15 +215,6 @@ impl EventTracker {
                         let app_path = window.path;
                         let pid = window.pid;
 
-                        let activity_detected = {
-                            let mouse_buttons = self.cursor_tracker.get_pressed_mouse_buttons();
-                            let keys_pressed = self.keyboard_tracker.get_pressed_keys();
-                            let mouse_active = self.cursor_tracker.has_mouse_moved();
-                            let mouse_clicked = mouse_buttons.left || mouse_buttons.right || mouse_buttons.middle || mouse_buttons.other;
-                            let keyboard_active = !keys_pressed.is_empty();
-                            mouse_active || mouse_clicked || keyboard_active
-                        };
-
                          let changed = last_state
                                 .as_ref()
                                 .map(|(prev_app, prev_file)| prev_app != &app_name || prev_file != &file)
@@ -222,20 +224,15 @@ impl EventTracker {
                             last_state = Some((app_name.clone(), file.clone()));
                             self.track_event(&app_name, &bundle_id, &app_path, &file, pid).await;
                         }
-
-                        if activity_detected {
-                            *self.last_activity.lock().await = Instant::now();
-                            last_check = Instant::now();
-                        }
                     }
 
-                    _ = tokio::time::sleep_until(last_check + afk_threshold) => {
+                    _ = &mut sleep => {
                         let last_active_time = *self.last_activity.lock().await;
                         if Instant::now().duration_since(last_active_time) >= afk_threshold {
                             self.end_active_event().await;
                             last_state = None;
                         }
-                        last_check = Instant::now();
+                        sleep.as_mut().reset(Instant::now() + afk_threshold);
                     }
                 }
             }

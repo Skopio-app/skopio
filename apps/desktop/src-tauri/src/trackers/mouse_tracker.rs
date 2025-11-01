@@ -25,8 +25,6 @@ pub struct MouseTracker {
     pressed_buttons: Arc<Mutex<MouseButtons>>,
     mouse_moved: Arc<AtomicBool>,
     runloop: Arc<Mutex<Option<CFRunLoop>>>,
-    // pub tx: watch::Sender<Option<CursorPosition>>,
-    // pub rx: watch::Receiver<Option<CursorPosition>>,
 }
 
 impl MouseTracker {
