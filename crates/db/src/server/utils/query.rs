@@ -203,3 +203,41 @@ where
         }
     }
 }
+
+#[cfg(all(test, feature = "server"))]
+mod tests {
+    use super::*;
+    use common::models::Group;
+    use common::time::TimeBucket;
+
+    #[test]
+    fn bucket_step_variants() {
+        matches!(
+            bucket_step(Some(TimeBucket::Hour)),
+            BucketStep::Seconds(3600)
+        );
+        matches!(
+            bucket_step(Some(TimeBucket::Day)),
+            BucketStep::Seconds(86_400)
+        );
+        matches!(
+            bucket_step(Some(TimeBucket::Week)),
+            BucketStep::Calendar("+7 days")
+        );
+        matches!(
+            bucket_step(Some(TimeBucket::Month)),
+            BucketStep::Calendar("+1 month")
+        );
+        matches!(
+            bucket_step(Some(TimeBucket::Year)),
+            BucketStep::Calendar("+1 year")
+        );
+    }
+
+    #[test]
+    fn group_key_info_works() {
+        assert_eq!(group_key_info(Some(Group::App)).0, "apps.name");
+        assert_eq!(group_key_info(Some(Group::Project)).0, "projects.name");
+        assert_eq!(group_key_info(None).0, "'Total'");
+    }
+}
