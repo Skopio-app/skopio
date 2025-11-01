@@ -23,6 +23,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v0.1.7] -2025-11-02
+
+### Added
+
+- Zen, Helium, Comet, and ChatGPT Atlas are now included in browser list.
+
+### Fixed
+
+- Dashboard widget resize handles now adhere to dark mode.
+- Adjusted frames in dino loading screen for smoother animation.
+- Project details page bredcrumb back navigation does not display brief white screen.
+- AFK state handling in event tracker.
+- Added overlap aware logic to event summary functionality.
+
+---
+
 ## [v0.1.6] -2025-10-19
 
 ### Added
