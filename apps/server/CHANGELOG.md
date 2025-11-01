@@ -23,6 +23,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v0.1.5] - 2025-11-02
+
+### Fixed
+
+- Add event range overlap aware logic to summary functionality
+
+### Added
+
+- Additional tests for overlap logic and query helpers.
+
+---
+
 ## [v0.1.4] - 2025-10-19
 
 ### Changed
