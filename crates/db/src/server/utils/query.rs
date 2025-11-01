@@ -207,37 +207,268 @@ where
 #[cfg(all(test, feature = "server"))]
 mod tests {
     use super::*;
-    use common::models::Group;
-    use common::time::TimeBucket;
+    use crate::server::utils::summary_filter::SummaryFilters;
+    use common::{models::Group, time::TimeBucket};
+    use sqlx::{Execute, QueryBuilder, Sqlite};
 
     #[test]
-    fn bucket_step_variants() {
-        matches!(
-            bucket_step(Some(TimeBucket::Hour)),
-            BucketStep::Seconds(3600)
+    fn test_append_date_range_both_bounds() {
+        let mut qb = QueryBuilder::<Sqlite>::new("SELECT * FROM events WHERE 1=1");
+        qb.append_date_range(
+            Some(1000),
+            Some(2000),
+            "events.timestamp",
+            "events.end_timestamp",
         );
-        matches!(
-            bucket_step(Some(TimeBucket::Day)),
-            BucketStep::Seconds(86_400)
-        );
-        matches!(
-            bucket_step(Some(TimeBucket::Week)),
-            BucketStep::Calendar("+7 days")
-        );
-        matches!(
-            bucket_step(Some(TimeBucket::Month)),
-            BucketStep::Calendar("+1 month")
-        );
-        matches!(
-            bucket_step(Some(TimeBucket::Year)),
-            BucketStep::Calendar("+1 year")
-        );
+
+        let sql = qb.build().sql();
+        assert!(sql.contains("AND (1=1"));
+        assert!(sql.contains("events.end_timestamp >"));
+        assert!(sql.contains("events.timestamp <"));
     }
 
     #[test]
-    fn group_key_info_works() {
-        assert_eq!(group_key_info(Some(Group::App)).0, "apps.name");
-        assert_eq!(group_key_info(Some(Group::Project)).0, "projects.name");
-        assert_eq!(group_key_info(None).0, "'Total'");
+    fn test_append_date_range_start_only() {
+        let mut qb = QueryBuilder::<Sqlite>::new("SELECT * FROM events WHERE 1=1");
+        qb.append_date_range(Some(1000), None, "events.timestamp", "events.end_timestamp");
+
+        let sql = qb.build().sql();
+        assert!(sql.contains("events.end_timestamp >"));
+        assert!(!sql.contains("events.timestamp <"));
+    }
+
+    #[test]
+    fn test_append_date_range_end_only() {
+        let mut qb = QueryBuilder::<Sqlite>::new("SELECT * FROM events WHERE 1=1");
+        qb.append_date_range(None, Some(2000), "events.timestamp", "events.end_timestamp");
+
+        let sql = qb.build().sql();
+        assert!(!sql.contains("events.end_timestamp >"));
+        assert!(sql.contains("events.timestamp <"));
+    }
+
+    #[test]
+    fn test_append_date_range_none() {
+        let mut qb = QueryBuilder::<Sqlite>::new("SELECT * FROM events WHERE 1=1");
+        let original_sql = qb.build().sql().to_string();
+
+        let mut qb = QueryBuilder::<Sqlite>::new("SELECT * FROM events WHERE 1=1");
+        qb.append_date_range(None, None, "events.timestamp", "events.end_timestamp");
+
+        assert_eq!(original_sql, qb.build().sql());
+    }
+
+    #[test]
+    fn test_append_filter_list_with_values() {
+        let mut qb = QueryBuilder::<Sqlite>::new("SELECT * FROM events WHERE 1=1");
+        let apps = vec!["VSCode".to_string(), "IntelliJ".to_string()];
+        qb.append_filter_list("apps.name", &apps);
+
+        let sql = qb.build().sql();
+        assert!(sql.contains("AND apps.name IN ("));
+    }
+
+    #[test]
+    fn test_append_filter_list_empty() {
+        let mut qb = QueryBuilder::<Sqlite>::new("SELECT * FROM events WHERE 1=1");
+        let original_sql = qb.build().sql().to_string();
+
+        let mut qb = QueryBuilder::<Sqlite>::new("SELECT * FROM events WHERE 1=1");
+        let apps: Vec<String> = vec![];
+        qb.append_filter_list("apps.name", &apps);
+
+        assert_eq!(original_sql, qb.build().sql());
+    }
+
+    #[test]
+    fn test_append_all_filters() {
+        let mut qb = QueryBuilder::<Sqlite>::new("SELECT * FROM events WHERE 1=1");
+        let filters = SummaryFilters {
+            apps: Some(vec!["VSCode".to_string()]),
+            projects: Some(vec!["MyProject".to_string()]),
+            categories: None,
+            entities: None,
+            branches: None,
+            languages: Some(vec!["Rust".to_string()]),
+            ..Default::default()
+        };
+
+        qb.append_all_filters(&filters);
+        let sql = qb.build().sql();
+
+        assert!(sql.contains("apps.name IN ("));
+        assert!(sql.contains("projects.name IN ("));
+        assert!(sql.contains("languages.name IN ("));
+        assert!(!sql.contains("categories.name"));
+    }
+
+    #[test]
+    fn test_append_standard_joins_no_inner() {
+        let mut qb = QueryBuilder::<Sqlite>::new("SELECT * FROM events");
+        qb.append_standard_joins(None);
+
+        let sql = qb.build().sql();
+        assert!(sql.contains("LEFT JOIN apps"));
+        assert!(sql.contains("LEFT JOIN projects"));
+        assert!(sql.contains("LEFT JOIN entities"));
+        assert!(sql.contains("LEFT JOIN branches"));
+        assert!(sql.contains("LEFT JOIN categories"));
+        assert!(sql.contains("LEFT JOIN languages"));
+        assert!(sql.contains("LEFT JOIN sources"));
+    }
+
+    #[test]
+    fn test_append_standard_joins_with_inner() {
+        let mut qb = QueryBuilder::<Sqlite>::new("SELECT * FROM events");
+        qb.append_standard_joins(Some("apps"));
+
+        let sql = qb.build().sql();
+        assert!(sql.contains(" JOIN apps ON"));
+        assert!(!sql.contains("LEFT JOIN apps"));
+        assert!(sql.contains("LEFT JOIN projects"));
+    }
+
+    #[test]
+    fn test_group_key_info_all_variants() {
+        assert_eq!(
+            group_key_info(Some(Group::App)),
+            ("apps.name", Some("apps"))
+        );
+        assert_eq!(
+            group_key_info(Some(Group::Project)),
+            ("projects.name", Some("projects"))
+        );
+        assert_eq!(
+            group_key_info(Some(Group::Entity)),
+            ("entities.name", Some("entities"))
+        );
+        assert_eq!(
+            group_key_info(Some(Group::Branch)),
+            ("branches.name", Some("branches"))
+        );
+        assert_eq!(
+            group_key_info(Some(Group::Category)),
+            ("categories.name", Some("categories"))
+        );
+        assert_eq!(
+            group_key_info(Some(Group::Language)),
+            ("languages.name", Some("languages"))
+        );
+        assert_eq!(
+            group_key_info(Some(Group::Source)),
+            ("sources.name", Some("sources"))
+        );
+        assert_eq!(group_key_info(None), ("'Total'", None));
+    }
+
+    #[test]
+    fn test_bucket_step_variants() {
+        match bucket_step(Some(TimeBucket::Hour)) {
+            BucketStep::Seconds(3600) => {}
+            _ => panic!("Expected Hour to be 3600 seconds"),
+        }
+
+        match bucket_step(Some(TimeBucket::Day)) {
+            BucketStep::Seconds(86400) => {}
+            _ => panic!("Expected Day to be 86400 seconds"),
+        }
+
+        match bucket_step(Some(TimeBucket::Week)) {
+            BucketStep::Calendar("+7 days") => {}
+            _ => panic!("Expected Week to be calendar-based"),
+        }
+
+        match bucket_step(Some(TimeBucket::Month)) {
+            BucketStep::Calendar("+1 month") => {}
+            _ => panic!("Expected Month to be calendar-based"),
+        }
+
+        match bucket_step(Some(TimeBucket::Year)) {
+            BucketStep::Calendar("+1 year") => {}
+            _ => panic!("Expected Year to be calendar-based"),
+        }
+
+        match bucket_step(None) {
+            BucketStep::Seconds(86400) => {}
+            _ => panic!("Expected None to default to Day"),
+        }
+    }
+
+    #[test]
+    fn test_push_bucket_label_expr() {
+        let mut qb = QueryBuilder::<Sqlite>::new("SELECT ");
+        qb.push_bucket_label_expr(Some(TimeBucket::Hour));
+        assert!(qb.build().sql().contains("%Y-%m-%d %H:00:00"));
+
+        let mut qb = QueryBuilder::<Sqlite>::new("SELECT ");
+        qb.push_bucket_label_expr(Some(TimeBucket::Day));
+        assert!(qb.build().sql().contains("%Y-%m-%d"));
+
+        let mut qb = QueryBuilder::<Sqlite>::new("SELECT ");
+        qb.push_bucket_label_expr(Some(TimeBucket::Week));
+        assert!(qb.build().sql().contains("%Y-W%W"));
+
+        let mut qb = QueryBuilder::<Sqlite>::new("SELECT ");
+        qb.push_bucket_label_expr(Some(TimeBucket::Month));
+        assert!(qb.build().sql().contains("%Y-%m"));
+
+        let mut qb = QueryBuilder::<Sqlite>::new("SELECT ");
+        qb.push_bucket_label_expr(Some(TimeBucket::Year));
+        assert!(qb.build().sql().contains("%Y"));
+
+        let mut qb = QueryBuilder::<Sqlite>::new("SELECT ");
+        qb.push_bucket_label_expr(None);
+        assert!(qb.build().sql().contains("'Unbucketed'"));
+    }
+
+    #[test]
+    fn test_push_overlap_with() {
+        let mut qb = QueryBuilder::<Sqlite>::new("SELECT ");
+        push_overlap_with(
+            &mut qb,
+            |q| {
+                q.push("1000");
+            },
+            |q| {
+                q.push("2000");
+            },
+        );
+
+        let sql = qb.build().sql();
+        assert!(sql.contains("max(0, min(events.end_timestamp"));
+        assert!(sql.contains("max(events.timestamp"));
+    }
+
+    #[test]
+    fn test_push_next_end_with_seconds() {
+        let mut qb = QueryBuilder::<Sqlite>::new("SELECT ");
+        let step = BucketStep::Seconds(3600);
+        push_next_end_with(
+            &mut qb,
+            |q| {
+                q.push("start_ts");
+            },
+            &step,
+        );
+
+        let sql = qb.build().sql();
+        assert!(sql.contains("start_ts + 3600"));
+    }
+
+    #[test]
+    fn test_push_next_end_with_calendar() {
+        let mut qb = QueryBuilder::<Sqlite>::new("SELECT ");
+        let step = BucketStep::Calendar("+1 month");
+        push_next_end_with(
+            &mut qb,
+            |q| {
+                q.push("start_ts");
+            },
+            &step,
+        );
+
+        let sql = qb.build().sql();
+        assert!(sql.contains("strftime('%s', datetime("));
+        assert!(sql.contains("+1 month"));
     }
 }
