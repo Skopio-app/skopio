@@ -3,6 +3,7 @@
 use core_foundation::runloop::{kCFRunLoopCommonModes, CFRunLoop};
 use core_graphics::event::{
     CGEventTap, CGEventTapLocation, CGEventTapOptions, CGEventTapPlacement, CGEventType,
+    CallbackResult,
 };
 use core_graphics::geometry::CGPoint;
 use objc2_foundation::NSAutoreleasePool;
@@ -97,11 +98,11 @@ impl MouseTracker {
                         _ => {}
                     }
 
-                    None
+                    CallbackResult::Keep
                 },
             ) {
                 Ok(tap) => {
-                    let loop_source = match tap.mach_port.create_runloop_source(0) {
+                    let loop_source = match tap.mach_port().create_runloop_source(0) {
                         Ok(source) => source,
                         Err(_) => {
                             error!("Failed to create runloop source!");

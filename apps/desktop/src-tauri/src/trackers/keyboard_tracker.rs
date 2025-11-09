@@ -3,7 +3,7 @@
 use core_foundation::runloop::{kCFRunLoopCommonModes, CFRunLoop};
 use core_graphics::event::{
     CGEventFlags, CGEventTap, CGEventTapLocation, CGEventTapOptions, CGEventTapPlacement,
-    CGEventType, EventField,
+    CGEventType, CallbackResult, EventField,
 };
 use objc2_foundation::NSAutoreleasePool;
 use std::collections::HashSet;
@@ -34,6 +34,7 @@ impl KeyboardTracker {
         tokio::task::spawn_blocking(move || unsafe {
             let pool = NSAutoreleasePool::new();
             let current = CFRunLoop::get_current();
+
             match CGEventTap::new(
                 CGEventTapLocation::Session,
                 CGEventTapPlacement::HeadInsertEventTap,
@@ -43,7 +44,7 @@ impl KeyboardTracker {
                     CGEventType::KeyUp,
                     CGEventType::FlagsChanged,
                 ],
-                |_proxy, event_type, event| {
+                move |_proxy, event_type, event| {
                     let key_event = event.clone();
                     let now = Instant::now();
 
@@ -80,11 +81,11 @@ impl KeyboardTracker {
                         }
                         _ => {}
                     }
-                    None
+                    CallbackResult::Keep
                 },
             ) {
                 Ok(tap) => {
-                    let loop_source = match tap.mach_port.create_runloop_source(0) {
+                    let loop_source = match tap.mach_port().create_runloop_source(0) {
                         Ok(source) => source,
                         Err(_) => {
                             error!("Failed to create runloop source!");

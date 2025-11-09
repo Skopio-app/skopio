@@ -246,8 +246,37 @@ impl SummaryQueryBuilder {
         let range_end = self.filters.end.unwrap_or(i64::MAX);
         let step = bucket_step(self.filters.time_bucket);
 
-        let mut qb =
-            QueryBuilder::<Sqlite>::new("WITH RECURSIVE buckets(start_ts, end_ts) AS ( SELECT ");
+        let mut qb = QueryBuilder::<Sqlite>::new(
+            "WITH filtered_events AS (
+            SELECT
+                events.timestamp,
+                events.end_timestamp,
+                events.app_id,
+                events.project_id,
+                events.entity_id,
+                events.branch_id,
+                events.category_id,
+                events.language_id,
+                events.source_id
+            FROM events
+            WHERE events.timestamp < ",
+        );
+        qb.push_bind(range_end)
+            .push(" AND events.end_timestamp > ")
+            .push_bind(range_start);
+
+        // Apply filters early
+        if let Some(apps) = &self.filters.apps {
+            qb.push(" AND events.app_id IN (SELECT id FROM apps WHERE name IN (");
+            let mut sep = qb.separated(", ");
+            for app in apps {
+                sep.push_bind(app);
+            }
+            qb.push("))");
+        }
+        // ... repeat for other filters
+
+        qb.push("), buckets(start_ts, end_ts) AS ( SELECT ");
         qb.push_bind(range_start)
             .push(", MIN(")
             .push_bind(range_end)
@@ -259,14 +288,9 @@ impl SummaryQueryBuilder {
             },
             &step,
         );
-        qb.push(
-            ") \
-         UNION ALL \
-             SELECT end_ts, MIN(",
-        )
-        .push_bind(range_end)
-        .push(", ");
-
+        qb.push(") UNION ALL SELECT end_ts, MIN(")
+            .push_bind(range_end)
+            .push(", ");
         push_next_end_with(
             &mut qb,
             |q| {
@@ -274,20 +298,15 @@ impl SummaryQueryBuilder {
             },
             &step,
         );
-        qb.push(
-            ") \
-             FROM buckets \
-             WHERE end_ts < ",
-        )
-        .push_bind(range_end)
-        .push(") ");
+        qb.push(") FROM buckets WHERE end_ts < ")
+            .push_bind(range_end)
+            .push(") ");
 
         qb.push("SELECT ");
         qb.push_bucket_label_expr(self.filters.time_bucket);
         qb.push(" AS bucket, ")
             .push(group_key)
-            .push(" AS group_key, ")
-            .push("SUM(");
+            .push(" AS group_key, SUM(");
         push_overlap_with(
             &mut qb,
             |q| {
@@ -306,25 +325,14 @@ impl SummaryQueryBuilder {
         }
 
         qb.push(
-            " FROM buckets \
-              JOIN events \
-                ON events.end_timestamp > buckets.start_ts \
-               AND events.timestamp < buckets.end_ts ",
+            " FROM buckets JOIN filtered_events AS events
+              ON events.end_timestamp > buckets.start_ts 
+             AND events.timestamp < buckets.end_ts ",
         );
 
         qb.append_standard_joins(inner_tbl);
-
         qb.push(" WHERE 1=1");
-
-        qb.append_date_range(
-            self.filters.start,
-            self.filters.end,
-            "events.timestamp",
-            "events.end_timestamp",
-        );
-
         qb.append_all_filters(&self.filters);
-
         qb.push(" GROUP BY ");
         qb.push_bucket_label_expr(self.filters.time_bucket);
         qb.push(", ").push(group_key);
