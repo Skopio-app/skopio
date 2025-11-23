@@ -158,17 +158,17 @@ pub fn group_key_info(group: Option<Group>) -> (&'static str, Option<&'static st
 /// ensuring only positive (actual overlapping) durations are counted.
 pub fn push_overlap_with<FStart, FEnd>(
     qb: &mut QueryBuilder<Sqlite>,
-    push_start: FStart,
-    push_end: FEnd,
+    mut push_start: FStart,
+    mut push_end: FEnd,
 ) where
-    FStart: FnOnce(&mut QueryBuilder<Sqlite>),
-    FEnd: FnOnce(&mut QueryBuilder<Sqlite>),
+    FStart: FnMut(&mut QueryBuilder<Sqlite>),
+    FEnd: FnMut(&mut QueryBuilder<Sqlite>),
 {
-    qb.push("max(0, min(events.end_timestamp, ");
+    qb.push(" (MIN(events.end_timestamp, ");
     push_end(qb);
-    qb.push(") - max(events.timestamp, ");
+    qb.push(") - MAX(events.timestamp, ");
     push_start(qb);
-    qb.push("))");
+    qb.push(")) ");
 }
 
 pub fn bucket_step(bucket: Option<TimeBucket>) -> BucketStep {
@@ -435,8 +435,8 @@ mod tests {
         );
 
         let sql = qb.build().sql();
-        assert!(sql.contains("max(0, min(events.end_timestamp"));
-        assert!(sql.contains("max(events.timestamp"));
+        assert!(sql.contains("MIN(events.end_timestamp"));
+        assert!(sql.contains("MAX(events.timestamp"));
     }
 
     #[test]
