@@ -30,6 +30,7 @@ common = { path = "../common" }
 thiserror = { workspace = true }
 async-trait = { workspace = true }
 uuid = { workspace = true, features = ["v7", "fast-rng", "serde"] }
+log = { workspace = true }
 
 [dev-dependencies]
 tokio = { workspace = true, features = ["macros", "rt-multi-thread"] }

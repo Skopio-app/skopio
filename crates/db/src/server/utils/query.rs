@@ -151,26 +151,6 @@ pub fn group_key_info(group: Option<Group>) -> (&'static str, Option<&'static st
     }
 }
 
-/// Appends an SQL expression that computes the time overlap (in seconds)
-/// between an event’s active range (`events.timestamp` .. `events.end_timestamp`)
-/// and a given interval defined by `push_start` and `push_end`.
-/// The expression yields `max(0, min(end_event, end_range) - max(start_event, start_range))`,
-/// ensuring only positive (actual overlapping) durations are counted.
-pub fn push_overlap_with<FStart, FEnd>(
-    qb: &mut QueryBuilder<Sqlite>,
-    mut push_start: FStart,
-    mut push_end: FEnd,
-) where
-    FStart: FnMut(&mut QueryBuilder<Sqlite>),
-    FEnd: FnMut(&mut QueryBuilder<Sqlite>),
-{
-    qb.push("max(0, min(events.end_timestamp, ");
-    push_end(qb);
-    qb.push(") - max(events.timestamp, ");
-    push_start(qb);
-    qb.push("))");
-}
-
 pub fn bucket_step(bucket: Option<TimeBucket>) -> BucketStep {
     match bucket {
         Some(TimeBucket::Hour) => BucketStep::Seconds(3600),
@@ -419,24 +399,6 @@ mod tests {
         let mut qb = QueryBuilder::<Sqlite>::new("SELECT ");
         qb.push_bucket_label_expr(None);
         assert!(qb.build().sql().contains("'Unbucketed'"));
-    }
-
-    #[test]
-    fn test_push_overlap_with() {
-        let mut qb = QueryBuilder::<Sqlite>::new("SELECT ");
-        push_overlap_with(
-            &mut qb,
-            |q| {
-                q.push("1000");
-            },
-            |q| {
-                q.push("2000");
-            },
-        );
-
-        let sql = qb.build().sql();
-        assert!(sql.contains("min(events.end_timestamp"));
-        assert!(sql.contains("max(events.timestamp"));
     }
 
     #[test]

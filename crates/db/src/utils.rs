@@ -1,5 +1,8 @@
 use std::path::Path;
 
+#[cfg(debug_assertions)]
+use sqlx::{Row, SqlitePool};
+
 use crate::{error::DBError, DBContext};
 
 pub fn extract_db_file_path(database_url: &str) -> std::path::PathBuf {
@@ -34,6 +37,24 @@ pub async fn update_synced_in(
     }
 
     query_builder.execute(db_context.pool()).await?;
+
+    Ok(())
+}
+
+#[allow(dead_code)]
+#[cfg(debug_assertions)]
+pub async fn explain_query(pool: &SqlitePool, sql: &str) -> Result<(), DBError> {
+    use log::info;
+
+    let explain_sql = format!("EXPLAIN QUERY PLAN {}", sql);
+
+    let rows = sqlx::query(&explain_sql).fetch_all(pool).await?;
+
+    info!("Query plan for: {}", sql);
+    for row in rows {
+        let detail: String = row.try_get("detail")?;
+        info!(" {}", detail);
+    }
 
     Ok(())
 }

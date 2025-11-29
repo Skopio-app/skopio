@@ -13,9 +13,7 @@ use crate::{
     error::DBError,
     models::BucketTimeSummary,
     server::utils::{
-        query::{
-            bucket_step, group_key_info, push_next_end_with, push_overlap_with, QueryBuilderExt,
-        },
+        query::{bucket_step, group_key_info, push_next_end_with, QueryBuilderExt},
         summary_filter::SummaryFilters,
     },
     DBContext,
@@ -200,20 +198,9 @@ impl SummaryQueryBuilder {
     /// Executes a query that returns only the total time (in seconds)
     /// for the current filters
     pub async fn execute_total_time(&self, db: &DBContext) -> Result<i64, DBError> {
-        let start = self.filters.start.unwrap_or(i64::MIN);
-        let end = self.filters.end.unwrap_or(i64::MAX);
-
-        let mut qb = QueryBuilder::<Sqlite>::new("SELECT SUM(");
-        push_overlap_with(
-            &mut qb,
-            |q| {
-                q.push_bind(start);
-            },
-            |q| {
-                q.push_bind(end);
-            },
+        let mut qb = QueryBuilder::<Sqlite>::new(
+            "SELECT COALESCE(SUM(duration), 0) AS total_seconds FROM events ",
         );
-        qb.push(") AS total_seconds FROM events ");
 
         qb.append_standard_joins(None);
         qb.push(" WHERE 1=1");
@@ -228,6 +215,20 @@ impl SummaryQueryBuilder {
         qb.append_all_filters(&self.filters);
 
         let query = qb.build_query_scalar::<Option<i64>>();
+
+        #[cfg(debug_assertions)]
+        {
+            use sqlx::Execute;
+
+            use crate::utils::explain_query;
+            use log::{info, warn};
+
+            let sql = query.sql();
+            info!("Executing total time query: {}", sql);
+            if let Err(e) = explain_query(db.pool(), sql).await {
+                warn!("Failed to explain total time query: {}", e);
+            }
+        }
         let result = query.fetch_one(db.pool()).await?;
 
         Ok(result.unwrap_or(0))
@@ -246,8 +247,10 @@ impl SummaryQueryBuilder {
         let range_end = self.filters.end.unwrap_or_default();
         let step = bucket_step(self.filters.time_bucket);
 
-        let mut qb =
-            QueryBuilder::<Sqlite>::new("WITH RECURSIVE buckets(start_ts, end_ts) AS ( SELECT ");
+        let mut qb = QueryBuilder::<Sqlite>::new(
+            "WITH RECURSIVE buckets(start_ts, end_ts) AS ( \
+            SELECT ",
+        );
         qb.push_bind(range_start)
             .push(", MIN(")
             .push_bind(range_end)
@@ -259,14 +262,9 @@ impl SummaryQueryBuilder {
             },
             &step,
         );
-        qb.push(
-            ") \
-         UNION ALL \
-             SELECT end_ts, MIN(",
-        )
-        .push_bind(range_end)
-        .push(", ");
-
+        qb.push(") UNION ALL SELECT end_ts, MIN(")
+            .push_bind(range_end)
+            .push(", ");
         push_next_end_with(
             &mut qb,
             |q| {
@@ -274,30 +272,16 @@ impl SummaryQueryBuilder {
             },
             &step,
         );
-        qb.push(
-            ") \
-             FROM buckets \
-             WHERE end_ts < ",
-        )
-        .push_bind(range_end)
-        .push(") ");
+        qb.push(") FROM buckets WHERE end_ts < ")
+            .push_bind(range_end)
+            .push(") ");
 
         qb.push("SELECT ");
         qb.push_bucket_label_expr(self.filters.time_bucket);
         qb.push(" AS bucket, ")
             .push(group_key)
             .push(" AS group_key, ")
-            .push("SUM(");
-        push_overlap_with(
-            &mut qb,
-            |q| {
-                q.push("buckets.start_ts");
-            },
-            |q| {
-                q.push("buckets.end_ts");
-            },
-        );
-        qb.push(") AS total_seconds");
+            .push("SUM(events.duration) AS total_seconds");
 
         if needs_entity_type {
             qb.push(", entities.type AS group_meta ");
@@ -305,40 +289,38 @@ impl SummaryQueryBuilder {
             qb.push(", NULL AS group_meta ");
         }
 
-        qb.push(
-            " FROM buckets \
-              JOIN ( \
-                  SELECT * FROM events \
-                  WHERE 1=1",
-        );
+        qb.push(" FROM buckets JOIN events ON events.timestamp >= buckets.start_ts AND events.timestamp < buckets.end_ts ");
+
+        qb.append_standard_joins(inner_tbl);
+        qb.push(" WHERE 1=1");
 
         qb.append_date_range(
             self.filters.start,
             self.filters.end,
-            "timestamp",
-            "end_timestamp",
+            "events.timestamp",
+            "events.end_timestamp",
         );
-
-        qb.push(
-            " ) AS events \
-                    ON events.end_timestamp > buckets.start_ts \
-                    AND events.timestamp < buckets.end_ts ",
-        );
-
-        qb.append_standard_joins(inner_tbl);
-
-        qb.push(" WHERE 1=1");
-
         qb.append_all_filters(&self.filters);
 
         qb.push(" GROUP BY ");
         qb.push_bucket_label_expr(self.filters.time_bucket);
         qb.push(", ").push(group_key);
 
-        let rows = qb
-            .build_query_as::<RawBucketRow>()
-            .fetch_all(db.pool())
-            .await?;
+        let query = qb.build_query_as::<RawBucketRow>();
+
+        #[cfg(debug_assertions)]
+        {
+            use crate::utils::explain_query;
+            use log::warn;
+            use sqlx::Execute;
+
+            let sql = query.sql();
+            if let Err(e) = explain_query(db.pool(), sql).await {
+                warn!("Failed to explain query: {}", e);
+            }
+        }
+
+        let rows = query.fetch_all(db.pool()).await?;
 
         let mut records = Vec::with_capacity(rows.len());
         for row in rows {

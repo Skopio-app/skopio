@@ -1025,6 +1025,7 @@ dependencies = [
  "chrono",
  "common",
  "libsqlite3-sys",
+ "log",
  "serde",
  "specta",
  "sqlx",
