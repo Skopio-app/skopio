@@ -435,8 +435,8 @@ mod tests {
         );
 
         let sql = qb.build().sql();
-        assert!(sql.contains("MIN(events.end_timestamp"));
-        assert!(sql.contains("MAX(events.timestamp"));
+        assert!(sql.contains("min(events.end_timestamp"));
+        assert!(sql.contains("max(events.timestamp"));
     }
 
     #[test]
