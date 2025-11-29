@@ -242,8 +242,8 @@ impl SummaryQueryBuilder {
         let (group_key, inner_tbl) = group_key_info(self.filters.group_by);
         let needs_entity_type = matches!(self.filters.group_by, Some(Group::Entity));
 
-        let range_start = self.filters.start.unwrap_or(i64::MIN);
-        let range_end = self.filters.end.unwrap_or(i64::MAX);
+        let range_start = self.filters.start.unwrap_or_default();
+        let range_end = self.filters.end.unwrap_or_default();
         let step = bucket_step(self.filters.time_bucket);
 
         let mut qb =
@@ -307,21 +307,27 @@ impl SummaryQueryBuilder {
 
         qb.push(
             " FROM buckets \
-              JOIN events \
-                ON events.end_timestamp > buckets.start_ts \
-               AND events.timestamp < buckets.end_ts ",
+              JOIN ( \
+                  SELECT * FROM events \
+                  WHERE 1=1",
+        );
+
+        qb.append_date_range(
+            self.filters.start,
+            self.filters.end,
+            "timestamp",
+            "end_timestamp",
+        );
+
+        qb.push(
+            " ) AS events \
+                    ON events.end_timestamp > buckets.start_ts \
+                    AND events.timestamp < buckets.end_ts ",
         );
 
         qb.append_standard_joins(inner_tbl);
 
         qb.push(" WHERE 1=1");
-
-        qb.append_date_range(
-            self.filters.start,
-            self.filters.end,
-            "events.timestamp",
-            "events.end_timestamp",
-        );
 
         qb.append_all_filters(&self.filters);
 
