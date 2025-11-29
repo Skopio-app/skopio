@@ -164,11 +164,11 @@ pub fn push_overlap_with<FStart, FEnd>(
     FStart: FnMut(&mut QueryBuilder<Sqlite>),
     FEnd: FnMut(&mut QueryBuilder<Sqlite>),
 {
-    qb.push(" (MIN(events.end_timestamp, ");
+    qb.push("max(0, min(events.end_timestamp, ");
     push_end(qb);
-    qb.push(") - MAX(events.timestamp, ");
+    qb.push(") - max(events.timestamp, ");
     push_start(qb);
-    qb.push(")) ");
+    qb.push("))");
 }
 
 pub fn bucket_step(bucket: Option<TimeBucket>) -> BucketStep {
