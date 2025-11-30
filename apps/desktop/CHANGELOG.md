@@ -23,6 +23,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v0.1.8] -2025-11-29
+
+### Added
+
+- Updated app Rust and Tauri deps.
+
+---
+
 ## [v0.1.7] -2025-11-02
 
 ### Added

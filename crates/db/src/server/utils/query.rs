@@ -21,6 +21,7 @@ pub trait QueryBuilderExt<'qb> {
     fn append_all_filters(&mut self, filters: &'qb SummaryFilters);
     fn append_standard_joins(&mut self, inner_join: Option<&str>);
     fn push_bucket_label_expr(&mut self, bucket: Option<TimeBucket>);
+    fn push_overlap_duration(&mut self, range_start_field: &str, range_end_field: &str);
 }
 
 impl<'qb> QueryBuilderExt<'qb> for QueryBuilder<'qb, Sqlite> {
@@ -135,6 +136,55 @@ impl<'qb> QueryBuilderExt<'qb> for QueryBuilder<'qb, Sqlite> {
             None => self.push("'Unbucketed'"),
         };
     }
+
+    /// Appends SQL logic to calculate the overlapping duration between events and a time range.
+    ///
+    /// This function generates a CASE statement that computes how much of an event's duration
+    /// falls within a specified time range. It handles four scenarios where events may
+    /// partially or fully overlap with the range boundaries.
+    fn push_overlap_duration(&mut self, range_start_field: &str, range_end_field: &str) {
+        self.push(
+            "CASE \
+        WHEN events.timestamp >= ",
+        )
+        .push(range_start_field)
+        .push(" AND events.end_timestamp <= ")
+        .push(range_end_field)
+        .push(
+            " THEN events.duration \
+        WHEN events.timestamp < ",
+        )
+        .push(range_start_field)
+        .push(" AND events.end_timestamp <= ")
+        .push(range_end_field)
+        .push(" THEN events.end_timestamp - ")
+        .push(range_start_field)
+        .push(
+            " \
+        WHEN events.timestamp >= ",
+        )
+        .push(range_start_field)
+        .push(" AND events.end_timestamp > ")
+        .push(range_end_field)
+        .push(" THEN ")
+        .push(range_end_field)
+        .push(
+            " - events.timestamp \
+        WHEN events.timestamp < ",
+        )
+        .push(range_start_field)
+        .push(" AND events.end_timestamp > ")
+        .push(range_end_field)
+        .push(" THEN ")
+        .push(range_end_field)
+        .push(" - ")
+        .push(range_start_field)
+        .push(
+            " \
+        ELSE 0 \
+        END",
+        );
+    }
 }
 
 /// Returns (group_key_sql, inner_join_table_name)
@@ -149,26 +199,6 @@ pub fn group_key_info(group: Option<Group>) -> (&'static str, Option<&'static st
         Some(Group::Source) => ("sources.name", Some("sources")),
         None => ("'Total'", None),
     }
-}
-
-/// Appends an SQL expression that computes the time overlap (in seconds)
-/// between an event’s active range (`events.timestamp` .. `events.end_timestamp`)
-/// and a given interval defined by `push_start` and `push_end`.
-/// The expression yields `max(0, min(end_event, end_range) - max(start_event, start_range))`,
-/// ensuring only positive (actual overlapping) durations are counted.
-pub fn push_overlap_with<FStart, FEnd>(
-    qb: &mut QueryBuilder<Sqlite>,
-    mut push_start: FStart,
-    mut push_end: FEnd,
-) where
-    FStart: FnMut(&mut QueryBuilder<Sqlite>),
-    FEnd: FnMut(&mut QueryBuilder<Sqlite>),
-{
-    qb.push("max(0, min(events.end_timestamp, ");
-    push_end(qb);
-    qb.push(") - max(events.timestamp, ");
-    push_start(qb);
-    qb.push("))");
 }
 
 pub fn bucket_step(bucket: Option<TimeBucket>) -> BucketStep {
@@ -419,24 +449,6 @@ mod tests {
         let mut qb = QueryBuilder::<Sqlite>::new("SELECT ");
         qb.push_bucket_label_expr(None);
         assert!(qb.build().sql().contains("'Unbucketed'"));
-    }
-
-    #[test]
-    fn test_push_overlap_with() {
-        let mut qb = QueryBuilder::<Sqlite>::new("SELECT ");
-        push_overlap_with(
-            &mut qb,
-            |q| {
-                q.push("1000");
-            },
-            |q| {
-                q.push("2000");
-            },
-        );
-
-        let sql = qb.build().sql();
-        assert!(sql.contains("min(events.end_timestamp"));
-        assert!(sql.contains("max(events.timestamp"));
     }
 
     #[test]

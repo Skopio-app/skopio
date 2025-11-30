@@ -195,7 +195,7 @@ impl ServerProject {
         let escaped_query = query.replace('"', "\"\"");
         let formatted_query = format!("\"{}\"*", escaped_query);
 
-        let rows: Vec<ServerProject> = sqlx::query_as!(
+        let sql_query = sqlx::query_as!(
             Self,
             r#"
             SELECT
@@ -212,9 +212,21 @@ impl ServerProject {
             "#,
             formatted_query,
             limit
-        )
-        .fetch_all(db_context.pool())
-        .await?;
+        );
+
+        #[cfg(debug_assertions)]
+        {
+            use crate::utils::explain_query;
+            use log::warn;
+            use sqlx::Execute;
+
+            let sql = sql_query.sql();
+            if let Err(e) = explain_query(db_context.pool(), sql).await {
+                warn!("Failed to explain project search query: {}", e);
+            }
+        }
+
+        let rows: Vec<ServerProject> = sql_query.fetch_all(db_context.pool()).await?;
 
         let projects = rows.into_iter().map(Into::into).collect();
 

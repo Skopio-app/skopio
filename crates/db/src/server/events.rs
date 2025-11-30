@@ -121,7 +121,24 @@ impl SummaryQueryBuilder {
         }
         qb.push("events.timestamp");
 
-        let rows = qb.build().fetch_all(db.pool()).await?;
+        let query = qb.build();
+
+        #[cfg(debug_assertions)]
+        {
+            use log::info;
+            use log::warn;
+            use sqlx::Execute;
+
+            use crate::utils::explain_query;
+
+            let sql = query.sql();
+            info!("Executing event range query: {}, ", sql);
+            if let Err(e) = explain_query(db.pool(), sql).await {
+                warn!("Failed to explain event query: {}", e);
+            }
+        }
+
+        let rows = query.fetch_all(db.pool()).await?;
 
         let mut flat_events = Vec::new();
         let mut grouped_events: HashMap<String, Vec<FullEvent>> = HashMap::new();
