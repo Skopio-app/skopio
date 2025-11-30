@@ -142,6 +142,18 @@ impl<'qb> QueryBuilderExt<'qb> for QueryBuilder<'qb, Sqlite> {
     /// This function generates a CASE statement that computes how much of an event's duration
     /// falls within a specified time range. It handles four scenarios where events may
     /// partially or fully overlap with the range boundaries.
+    ///
+    /// # Overview
+    ///
+    /// When tracking time-based events across specific time ranges (hours, days, weeks),
+    /// events may:
+    /// - Start and end within the range (full overlap)
+    /// - Start before the range and end within it (partial overlap at start)
+    /// - Start within the range and end after it (partial overlap at end)
+    /// - Start before and end after the range (span the entire range)
+    ///
+    /// This function ensures only the overlapping portion is counted, providing accurate
+    /// time tracking across boundaries.
     fn push_overlap_duration(&mut self, range_start_field: &str, range_end_field: &str) {
         self.push(
             "CASE \
