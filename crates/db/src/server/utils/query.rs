@@ -251,7 +251,274 @@ mod tests {
     use super::*;
     use crate::server::utils::summary_filter::SummaryFilters;
     use common::{models::Group, time::TimeBucket};
-    use sqlx::{Execute, QueryBuilder, Sqlite};
+    use sqlx::{Execute, QueryBuilder, Sqlite, SqlitePool};
+    use uuid::Uuid;
+
+    /// Helper to create a test database with events table
+    async fn setup_test_db() -> SqlitePool {
+        let pool = SqlitePool::connect(":memory:").await.unwrap();
+
+        // Minimal schema for testing
+        sqlx::query(
+            "CREATE TABLE events (
+                    id BLOB PRIMARY KEY,
+                    timestamp INTEGER NOT NULL,
+                    end_timestamp INTEGER NOT NULL,
+                    duration INTEGER NOT NULL
+                )",
+        )
+        .execute(&pool)
+        .await
+        .unwrap();
+
+        pool
+    }
+
+    /// Helper to insert a test event
+    async fn insert_event(
+        pool: &SqlitePool,
+        timestamp: i64,
+        end_timestamp: i64,
+        duration: i64,
+    ) -> Uuid {
+        let id = Uuid::now_v7();
+        sqlx::query(
+            "INSERT INTO events (id, timestamp, end_timestamp, duration)
+                  VALUES (?, ?, ?, ?)",
+        )
+        .bind(id)
+        .bind(timestamp)
+        .bind(end_timestamp)
+        .bind(duration)
+        .execute(pool)
+        .await
+        .unwrap();
+
+        id
+    }
+
+    /// Helper to build and execute overlap query
+    async fn calculate_overlap(pool: &SqlitePool, range_start: i64, range_end: i64) -> i64 {
+        let mut qb = QueryBuilder::<Sqlite>::new("SELECT COALESCE(SUM(");
+        qb.push_overlap_duration(&range_start.to_string(), &range_end.to_string());
+        qb.push("), 0) FROM events WHERE end_timestamp > ")
+            .push_bind(range_start)
+            .push(" AND timestamp < ")
+            .push_bind(range_end);
+
+        let result: i64 = qb.build_query_scalar().fetch_one(pool).await.unwrap();
+
+        result
+    }
+
+    #[sqlx::test]
+    async fn test_event_fully_within_range() {
+        let pool = setup_test_db().await;
+
+        // Event: 1000-2000 (duration: 1000)
+        // Range: 500-2500
+        // Expected: Full duration (1000)
+        insert_event(&pool, 1000, 2000, 1000).await;
+
+        let overlap = calculate_overlap(&pool, 500, 2500).await;
+        assert_eq!(
+            overlap, 1000,
+            "Event fully within range should count full duration"
+        );
+    }
+
+    #[sqlx::test]
+    async fn test_event_starts_before_range() {
+        let pool = setup_test_db().await;
+
+        // Event: 500-1500 (duration: 1000)
+        // Range: 1000-2000
+        // Expected: 1500 - 1000 = 500 (only portion after range start)
+        insert_event(&pool, 500, 1500, 1000).await;
+
+        let overlap = calculate_overlap(&pool, 1000, 2000).await;
+        assert_eq!(
+            overlap, 500,
+            "Event starting before range should count from range start"
+        );
+    }
+
+    #[sqlx::test]
+    async fn test_event_ends_after_range() {
+        let pool = setup_test_db().await;
+
+        // Event: 1500-2500 (duration: 1000)
+        // Range: 1000-2000
+        // Expected: 2000 - 1500 = 500 (only portion before range end)
+        insert_event(&pool, 1500, 2500, 1000).await;
+
+        let overlap = calculate_overlap(&pool, 1000, 2000).await;
+        assert_eq!(
+            overlap, 500,
+            "Event ending after range should count until range end"
+        );
+    }
+
+    #[sqlx::test]
+    async fn test_event_spans_entire_range() {
+        let pool = setup_test_db().await;
+
+        // Event: 500-2500 (duration: 2000)
+        // Range: 1000-2000
+        // Expected: 2000 - 1000 = 1000 (entire range duration)
+        insert_event(&pool, 500, 2500, 2000).await;
+
+        let overlap = calculate_overlap(&pool, 1000, 2000).await;
+        assert_eq!(
+            overlap, 1000,
+            "Event spanning entire range should count range duration"
+        );
+    }
+
+    #[sqlx::test]
+    async fn test_event_completely_before_range() {
+        let pool = setup_test_db().await;
+
+        // Event: 100-500 (duration: 400)
+        // Range: 1000-2000
+        // Expected: 0 (no overlap)
+        insert_event(&pool, 100, 500, 400).await;
+
+        let overlap = calculate_overlap(&pool, 1000, 2000).await;
+        assert_eq!(overlap, 0, "Event before range should not be counted");
+    }
+
+    #[sqlx::test]
+    async fn test_event_completely_after_range() {
+        let pool = setup_test_db().await;
+
+        // Event: 2500-3000 (duration: 500)
+        // Range: 1000-2000
+        // Expected: 0 (no overlap)
+        insert_event(&pool, 2500, 3000, 500).await;
+
+        let overlap = calculate_overlap(&pool, 1000, 2000).await;
+        assert_eq!(overlap, 0, "Event after range should not be counted");
+    }
+
+    #[sqlx::test]
+    async fn test_multiple_events_various_overlaps() {
+        let pool = setup_test_db().await;
+
+        // Range: 1000-2000
+
+        // Event 1: Fully within (1200-1800, duration: 600)
+        insert_event(&pool, 1200, 1800, 600).await;
+
+        // Event 2: Starts before (800-1500, duration: 700)
+        // Expected overlap: 1500 - 1000 = 500
+        insert_event(&pool, 800, 1500, 700).await;
+
+        // Event 3: Ends after (1700-2300, duration: 600)
+        // Expected overlap: 2000 - 1700 = 300
+        insert_event(&pool, 1700, 2300, 600).await;
+
+        // Event 4: Spans entire range (500-2500, duration: 2000)
+        insert_event(&pool, 500, 2500, 2000).await;
+
+        // Total expected = 600 + 500 + 300 + 1000 = 2400
+        let overlap = calculate_overlap(&pool, 1000, 2000).await;
+        assert_eq!(overlap, 2400, "Multiple events should sum correctly");
+    }
+
+    #[sqlx::test]
+    async fn test_event_at_exact_boundaries() {
+        let pool = setup_test_db().await;
+
+        // Event exactly at range start
+        insert_event(&pool, 1000, 1500, 500).await;
+
+        let overlap = calculate_overlap(&pool, 1000, 2000).await;
+        assert_eq!(overlap, 500, "Event at range start should be included");
+    }
+
+    #[sqlx::test]
+    async fn test_event_ending_at_exact_boundary() {
+        let pool = setup_test_db().await;
+
+        // Event ending exactly at range end
+        insert_event(&pool, 1500, 2000, 500).await;
+
+        let overlap = calculate_overlap(&pool, 1000, 2000).await;
+        assert_eq!(
+            overlap, 500,
+            "Event ending at range end should be fully included"
+        );
+    }
+
+    #[sqlx::test]
+    async fn test_zero_duration_event() {
+        let pool = setup_test_db().await;
+
+        // Event with zero duration (point in time)
+        insert_event(&pool, 1500, 1500, 0).await;
+
+        let overlap = calculate_overlap(&pool, 1000, 2000).await;
+        assert_eq!(overlap, 0, "Zero duration event should contribute 0");
+    }
+
+    #[sqlx::test]
+    async fn test_single_second_event() {
+        let pool = setup_test_db().await;
+
+        // Event: 1500-1501 (duration: 1)
+        insert_event(&pool, 1500, 1501, 1).await;
+
+        let overlap = calculate_overlap(&pool, 1000, 2000).await;
+        assert_eq!(overlap, 1, "Single second event should count as 1");
+    }
+
+    #[sqlx::test]
+    async fn test_empty_database() {
+        let pool = setup_test_db().await;
+
+        // No events inserted
+        let overlap = calculate_overlap(&pool, 1000, 2000).await;
+        assert_eq!(overlap, 0, "Empty database should return 0");
+    }
+
+    #[sqlx::test]
+    async fn test_negative_duration_handling() {
+        let pool = setup_test_db().await;
+
+        // Malformed event: end before start
+        insert_event(&pool, 2000, 1000, -1000).await;
+
+        let overlap = calculate_overlap(&pool, 1000, 3000).await;
+
+        // The WHERE clause (end_timestamp > range_start AND timestamp < range_end)
+        // will exclude this event, so overlap should be 0
+        assert_eq!(
+            overlap, 0,
+            "Malformed event should not contribute to overlap"
+        );
+    }
+
+    #[sqlx::test]
+    async fn test_very_large_duration() {
+        let pool = setup_test_db().await;
+
+        // Event spanning a week (604800 seconds)
+        let week_start = 1764450000;
+        let week_end = 1765054800;
+
+        insert_event(&pool, week_start, week_end, 604800).await;
+
+        // Query for one day within that week
+        let day_start = 1764450000;
+        let day_end = 1764536400; // +86400 seconds (1 day)
+
+        let overlap = calculate_overlap(&pool, day_start, day_end).await;
+        assert_eq!(
+            overlap, 86400,
+            "Should count exactly one day from week-long event"
+        );
+    }
 
     #[test]
     fn test_append_date_range_both_bounds() {
