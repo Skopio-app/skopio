@@ -23,6 +23,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v0.1.7] - 2025-12-01
+
+### Fixed
+
+- Overlap awareness when computing event summaries or total time spent given a range.
+
+---
+
 ## [v0.1.6] - 2025-11-29
 
 ### Fixed
