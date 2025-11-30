@@ -198,9 +198,12 @@ impl SummaryQueryBuilder {
     /// Executes a query that returns only the total time (in seconds)
     /// for the current filters
     pub async fn execute_total_time(&self, db: &DBContext) -> Result<i64, DBError> {
-        let mut qb = QueryBuilder::<Sqlite>::new(
-            "SELECT COALESCE(SUM(duration), 0) AS total_seconds FROM events ",
-        );
+        let start = self.filters.start.unwrap_or(i64::MIN);
+        let end = self.filters.end.unwrap_or(i64::MAX);
+
+        let mut qb = QueryBuilder::<Sqlite>::new("SELECT COALESCE(SUM(");
+        qb.push_overlap_duration(&start.to_string(), &end.to_string());
+        qb.push("), 0) AS total_seconds FROM events ");
 
         qb.append_standard_joins(None);
         qb.push(" WHERE 1=1");
@@ -281,7 +284,9 @@ impl SummaryQueryBuilder {
         qb.push(" AS bucket, ")
             .push(group_key)
             .push(" AS group_key, ")
-            .push("SUM(events.duration) AS total_seconds");
+            .push("SUM(");
+        qb.push_overlap_duration("buckets.start_ts", "buckets.end_ts");
+        qb.push(") AS total_seconds");
 
         if needs_entity_type {
             qb.push(", entities.type AS group_meta ");

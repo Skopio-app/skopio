@@ -21,6 +21,7 @@ pub trait QueryBuilderExt<'qb> {
     fn append_all_filters(&mut self, filters: &'qb SummaryFilters);
     fn append_standard_joins(&mut self, inner_join: Option<&str>);
     fn push_bucket_label_expr(&mut self, bucket: Option<TimeBucket>);
+    fn push_overlap_duration(&mut self, range_start_field: &str, range_end_field: &str);
 }
 
 impl<'qb> QueryBuilderExt<'qb> for QueryBuilder<'qb, Sqlite> {
@@ -134,6 +135,55 @@ impl<'qb> QueryBuilderExt<'qb> for QueryBuilder<'qb, Sqlite> {
             }
             None => self.push("'Unbucketed'"),
         };
+    }
+
+    /// Appends SQL logic to calculate the overlapping duration between events and a time range.
+    ///
+    /// This function generates a CASE statement that computes how much of an event's duration
+    /// falls within a specified time range. It handles four scenarios where events may
+    /// partially or fully overlap with the range boundaries.
+    fn push_overlap_duration(&mut self, range_start_field: &str, range_end_field: &str) {
+        self.push(
+            "CASE \
+        WHEN events.timestamp >= ",
+        )
+        .push(range_start_field)
+        .push(" AND events.end_timestamp <= ")
+        .push(range_end_field)
+        .push(
+            " THEN events.duration \
+        WHEN events.timestamp < ",
+        )
+        .push(range_start_field)
+        .push(" AND events.end_timestamp <= ")
+        .push(range_end_field)
+        .push(" THEN events.end_timestamp - ")
+        .push(range_start_field)
+        .push(
+            " \
+        WHEN events.timestamp >= ",
+        )
+        .push(range_start_field)
+        .push(" AND events.end_timestamp > ")
+        .push(range_end_field)
+        .push(" THEN ")
+        .push(range_end_field)
+        .push(
+            " - events.timestamp \
+        WHEN events.timestamp < ",
+        )
+        .push(range_start_field)
+        .push(" AND events.end_timestamp > ")
+        .push(range_end_field)
+        .push(" THEN ")
+        .push(range_end_field)
+        .push(" - ")
+        .push(range_start_field)
+        .push(
+            " \
+        ELSE 0 \
+        END",
+        );
     }
 }
 
