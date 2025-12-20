@@ -23,6 +23,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v0.1.8] - 2025-12-20
+
+### Fixed
+
+- Join by event overlap as opposed to start-in-bucket in summary query logic.
+
+---
+
 ## [v0.1.7] - 2025-12-01
 
 ### Fixed
