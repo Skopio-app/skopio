@@ -294,7 +294,7 @@ impl SummaryQueryBuilder {
             qb.push(", NULL AS group_meta ");
         }
 
-        qb.push(" FROM buckets JOIN events ON events.timestamp >= buckets.start_ts AND events.timestamp < buckets.end_ts ");
+        qb.push(" FROM buckets JOIN events ON events.end_timestamp > buckets.start_ts AND events.timestamp < buckets.end_ts ");
 
         qb.append_standard_joins(inner_tbl);
         qb.push(" WHERE 1=1");
