@@ -16,7 +16,7 @@ pub enum Commands {
     /// Save an event (a period of activity, with a start and end timestamp)
     Event {
         #[arg(long, short)]
-        /// The start of the recorded event
+        /// The start of the recorded event (Unix timestamp)
         timestamp: i32,
 
         #[arg(long, short)]
@@ -32,11 +32,11 @@ pub enum Commands {
         entity: String,
 
         #[arg(long)]
-        /// The entity type, be it an app, file or URL
+        /// The entity type, be it an App, File or Url
         entity_type: String,
 
         #[arg(long, short)]
-        /// The duration of an event
+        /// The duration of an event in seconds
         duration: i32,
 
         #[arg(long, short)]
@@ -48,7 +48,7 @@ pub enum Commands {
         source: String,
 
         #[arg(long)]
-        /// The end timestamp of the event
+        /// The end timestamp of the event (Unix timestamp)
         end_timestamp: i32,
     },
 
