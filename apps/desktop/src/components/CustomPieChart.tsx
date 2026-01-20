@@ -66,19 +66,23 @@ const CustomPieChart: React.FC<CustomPieChartProps> = ({ data }) => {
         />
       </div>
 
-      <div className="w-52 pr-2 pl-3 overflow-y-auto max-h-[300px] space-y-2 text-sm scroll-hidden">
-        {data.map((d) => (
-          <div key={d.id} className="flex items-center justify-between">
-            <div className="flex items-center gap-2 min-w-0">
+      <div className="basis-[clamp(10rem,30%,18rem)] shrink-0 pr-2 pl-3 overflow-y-auto max-h-[300px] space-y-2 text-sm scroll-hidden">
+        {chartData.map((d) => (
+          <div key={d.id} className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2 min-w-0 flex-1">
               <span
                 className="w-3 h-3 rounded-full inline-block shrink-0"
                 style={{ backgroundColor: getColorForKey(d.id) }}
               />
-              <span className="truncate text-foreground text-xs max-w-[7rem]">
+              <span
+                title={d.label}
+                className="flex-1 min-w-0 truncate text-foreground text-xs"
+              >
                 {d.label}
               </span>
             </div>
-            <span className="truncate text-xs text-muted-foreground max-w[5rem] text-right">
+
+            <span className="shrink-0 truncate text-xs text-muted-foreground max-w-[5rem] text-right">
               {formatDuration(d.value)}
             </span>
           </div>
