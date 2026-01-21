@@ -2,6 +2,7 @@ import { ResponsivePieCanvas } from "@nivo/pie";
 import { useMemo } from "react";
 import { formatDuration } from "@/utils/time";
 import { useChartColor, useCssVarColor } from "@/hooks/useChartColor";
+import { useElementSize } from "@/hooks/useElementSize";
 
 interface CustomPieChartProps {
   data: {
@@ -20,6 +21,16 @@ const CustomPieChart: React.FC<CustomPieChartProps> = ({ data }) => {
   const { getColorForKey } = useChartColor();
   const linkTextColor = useCssVarColor("--muted-foreground");
 
+  const { ref, width } = useElementSize<HTMLDivElement>();
+
+  const enableArcLinkLabels = width >= 420;
+
+  const margin = useMemo(() => {
+    if (width < 360) return { top: 44, right: 44, bottom: 44, left: 44 };
+    if (width < 520) return { top: 36, right: 56, bottom: 36, left: 56 };
+    return { top: 30, right: 70, bottom: 30, left: 70 };
+  }, [width]);
+
   if (!chartData.length) {
     return (
       <div className="h-[220px] w-full flex items-center justify-center text-sm text-muted-foreground">
@@ -30,10 +41,10 @@ const CustomPieChart: React.FC<CustomPieChartProps> = ({ data }) => {
 
   return (
     <div className="h-[200px] w-full flex">
-      <div className="flex-1">
+      <div ref={ref} className="flex-1 min-w-0">
         <ResponsivePieCanvas
           data={chartData}
-          margin={{ top: 30, right: 10, left: 20, bottom: 30 }}
+          margin={margin}
           innerRadius={0.5}
           padAngle={0.6}
           cornerRadius={2}
@@ -42,12 +53,15 @@ const CustomPieChart: React.FC<CustomPieChartProps> = ({ data }) => {
           arcLinkLabelsTextColor={linkTextColor}
           arcLinkLabelsThickness={2}
           colors={(bar) => getColorForKey(String(bar.id))}
-          arcLinkLabelsDiagonalLength={12}
+          arcLinkLabelsDiagonalLength={width < 420 ? 8 : 12}
+          arcLinkLabelsStraightLength={width < 420 ? 8 : 12}
+          arcLinkLabelsTextOffset={width < 420 ? 4 : 6}
           arcLinkLabelsColor={{ from: "color" }}
           arcLabelsSkipAngle={10}
           arcLabelsTextColor={{ from: "color", modifiers: [["darker", 2]] }}
           legends={undefined}
           enableArcLabels={false}
+          enableArcLinkLabels={enableArcLinkLabels}
           tooltip={({ datum }) => {
             const time = formatDuration(datum.value);
             return (
