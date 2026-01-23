@@ -87,7 +87,7 @@ impl EventTracker {
         let app_details =
             resolve_app_details(app_bundle_id, app_name, app_path, entity, &snapshot, pid);
 
-        let branch_name = if app_name == "Xcode" {
+        let branch_name = if app_bundle_id.is_xcode_bundle() {
             app_details.project_path.as_ref().and_then(find_git_branch)
         } else {
             None
