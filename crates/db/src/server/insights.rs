@@ -98,7 +98,6 @@ impl InsightProvider for Insights {
                 let start_epoch = start.timestamp();
                 let end_epoch = end.timestamp();
 
-                // Match summary's group key + join semantics.
                 let (group_key, inner_tbl) = group_key_info(Some(group_by));
 
                 let mut qb = QueryBuilder::<Sqlite>::new("SELECT ");
@@ -109,7 +108,6 @@ impl InsightProvider for Insights {
                 qb.append_standard_joins(inner_tbl);
                 qb.push(" WHERE 1=1");
 
-                // Overlap-aware gating like summary.
                 qb.append_date_range(
                     Some(start_epoch),
                     Some(end_epoch),
@@ -224,15 +222,11 @@ impl InsightProvider for Insights {
                 let range_start = start.timestamp();
                 let range_end = end.timestamp();
 
-                // We compute "average of per-bucket totals" (not avg of event durations),
-                // using overlap-aware bucketing like summary.
                 let (key_expr, step): (&'static str, BucketStep) = match bucket {
-                    // Average by weekday (0=Sun..6=Sat)
                     InsightBucket::Day => (
                         "CAST(strftime('%w', datetime(buckets.start_ts,'unixepoch','localtime')) AS INTEGER)",
                         BucketStep::Seconds(86_400),
                     ),
-                    // Average by month-of-year (01..12)
                     InsightBucket::Month => (
                         "CAST(strftime('%m', datetime(buckets.start_ts,'unixepoch','localtime')) AS INTEGER)",
                         bucket_step(Some(common::time::TimeBucket::Month)),
@@ -271,9 +265,6 @@ impl InsightProvider for Insights {
                     .push_bind(range_end)
                     .push(") ");
 
-                // Two-stage aggregation:
-                // 1) totals per (bucket-start, label, key)
-                // 2) AVG(total_seconds) per (key, label)
                 qb.push(
                     "SELECT key, label, ROUND(AVG(total_seconds), 2) AS avg_duration \
                      FROM ( \
@@ -306,7 +297,6 @@ impl InsightProvider for Insights {
 
                 let rows: Vec<AvgRow> = qb.build_query_as().fetch_all(db_context.pool()).await?;
 
-                // Map key -> display label
                 const WEEKDAYS: [&str; 7] = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
                 const MONTHS: [&str; 12] = [
                     "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov",
