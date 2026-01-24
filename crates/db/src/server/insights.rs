@@ -3,7 +3,7 @@ use std::collections::BTreeMap;
 use async_trait::async_trait;
 use common::{
     models::{outputs::InsightResult, Group, InsightBucket, InsightType},
-    time::insight::InsightRange,
+    time::{insight::InsightRange, TimeBucket},
 };
 use sqlx::{QueryBuilder, Sqlite};
 
@@ -229,7 +229,7 @@ impl InsightProvider for Insights {
                     ),
                     InsightBucket::Month => (
                         "CAST(strftime('%m', datetime(buckets.start_ts,'unixepoch','localtime')) AS INTEGER)",
-                        bucket_step(Some(common::time::TimeBucket::Month)),
+                        bucket_step(Some(TimeBucket::Month)),
                     ),
                     _ => return Err(DBError::Unsupported("Only day or month is supported")),
                 };

@@ -1,15 +1,20 @@
 import SkeletonChart from "@/components/loading/SkeletonChart";
+import { Skeleton } from "@skopio/ui";
+
+type SectionVariant = "chart" | "text";
 
 interface SectionContainerProps {
   title?: string;
   children: React.ReactNode;
   loading: boolean;
+  variant?: SectionVariant;
 }
 
 const SectionContainer: React.FC<SectionContainerProps> = ({
   title,
   children,
   loading,
+  variant = "chart",
 }) => {
   return (
     <div className="relative flex flex-col rounded-2xl w-full border border-[var(--muted-foreground)]">
@@ -22,7 +27,14 @@ const SectionContainer: React.FC<SectionContainerProps> = ({
       )}
 
       {loading ? (
-        <SkeletonChart />
+        variant === "chart" ? (
+          <SkeletonChart />
+        ) : (
+          <div className="flex flex-col gap-2 p-3">
+            <Skeleton className="h-4 w-40" />
+            <Skeleton className="h-4 w-2/5" />
+          </div>
+        )
       ) : (
         <div className="flex-1 overflow-hidden">{children}</div>
       )}
