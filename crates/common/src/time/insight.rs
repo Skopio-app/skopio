@@ -1,5 +1,5 @@
 use chrono::{
-    offset::LocalResult, DateTime, Datelike, Duration, NaiveDate, TimeZone, Utc, Weekday,
+    offset::LocalResult, DateTime, Datelike, Duration, Local, NaiveDate, TimeZone, Utc, Weekday,
 };
 use serde::{Deserialize, Serialize};
 
@@ -11,35 +11,39 @@ pub struct InsightRange {
     pub end: DateTime<Utc>,
 }
 
+fn local_midnight_to_utc(date: NaiveDate) -> Result<DateTime<Utc>, TimeError> {
+    let local_dt = match Local.with_ymd_and_hms(date.year(), date.month(), date.day(), 0, 0, 0) {
+        LocalResult::Single(dt) => dt,
+        LocalResult::Ambiguous(dt1, _dt2) => dt1,
+        LocalResult::None => return Err(TimeError::InvalidDate),
+    };
+    Ok(local_dt.with_timezone(&Utc))
+}
+
 impl TryFrom<String> for InsightRange {
     type Error = TimeError;
 
     fn try_from(value: String) -> Result<Self, Self::Error> {
         // Handle "yyyy-mm-dd"
         if let Ok(date) = NaiveDate::parse_from_str(&value, "%Y-%m-%d") {
-            let start = match Utc.with_ymd_and_hms(date.year(), date.month(), date.day(), 0, 0, 0) {
-                LocalResult::Single(dt) => dt,
-                _ => return Err(TimeError::InvalidDate),
-            };
+            let start = local_midnight_to_utc(date)?;
             let end = start + Duration::days(1);
             return Ok(InsightRange { start, end });
         }
 
         // Handle "yyyy-mm"
-        if let Ok(date) = NaiveDate::parse_from_str(&format!("{}-01", value), "%Y-%m-%d") {
-            let start = match Utc.with_ymd_and_hms(date.year(), date.month(), 1, 0, 0, 0) {
-                LocalResult::Single(dt) => dt,
-                _ => return Err(TimeError::InvalidDate),
-            };
-            let end = match if date.month() == 12 {
-                Utc.with_ymd_and_hms(date.year() + 1, 1, 1, 0, 0, 0)
+        if let Ok(first_of_month) = NaiveDate::parse_from_str(&format!("{}-01", value), "%Y-%m-%d")
+        {
+            let start = local_midnight_to_utc(first_of_month)?;
+            let next_month = if first_of_month.month() == 12 {
+                NaiveDate::from_ymd_opt(first_of_month.year() + 1, 1, 1)
+                    .ok_or(TimeError::InvalidDate)?
             } else {
-                Utc.with_ymd_and_hms(date.year(), date.month() + 1, 1, 0, 0, 0)
-            } {
-                LocalResult::Single(dt) => dt,
-                _ => return Err(TimeError::InvalidDate),
+                NaiveDate::from_ymd_opt(first_of_month.year(), first_of_month.month() + 1, 1)
+                    .ok_or(TimeError::InvalidDate)?
             };
 
+            let end = local_midnight_to_utc(next_month)?;
             return Ok(InsightRange { start, end });
         }
 
@@ -53,17 +57,7 @@ impl TryFrom<String> for InsightRange {
             let iso_week_start = NaiveDate::from_isoywd_opt(year, week, Weekday::Mon)
                 .ok_or(TimeError::InvalidDate)?;
 
-            let start = match Utc.with_ymd_and_hms(
-                iso_week_start.year(),
-                iso_week_start.month(),
-                iso_week_start.day(),
-                0,
-                0,
-                0,
-            ) {
-                LocalResult::Single(dt) => dt,
-                _ => return Err(TimeError::InvalidDate),
-            };
+            let start = local_midnight_to_utc(iso_week_start)?;
             let end = start + Duration::days(7);
 
             return Ok(InsightRange { start, end });
@@ -71,14 +65,11 @@ impl TryFrom<String> for InsightRange {
 
         // Handle "yyyy"
         if let Ok(year) = value.parse::<i32>() {
-            let start = match Utc.with_ymd_and_hms(year, 1, 1, 0, 0, 0) {
-                LocalResult::Single(dt) => dt,
-                _ => return Err(TimeError::InvalidDate),
-            };
-            let end = match Utc.with_ymd_and_hms(year + 1, 1, 1, 0, 0, 0) {
-                LocalResult::Single(dt) => dt,
-                _ => return Err(TimeError::InvalidDate),
-            };
+            let start_date = NaiveDate::from_ymd_opt(year, 1, 1).ok_or(TimeError::InvalidDate)?;
+            let end_date = NaiveDate::from_ymd_opt(year + 1, 1, 1).ok_or(TimeError::InvalidDate)?;
+
+            let start = local_midnight_to_utc(start_date)?;
+            let end = local_midnight_to_utc(end_date)?;
             return Ok(InsightRange { start, end });
         }
 

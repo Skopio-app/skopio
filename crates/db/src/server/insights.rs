@@ -1,18 +1,42 @@
 use std::collections::BTreeMap;
 
 use async_trait::async_trait;
-use chrono::NaiveDate;
 use common::{
     models::{outputs::InsightResult, Group, InsightBucket, InsightType},
     time::insight::InsightRange,
 };
-use sqlx::Row;
+use sqlx::{QueryBuilder, Sqlite};
 
-use crate::{error::DBError, DBContext};
+use crate::{
+    error::DBError,
+    server::utils::query::{
+        bucket_step, group_key_info, push_next_end_with, BucketStep, QueryBuilderExt,
+    },
+    DBContext,
+};
 
 #[derive(sqlx::FromRow)]
 struct YearResult {
     year: Option<String>,
+}
+
+#[derive(sqlx::FromRow)]
+struct TopNRow {
+    label: String,
+    total_duration: i64,
+}
+
+#[derive(sqlx::FromRow)]
+struct MostActiveDayRow {
+    date: String,
+    total: i64,
+}
+
+#[derive(sqlx::FromRow)]
+struct AvgRow {
+    key: i64,
+    label: String,
+    avg_duration: f64,
 }
 
 #[async_trait]
@@ -64,65 +88,44 @@ impl InsightProvider for Insights {
                 let Some(InsightRange { start, end, .. }) = query.insight_range else {
                     return Err(DBError::MissingField("insight_range"));
                 };
-
                 let Some(group_by) = query.group_by else {
                     return Err(DBError::MissingField("group_by"));
                 };
-
                 let Some(limit) = query.limit else {
                     return Err(DBError::MissingField("limit"));
                 };
 
-                let (_field, join) = match group_by {
-                    Group::Project => ("project_id", "JOIN projects p ON p.id = e.project_id"),
-                    Group::App => ("app_id", "JOIN apps a ON a.id = e.app_id"),
-                    Group::Category => ("category_id", "JOIN categories c ON c.id = e.category_id"),
-                    Group::Branch => ("branch_id", "JOIN branches b ON b.id = e.branch_id"),
-                    Group::Entity => ("entity_id", "JOIN entities en ON en.id = e.entity_id"),
-                    Group::Language => ("language_id", "JOIN languages l ON l.id = e.language_id"),
-                    Group::Source => ("source_id", "JOIN sources s ON s.id = e.source_id"),
-                };
+                let start_epoch = start.timestamp();
+                let end_epoch = end.timestamp();
 
-                let label = match group_by {
-                    Group::Project => "p.name",
-                    Group::App => "a.name",
-                    Group::Category => "c.name",
-                    Group::Branch => "b.name",
-                    Group::Entity => "en.name",
-                    Group::Language => "l.name",
-                    Group::Source => "s.name",
-                };
+                // Match summary's group key + join semantics.
+                let (group_key, inner_tbl) = group_key_info(Some(group_by));
 
-                let query_string = format!(
-                    "
-                        SELECT {label} as name, SUM(e.duration) as total_duration
-                        FROM events e
-                        {join}
-                        WHERE e.timestamp >= ? AND e.timestamp < ?
-                        GROUP BY {label}
-                        ORDER BY total_duration DESC
-                        LIMIT ?
-                        "
+                let mut qb = QueryBuilder::<Sqlite>::new("SELECT ");
+                qb.push(group_key).push(" AS label, COALESCE(SUM(");
+                qb.push_overlap_duration(&start_epoch.to_string(), &end_epoch.to_string());
+                qb.push("), 0) AS total_duration FROM events ");
+
+                qb.append_standard_joins(inner_tbl);
+                qb.push(" WHERE 1=1");
+
+                // Overlap-aware gating like summary.
+                qb.append_date_range(
+                    Some(start_epoch),
+                    Some(end_epoch),
+                    "events.timestamp",
+                    "events.end_timestamp",
                 );
 
-                let rows = sqlx::query(&query_string)
-                    .bind(start.timestamp())
-                    .bind(end.timestamp())
-                    .bind(limit as i64)
-                    .fetch_all(db_context.pool())
-                    .await?;
+                qb.push(" GROUP BY ").push(group_key);
+                qb.push(" ORDER BY total_duration DESC LIMIT ");
+                qb.push_bind(limit as i64);
+
+                let rows: Vec<TopNRow> = qb.build_query_as().fetch_all(db_context.pool()).await?;
 
                 let results = rows
                     .into_iter()
-                    .filter_map(|r| {
-                        let name: Option<String> = r.try_get("name").ok();
-                        let total_duration: Option<i64> = r.try_get("total_duration").ok();
-                        if let (Some(n), Some(td)) = (name, total_duration) {
-                            Some((n, td))
-                        } else {
-                            None
-                        }
-                    })
+                    .map(|r| (r.label, r.total_duration))
                     .collect();
 
                 Ok(InsightResult::TopN(results))
@@ -142,37 +145,71 @@ impl InsightProvider for Insights {
                     }
                 }
 
-                let start_epoch = start.timestamp();
-                let end_epoch = end.timestamp();
+                let range_start = start.timestamp();
+                let range_end = end.timestamp();
 
-                let row = sqlx::query!(
-                    r#"
-                    SELECT
-                        DATE(timestamp, 'unixepoch', 'localtime') AS "date!: String",
-                        COALESCE(SUM(duration), 0)  AS "total!: i64"
-                    FROM events
-                    WHERE timestamp >= ?1 AND timestamp < ?2
-                    GROUP BY 1
-                    ORDER BY 2 DESC
-                    LIMIT 1
-                    "#,
-                    start_epoch,
-                    end_epoch
-                )
-                .fetch_optional(db_context.pool())
-                .await?;
+                let step = BucketStep::Seconds(86_400);
 
-                if let Some(value) = row {
-                    Ok(InsightResult::MostActiveDay {
-                        date: value.date,
-                        total_duration: value.total,
-                    })
-                } else {
-                    Ok(InsightResult::MostActiveDay {
-                        date: "".into(),
-                        total_duration: 0,
-                    })
-                }
+                let mut qb = QueryBuilder::<Sqlite>::new(
+                    "WITH RECURSIVE buckets(start_ts, end_ts) AS ( SELECT ",
+                );
+
+                qb.push_bind(range_start)
+                    .push(", MIN(")
+                    .push_bind(range_end)
+                    .push(", ");
+                push_next_end_with(
+                    &mut qb,
+                    |q| {
+                        q.push_bind(range_start);
+                    },
+                    &step,
+                );
+                qb.push(") UNION ALL SELECT end_ts, MIN(")
+                    .push_bind(range_end)
+                    .push(", ");
+                push_next_end_with(
+                    &mut qb,
+                    |q| {
+                        q.push("end_ts");
+                    },
+                    &step,
+                );
+                qb.push(") FROM buckets WHERE end_ts < ")
+                    .push_bind(range_end)
+                    .push(") ");
+
+                qb.push(
+                    "SELECT \
+                        strftime('%Y-%m-%d', datetime(buckets.start_ts,'unixepoch','localtime')) AS date, \
+                        COALESCE(SUM(",
+                );
+                qb.push_overlap_duration("buckets.start_ts", "buckets.end_ts");
+                qb.push(
+                    "), 0) AS total \
+                     FROM buckets \
+                     JOIN events ON events.end_timestamp > buckets.start_ts AND events.timestamp < buckets.end_ts \
+                     WHERE 1=1",
+                );
+
+                qb.append_date_range(
+                    Some(range_start),
+                    Some(range_end),
+                    "events.timestamp",
+                    "events.end_timestamp",
+                );
+
+                qb.push(" GROUP BY date ORDER BY total DESC LIMIT 1");
+
+                let row: Option<MostActiveDayRow> = qb
+                    .build_query_as()
+                    .fetch_optional(db_context.pool())
+                    .await?;
+
+                Ok(InsightResult::MostActiveDay {
+                    date: row.as_ref().map(|r| r.date.clone()).unwrap_or_default(),
+                    total_duration: row.as_ref().map(|r| r.total).unwrap_or(0),
+                })
             }
 
             InsightType::AggregatedAverage => {
@@ -184,101 +221,116 @@ impl InsightProvider for Insights {
                     return Err(DBError::MissingField("bucket"));
                 };
 
-                let bucket_format = match bucket {
-                    InsightBucket::Day => "%Y-%m-%d",
-                    InsightBucket::Month => "%Y-%m",
-                    _ => {
-                        return Err(DBError::Unsupported("Only day or month is supported"));
-                    }
+                let range_start = start.timestamp();
+                let range_end = end.timestamp();
+
+                // We compute "average of per-bucket totals" (not avg of event durations),
+                // using overlap-aware bucketing like summary.
+                let (key_expr, step): (&'static str, BucketStep) = match bucket {
+                    // Average by weekday (0=Sun..6=Sat)
+                    InsightBucket::Day => (
+                        "CAST(strftime('%w', datetime(buckets.start_ts,'unixepoch','localtime')) AS INTEGER)",
+                        BucketStep::Seconds(86_400),
+                    ),
+                    // Average by month-of-year (01..12)
+                    InsightBucket::Month => (
+                        "CAST(strftime('%m', datetime(buckets.start_ts,'unixepoch','localtime')) AS INTEGER)",
+                        bucket_step(Some(common::time::TimeBucket::Month)),
+                    ),
+                    _ => return Err(DBError::Unsupported("Only day or month is supported")),
                 };
 
-                let (join_clause, label_select, group_by_clause) = match query.group_by {
-                    Some(Group::App) => (
-                        "JOIN apps a ON a.id = e.app_id",
-                        ", a.name as label",
-                        ", label",
-                    ),
-                    Some(Group::Project) => (
-                        "JOIN projects p ON p.id = e.project_id",
-                        ", p.name as label",
-                        ", label",
-                    ),
-                    Some(Group::Category) => (
-                        "JOIN categories c ON c.id = e.category_id",
-                        ", c.name as label",
-                        ", label",
-                    ),
-                    Some(Group::Branch) => (
-                        "JOIN branches b ON b.id = e.branch_id",
-                        ", b.name as label",
-                        ", label",
-                    ),
-                    Some(Group::Entity) => (
-                        "JOIN entities en ON en.id = e.entity_id",
-                        ", en.name as label",
-                        ", label",
-                    ),
-                    Some(Group::Language) => (
-                        "JOIN languages l ON l.id = e.language_id",
-                        ", l.name as label",
-                        ", label",
-                    ),
-                    Some(Group::Source) => (
-                        "JOIN sources s ON s.id = e.source_id",
-                        ", s.name as label",
-                        ", label",
-                    ),
-                    None => ("", ", '_' as label", ""),
-                };
+                let (group_key, inner_tbl) = group_key_info(query.group_by);
 
-                let sql = format!(
-                    "
-                    SELECT
-                        strftime('{bucket_format}', e.timestamp, 'unixepoch', 'localtime') as bucket,
-                        ROUND(AVG(e.duration), 2) as avg_duration
-                        {label_select}
-                    FROM events e
-                    {join_clause}
-                    WHERE timestamp >= ? AND timestamp < ?
-                    GROUP BY bucket{group_by_clause}
-                    ORDER BY bucket
-                    "
+                let mut qb = QueryBuilder::<Sqlite>::new(
+                    "WITH RECURSIVE buckets(start_ts, end_ts) AS ( SELECT ",
                 );
 
-                let rows = sqlx::query(&sql)
-                    .bind(start.timestamp())
-                    .bind(end.timestamp())
-                    .fetch_all(db_context.pool())
-                    .await?;
+                qb.push_bind(range_start)
+                    .push(", MIN(")
+                    .push_bind(range_end)
+                    .push(", ");
+                push_next_end_with(
+                    &mut qb,
+                    |q| {
+                        q.push_bind(range_start);
+                    },
+                    &step,
+                );
+                qb.push(") UNION ALL SELECT end_ts, MIN(")
+                    .push_bind(range_end)
+                    .push(", ");
+                push_next_end_with(
+                    &mut qb,
+                    |q| {
+                        q.push("end_ts");
+                    },
+                    &step,
+                );
+                qb.push(") FROM buckets WHERE end_ts < ")
+                    .push_bind(range_end)
+                    .push(") ");
+
+                // Two-stage aggregation:
+                // 1) totals per (bucket-start, label, key)
+                // 2) AVG(total_seconds) per (key, label)
+                qb.push(
+                    "SELECT key, label, ROUND(AVG(total_seconds), 2) AS avg_duration \
+                     FROM ( \
+                        SELECT ",
+                );
+                qb.push(key_expr).push(" AS key, ");
+                qb.push(group_key).push(" AS label, COALESCE(SUM(");
+                qb.push_overlap_duration("buckets.start_ts", "buckets.end_ts");
+                qb.push(
+                    "), 0) AS total_seconds \
+                        FROM buckets \
+                        JOIN events ON events.end_timestamp > buckets.start_ts AND events.timestamp < buckets.end_ts ",
+                );
+
+                qb.append_standard_joins(inner_tbl);
+                qb.push(" WHERE 1=1");
+                qb.append_date_range(
+                    Some(range_start),
+                    Some(range_end),
+                    "events.timestamp",
+                    "events.end_timestamp",
+                );
+
+                qb.push(
+                    " GROUP BY buckets.start_ts, label, key \
+                     ) \
+                     GROUP BY key, label \
+                     ORDER BY key",
+                );
+
+                let rows: Vec<AvgRow> = qb.build_query_as().fetch_all(db_context.pool()).await?;
+
+                // Map key -> display label
+                const WEEKDAYS: [&str; 7] = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+                const MONTHS: [&str; 12] = [
+                    "Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov",
+                    "Dec",
+                ];
 
                 let mut map: BTreeMap<String, Vec<(String, f64)>> = BTreeMap::new();
 
-                for row in rows {
-                    let bucket_str: Option<String> = row.try_get("bucket").ok();
-                    let avg: Option<f64> = row.try_get("avg_duration").ok();
-                    let label: Option<String> = row.try_get("label").ok();
-
-                    if let (Some(bucket_str), Some(avg_duration), Some(group)) =
-                        (bucket_str, avg, label)
-                    {
-                        let label_key = match bucket {
-                            InsightBucket::Day => {
-                                NaiveDate::parse_from_str(&bucket_str, "%Y-%m-%d")
-                                    .ok()
-                                    .map(|d| d.format("%a").to_string())
-                            }
-                            InsightBucket::Month => {
-                                NaiveDate::parse_from_str(&format!("{}-01", bucket_str), "%Y-%m-%d")
-                                    .ok()
-                                    .map(|d| d.format("%b").to_string())
-                            }
-                            _ => None,
-                        };
-
-                        if let Some(label) = label_key {
-                            map.entry(label).or_default().push((group, avg_duration));
+                for r in rows {
+                    let bucket_label = match bucket {
+                        InsightBucket::Day => {
+                            let idx = (r.key.clamp(0, 6)) as usize;
+                            WEEKDAYS[idx].to_string()
                         }
-                    }
+                        InsightBucket::Month => {
+                            let idx = (r.key.clamp(1, 12) - 1) as usize;
+                            MONTHS[idx].to_string()
+                        }
+                        _ => unreachable!(),
+                    };
+
+                    map.entry(bucket_label)
+                        .or_default()
+                        .push((r.label, r.avg_duration));
                 }
 
                 Ok(InsightResult::AggregatedAverage(map))
