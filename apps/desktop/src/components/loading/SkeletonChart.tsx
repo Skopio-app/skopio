@@ -27,42 +27,50 @@ const SkeletonBarChart = () => {
   );
 };
 
-const SkeletonCalendarChart = () => {
-  const cols = 7;
-  const rows = 6;
+interface SkeletonCalendarChartProps {
+  weeks?: number;
+}
 
-  const intensity = (i: number) => {
+const SkeletonCalendarChart: React.FC<SkeletonCalendarChartProps> = ({
+  weeks = 14,
+}) => {
+  // 7 days per week
+  const totalCells = weeks * 7;
+
+  const shade = (i: number) => {
     const x = Math.sin(i * 9377) * 10000;
     const frac = x - Math.floor(x);
-    return 0.25 + frac * 0.55;
+    // opacity range: 0.25..0.85
+    return 0.25 + frac * 0.6;
   };
 
   return (
-    <div className="h-[200px] w-full p-4 animate-pulse">
-      <div className="flex items-center justify-between mb-3">
-        <div className="h-4 w-28 bg-gray-300/60 rounded-md" />
-        <div className="h-4 w-16 bg-gray-300/40 rounded-md" />
-      </div>
-
-      {/* weekday row */}
-      <div className="grid grid-cols-7 gap-2 mb-2">
-        {Array.from({ length: 7 }).map((_, i) => (
-          <div key={i} className="h-3 bg-gray-300/30 rounded-md" />
-        ))}
-      </div>
-
-      {/* calendar grid */}
-      <div className="grid grid-cols-7 gap-2">
-        {Array.from({ length: cols * rows }).map((_, i) => (
+    <div className="h-[200px] w-full px-4 py-3 animate-pulse">
+      {/* calendar body */}
+      <div className="flex w-full">
+        {/* grid */}
+        <div className="flex-1 overflow-hidden">
           <div
-            key={i}
-            className="aspect-square rounded-md bg-gray-300/60"
+            className="grid gap-[2px]"
             style={{
-              opacity: intensity(i),
-              minWidth: "10px",
+              gridTemplateColumns: `repeat(${weeks}, minmax(0, 1fr))`,
+              gridTemplateRows: "repeat(7, minmax(0, 1fr))",
+              height: 120,
             }}
-          />
-        ))}
+          >
+            {Array.from({ length: totalCells }).map((_, i) => (
+              <div
+                key={i}
+                className="rounded-[5px] bg-gray-300/60"
+                style={{
+                  opacity: shade(i),
+                }}
+              />
+            ))}
+          </div>
+        </div>
+
+        <div className="w-8 shrink-0" />
       </div>
     </div>
   );
