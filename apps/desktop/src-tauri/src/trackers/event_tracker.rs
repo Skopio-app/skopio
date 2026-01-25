@@ -32,6 +32,26 @@ pub struct Event {
     pub end_timestamp: Option<DateTime<Utc>>,
 }
 
+impl From<Event> for DBEvent {
+    fn from(value: Event) -> Self {
+        Self {
+            id: None,
+            timestamp: value.timestamp,
+            duration: value.duration,
+            category: Some(value.category.to_string()),
+            app_name: value.app_name,
+            entity_name: value.entity_name,
+            entity_type: value.entity_type.map(|t| t.to_string()),
+            project_name: value.project_name,
+            project_path: value.project_path,
+            branch_name: value.branch_name,
+            language_name: value.language_name,
+            source_name: SOURCE.to_string(),
+            end_timestamp: value.end_timestamp,
+        }
+    }
+}
+
 pub struct EventTracker {
     active_event: Arc<Mutex<Option<Event>>>,
     last_activity: Arc<Mutex<Instant>>,
@@ -106,21 +126,7 @@ impl EventTracker {
                     ended_event.duration = Some(duration);
                     ended_event.end_timestamp = Some(now);
 
-                    let db_event = DBEvent {
-                        id: None,
-                        timestamp: ended_event.timestamp,
-                        duration: ended_event.duration,
-                        category: Some(ended_event.category.to_string()),
-                        app_name: ended_event.app_name,
-                        entity_name: ended_event.entity_name,
-                        entity_type: Some(ended_event.entity_type.unwrap().to_string()),
-                        project_name: ended_event.project_name,
-                        project_path: ended_event.project_path,
-                        branch_name: ended_event.branch_name,
-                        language_name: ended_event.language_name,
-                        source_name: SOURCE.to_string(),
-                        end_timestamp: ended_event.end_timestamp,
-                    };
+                    let db_event: DBEvent = ended_event.into();
 
                     self.tracker
                         .insert_event(&db_event)
@@ -248,21 +254,7 @@ impl EventTracker {
             ended_event.duration = Some(event_duration);
             ended_event.end_timestamp = Some(Utc::now());
 
-            let db_event = DBEvent {
-                id: None,
-                timestamp: ended_event.timestamp,
-                duration: ended_event.duration,
-                category: Some(ended_event.category.to_string()),
-                app_name: ended_event.app_name,
-                entity_name: ended_event.entity_name,
-                entity_type: Some(ended_event.entity_type.unwrap().to_string()),
-                project_name: ended_event.project_name,
-                project_path: ended_event.project_path,
-                branch_name: ended_event.branch_name,
-                language_name: ended_event.language_name,
-                source_name: SOURCE.to_string(),
-                end_timestamp: ended_event.end_timestamp,
-            };
+            let db_event: DBEvent = ended_event.into();
 
             self.tracker
                 .insert_event(&db_event)
