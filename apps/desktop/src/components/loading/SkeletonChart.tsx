@@ -13,12 +13,22 @@ interface SkeletonPieChartProps {
   showLegend?: boolean;
 }
 
+const SKELETON_SEED = 9377;
+
+const seededFrac = (i: number, seed: number = SKELETON_SEED) => {
+  const x = Math.sin(i * seed) * 10000;
+  return x - Math.floor(x); // 0..1
+};
+
+const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
+
+const seededRange = (i: number, min: number, max: number, seed?: number) =>
+  lerp(min, max, seededFrac(i, seed));
+
+const toPercent = (t: number) => `${Math.round(t * 100)}%`;
+
 const SkeletonBarChart = () => {
-  const barHeight = (i: number) => {
-    const x = Math.sin(i * 9377) * 10000;
-    const frac = x - Math.floor(x);
-    return 40 + Math.round(frac * 100);
-  };
+  const barHeightPx = (i: number) => Math.round(seededRange(i, 40, 140)); // 40..140px
 
   return (
     <div className="h-[200px] w-full relative flex gap-1 items-end px-4 animate-pulse">
@@ -27,7 +37,7 @@ const SkeletonBarChart = () => {
           key={idx}
           className="flex-1 bg-gray-300/60 rounded-md"
           style={{
-            height: `${barHeight(idx)}px`,
+            height: `${barHeightPx(idx)}px`,
             minWidth: "6px",
           }}
         />
@@ -42,12 +52,7 @@ const SkeletonCalendarChart: React.FC<SkeletonCalendarChartProps> = ({
   // 7 days per week
   const totalCells = weeks * 7;
 
-  const shade = (i: number) => {
-    const x = Math.sin(i * 9377) * 10000;
-    const frac = x - Math.floor(x);
-    // opacity range: 0.25..0.85
-    return 0.25 + frac * 0.6;
-  };
+  const cellOpacity = (i: number) => seededRange(i, 0.25, 0.85); // 0.25..0.85
 
   return (
     <div className="h-[200px] w-full px-4 py-3 animate-pulse">
@@ -68,7 +73,7 @@ const SkeletonCalendarChart: React.FC<SkeletonCalendarChartProps> = ({
                 key={i}
                 className="rounded-[5px] bg-gray-300/60"
                 style={{
-                  opacity: shade(i),
+                  opacity: cellOpacity(i),
                 }}
               />
             ))}
@@ -85,12 +90,7 @@ const SkeletonPieChart: React.FC<SkeletonPieChartProps> = ({
   legendRows = 6,
   showLegend = true,
 }) => {
-  const widthFrac = (i: number) => {
-    const x = Math.sin(i * 9377) * 10000;
-    const frac = x - Math.floor(x);
-    // 40%..95%
-    return 0.4 + frac * 0.55;
-  };
+  const legendWidthPct = (i: number) => toPercent(seededRange(i, 0.4, 0.95)); // 40%..95%
 
   return (
     <div className="h-[200px] w-full flex items-center gap-4 px-4 animate-pulse">
@@ -112,7 +112,7 @@ const SkeletonPieChart: React.FC<SkeletonPieChartProps> = ({
                 <div className="w-3 h-3 rounded-xl bg-gray-300/60 shrink-0" />
                 <div
                   className="h-3 rounded bg-gray-300/45"
-                  style={{ width: `${Math.round(widthFrac(i) * 100)}%` }}
+                  style={{ width: legendWidthPct(i) }}
                 />
               </div>
               <div className="h-3 w-12 rounded bg-gray-300/30 shrink-0" />
@@ -125,9 +125,14 @@ const SkeletonPieChart: React.FC<SkeletonPieChartProps> = ({
 };
 
 const SkeletonChart: React.FC<SkeletonChartProps> = ({ variant = "bar" }) => {
-  if (variant === "calendar") return <SkeletonCalendarChart />;
-  if (variant === "pie") return <SkeletonPieChart />;
-  return <SkeletonBarChart />;
+  switch (variant) {
+    case "calendar":
+      return <SkeletonCalendarChart />;
+    case "pie":
+      return <SkeletonPieChart />;
+    default:
+      return <SkeletonBarChart />;
+  }
 };
 
 export default SkeletonChart;
