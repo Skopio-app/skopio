@@ -12,6 +12,7 @@ const LanguagePieChartWidget = () => {
       tooltip="The duration of use of the various detected programming languages."
       title="Languages"
       loading={loading}
+      skeletonVariant="pie"
     >
       <CustomPieChart data={data} />
     </WidgetCard>

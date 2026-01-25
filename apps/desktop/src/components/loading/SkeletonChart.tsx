@@ -1,7 +1,16 @@
-export type SkeletonChartVariant = "bar" | "calendar";
+export type SkeletonChartVariant = "bar" | "calendar" | "pie";
 
 interface SkeletonChartProps {
   variant?: SkeletonChartVariant;
+}
+
+interface SkeletonCalendarChartProps {
+  weeks?: number;
+}
+
+interface SkeletonPieChartProps {
+  legendRows?: number;
+  showLegend?: boolean;
 }
 
 const SkeletonBarChart = () => {
@@ -26,10 +35,6 @@ const SkeletonBarChart = () => {
     </div>
   );
 };
-
-interface SkeletonCalendarChartProps {
-  weeks?: number;
-}
 
 const SkeletonCalendarChart: React.FC<SkeletonCalendarChartProps> = ({
   weeks = 14,
@@ -76,8 +81,52 @@ const SkeletonCalendarChart: React.FC<SkeletonCalendarChartProps> = ({
   );
 };
 
+const SkeletonPieChart: React.FC<SkeletonPieChartProps> = ({
+  legendRows = 6,
+  showLegend = true,
+}) => {
+  const widthFrac = (i: number) => {
+    const x = Math.sin(i * 9377) * 10000;
+    const frac = x - Math.floor(x);
+    // 40%..95%
+    return 0.4 + frac * 0.55;
+  };
+
+  return (
+    <div className="h-[200px] w-full flex items-center gap-4 px-4 animate-pulse">
+      {/* Donut placeholder */}
+      <div className="flex-1 flex items-center justify-center min-w-0">
+        <div className="relative w-[140px] h-[140px] rounded-full bg-gray-300/50">
+          {/* donut hole */}
+          <div className="absolute inset-0 m-auto w-[70px] h-[70px] rounded-full bg-background" />
+          {/* subtle “slice” hints */}
+          <div className="absolute inset-0 rounded-full border border-gray-300/40" />
+        </div>
+      </div>
+
+      {showLegend && (
+        <div className="w-52 pr-2 pl-1 space-y-2">
+          {Array.from({ length: legendRows }).map((_, i) => (
+            <div key={i} className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2 min-w-0 flex-1">
+                <div className="w-3 h-3 rounded-xl bg-gray-300/60 shrink-0" />
+                <div
+                  className="h-3 rounded bg-gray-300/45"
+                  style={{ width: `${Math.round(widthFrac(i) * 100)}%` }}
+                />
+              </div>
+              <div className="h-3 w-12 rounded bg-gray-300/30 shrink-0" />
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
 const SkeletonChart: React.FC<SkeletonChartProps> = ({ variant = "bar" }) => {
   if (variant === "calendar") return <SkeletonCalendarChart />;
+  if (variant === "pie") return <SkeletonPieChart />;
   return <SkeletonBarChart />;
 };
 

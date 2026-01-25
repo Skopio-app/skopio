@@ -9,7 +9,9 @@ import {
   TooltipTrigger,
 } from "@skopio/ui";
 import { GripVertical, Info, Settings, X } from "lucide-react";
-import SkeletonChart from "@/components/loading/SkeletonChart";
+import SkeletonChart, {
+  SkeletonChartVariant,
+} from "@/components/loading/SkeletonChart";
 import React from "react";
 
 export interface WidgetCardProps {
@@ -22,6 +24,7 @@ export interface WidgetCardProps {
   draggableHandleId?: string;
   loading: boolean;
   settingsContent?: React.ReactNode;
+  skeletonVariant?: SkeletonChartVariant;
 }
 
 const WidgetCard = React.forwardRef<HTMLDivElement, WidgetCardProps>(
@@ -36,6 +39,7 @@ const WidgetCard = React.forwardRef<HTMLDivElement, WidgetCardProps>(
       draggableHandleId = "widget-drag-handle",
       loading,
       settingsContent,
+      skeletonVariant = "bar",
     },
     ref,
   ) => {
@@ -106,7 +110,7 @@ const WidgetCard = React.forwardRef<HTMLDivElement, WidgetCardProps>(
         </div>
 
         {loading ? (
-          <SkeletonChart />
+          <SkeletonChart variant={skeletonVariant} />
         ) : (
           <div className="flex-1 overflow-hidden">{children}</div>
         )}
