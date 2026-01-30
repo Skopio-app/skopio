@@ -23,7 +23,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [v0.1.8] -2025-11-29
+## [v0.1.9] - 2026-01-31
+
+### Added
+
+- Extra chart loader components.
+- JetBrains IDEs are now included in ignore list.
+
+### Fixed
+
+- Branch name resolution logic for Xcode app bundles.
+- Pie chart displays are more responsive in respect to text and bounds sizing.
+
+---
+
+## [v0.1.8] - 2025-11-29
 
 ### Added
 
@@ -31,7 +45,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [v0.1.7] -2025-11-02
+## [v0.1.7] - 2025-11-02
 
 ### Added
 
@@ -47,7 +61,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [v0.1.6] -2025-10-19
+## [v0.1.6] - 2025-10-19
 
 ### Added
 
@@ -60,7 +74,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [v0.1.5] -2025-10-11
+## [v0.1.5] - 2025-10-11
 
 ### Fixed
 
