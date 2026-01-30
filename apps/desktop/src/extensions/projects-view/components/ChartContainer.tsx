@@ -1,15 +1,19 @@
-import SkeletonChart from "@/components/loading/SkeletonChart";
+import SkeletonChart, {
+  SkeletonChartVariant,
+} from "@/components/loading/SkeletonChart";
 
 interface ChartContainerProps {
   title?: string;
   children: React.ReactNode;
   loading: boolean;
+  skeletonVariant?: SkeletonChartVariant;
 }
 
 const ChartContainer: React.FC<ChartContainerProps> = ({
   title,
   children,
   loading,
+  skeletonVariant = "bar",
 }) => {
   return (
     <div className="relative flex flex-col rounded-2xl w-full max-w-3xl">
@@ -22,7 +26,7 @@ const ChartContainer: React.FC<ChartContainerProps> = ({
       )}
 
       {loading ? (
-        <SkeletonChart />
+        <SkeletonChart variant={skeletonVariant} />
       ) : (
         <div className="flex-1 overflow-hidden">{children}</div>
       )}

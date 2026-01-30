@@ -12,6 +12,7 @@ const AppPieChartWidget = () => {
       tooltip="The duration of use of the various tracked apps."
       title="Apps"
       loading={loading}
+      skeletonVariant="pie"
     >
       <CustomPieChart data={data} />
     </WidgetCard>

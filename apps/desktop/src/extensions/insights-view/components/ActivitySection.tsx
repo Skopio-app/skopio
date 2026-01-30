@@ -57,7 +57,11 @@ const ActivitySection = () => {
   }
 
   return (
-    <SectionContainer title="Activity" loading={isLoading}>
+    <SectionContainer
+      title="Activity"
+      loading={isLoading}
+      skeletonVariant="calendar"
+    >
       <CalendarChart
         data={calendarData}
         start={yearConfig.start}

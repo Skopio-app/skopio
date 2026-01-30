@@ -32,7 +32,10 @@ const ItemsList: React.FC<ItemsListProps> = ({ title, data, loading }) => {
             </div>
           ))
         ) : (
-          <Skeleton className="w-xl" />
+          <div className="flex items-center gap-x-2">
+            <Skeleton className="w-1/4" />
+            <Skeleton className="w-50" />
+          </div>
         )}
       </div>
     </div>

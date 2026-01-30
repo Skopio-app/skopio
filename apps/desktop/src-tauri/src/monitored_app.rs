@@ -70,11 +70,37 @@ const CODE_VARIANTS: &[MonitoredApp] = &[
     MonitoredApp::VSCodium,
 ];
 
+const JB_IGNORE: &str = "A JetBrains IDE plugin is available to capture more accurate data";
+const JETBRAINS_IDES: &[MonitoredApp] = &[
+    MonitoredApp::IntelliJIdea,
+    MonitoredApp::IntelliJIdeaCE,
+    MonitoredApp::PyCharm,
+    MonitoredApp::PyCharmCE,
+    MonitoredApp::Clion,
+    MonitoredApp::GoLand,
+    MonitoredApp::WebStorm,
+    MonitoredApp::PhpStorm,
+    MonitoredApp::RubyMine,
+    MonitoredApp::Rider,
+    MonitoredApp::DataGrip,
+    MonitoredApp::RustRover,
+    MonitoredApp::DataSpell,
+    MonitoredApp::AndroidStudio,
+    MonitoredApp::AndroidStudioPreview,
+    MonitoredApp::AndroidStudioCanary,
+    MonitoredApp::AndroidStudioBeta,
+    MonitoredApp::AndroidStudioDev,
+];
+
 static IGNORED_APPS: LazyLock<HashMap<MonitoredApp, &'static str>> = LazyLock::new(|| {
     let mut m = HashMap::new();
 
     for &v in CODE_VARIANTS {
         m.insert(v, CODE_IGNORE);
+    }
+
+    for &jb in JETBRAINS_IDES {
+        m.insert(jb, JB_IGNORE);
     }
 
     m.insert(
@@ -213,6 +239,47 @@ pub enum MonitoredApp {
     Windsurf,
     #[strum(serialize = "com.todesktop.230313mzl4w4u92")]
     Cursor,
+
+    // Android studio
+    #[strum(serialize = "com.google.android.studio")]
+    AndroidStudio,
+    #[strum(serialize = "com.google.android.studio.preview")]
+    AndroidStudioPreview,
+    #[strum(serialize = "com.google.android.studio.canary")]
+    AndroidStudioCanary,
+    #[strum(serialize = "com.google.android.studio.beta")]
+    AndroidStudioBeta,
+    #[strum(serialize = "com.google.android.studio.dev")]
+    AndroidStudioDev,
+
+    // JetBrains IDEs
+    #[strum(serialize = "com.jetbrains.intellij")]
+    IntelliJIdea,
+    #[strum(serialize = "com.jetbrains.intellij.ce")]
+    IntelliJIdeaCE,
+    #[strum(serialize = "com.jetbrains.pycharm")]
+    PyCharm,
+    #[strum(serialize = "com.jetbrains.pycharm.ce")]
+    PyCharmCE,
+    #[strum(serialize = "com.jetbrains.clion")]
+    Clion,
+    #[strum(serialize = "com.jetbrains.goland")]
+    GoLand,
+    #[strum(serialize = "com.jetbrains.WebStorm")]
+    WebStorm,
+    #[strum(serialize = "com.jetbrains.PhpStorm")]
+    PhpStorm,
+    #[strum(serialize = "com.jetbrains.rubymine")]
+    RubyMine,
+    #[strum(serialize = "com.jetbrains.rider")]
+    Rider,
+    #[strum(serialize = "com.jetbrains.datagrip")]
+    DataGrip,
+    #[strum(serialize = "com.jetbrains.rustrover")]
+    RustRover,
+    #[strum(serialize = "com.jetbrains.dataspell")]
+    DataSpell,
+
     /// Fallback for unrecognized applications
     #[strum(serialize = "unknown")]
     Unknown,

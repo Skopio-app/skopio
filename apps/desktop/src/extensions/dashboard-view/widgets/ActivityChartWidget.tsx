@@ -23,6 +23,7 @@ const ActivityChartWidget = () => {
       tooltip="Daily recorded activity durations for the current year."
       title="Daily Activity"
       loading={loading}
+      skeletonVariant="calendar"
     >
       <CalendarChart
         data={data}

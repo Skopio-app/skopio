@@ -2,6 +2,7 @@ import { ResponsivePieCanvas } from "@nivo/pie";
 import { useMemo } from "react";
 import { formatDuration } from "@/utils/time";
 import { useChartColor, useCssVarColor } from "@/hooks/useChartColor";
+import { useElementSize } from "@/hooks/useElementSize";
 
 interface CustomPieChartProps {
   data: {
@@ -20,6 +21,16 @@ const CustomPieChart: React.FC<CustomPieChartProps> = ({ data }) => {
   const { getColorForKey } = useChartColor();
   const linkTextColor = useCssVarColor("--muted-foreground");
 
+  const { ref, width } = useElementSize<HTMLDivElement>();
+
+  const enableArcLinkLabels = width >= 420;
+
+  const margin = useMemo(() => {
+    if (width < 360) return { top: 44, right: 44, bottom: 44, left: 44 };
+    if (width < 520) return { top: 36, right: 56, bottom: 36, left: 56 };
+    return { top: 30, right: 70, bottom: 30, left: 70 };
+  }, [width]);
+
   if (!chartData.length) {
     return (
       <div className="h-[220px] w-full flex items-center justify-center text-sm text-muted-foreground">
@@ -30,10 +41,10 @@ const CustomPieChart: React.FC<CustomPieChartProps> = ({ data }) => {
 
   return (
     <div className="h-[200px] w-full flex">
-      <div className="flex-1">
+      <div ref={ref} className="flex-1 min-w-0">
         <ResponsivePieCanvas
           data={chartData}
-          margin={{ top: 30, right: 10, left: 20, bottom: 30 }}
+          margin={margin}
           innerRadius={0.5}
           padAngle={0.6}
           cornerRadius={2}
@@ -42,12 +53,15 @@ const CustomPieChart: React.FC<CustomPieChartProps> = ({ data }) => {
           arcLinkLabelsTextColor={linkTextColor}
           arcLinkLabelsThickness={2}
           colors={(bar) => getColorForKey(String(bar.id))}
-          arcLinkLabelsDiagonalLength={12}
+          arcLinkLabelsDiagonalLength={width < 420 ? 8 : 12}
+          arcLinkLabelsStraightLength={width < 420 ? 8 : 12}
+          arcLinkLabelsTextOffset={width < 420 ? 4 : 6}
           arcLinkLabelsColor={{ from: "color" }}
           arcLabelsSkipAngle={10}
           arcLabelsTextColor={{ from: "color", modifiers: [["darker", 2]] }}
           legends={undefined}
           enableArcLabels={false}
+          enableArcLinkLabels={enableArcLinkLabels}
           tooltip={({ datum }) => {
             const time = formatDuration(datum.value);
             return (
@@ -66,19 +80,23 @@ const CustomPieChart: React.FC<CustomPieChartProps> = ({ data }) => {
         />
       </div>
 
-      <div className="w-52 pr-2 pl-3 overflow-y-auto max-h-[300px] space-y-2 text-sm scroll-hidden">
-        {data.map((d) => (
-          <div key={d.id} className="flex items-center justify-between">
-            <div className="flex items-center gap-2 min-w-0">
+      <div className="basis-[clamp(10rem,30%,18rem)] shrink-0 pr-2 pl-3 overflow-y-auto max-h-[300px] space-y-2 text-sm scroll-hidden">
+        {chartData.map((d) => (
+          <div key={d.id} className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2 min-w-0 flex-1">
               <span
                 className="w-3 h-3 rounded-full inline-block shrink-0"
                 style={{ backgroundColor: getColorForKey(d.id) }}
               />
-              <span className="truncate text-foreground text-xs max-w-[7rem]">
+              <span
+                title={d.label}
+                className="flex-1 min-w-0 truncate text-foreground text-xs"
+              >
                 {d.label}
               </span>
             </div>
-            <span className="truncate text-xs text-muted-foreground max-w[5rem] text-right">
+
+            <span className="shrink-0 truncate text-xs text-muted-foreground max-w-[5rem] text-right">
               {formatDuration(d.value)}
             </span>
           </div>

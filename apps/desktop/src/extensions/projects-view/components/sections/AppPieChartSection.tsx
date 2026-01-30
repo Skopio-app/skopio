@@ -8,7 +8,7 @@ const AppPieChartSection = () => {
   const { data, loading } = useProjectSummaryData(options);
 
   return (
-    <ChartContainer title="Apps" loading={loading}>
+    <ChartContainer title="Apps" loading={loading} skeletonVariant="pie">
       <CustomPieChart data={data} />
     </ChartContainer>
   );

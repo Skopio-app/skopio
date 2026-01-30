@@ -9,7 +9,7 @@ const LanguagePieChartSection = () => {
   const { data, loading } = useProjectSummaryData(options);
 
   return (
-    <ChartContainer title="Languages" loading={loading}>
+    <ChartContainer title="Languages" loading={loading} skeletonVariant="pie">
       <CustomPieChart data={data} />
     </ChartContainer>
   );
