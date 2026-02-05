@@ -61,6 +61,82 @@ pub struct Goal {
     pub excluded_days: Vec<String>,
 }
 
+impl Goal {
+    pub async fn fetch_all(db: &DBContext) -> Result<Vec<Self>, DBError> {
+        let rows = sqlx::query!(
+            "
+        SELECT
+          g.id,
+          g.name,
+          g.target_seconds,
+          g.time_span,
+          g.use_apps,
+          g.use_categories,
+          g.ignore_no_activity_days,
+          g.created_at,
+          g.updated_at,
+          ga.app,
+          gc.category,
+          gd.day
+        FROM goals g
+        LEFT JOIN goal_apps ga ON g.id = ga.goal_id
+        LEFT JOIN goal_categories gc ON g.id = gc.goal_id
+        LEFT JOIN goal_excluded_days gd ON g.id = gd.goal_id
+        ORDER BY g.id
+        "
+        )
+        .fetch_all(db.pool())
+        .await?;
+
+        let mut grouped: HashMap<i64, Goal> = HashMap::new();
+
+        for row in rows {
+            let entry = grouped.entry(row.id).or_insert_with(|| Goal {
+                id: row.id,
+                name: row.name,
+                target_seconds: row.target_seconds,
+                time_span: TimeSpan::from_str(&row.time_span).unwrap(),
+                use_apps: row.use_apps,
+                use_categories: row.use_categories,
+                ignore_no_activity_days: row.ignore_no_activity_days,
+                created_at: row.created_at.parse::<DateTime<Utc>>().unwrap_or_default(),
+                updated_at: row.updated_at.parse::<DateTime<Utc>>().unwrap_or_default(),
+                apps: vec![],
+                categories: vec![],
+                excluded_days: vec![],
+            });
+
+            if let Some(app) = row.app {
+                if !entry.apps.contains(&app) {
+                    entry.apps.push(app);
+                }
+            }
+
+            if let Some(cat) = row.category {
+                if !entry.categories.contains(&cat) {
+                    entry.categories.push(cat);
+                }
+            }
+
+            if let Some(day) = row.day {
+                if !entry.excluded_days.contains(&day) {
+                    entry.excluded_days.push(day);
+                }
+            }
+        }
+
+        Ok(grouped.into_values().collect())
+    }
+
+    pub async fn delete(db: &DBContext, goal_id: i64) -> Result<(), DBError> {
+        sqlx::query!("DELETE FROM goals WHERE id = ?", goal_id)
+            .execute(db.pool())
+            .await?;
+
+        Ok(())
+    }
+}
+
 #[derive(Serialize, Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct GoalInput {
@@ -75,6 +151,62 @@ pub struct GoalInput {
     pub apps: Vec<String>,
     pub categories: Vec<String>,
     pub excluded_days: Vec<String>,
+}
+
+impl GoalInput {
+    pub async fn insert(self, db: &DBContext) -> Result<(), DBError> {
+        let time_span = self.time_span.to_string();
+
+        let id = sqlx::query_scalar!(
+        "
+        INSERT INTO goals (created_at, updated_at, name, target_seconds, time_span, use_apps, use_categories, ignore_no_activity_days)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        RETURNING id
+        ",
+        self.created_at,
+        self.updated_at,
+        self.name,
+        self.target_seconds,
+        time_span,
+        self.use_apps,
+        self.use_categories,
+        self.ignore_no_activity_days,
+    )
+    .fetch_one(db.pool())
+    .await?;
+
+        for app in self.apps {
+            sqlx::query!(
+                "INSERT INTO goal_apps (goal_id, app) VALUES (?, ?)",
+                id,
+                app
+            )
+            .execute(db.pool())
+            .await?;
+        }
+
+        for cat in self.categories {
+            sqlx::query!(
+                "INSERT INTO goal_categories (goal_id, category) VALUES (?, ?)",
+                id,
+                cat
+            )
+            .execute(db.pool())
+            .await?;
+        }
+
+        for day in self.excluded_days {
+            sqlx::query!(
+                "INSERT INTO goal_excluded_days (goal_id, day) VALUES (?, ?)",
+                id,
+                day
+            )
+            .execute(db.pool())
+            .await?;
+        }
+
+        Ok(())
+    }
 }
 
 #[derive(Serialize, Deserialize, specta::Type)]
@@ -100,259 +232,126 @@ pub struct GoalUpdateInput {
     pub excluded_days: Option<Vec<String>>,
 }
 
-pub async fn fetch_all_goals(db: &DBContext) -> Result<Vec<Goal>, DBError> {
-    let rows = sqlx::query!(
-        "
-        SELECT
-          g.id,
-          g.name,
-          g.target_seconds,
-          g.time_span,
-          g.use_apps,
-          g.use_categories,
-          g.ignore_no_activity_days,
-          g.created_at,
-          g.updated_at,
-          ga.app,
-          gc.category,
-          gd.day
-        FROM goals g
-        LEFT JOIN goal_apps ga ON g.id = ga.goal_id
-        LEFT JOIN goal_categories gc ON g.id = gc.goal_id
-        LEFT JOIN goal_excluded_days gd ON g.id = gd.goal_id
-        ORDER BY g.id
-        "
-    )
-    .fetch_all(db.pool())
-    .await?;
+impl GoalUpdateInput {
+    pub async fn apply(self, db: &DBContext, goal_id: i64) -> Result<(), DBError> {
+        let now = Utc::now().to_rfc3339();
 
-    let mut grouped: HashMap<i64, Goal> = HashMap::new();
+        let mut tx = db.pool().begin().await?;
 
-    for row in rows {
-        let entry = grouped.entry(row.id).or_insert_with(|| Goal {
-            id: row.id,
-            name: row.name,
-            target_seconds: row.target_seconds,
-            time_span: TimeSpan::from_str(&row.time_span).unwrap(),
-            use_apps: row.use_apps,
-            use_categories: row.use_categories,
-            ignore_no_activity_days: row.ignore_no_activity_days,
-            created_at: row.created_at.parse::<DateTime<Utc>>().unwrap_or_default(),
-            updated_at: row.updated_at.parse::<DateTime<Utc>>().unwrap_or_default(),
-            apps: vec![],
-            categories: vec![],
-            excluded_days: vec![],
-        });
-
-        if let Some(app) = row.app {
-            if !entry.apps.contains(&app) {
-                entry.apps.push(app);
-            }
-        }
-
-        if let Some(cat) = row.category {
-            if !entry.categories.contains(&cat) {
-                entry.categories.push(cat);
-            }
-        }
-
-        if let Some(day) = row.day {
-            if !entry.excluded_days.contains(&day) {
-                entry.excluded_days.push(day);
-            }
-        }
-    }
-
-    Ok(grouped.into_values().collect())
-}
-
-pub async fn insert_goal(db: &DBContext, input: GoalInput) -> Result<(), DBError> {
-    let now = Utc::now().to_rfc3339();
-    let time_span = input.time_span.to_string();
-
-    let id = sqlx::query_scalar!(
-        "
-        INSERT INTO goals (created_at, updated_at, name, target_seconds, time_span, use_apps, use_categories, ignore_no_activity_days, created_at, updated_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        RETURNING id
-        ",
-        input.created_at,
-        input.updated_at,
-        input.name,
-        input.target_seconds,
-        time_span,
-        input.use_apps,
-        input.use_categories,
-        input.ignore_no_activity_days,
-        now,
-        now
-    )
-    .fetch_one(db.pool())
-    .await?;
-
-    for app in input.apps {
-        sqlx::query!(
-            "INSERT INTO goal_apps (goal_id, app) VALUES (?, ?)",
-            id,
-            app
-        )
-        .execute(db.pool())
-        .await?;
-    }
-
-    for cat in input.categories {
-        sqlx::query!(
-            "INSERT INTO goal_categories (goal_id, category) VALUES (?, ?)",
-            id,
-            cat
-        )
-        .execute(db.pool())
-        .await?;
-    }
-
-    for day in input.excluded_days {
-        sqlx::query!(
-            "INSERT INTO goal_excluded_days (goal_id, day) VALUES (?, ?)",
-            id,
-            day
-        )
-        .execute(db.pool())
-        .await?;
-    }
-
-    Ok(())
-}
-
-pub async fn modify_goal(
-    db: &DBContext,
-    goal_id: i64,
-    update: GoalUpdateInput,
-) -> Result<(), DBError> {
-    let now = Utc::now().to_rfc3339();
-
-    let mut tx = db.pool().begin().await?;
-
-    sqlx::query!("UPDATE goals set updated_at = ? WHERE id = ?", now, goal_id,)
-        .execute(&mut *tx)
-        .await?;
-
-    if let Some(name) = update.name {
-        sqlx::query!("UPDATE goals set name = ? WHERE id = ?", name, goal_id,)
+        sqlx::query!("UPDATE goals set updated_at = ? WHERE id = ?", now, goal_id,)
             .execute(&mut *tx)
             .await?;
-    }
 
-    if let Some(seconds) = update.target_seconds {
-        sqlx::query!(
-            "UPDATE goals set target_seconds = ? WHERE id = ?",
-            seconds,
-            goal_id,
-        )
-        .execute(&mut *tx)
-        .await?;
-    }
+        if let Some(name) = self.name {
+            sqlx::query!("UPDATE goals set name = ? WHERE id = ?", name, goal_id,)
+                .execute(&mut *tx)
+                .await?;
+        }
 
-    if let Some(span) = update.time_span {
-        let string_span = span.to_string();
-        sqlx::query!(
-            "UPDATE goals set time_span = ? WHERE id = ?",
-            string_span,
-            goal_id
-        )
-        .execute(&mut *tx)
-        .await?;
-
-        sqlx::query!(
-            "UPDATE shown_goal_notifications set time_span = ? WHERE goal_id = ?",
-            string_span,
-            goal_id,
-        )
-        .execute(&mut *tx)
-        .await?;
-    }
-
-    if let Some(val) = update.use_apps {
-        sqlx::query!("UPDATE goals set use_apps = ? WHERE id = ?", val, goal_id)
-            .execute(&mut *tx)
-            .await?;
-    }
-
-    if let Some(val) = update.use_categories {
-        sqlx::query!(
-            "UPDATE goals set use_categories = ? WHERE id = ?",
-            val,
-            goal_id,
-        )
-        .execute(&mut *tx)
-        .await?;
-    }
-
-    if let Some(val) = update.ignore_no_activity_days {
-        sqlx::query!(
-            "UPDATE goals set ignore_no_activity_days = ? WHERE id = ?",
-            val,
-            goal_id,
-        )
-        .execute(&mut *tx)
-        .await?;
-    }
-
-    if let Some(apps) = update.apps {
-        sqlx::query!("DELETE FROM goal_apps WHERE goal_id = ?", goal_id)
-            .execute(&mut *tx)
-            .await?;
-        for app in apps {
+        if let Some(seconds) = self.target_seconds {
             sqlx::query!(
-                "INSERT INTO goal_apps (goal_id, app) VALUES (?, ?)",
+                "UPDATE goals set target_seconds = ? WHERE id = ?",
+                seconds,
                 goal_id,
-                app,
             )
             .execute(&mut *tx)
             .await?;
         }
-    }
 
-    if let Some(cats) = update.categories {
-        sqlx::query!("DELETE FROM goal_categories WHERE goal_id = ?", goal_id)
+        if let Some(span) = self.time_span {
+            let string_span = span.to_string();
+            sqlx::query!(
+                "UPDATE goals set time_span = ? WHERE id = ?",
+                string_span,
+                goal_id
+            )
             .execute(&mut *tx)
             .await?;
 
-        for cat in cats {
             sqlx::query!(
-                "INSERT INTO goal_categories (goal_id, category) VALUES (?, ?)",
+                "UPDATE shown_goal_notifications set time_span = ? WHERE goal_id = ?",
+                string_span,
                 goal_id,
-                cat,
             )
             .execute(&mut *tx)
             .await?;
         }
-    }
 
-    if let Some(days) = update.excluded_days {
-        sqlx::query!("DELETE FROM goal_excluded_days WHERE goal_id = ?", goal_id)
+        if let Some(val) = self.use_apps {
+            sqlx::query!("UPDATE goals set use_apps = ? WHERE id = ?", val, goal_id)
+                .execute(&mut *tx)
+                .await?;
+        }
+
+        if let Some(val) = self.use_categories {
+            sqlx::query!(
+                "UPDATE goals set use_categories = ? WHERE id = ?",
+                val,
+                goal_id,
+            )
             .execute(&mut *tx)
             .await?;
+        }
 
-        for day in days {
+        if let Some(val) = self.ignore_no_activity_days {
             sqlx::query!(
-                "
+                "UPDATE goals set ignore_no_activity_days = ? WHERE id = ?",
+                val,
+                goal_id,
+            )
+            .execute(&mut *tx)
+            .await?;
+        }
+
+        if let Some(apps) = self.apps {
+            sqlx::query!("DELETE FROM goal_apps WHERE goal_id = ?", goal_id)
+                .execute(&mut *tx)
+                .await?;
+            for app in apps {
+                sqlx::query!(
+                    "INSERT INTO goal_apps (goal_id, app) VALUES (?, ?)",
+                    goal_id,
+                    app,
+                )
+                .execute(&mut *tx)
+                .await?;
+            }
+        }
+
+        if let Some(cats) = self.categories {
+            sqlx::query!("DELETE FROM goal_categories WHERE goal_id = ?", goal_id)
+                .execute(&mut *tx)
+                .await?;
+
+            for cat in cats {
+                sqlx::query!(
+                    "INSERT INTO goal_categories (goal_id, category) VALUES (?, ?)",
+                    goal_id,
+                    cat,
+                )
+                .execute(&mut *tx)
+                .await?;
+            }
+        }
+
+        if let Some(days) = self.excluded_days {
+            sqlx::query!("DELETE FROM goal_excluded_days WHERE goal_id = ?", goal_id)
+                .execute(&mut *tx)
+                .await?;
+
+            for day in days {
+                sqlx::query!(
+                    "
             INSERT INTO goal_excluded_days (goal_id, day) VALUES (?, ?)",
-                goal_id,
-                day,
-            )
-            .execute(&mut *tx)
-            .await?;
+                    goal_id,
+                    day,
+                )
+                .execute(&mut *tx)
+                .await?;
+            }
         }
+
+        tx.commit().await?;
+        Ok(())
     }
-
-    tx.commit().await?;
-    Ok(())
-}
-
-pub async fn delete_goal(db: &DBContext, goal_id: i64) -> Result<(), DBError> {
-    sqlx::query!("DELETE FROM goals WHERE id = ?", goal_id)
-        .execute(db.pool())
-        .await?;
-
-    Ok(())
 }
