@@ -7,7 +7,7 @@ use common::{
 };
 use db::{
     desktop::{
-        goal_notifications::{has_shown_goal_notification, insert_shown_goal_notification},
+        goal_notifications::GoalNotification,
         goals::{
             delete_goal, fetch_all_goals, insert_goal, modify_goal, Goal, GoalInput,
             GoalUpdateInput, TimeSpan,
@@ -77,9 +77,13 @@ impl GoalService {
             }
 
             let period_key = current_period_key(&goal.time_span);
-            let already_shown =
-                has_shown_goal_notification(&self.db, goal.id, &goal.time_span, &period_key)
-                    .await?;
+            let already_shown = GoalNotification::has_shown_notification(
+                &self.db,
+                goal.id,
+                &goal.time_span,
+                &period_key,
+            )
+            .await?;
 
             if already_shown {
                 continue;
@@ -94,7 +98,13 @@ impl GoalService {
 
             app.show_notification(payload)?;
 
-            insert_shown_goal_notification(&self.db, goal.id, &goal.time_span, &period_key).await?;
+            GoalNotification::insert_shown_notification(
+                &self.db,
+                goal.id,
+                &goal.time_span,
+                &period_key,
+            )
+            .await?;
         }
 
         Ok(())
