@@ -11,6 +11,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
+  Switch,
   ToggleGroup,
   ToggleGroupItem,
 } from "@skopio/ui";
@@ -56,6 +57,7 @@ const TimelineExtension = () => {
   const [selectedLabel, setSelectedLabel] = useState<string>(
     durations[0].label,
   );
+  const [showAfk, setShowAfk] = useState<boolean>(false);
   const [dateRange, setDateRange] = useState<{
     from: Date | null;
     to: Date | null;
@@ -73,7 +75,12 @@ const TimelineExtension = () => {
     };
   }, [isCustom, dateRange.from, dateRange.to]);
 
-  const { events, loading } = useEventSummary(group, duration, customRange);
+  const { events, afkEvents, loading } = useEventSummary(
+    group,
+    duration,
+    customRange,
+    showAfk,
+  );
 
   const handleApplyCustomRange = () => {
     const { from, to } = dateRange;
@@ -215,12 +222,24 @@ const TimelineExtension = () => {
         </Select>
       </div>
 
+      <div className="flex items-center gap-3">
+        <Switch
+          checked={showAfk}
+          onCheckedChange={setShowAfk}
+          id="toggle-afk"
+        />
+        <Label htmlFor="toggle-afk" className="cursor-pointer">
+          Show AFK events
+        </Label>
+      </div>
+
       {loading ? (
         <SkeletonChart />
       ) : (
         <TimelineView
           durationMinutes={duration}
           groupedEvents={events}
+          afkEvents={afkEvents}
           customStart={
             customRange
               ? subDays(endOfDay(customRange?.start ?? new Date()), 1)

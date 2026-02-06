@@ -19,6 +19,7 @@ import { useColorCache } from "@/stores/useColorCache";
 interface TimelineViewProps {
   durationMinutes: number;
   groupedEvents: EventGroup[];
+  afkEvents: FullEvent[];
   customStart?: Date;
   customEnd?: Date;
 }
@@ -57,6 +58,7 @@ interface TimelineGroup {
 export const TimelineView: React.FC<TimelineViewProps> = ({
   durationMinutes,
   groupedEvents,
+  afkEvents,
   customStart,
   customEnd,
 }) => {
@@ -70,19 +72,32 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
 
   const ANIMATION_INACTIVITY_DELAY_MS = 5000;
 
+  const AFK_GROUP_KEY = "__AFK__";
+
+  const combinedGroups: EventGroup[] = useMemo(() => {
+    const afk = (afkEvents ?? []).length
+      ? [{ group: AFK_GROUP_KEY, events: afkEvents ?? [] }]
+      : [];
+    return [...afk, ...groupedEvents];
+  }, [groupedEvents, afkEvents]);
+
   const groups: TimelineGroup[] = useMemo(() => {
-    return groupedEvents
+    return combinedGroups
+      .slice()
       .sort((a, b) => {
+        if (a.group === AFK_GROUP_KEY) return -1;
+        if (b.group === AFK_GROUP_KEY) return 1;
         return a.group.localeCompare(b.group);
       })
       .map((group) => {
-        const content = truncateValue(group.group, 20);
+        const label = group.group === AFK_GROUP_KEY ? "AFK" : group.group;
+        const content = truncateValue(label, 20);
         return {
           id: group.group,
           content,
         };
       });
-  }, [groupedEvents]);
+  }, [combinedGroups]);
 
   const safeParseISO = (dateInput: unknown): Date | null => {
     if (typeof dateInput === "number") {
@@ -237,7 +252,7 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
 
     const itemsToProcess: TimelineDataItem[] = [];
 
-    groupedEvents.forEach((groupData: EventGroup) => {
+    combinedGroups.forEach((groupData: EventGroup) => {
       groupData.events.forEach((e: FullEvent) => {
         const start = safeParseISO(e.timestamp);
         const end = e.endTimestamp
@@ -248,12 +263,14 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
 
         const id = String(e.id);
         const group = groupData.group;
-        const color = getColorForCategory(e.category);
+
+        const color =
+          group === AFK_GROUP_KEY ? "#e5e7eb" : getColorForCategory(e.category);
 
         const item: TimelineDataItem = {
           id,
           group,
-          content: `${e.app ?? "unknown"}`,
+          content: group === AFK_GROUP_KEY ? "AFK" : `${e.app ?? "unknown"}`,
           start,
           end,
           title: formatTimelineTitle({
@@ -295,9 +312,9 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
         }, ANIMATION_INACTIVITY_DELAY_MS);
       }
     }
-  }, [groupedEvents, clearAnimationTimeout]);
+  }, [combinedGroups, clearAnimationTimeout]);
 
-  if (groupedEvents.length === 0) {
+  if (combinedGroups.length === 0) {
     return (
       <p className="text-muted-foreground flex items-center justify-center py-10">
         No events to display for the selected range
