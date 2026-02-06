@@ -71,6 +71,9 @@ export const commands = {
   async fetchEvents(query: BucketSummaryInput): Promise<EventGroupResult> {
     return await TAURI_INVOKE("fetch_events", { query });
   },
+  async fetchAfkEvents(query: BucketSummaryInput): Promise<FullEvent[]> {
+    return await TAURI_INVOKE("fetch_afk_events", { query });
+  },
   async dismissNotificationWindow(): Promise<null> {
     return await TAURI_INVOKE("dismiss_notification_window");
   },
