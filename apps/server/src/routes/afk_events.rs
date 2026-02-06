@@ -1,6 +1,17 @@
-use axum::{extract::State, routing::post, Json, Router};
-use common::models::inputs::AFKEventInput;
-use db::{server::afk_events::AFKEvent, DBContext};
+use axum::{
+    extract::State,
+    routing::{get, post},
+    Json, Router,
+};
+use common::models::{
+    inputs::{AFKEventInput, BucketSummaryInput},
+    outputs::FullEvent,
+};
+use db::{
+    server::{afk_events::AFKEvent, summary::SummaryQueryBuilder},
+    DBContext,
+};
+use serde_qs::axum::QsQuery;
 use std::sync::Arc;
 use tokio::sync::Mutex;
 use tracing::info;
@@ -45,8 +56,20 @@ async fn handle_afk_events(
     Ok(())
 }
 
+async fn fetch_afk_events(
+    State(db): State<Arc<Mutex<DBContext>>>,
+    QsQuery(payload): QsQuery<BucketSummaryInput>,
+) -> ServerResult<Json<Vec<FullEvent>>> {
+    let db = db.lock().await;
+    let builder = SummaryQueryBuilder::from(payload);
+    let events = builder.fetch_afk_event_range(&db).await?;
+
+    Ok(Json(events))
+}
+
 pub fn afk_event_routes(db: Arc<Mutex<DBContext>>) -> Router {
     Router::new()
         .route("/afk", post(handle_afk_events))
+        .route("/afk", get(fetch_afk_events))
         .with_state(db)
 }
