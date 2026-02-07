@@ -120,6 +120,29 @@ cargo run
 
 ---
 
+- GET `/afk`
+
+  Fetch AFK events, when provided with a time range query
+
+  ```json
+  [
+    {
+      "id": "019978f0-71fb-7ba0-a472-07f7cd357ac6",
+      "afk_start": "2025-09-11T12:00:00Z",
+      "afk_end": "2025-09-11T12:15:00Z",
+      "duration": 900
+    },
+    {
+      "id": "019978f3-311f-7941-a257-7bfa1252728b",
+      "afk_start": "2025-09-11T13:30:00Z",
+      "afk_end": "2025-09-11T13:45:00Z",
+      "duration": 900
+    }
+  ]
+  ```
+
+---
+
 - GET `/apps`
 
   List saved tracked apps.

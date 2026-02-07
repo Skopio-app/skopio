@@ -23,6 +23,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v0.1.11] - 2026-02-07
+
+### Fixed
+
+- AFK event timestamps are saved via unix timestamps for consistency
+
+---
+
 ## [v0.1.10] - 2026-02-07
 
 ### Added
