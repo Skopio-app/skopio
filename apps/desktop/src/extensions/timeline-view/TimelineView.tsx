@@ -69,6 +69,7 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
   const rangeChangedDebounceRef = useRef<ReturnType<typeof _.debounce> | null>(
     null,
   );
+  const groupsDataSetRef = useRef<DataSet<TimelineGroup> | null>(null);
 
   const ANIMATION_INACTIVITY_DELAY_MS = 5000;
 
@@ -139,6 +140,7 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
     app,
     entity,
     entityType,
+    isAfk,
   }: {
     start: Date;
     end: Date;
@@ -146,6 +148,7 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
     app?: string | null;
     entity?: string | null;
     entityType?: string | null;
+    isAfk: boolean;
   }): string => {
     const formattedDuration = formatDuration(duration);
 
@@ -153,10 +156,12 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
       `Start: ${format(start, "HH:mm:ss")}`,
       `End: ${format(end, "HH:mm:ss")}`,
       `Duration: ${formattedDuration}`,
-      `App: ${app ?? "unknown"}`,
-      `Entity: ${entityType === "File" ? getEntityName(entity ?? "unknown", entityType ?? "unknown") : truncateValue(entity ?? "unknown")}`,
+      isAfk ? `App: ${app ?? "unknown"}` : null,
+      isAfk
+        ? `Entity: ${entityType === "File" ? getEntityName(entity ?? "unknown", entityType ?? "unknown") : truncateValue(entity ?? "unknown")}`
+        : null,
     ]
-      .map((line) => line.replace(/"/g, "&quot;"))
+      .map((line) => line?.replace(/"/g, "&quot;"))
       .join("<br/>");
   };
 
@@ -186,10 +191,12 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
     };
 
     dataSetRef.current = new DataSet<TimelineDataItem>();
+    groupsDataSetRef.current = new DataSet<TimelineGroup>(groups);
+
     timelineRef.current = new Timeline(
       containerRef.current,
       dataSetRef.current,
-      groups,
+      groupsDataSetRef.current,
       options,
     );
 
@@ -238,9 +245,29 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
         dataSetRef.current = null;
       }
 
+      if (groupsDataSetRef.current) {
+        groupsDataSetRef.current.clear();
+        groupsDataSetRef.current = null;
+      }
+
       clearAnimationTimeout();
     };
-  }, [groups, durationMinutes, customStart, customEnd, clearAnimationTimeout]);
+  }, [durationMinutes, customStart, customEnd, clearAnimationTimeout]);
+
+  useEffect(() => {
+    if (!timelineRef.current) return;
+
+    if (!groupsDataSetRef.current) {
+      groupsDataSetRef.current = new DataSet<TimelineGroup>(groups);
+      timelineRef.current.setGroups(groupsDataSetRef.current);
+      return;
+    }
+
+    groupsDataSetRef.current.clear();
+    groupsDataSetRef.current.add(groups);
+
+    timelineRef.current.setGroups(groupsDataSetRef.current);
+  }, [groups]);
 
   useEffect(() => {
     if (!dataSetRef.current || !timelineRef.current) {
@@ -250,6 +277,7 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
       return;
     }
 
+    const ds = dataSetRef.current;
     const itemsToProcess: TimelineDataItem[] = [];
 
     combinedGroups.forEach((groupData: EventGroup) => {
@@ -261,16 +289,16 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
 
         if (!start || !end || differenceInSeconds(end, start) <= 1) return;
 
-        const id = String(e.id);
+        const isAfk = groupData.group === AFK_GROUP_KEY;
+        const id = isAfk ? `afk:${e.id}` : `ev:${e.id}`;
         const group = groupData.group;
 
-        const color =
-          group === AFK_GROUP_KEY ? "#e5e7eb" : getColorForCategory(e.category);
+        const color = isAfk ? "#e5e7eb" : getColorForCategory(e.category);
 
         const item: TimelineDataItem = {
           id,
           group,
-          content: group === AFK_GROUP_KEY ? "AFK" : `${e.app ?? "unknown"}`,
+          content: isAfk ? "AFK" : `${e.app ?? "unknown"}`,
           start,
           end,
           title: formatTimelineTitle({
@@ -280,6 +308,7 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
             entity: e.entity,
             duration: e.duration ?? 0,
             entityType: e.entityType,
+            isAfk,
           }),
           style: `background-color: ${color}; border-color: ${Color(color).darken(0.6)};`,
         };
@@ -288,9 +317,13 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
       });
     });
 
-    if (itemsToProcess.length > 0) {
-      dataSetRef.current.update(itemsToProcess);
-    }
+    const nextIds = new Set(itemsToProcess.map((i) => i.id!).filter(Boolean));
+    const existingIds = ds.getIds() as Array<string | number>;
+
+    const toRemove = existingIds.filter((id) => !nextIds.has(String(id)));
+    if (toRemove.length > 0) ds.remove(toRemove);
+
+    ds.update(itemsToProcess);
 
     const allItemsInDataSet = dataSetRef.current.get() as TimelineDataItem[];
     const latestOverallEnd = _.maxBy(allItemsInDataSet, "end")?.end ?? null;

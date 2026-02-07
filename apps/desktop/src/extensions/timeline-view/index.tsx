@@ -27,6 +27,7 @@ import {
 import SkeletonChart from "@/components/loading/SkeletonChart";
 import { toast } from "sonner";
 import { useEventSummary } from "./hooks/useEventSummary";
+import { useLocalStorage } from "./hooks/useLocalStorage";
 
 const durations = [
   { label: "15m", minutes: 15 },
@@ -57,7 +58,6 @@ const TimelineExtension = () => {
   const [selectedLabel, setSelectedLabel] = useState<string>(
     durations[0].label,
   );
-  const [showAfk, setShowAfk] = useState<boolean>(false);
   const [dateRange, setDateRange] = useState<{
     from: Date | null;
     to: Date | null;
@@ -65,6 +65,12 @@ const TimelineExtension = () => {
     from: new Date(),
     to: new Date(),
   });
+
+  const [showAfk, setShowAfk] = useLocalStorage<boolean>(
+    "timeline.showAfkEvents",
+    false,
+  );
+
   const isCustom = duration === 0;
 
   const customRange = useMemo(() => {
@@ -223,14 +229,14 @@ const TimelineExtension = () => {
       </div>
 
       <div className="flex items-center gap-3">
+        <Label htmlFor="toggle-afk" className="cursor-pointer">
+          Show AFK events
+        </Label>
         <Switch
           checked={showAfk}
           onCheckedChange={setShowAfk}
           id="toggle-afk"
         />
-        <Label htmlFor="toggle-afk" className="cursor-pointer">
-          Show AFK events
-        </Label>
       </div>
 
       {loading ? (
@@ -239,7 +245,7 @@ const TimelineExtension = () => {
         <TimelineView
           durationMinutes={duration}
           groupedEvents={events}
-          afkEvents={afkEvents}
+          afkEvents={showAfk ? afkEvents : []}
           customStart={
             customRange
               ? subDays(endOfDay(customRange?.start ?? new Date()), 1)
