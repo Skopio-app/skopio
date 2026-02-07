@@ -39,8 +39,8 @@ async fn handle_afk_events(
 
             AFKEvent {
                 id,
-                afk_start: afk.afk_start,
-                afk_end: afk.afk_end,
+                afk_start: afk.afk_start.timestamp(),
+                afk_end: afk.afk_end.map(|t| t.timestamp()),
                 duration: afk.duration,
             }
         })

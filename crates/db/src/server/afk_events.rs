@@ -8,8 +8,8 @@ use uuid::Uuid;
 #[derive(Serialize, Deserialize, Debug)]
 pub struct AFKEvent {
     pub id: Uuid,
-    pub afk_start: DateTime<Utc>,
-    pub afk_end: Option<DateTime<Utc>>,
+    pub afk_start: i64,
+    pub afk_end: Option<i64>,
     pub duration: Option<i64>,
 }
 
@@ -51,8 +51,28 @@ impl SummaryQueryBuilder {
             "
             SELECT
                 id,
-                afk_start,
-                afk_end,
+
+                CASE
+                  WHEN typeof(afk_start) = 'integer' THEN afk_start
+                  WHEN typeof(afk_start) = 'text' THEN
+                    CASE
+                      WHEN afk_start GLOB '[0-9]*' THEN CAST(afk_start AS INTEGER)
+                      ELSE CAST(strftime('%s', afk_start) AS INTEGER)
+                    END
+                  ELSE NULL
+                END AS afk_start_i,
+
+                CASE
+                  WHEN afk_end IS NULL THEN NULL
+                  WHEN typeof(afk_end) = 'integer' THEN afk_end
+                  WHEN typeof(afk_end) = 'text' THEN
+                    CASE
+                      WHEN afk_end GLOB '[0-9]*' THEN CAST(afk_end AS INTEGER)
+                      ELSE CAST(strftime('%s', afk_end) AS INTEGER)
+                    END
+                  ELSE NULL
+                END AS afk_end_i,
+
                 duration
             FROM afk_events
             WHERE 1=1
@@ -63,21 +83,18 @@ impl SummaryQueryBuilder {
             qb.push(" AND (1=1");
 
             if let Some(start) = self.filters.start {
-                qb.push(
-                    " AND CAST(strftime('%s', COALESCE(afk_end, datetime('now'))) AS INTEGER) > ",
-                )
-                .push_bind(start);
+                qb.push(" AND COALESCE(afk_end_i, CAST(strftime('%s','now') AS INTEGER)) > ")
+                    .push_bind(start);
             }
 
             if let Some(end) = self.filters.end {
-                qb.push(" AND CAST(strftime('%s', afk_start) AS INTEGER) < ")
-                    .push_bind(end);
+                qb.push(" AND afk_start_i < ").push_bind(end);
             }
 
             qb.push(")");
         }
 
-        qb.push(" ORDER BY CAST(strftime('%s', afk_start) AS INTEGER)");
+        qb.push(" ORDER BY afk_start_i");
 
         let query = qb.build();
 
@@ -96,26 +113,19 @@ impl SummaryQueryBuilder {
 
         let rows = query.fetch_all(db.pool()).await?;
 
-        let mut events = Vec::with_capacity(rows.len());
+        let mut afk_events = Vec::with_capacity(rows.len());
 
         for row in rows {
-            let id = row.try_get::<Vec<u8>, _>("id").and_then(|bytes| {
-                Uuid::from_slice(&bytes).map_err(|e| sqlx::Error::Decode(Box::new(e)))
-            })?;
+            let id = row.try_get("id").map(Uuid::from_slice).unwrap()?;
 
-            let afk_start_s: String = row.try_get("afk_start")?;
-            let afk_end_s: Option<String> = row.try_get("afk_end")?;
+            let timestamp: DateTime<Utc> =
+                DateTime::<Utc>::from_timestamp(row.try_get::<i64, _>("afk_start_i")?, 0)
+                    .unwrap_or_default();
+            let end_timestamp: Option<DateTime<Utc>> =
+                DateTime::<Utc>::from_timestamp(row.try_get::<i64, _>("afk_end_i")?, 0);
             let duration: Option<i64> = row.try_get("duration")?;
 
-            let timestamp = DateTime::parse_from_rfc3339(&afk_start_s)
-                .map(|dt| dt.with_timezone(&Utc))
-                .unwrap_or_default();
-
-            let end_timestamp = afk_end_s
-                .and_then(|s| DateTime::parse_from_rfc3339(&s).ok())
-                .map(|dt| dt.with_timezone(&Utc));
-
-            events.push(FullEvent {
+            afk_events.push(FullEvent {
                 id,
                 timestamp,
                 end_timestamp,
@@ -131,6 +141,6 @@ impl SummaryQueryBuilder {
             });
         }
 
-        Ok(events)
+        Ok(afk_events)
     }
 }
