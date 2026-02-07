@@ -453,7 +453,7 @@ mod tests {
         let include_this = false;
 
         let mut year = local_today.year();
-        let mut month = local_today.month();
+        let mut month = local_today.month() as i32;
 
         if !include_this {
             month -= 1;
@@ -463,14 +463,14 @@ mod tests {
             }
         }
 
-        let mut start_month = month - n as u32 + 1;
+        let mut start_month = month - n as i32 + 1;
         let mut start_year = year;
         while start_month <= 0 {
             start_month += 12;
             start_year -= 1;
         }
 
-        let expected_start = month_start_utc(start_year, start_month);
+        let expected_start = month_start_utc(start_year, start_month as u32);
         let expected_end = Local
             .with_ymd_and_hms(year, (month as u32) + 1, 1, 0, 0, 0)
             .single()
