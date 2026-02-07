@@ -263,7 +263,7 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
 
       clearAnimationTimeout();
     };
-  }, [durationMinutes, customStart, customEnd, clearAnimationTimeout]);
+  }, [groups, durationMinutes, customStart, customEnd, clearAnimationTimeout]);
 
   useEffect(() => {
     if (!timelineRef.current) return;
