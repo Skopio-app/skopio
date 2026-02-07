@@ -228,9 +228,9 @@ const TimelineExtension = () => {
         </Select>
       </div>
 
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3.5">
         <Label htmlFor="toggle-afk" className="cursor-pointer">
-          Show AFK events
+          Display AFK events:
         </Label>
         <Switch
           checked={showAfk}

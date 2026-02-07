@@ -176,6 +176,12 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
       .join("<br/>");
   };
 
+  const groupsRef = useRef<TimelineGroup[]>(groups);
+
+  useEffect(() => {
+    groupsRef.current = groups;
+  }, [groups]);
+
   useEffect(() => {
     if (!containerRef.current) return;
 
@@ -194,15 +200,11 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
       zoomMax: 1000 * 60 * 60 * 24 * 31 * 3, // 3 months
       stack: false,
       showMinorLabels: true,
-      tooltip: {
-        followMouse: true,
-        overflowMethod: "cap",
-        delay: 0,
-      },
+      tooltip: { followMouse: true, overflowMethod: "cap", delay: 0 },
     };
 
     dataSetRef.current = new DataSet<TimelineDataItem>();
-    groupsDataSetRef.current = new DataSet<TimelineGroup>(groups);
+    groupsDataSetRef.current = new DataSet<TimelineGroup>(groupsRef.current);
 
     timelineRef.current = new Timeline(
       containerRef.current,
@@ -234,7 +236,6 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
 
     const debounced = _.debounce(onRangeChanged, 500);
     rangeChangedDebounceRef.current = debounced;
-
     timelineRef.current.on("rangechanged", debounced);
 
     return () => {
@@ -263,7 +264,7 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
 
       clearAnimationTimeout();
     };
-  }, [groups, durationMinutes, customStart, customEnd, clearAnimationTimeout]);
+  }, [durationMinutes, customStart, customEnd, clearAnimationTimeout]);
 
   useEffect(() => {
     if (!timelineRef.current) return;
