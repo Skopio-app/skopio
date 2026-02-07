@@ -62,12 +62,14 @@ export const useEventSummary = (
     hasValidCustom ? customRange : null,
   );
 
+  const enabledBase = hasValidCustom || !customRange;
+
   const { data: eventRes, isLoading: eventsLoading } = useQuery({
     queryKey: ["eventSummary", queryKeyBase],
     queryFn: async (): Promise<EventGroupResult> => {
       return commands.fetchEvents(input);
     },
-    enabled: hasValidCustom || !customRange,
+    enabled: enabledBase,
     select: toGrouped,
   });
 
@@ -76,7 +78,7 @@ export const useEventSummary = (
     queryFn: async (): Promise<FullEvent[]> => {
       return commands.fetchAfkEvents(input);
     },
-    enabled: (hasValidCustom || !customRange) && showAfk,
+    enabled: enabledBase && showAfk,
   });
 
   return {

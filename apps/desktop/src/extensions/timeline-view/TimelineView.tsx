@@ -152,16 +152,27 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
   }): string => {
     const formattedDuration = formatDuration(duration);
 
-    return [
+    const lines: Array<string | null> = [
       `Start: ${format(start, "HH:mm:ss")}`,
       `End: ${format(end, "HH:mm:ss")}`,
       `Duration: ${formattedDuration}`,
-      isAfk ? `App: ${app ?? "unknown"}` : null,
-      isAfk
-        ? `Entity: ${entityType === "File" ? getEntityName(entity ?? "unknown", entityType ?? "unknown") : truncateValue(entity ?? "unknown")}`
-        : null,
-    ]
-      .map((line) => line?.replace(/"/g, "&quot;"))
+    ];
+
+    if (!isAfk) {
+      lines.push(`App: ${app ?? "unknown"}`);
+
+      if (entity) {
+        const ent =
+          entityType === "File"
+            ? getEntityName(entity, entityType ?? "unknown")
+            : truncateValue(entity);
+        lines.push(`Entity: ${ent}`);
+      }
+    }
+
+    return lines
+      .filter(Boolean)
+      .map((line) => (line as string).replace(/"/g, "&quot;"))
       .join("<br/>");
   };
 
