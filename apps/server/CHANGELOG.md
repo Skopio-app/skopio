@@ -23,6 +23,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v0.1.10] - 2026-02-07
+
+### Added
+
+- New route to fetch AFK events.
+
+### Fixed
+
+- AFK events are migrated to use unix timestamps.
+
+---
+
 ## [v0.1.9] - 2026-01-31
 
 ### Fixed
