@@ -27,7 +27,7 @@ import {
 import SkeletonChart from "@/components/loading/SkeletonChart";
 import { toast } from "sonner";
 import { useEventSummary } from "./hooks/useEventSummary";
-import { useLocalStorage } from "./hooks/useLocalStorage";
+import { useLocalStorage } from "../../hooks/useLocalStorage";
 
 const durations = [
   { label: "15m", minutes: 15 },

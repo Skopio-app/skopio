@@ -4,10 +4,10 @@ import StackedBarChart from "@/components/StackedBarChart";
 import { Group } from "@/types/tauri.gen";
 import { useMemo } from "react";
 import SettingsContent, { MIN_TOP_N } from "../components/SettingsContent";
-import { usePersistentTopN } from "../hooks/usePersistentTopN";
+import { useLocalStorage } from "@/hooks/useLocalStorage";
 
 const CategoryChartWidget = () => {
-  const [topN, setTopN] = usePersistentTopN("categoryTopN", MIN_TOP_N);
+  const [topN, setTopN] = useLocalStorage("categoryTopN", MIN_TOP_N);
   const options = useMemo(
     () => ({
       groupBy: "category" as Group,
