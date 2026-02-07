@@ -3,6 +3,7 @@ import {
   commands,
   EventGroup,
   EventGroupResult,
+  FullEvent,
   Group,
 } from "@/types/tauri.gen";
 import { useQuery } from "@tanstack/react-query";
@@ -32,39 +33,57 @@ const buildInput = (
   };
 };
 
+const toGrouped = (res: EventGroupResult): EventGroup[] =>
+  "Grouped" in res ? res.Grouped : [];
+
 export const useEventSummary = (
   group: Group,
   duration: number,
   customRange: CustomRange,
+  showAfk: boolean,
 ) => {
   const hasValidCustom =
     !!customRange && !!customRange.start && !!customRange.end;
 
-  const { data, isLoading } = useQuery({
-    queryKey: [
-      "eventSummary",
-      {
-        group,
-        duration: hasValidCustom ? undefined : duration,
-        custom: hasValidCustom
-          ? {
-              start: customRange.start.toISOString(),
-              end: customRange.end.toISOString(),
-            }
-          : null,
-      },
-    ],
+  const queryKeyBase = {
+    group,
+    duration: hasValidCustom ? undefined : duration,
+    custom: hasValidCustom
+      ? {
+          start: customRange.start.toISOString(),
+          end: customRange.end.toISOString(),
+        }
+      : null,
+  };
+
+  const input = buildInput(
+    group,
+    duration,
+    hasValidCustom ? customRange : null,
+  );
+
+  const enabledBase = hasValidCustom || !customRange;
+
+  const { data: eventRes, isLoading: eventsLoading } = useQuery({
+    queryKey: ["eventSummary", queryKeyBase],
     queryFn: async (): Promise<EventGroupResult> => {
-      const input = buildInput(
-        group,
-        duration,
-        hasValidCustom ? customRange : null,
-      );
       return commands.fetchEvents(input);
     },
-    enabled: hasValidCustom || !customRange,
-    select: (res): EventGroup[] => ("Grouped" in res ? res.Grouped : []),
+    enabled: enabledBase,
+    select: toGrouped,
   });
 
-  return { events: data ?? [], loading: isLoading };
+  const { data: afkRes, isLoading: afkLoading } = useQuery({
+    queryKey: ["afkEvents", queryKeyBase],
+    queryFn: async (): Promise<FullEvent[]> => {
+      return commands.fetchAfkEvents(input);
+    },
+    enabled: enabledBase && showAfk,
+  });
+
+  return {
+    events: eventRes ?? [],
+    afkEvents: afkRes ?? [],
+    loading: eventsLoading || (showAfk ? afkLoading : false),
+  };
 };

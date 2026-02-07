@@ -1,3 +1,4 @@
+pub mod afk_events;
 pub mod data;
 pub mod events;
 pub mod insights;

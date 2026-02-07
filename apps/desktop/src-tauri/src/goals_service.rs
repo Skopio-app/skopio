@@ -7,11 +7,8 @@ use common::{
 };
 use db::{
     desktop::{
-        goal_notifications::{has_shown_goal_notification, insert_shown_goal_notification},
-        goals::{
-            delete_goal, fetch_all_goals, insert_goal, modify_goal, Goal, GoalInput,
-            GoalUpdateInput, TimeSpan,
-        },
+        goal_notifications::GoalNotification,
+        goals::{Goal, GoalInput, GoalUpdateInput, TimeSpan},
     },
     DBContext,
 };
@@ -59,7 +56,7 @@ impl GoalService {
     }
 
     pub async fn check_goals(&self, app: &AppHandle) -> anyhow::Result<()> {
-        let goals = fetch_all_goals(&self.db).await?;
+        let goals = Goal::fetch_all(&self.db).await?;
         for goal in goals {
             if is_today_excluded(&goal.excluded_days) {
                 debug!("Goal {} is excluded today", goal.id);
@@ -77,9 +74,13 @@ impl GoalService {
             }
 
             let period_key = current_period_key(&goal.time_span);
-            let already_shown =
-                has_shown_goal_notification(&self.db, goal.id, &goal.time_span, &period_key)
-                    .await?;
+            let already_shown = GoalNotification::has_shown_notification(
+                &self.db,
+                goal.id,
+                &goal.time_span,
+                &period_key,
+            )
+            .await?;
 
             if already_shown {
                 continue;
@@ -94,7 +95,13 @@ impl GoalService {
 
             app.show_notification(payload)?;
 
-            insert_shown_goal_notification(&self.db, goal.id, &goal.time_span, &period_key).await?;
+            GoalNotification::insert_shown_notification(
+                &self.db,
+                goal.id,
+                &goal.time_span,
+                &period_key,
+            )
+            .await?;
         }
 
         Ok(())
@@ -135,7 +142,7 @@ impl GoalService {
 #[tauri::command]
 #[specta::specta]
 pub async fn get_goals(db: tauri::State<'_, Arc<DBContext>>) -> Result<Vec<Goal>, String> {
-    fetch_all_goals(&db)
+    Goal::fetch_all(&db)
         .await
         .map_err(|e| format!("Failed to fetch goals: {}", e))
 }
@@ -146,7 +153,8 @@ pub async fn add_goal(
     db: tauri::State<'_, Arc<DBContext>>,
     input: GoalInput,
 ) -> Result<(), String> {
-    insert_goal(&db, input)
+    input
+        .insert(&db)
         .await
         .map_err(|e| format!("DB insert failed: {}", e))?;
 
@@ -160,7 +168,8 @@ pub async fn update_goal(
     goal_id: i64,
     input: GoalUpdateInput,
 ) -> Result<(), String> {
-    modify_goal(&db, goal_id, input)
+    input
+        .apply(&db, goal_id)
         .await
         .map_err(|e| format!("Goal DB updated failed: {}", e))?;
 
@@ -170,7 +179,7 @@ pub async fn update_goal(
 #[tauri::command]
 #[specta::specta]
 pub async fn remove_goal(db: tauri::State<'_, Arc<DBContext>>, goal_id: i64) -> Result<(), String> {
-    delete_goal(&db, goal_id)
+    Goal::delete(&db, goal_id)
         .await
         .map_err(|e| format!("Goal DB delete failed: {}", e))?;
 

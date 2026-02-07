@@ -19,6 +19,7 @@ import { useColorCache } from "@/stores/useColorCache";
 interface TimelineViewProps {
   durationMinutes: number;
   groupedEvents: EventGroup[];
+  afkEvents: FullEvent[];
   customStart?: Date;
   customEnd?: Date;
 }
@@ -57,6 +58,7 @@ interface TimelineGroup {
 export const TimelineView: React.FC<TimelineViewProps> = ({
   durationMinutes,
   groupedEvents,
+  afkEvents,
   customStart,
   customEnd,
 }) => {
@@ -67,22 +69,36 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
   const rangeChangedDebounceRef = useRef<ReturnType<typeof _.debounce> | null>(
     null,
   );
+  const groupsDataSetRef = useRef<DataSet<TimelineGroup> | null>(null);
 
   const ANIMATION_INACTIVITY_DELAY_MS = 5000;
 
+  const AFK_GROUP_KEY = "__AFK__";
+
+  const combinedGroups: EventGroup[] = useMemo(() => {
+    const afk = (afkEvents ?? []).length
+      ? [{ group: AFK_GROUP_KEY, events: afkEvents ?? [] }]
+      : [];
+    return [...afk, ...groupedEvents];
+  }, [groupedEvents, afkEvents]);
+
   const groups: TimelineGroup[] = useMemo(() => {
-    return groupedEvents
+    return combinedGroups
+      .slice()
       .sort((a, b) => {
+        if (a.group === AFK_GROUP_KEY) return -1;
+        if (b.group === AFK_GROUP_KEY) return 1;
         return a.group.localeCompare(b.group);
       })
       .map((group) => {
-        const content = truncateValue(group.group, 20);
+        const label = group.group === AFK_GROUP_KEY ? "AFK" : group.group;
+        const content = truncateValue(label, 20);
         return {
           id: group.group,
           content,
         };
       });
-  }, [groupedEvents]);
+  }, [combinedGroups]);
 
   const safeParseISO = (dateInput: unknown): Date | null => {
     if (typeof dateInput === "number") {
@@ -124,6 +140,7 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
     app,
     entity,
     entityType,
+    isAfk,
   }: {
     start: Date;
     end: Date;
@@ -131,19 +148,39 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
     app?: string | null;
     entity?: string | null;
     entityType?: string | null;
+    isAfk: boolean;
   }): string => {
     const formattedDuration = formatDuration(duration);
 
-    return [
+    const lines: Array<string | null> = [
       `Start: ${format(start, "HH:mm:ss")}`,
       `End: ${format(end, "HH:mm:ss")}`,
       `Duration: ${formattedDuration}`,
-      `App: ${app ?? "unknown"}`,
-      `Entity: ${entityType === "File" ? getEntityName(entity ?? "unknown", entityType ?? "unknown") : truncateValue(entity ?? "unknown")}`,
-    ]
-      .map((line) => line.replace(/"/g, "&quot;"))
+    ];
+
+    if (!isAfk) {
+      lines.push(`App: ${app ?? "unknown"}`);
+
+      if (entity) {
+        const ent =
+          entityType === "File"
+            ? getEntityName(entity, entityType ?? "unknown")
+            : truncateValue(entity);
+        lines.push(`Entity: ${ent}`);
+      }
+    }
+
+    return lines
+      .filter(Boolean)
+      .map((line) => (line as string).replace(/"/g, "&quot;"))
       .join("<br/>");
   };
+
+  const groupsRef = useRef<TimelineGroup[]>(groups);
+
+  useEffect(() => {
+    groupsRef.current = groups;
+  }, [groups]);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -163,18 +200,16 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
       zoomMax: 1000 * 60 * 60 * 24 * 31 * 3, // 3 months
       stack: false,
       showMinorLabels: true,
-      tooltip: {
-        followMouse: true,
-        overflowMethod: "cap",
-        delay: 0,
-      },
+      tooltip: { followMouse: true, overflowMethod: "cap", delay: 0 },
     };
 
     dataSetRef.current = new DataSet<TimelineDataItem>();
+    groupsDataSetRef.current = new DataSet<TimelineGroup>(groupsRef.current);
+
     timelineRef.current = new Timeline(
       containerRef.current,
       dataSetRef.current,
-      groups,
+      groupsDataSetRef.current,
       options,
     );
 
@@ -201,7 +236,6 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
 
     const debounced = _.debounce(onRangeChanged, 500);
     rangeChangedDebounceRef.current = debounced;
-
     timelineRef.current.on("rangechanged", debounced);
 
     return () => {
@@ -223,9 +257,29 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
         dataSetRef.current = null;
       }
 
+      if (groupsDataSetRef.current) {
+        groupsDataSetRef.current.clear();
+        groupsDataSetRef.current = null;
+      }
+
       clearAnimationTimeout();
     };
-  }, [groups, durationMinutes, customStart, customEnd, clearAnimationTimeout]);
+  }, [durationMinutes, customStart, customEnd, clearAnimationTimeout]);
+
+  useEffect(() => {
+    if (!timelineRef.current) return;
+
+    if (!groupsDataSetRef.current) {
+      groupsDataSetRef.current = new DataSet<TimelineGroup>(groups);
+      timelineRef.current.setGroups(groupsDataSetRef.current);
+      return;
+    }
+
+    groupsDataSetRef.current.clear();
+    groupsDataSetRef.current.add(groups);
+
+    timelineRef.current.setGroups(groupsDataSetRef.current);
+  }, [groups]);
 
   useEffect(() => {
     if (!dataSetRef.current || !timelineRef.current) {
@@ -235,9 +289,10 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
       return;
     }
 
+    const ds = dataSetRef.current;
     const itemsToProcess: TimelineDataItem[] = [];
 
-    groupedEvents.forEach((groupData: EventGroup) => {
+    combinedGroups.forEach((groupData: EventGroup) => {
       groupData.events.forEach((e: FullEvent) => {
         const start = safeParseISO(e.timestamp);
         const end = e.endTimestamp
@@ -246,14 +301,16 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
 
         if (!start || !end || differenceInSeconds(end, start) <= 1) return;
 
-        const id = String(e.id);
+        const isAfk = groupData.group === AFK_GROUP_KEY;
+        const id = isAfk ? `afk:${e.id}` : `ev:${e.id}`;
         const group = groupData.group;
-        const color = getColorForCategory(e.category);
+
+        const color = isAfk ? "#e5e7eb" : getColorForCategory(e.category);
 
         const item: TimelineDataItem = {
           id,
           group,
-          content: `${e.app ?? "unknown"}`,
+          content: isAfk ? "AFK" : `${e.app ?? "unknown"}`,
           start,
           end,
           title: formatTimelineTitle({
@@ -263,6 +320,7 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
             entity: e.entity,
             duration: e.duration ?? 0,
             entityType: e.entityType,
+            isAfk,
           }),
           style: `background-color: ${color}; border-color: ${Color(color).darken(0.6)};`,
         };
@@ -271,9 +329,13 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
       });
     });
 
-    if (itemsToProcess.length > 0) {
-      dataSetRef.current.update(itemsToProcess);
-    }
+    const nextIds = new Set(itemsToProcess.map((i) => i.id!).filter(Boolean));
+    const existingIds = ds.getIds() as Array<string | number>;
+
+    const toRemove = existingIds.filter((id) => !nextIds.has(String(id)));
+    if (toRemove.length > 0) ds.remove(toRemove);
+
+    ds.update(itemsToProcess);
 
     const allItemsInDataSet = dataSetRef.current.get() as TimelineDataItem[];
     const latestOverallEnd = _.maxBy(allItemsInDataSet, "end")?.end ?? null;
@@ -295,9 +357,9 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
         }, ANIMATION_INACTIVITY_DELAY_MS);
       }
     }
-  }, [groupedEvents, clearAnimationTimeout]);
+  }, [combinedGroups, clearAnimationTimeout]);
 
-  if (groupedEvents.length === 0) {
+  if (combinedGroups.length === 0) {
     return (
       <p className="text-muted-foreground flex items-center justify-center py-10">
         No events to display for the selected range

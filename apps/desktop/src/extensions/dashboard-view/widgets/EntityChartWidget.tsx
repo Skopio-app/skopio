@@ -3,11 +3,11 @@ import { useSummaryData } from "../hooks/useSummaryData";
 import StackedBarChart from "@/components/StackedBarChart";
 import { Group } from "@/types/tauri.gen";
 import { useMemo } from "react";
-import { usePersistentTopN } from "../hooks/usePersistentTopN";
 import SettingsContent, { MIN_TOP_N } from "../components/SettingsContent";
+import { useLocalStorage } from "@/hooks/useLocalStorage";
 
 const EntityChartWidget = () => {
-  const [topN, setTopN] = usePersistentTopN("entityTopN", MIN_TOP_N);
+  const [topN, setTopN] = useLocalStorage("entityTopN", MIN_TOP_N);
 
   const options = useMemo(
     () => ({

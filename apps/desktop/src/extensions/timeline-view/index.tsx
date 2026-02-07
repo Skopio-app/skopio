@@ -11,6 +11,7 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
+  Switch,
   ToggleGroup,
   ToggleGroupItem,
 } from "@skopio/ui";
@@ -26,6 +27,7 @@ import {
 import SkeletonChart from "@/components/loading/SkeletonChart";
 import { toast } from "sonner";
 import { useEventSummary } from "./hooks/useEventSummary";
+import { useLocalStorage } from "../../hooks/useLocalStorage";
 
 const durations = [
   { label: "15m", minutes: 15 },
@@ -63,6 +65,12 @@ const TimelineExtension = () => {
     from: new Date(),
     to: new Date(),
   });
+
+  const [showAfk, setShowAfk] = useLocalStorage<boolean>(
+    "timeline.showAfkEvents",
+    false,
+  );
+
   const isCustom = duration === 0;
 
   const customRange = useMemo(() => {
@@ -73,7 +81,12 @@ const TimelineExtension = () => {
     };
   }, [isCustom, dateRange.from, dateRange.to]);
 
-  const { events, loading } = useEventSummary(group, duration, customRange);
+  const { events, afkEvents, loading } = useEventSummary(
+    group,
+    duration,
+    customRange,
+    showAfk,
+  );
 
   const handleApplyCustomRange = () => {
     const { from, to } = dateRange;
@@ -215,12 +228,24 @@ const TimelineExtension = () => {
         </Select>
       </div>
 
+      <div className="flex items-center gap-3.5">
+        <Label htmlFor="toggle-afk" className="cursor-pointer">
+          Display AFK events:
+        </Label>
+        <Switch
+          checked={showAfk}
+          onCheckedChange={setShowAfk}
+          id="toggle-afk"
+        />
+      </div>
+
       {loading ? (
         <SkeletonChart />
       ) : (
         <TimelineView
           durationMinutes={duration}
           groupedEvents={events}
+          afkEvents={showAfk ? afkEvents : []}
           customStart={
             customRange
               ? subDays(endOfDay(customRange?.start ?? new Date()), 1)

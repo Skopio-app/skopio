@@ -1,0 +1,20 @@
+{
+  "db_name": "SQLite",
+  "query": "\n        INSERT INTO goals (created_at, updated_at, name, target_seconds, time_span, use_apps, use_categories, ignore_no_activity_days)\n        VALUES (?, ?, ?, ?, ?, ?, ?, ?)\n        RETURNING id\n        ",
+  "describe": {
+    "columns": [
+      {
+        "name": "id",
+        "ordinal": 0,
+        "type_info": "Integer"
+      }
+    ],
+    "parameters": {
+      "Right": 8
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "1fd77b3c84e403d8138f2bb312402531cddbfdc49e4391084308834878067574"
+}
