@@ -150,6 +150,15 @@ pub trait BundleIdExt {
 
     /// Returns true if this bundle identifier corresponds to a browser app.
     fn is_browser_bundle(&self) -> bool;
+
+    fn resolve_app_details(
+        &self,
+        app_name: &str,
+        app_path: &str,
+        entity: &str,
+        snapshot: &AxSnapshot,
+        pid: i32,
+    ) -> AppDetails;
 }
 
 impl BundleIdExt for str {
@@ -171,6 +180,86 @@ impl BundleIdExt for str {
     fn is_browser_bundle(&self) -> bool {
         let app = self.as_monitored_app();
         BROWSER_APPS.contains(&app)
+    }
+
+    fn resolve_app_details(
+        &self,
+        app_name: &str,
+        app_path: &str,
+        entity: &str,
+        snapshot: &AxSnapshot,
+        pid: i32,
+    ) -> AppDetails {
+        let app = self.as_monitored_app();
+        match app {
+            MonitoredApp::Xcode => {
+                let mut xi = snapshot.xcode.clone().unwrap_or_default();
+                if xi.entity_path.trim().is_empty() || xi.entity_path == "unknown" {
+                    xi.entity_path = snapshot
+                        .window_title
+                        .clone()
+                        .unwrap_or_else(|| "unknown".into());
+                }
+                if xi
+                    .project_path
+                    .as_deref()
+                    .map(str::is_empty)
+                    .unwrap_or(true)
+                {
+                    xi.project_path = Some(app_path.to_string());
+                }
+                if xi
+                    .project_name
+                    .as_deref()
+                    .map(str::is_empty)
+                    .unwrap_or(true)
+                {
+                    xi.project_name = Some(app_name.to_lowercase())
+                }
+                let language = detect_language(&xi.entity_path);
+                AppDetails {
+                    project_name: xi.project_name,
+                    project_path: xi.project_path,
+                    entity: xi.entity_path.clone(),
+                    language,
+                    entity_type: app.get_entity_type(),
+                    category: app.get_category(Some(&xi.entity_path), None, pid),
+                }
+            }
+            _ if BROWSER_APPS.contains(&app) => {
+                if let Some(bi) = snapshot
+                    .browser
+                    .clone()
+                    .filter(|b| !b.url.is_empty() && !b.domain.is_empty())
+                {
+                    AppDetails {
+                        project_name: Some(bi.domain),
+                        project_path: Some(bi.url.clone()),
+                        entity: bi.path,
+                        language: None,
+                        category: app.get_category(None, Some(&bi.url), pid),
+                        entity_type: app.get_entity_type(),
+                    }
+                } else {
+                    AppDetails {
+                        project_name: Some(app_name.to_lowercase()),
+                        project_path: Some(app_path.to_string()),
+                        entity: entity.to_string(),
+                        language: None,
+                        category: app.get_category(None, None, pid),
+                        entity_type: Entity::App,
+                    }
+                }
+            }
+            _ => AppDetails {
+                project_name: Some(app_name.to_lowercase()),
+                project_path: Some(app_path.to_string()),
+                entity: entity.to_string(),
+                entity_type: app.get_entity_type(),
+                category: app.get_category(None, None, pid),
+                language: None,
+            },
+        }
     }
 }
 
@@ -545,86 +634,6 @@ fn is_documentation_entity(entity_path: &str) -> bool {
         return doc_languages.contains(language.as_str());
     }
     false
-}
-
-pub fn resolve_app_details(
-    bundle_id: &str,
-    app_name: &str,
-    app_path: &str,
-    entity: &str,
-    snapshot: &AxSnapshot,
-    pid: i32,
-) -> AppDetails {
-    let app = bundle_id.as_monitored_app();
-    match app {
-        MonitoredApp::Xcode => {
-            let mut xi = snapshot.xcode.clone().unwrap_or_default();
-            if xi.entity_path.trim().is_empty() || xi.entity_path == "unknown" {
-                xi.entity_path = snapshot
-                    .window_title
-                    .clone()
-                    .unwrap_or_else(|| "unknown".into());
-            }
-            if xi
-                .project_path
-                .as_deref()
-                .map(str::is_empty)
-                .unwrap_or(true)
-            {
-                xi.project_path = Some(app_path.to_string());
-            }
-            if xi
-                .project_name
-                .as_deref()
-                .map(str::is_empty)
-                .unwrap_or(true)
-            {
-                xi.project_name = Some(app_name.to_lowercase())
-            }
-            let language = detect_language(&xi.entity_path);
-            AppDetails {
-                project_name: xi.project_name,
-                project_path: xi.project_path,
-                entity: xi.entity_path.clone(),
-                language,
-                entity_type: app.get_entity_type(),
-                category: app.get_category(Some(&xi.entity_path), None, pid),
-            }
-        }
-        _ if BROWSER_APPS.contains(&app) => {
-            if let Some(bi) = snapshot
-                .browser
-                .clone()
-                .filter(|b| !b.url.is_empty() && !b.domain.is_empty())
-            {
-                AppDetails {
-                    project_name: Some(bi.domain),
-                    project_path: Some(bi.url.clone()),
-                    entity: bi.path,
-                    language: None,
-                    category: app.get_category(None, Some(&bi.url), pid),
-                    entity_type: app.get_entity_type(),
-                }
-            } else {
-                AppDetails {
-                    project_name: Some(app_name.to_lowercase()),
-                    project_path: Some(app_path.to_string()),
-                    entity: entity.to_string(),
-                    language: None,
-                    category: app.get_category(None, None, pid),
-                    entity_type: Entity::App,
-                }
-            }
-        }
-        _ => AppDetails {
-            project_name: Some(app_name.to_lowercase()),
-            project_path: Some(app_path.to_string()),
-            entity: entity.to_string(),
-            entity_type: app.get_entity_type(),
-            category: app.get_category(None, None, pid),
-            language: None,
-        },
-    }
 }
 
 #[tauri::command]

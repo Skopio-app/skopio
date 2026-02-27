@@ -1,4 +1,4 @@
-use crate::monitored_app::{resolve_app_details, BundleIdExt, Category, Entity};
+use crate::monitored_app::{BundleIdExt, Category, Entity};
 use crate::trackers::SOURCE;
 use crate::tracking_service::TrackingService;
 use crate::utils::ax::cache::AxSnapshotCache;
@@ -105,7 +105,7 @@ impl EventTracker {
         let now = Utc::now();
         let snapshot = self.ax_cache.snapshot().await;
         let app_details =
-            resolve_app_details(app_bundle_id, app_name, app_path, entity, &snapshot, pid);
+            app_bundle_id.resolve_app_details(app_name, app_path, entity, &snapshot, pid);
 
         let branch_name = if app_bundle_id.is_xcode_bundle() {
             app_details.project_path.as_ref().and_then(find_git_branch)
