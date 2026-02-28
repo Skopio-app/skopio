@@ -7,7 +7,7 @@ repository.workspace = true
 rust-version.workspace = true
 
 [dependencies]
-axum = { version = "0.8.1" }
+axum = { version = "0.8.8" }
 serde = { workspace = true, features = ["derive"] }
 serde_json = { workspace = true }
 tokio = { workspace = true, features = ["full"] }
@@ -18,7 +18,7 @@ tracing-appender.workspace = true
 db = { path = "../../crates/db", features = ["server"] }
 chrono = { workspace = true, features = ["serde"] }
 dirs = { workspace = true }
-tower-http = { version = "0.6.2", features = ["cors"] }
+tower-http = { version = "0.6.8", features = ["cors"] }
 common = { path = "../../crates/common" }
 specta = { workspace = true }
 serde_qs = { workspace = true, features = ["axum"] }

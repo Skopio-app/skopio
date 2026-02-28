@@ -85,9 +85,7 @@ impl<P: AxProvider> AxSnapshotCache<P> {
             let app_changed = prev
                 .as_ref()
                 .and_then(|p| p.app.as_ref())
-                .map_or(true, |pa| {
-                    pa.bundle_id != app.bundle_id || pa.pid != app.pid
-                });
+                .is_none_or(|pa| pa.bundle_id != app.bundle_id || pa.pid != app.pid);
 
             let same_title = match (
                 &prev.as_ref().and_then(|p| p.window_title.clone()),

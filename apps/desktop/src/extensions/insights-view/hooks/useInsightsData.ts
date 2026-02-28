@@ -35,7 +35,9 @@ export const useTopNInsights = ({
   });
 
   if (error) {
-    toast.error(`Failed to fetch topN insights: ${(error as Error).message}`);
+    toast.error(
+      `Failed to fetch topN ${groupBy}s: ${(error as Error).message ?? String(error)}`,
+    );
   }
   const parsed = data ?? [];
 

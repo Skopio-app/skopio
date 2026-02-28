@@ -61,7 +61,7 @@ const ProjectsView = () => {
   });
 
   if (error) {
-    toast.error((error as Error)?.message ?? "Failed to fetch projects");
+    toast.error((error as Error)?.message ?? String(error));
   }
 
   const list = useMemo(() => sortProjects(data?.data ?? []), [data]);

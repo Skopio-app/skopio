@@ -286,9 +286,9 @@ export type Project = {
   lastUpdated: number | null;
 };
 export type ProjectListQuery = {
-  after: string | null;
-  limit: number | null;
-  query: string | null;
+  after?: string | null;
+  limit?: number | null;
+  query?: string | null;
 };
 export type ServerStatus =
   | { state: "offline" }
@@ -308,8 +308,8 @@ export type ServerStatus =
  * Query input for requesting summaries over a range of time
  */
 export type SummaryQueryInput = {
-  start: string | null;
-  end: string | null;
+  start?: string | null;
+  end?: string | null;
   apps?: string[] | null;
   projects?: string[] | null;
   categories?: string[] | null;

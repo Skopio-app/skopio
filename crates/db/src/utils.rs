@@ -20,8 +20,7 @@ pub async fn update_synced_in(
         return Ok(());
     }
 
-    let placeholders = std::iter::repeat("?")
-        .take(ids.len())
+    let placeholders = std::iter::repeat_n("?", ids.len())
         .collect::<Vec<_>>()
         .join(", ");
 

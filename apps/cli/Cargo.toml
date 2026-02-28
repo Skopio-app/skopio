@@ -8,7 +8,7 @@ rust-version.workspace = true
 
 [dependencies]
 chrono = { workspace = true, features = ["serde"] }
-clap = { version = "4.5.29", features = ["derive"] }
+clap = { version = "4.5.60", features = ["derive"] }
 rusqlite = { workspace = true, features = ["bundled-sqlcipher-vendored-openssl"] }
 serde = { workspace = true, features = ["derive"] }
 dirs = { workspace = true }
@@ -16,7 +16,7 @@ serde_json = { workspace = true }
 log = { workspace = true }
 env_logger = { workspace = true }
 common = { path = "../../crates/common" }
-refinery = { version = "0.8.16", features = ["rusqlite"]}
+refinery = { version = "0.9.0", features = ["rusqlite"]}
 thiserror = { workspace = true }
 uuid = { workspace = true, features = ["v4"]}
 tokio = { workspace = true, features = ["rt-multi-thread", "macros"]}
