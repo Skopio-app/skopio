@@ -21,7 +21,7 @@ export interface WidgetCardProps {
   onRemove?: () => void;
   children: React.ReactNode;
   className?: string;
-  draggableHandleId?: string;
+  draggableHandleClassName?: string;
   loading: boolean;
   settingsContent?: React.ReactNode;
   skeletonVariant?: SkeletonChartVariant;
@@ -36,7 +36,7 @@ const WidgetCard = React.forwardRef<HTMLDivElement, WidgetCardProps>(
       onSettingsOpenChange,
       children,
       className,
-      draggableHandleId = "widget-drag-handle",
+      draggableHandleClassName = "widget-drag-handle",
       loading,
       settingsContent,
       skeletonVariant = "bar",
@@ -68,8 +68,11 @@ const WidgetCard = React.forwardRef<HTMLDivElement, WidgetCardProps>(
             <Button
               variant="ghost"
               size="icon"
-              className="h-6 w-6 cursor-grab"
-              id={draggableHandleId}
+              className={cn(
+                "h-6 w-6 cursor-grab active:cursor-grabbing",
+                draggableHandleClassName,
+              )}
+              type="button"
               aria-label="Drag"
             >
               <GripVertical className="h-4 w-4 text-muted-foreground" />
