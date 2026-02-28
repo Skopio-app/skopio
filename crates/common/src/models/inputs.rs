@@ -35,19 +35,27 @@ pub struct AFKEventInput {
 #[derive(Debug, Serialize, Deserialize, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct SummaryQueryInput {
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub start: Option<DateTime<Utc>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub end: Option<DateTime<Utc>>,
     #[specta(optional)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub apps: Option<Vec<String>>,
     #[specta(optional)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub projects: Option<Vec<String>>,
     #[specta(optional)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub categories: Option<Vec<String>>,
     #[specta(optional)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub entities: Option<Vec<String>>,
     #[specta(optional)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub branches: Option<Vec<String>>,
     #[specta(optional)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub languages: Option<Vec<String>>,
 }
 
@@ -57,26 +65,36 @@ pub struct SummaryQueryInput {
 pub struct BucketSummaryInput {
     pub preset: TimeRangePreset,
     #[specta(optional)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub apps: Option<Vec<String>>,
     #[specta(optional)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub projects: Option<Vec<String>>,
     #[specta(optional)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub entities: Option<Vec<String>>,
     #[specta(optional)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub categories: Option<Vec<String>>,
     #[specta(optional)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub branches: Option<Vec<String>>,
     #[specta(optional)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub languages: Option<Vec<String>>,
     #[specta(optional)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub group_by: Option<Group>,
 }
 
 #[derive(Serialize, Deserialize, Debug, specta::Type)]
 #[serde(rename_all = "camelCase")]
 pub struct ProjectListQuery {
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub after: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub limit: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub query: Option<String>,
 }
 
@@ -86,11 +104,15 @@ pub struct ProjectListQuery {
 pub struct InsightQueryPayload {
     pub insight_type: InsightType,
     #[specta(optional)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub insight_range: Option<String>,
     #[specta(optional)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub group_by: Option<Group>,
     #[specta(optional)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub limit: Option<usize>,
     #[specta(optional)]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub bucket: Option<InsightBucket>,
 }
