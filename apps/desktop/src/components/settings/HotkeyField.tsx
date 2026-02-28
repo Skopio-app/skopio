@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import Kbd from "@/components/settings/kbd";
 import { cn, Popover, PopoverContent, PopoverTrigger } from "@skopio/ui";
 import { baseKeyFromEvent } from "@/utils/hotkey";
+import { useWindowKeydown } from "@/hooks/useWindowKeydown";
 import { Check } from "lucide-react";
 
 enum Mods {
@@ -47,10 +48,10 @@ const HotkeyField: React.FC<HotkeyFieldProps> = ({
       document.removeEventListener("pointerdown", handlePointerDown, true);
   }, [open]);
 
-  useEffect(() => {
-    if (!recording) return;
+  useWindowKeydown(
+    (e) => {
+      if (!recording) return;
 
-    const handler = (e: KeyboardEvent) => {
       e.preventDefault();
       e.stopPropagation();
       if (e.repeat) return;
@@ -89,14 +90,15 @@ const HotkeyField: React.FC<HotkeyFieldProps> = ({
         setRecording(false);
         setLiveParts([]);
       }, 700) as number;
-    };
+    },
+    { capture: true },
+  );
 
-    window.addEventListener("keydown", handler, { capture: true });
+  useEffect(() => {
     return () => {
-      window.removeEventListener("keydown", handler, { capture: true } as any);
       if (finalizeTimer.current) window.clearTimeout(finalizeTimer.current);
     };
-  }, [recording, onChange]);
+  }, []);
 
   return (
     <Popover

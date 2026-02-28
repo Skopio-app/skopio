@@ -8,6 +8,7 @@ import {
 import { emit } from "@tauri-apps/api/event";
 import { useEffect, useMemo, useState } from "react";
 import { listen, type UnlistenFn } from "@tauri-apps/api/event";
+import { useWindowKeydown } from "@/hooks/useWindowKeydown";
 
 export const SHORTCUT_EVENT = "global-shortcut";
 
@@ -161,9 +162,8 @@ export const initializeGlobalShortcut = async (): Promise<void> => {
 };
 
 export const useGlobalShortcutListener = () => {
-  useEffect(() => {
-    let unlisten: UnlistenFn | null = null;
-    const onKeyDown = async (e: KeyboardEvent) => {
+  useWindowKeydown(
+    async (e) => {
       if (isEditableTarget(e.target)) return;
 
       const key = e.key;
@@ -192,7 +192,6 @@ export const useGlobalShortcutListener = () => {
         return;
       }
 
-      // Windows specific
       if (alt && key === "ArrowLeft") {
         e.preventDefault();
         goBack();
@@ -206,12 +205,13 @@ export const useGlobalShortcutListener = () => {
       if (ctrl && (key === "r" || key === "R")) {
         e.preventDefault();
         reloadWindow();
-        return;
       }
-    };
+    },
+    { capture: true },
+  );
 
-    window.addEventListener("keydown", onKeyDown, { capture: true });
-
+  useEffect(() => {
+    let unlisten: UnlistenFn | null = null;
     (async () => {
       try {
         await initializeGlobalShortcut();
@@ -224,9 +224,6 @@ export const useGlobalShortcutListener = () => {
     })();
 
     return () => {
-      window.removeEventListener("keydown", onKeyDown, {
-        capture: true,
-      } as any);
       if (unlisten) unlisten();
     };
   }, []);
