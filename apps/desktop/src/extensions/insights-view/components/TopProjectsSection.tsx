@@ -1,11 +1,11 @@
-import { useTopNInsights } from "../hooks/useInsightsData";
 import TextSectionItem from "./TextSectionItem";
 
-const TopProjectsSection = () => {
-  const { data, loading } = useTopNInsights({ groupBy: "project" });
+interface TopProjectsSectionProps {
+  projects: string[];
+  loading: boolean;
+}
 
-  const projects = data.map(([project]) => project);
-
+const TopProjectsSection = ({ projects, loading }: TopProjectsSectionProps) => {
   return (
     <TextSectionItem
       title="Top projects"

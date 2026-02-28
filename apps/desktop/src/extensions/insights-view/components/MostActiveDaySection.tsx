@@ -1,49 +1,24 @@
 import TextSectionItem from "./TextSectionItem";
-import { commands, InsightQueryPayload } from "@/types/tauri.gen";
-import { useYearFilter } from "../stores/useYearFilter";
-import { format } from "date-fns";
-import { formatDuration } from "@/utils/time";
-import { useQuery } from "@tanstack/react-query";
 
-const MostActiveDaySection = () => {
-  const { year } = useYearFilter();
+export type ActiveDay = { day: string | null; time: string | null };
 
-  type ActiveDay = { day: string | null; time: string | null };
+interface MostActiveDaySectionProps {
+  data: ActiveDay;
+  loading: boolean;
+}
 
-  const { data = { day: null, time: null }, isLoading } = useQuery({
-    queryKey: ["mostActiveDay", year],
-    queryFn: async () => {
-      const query: InsightQueryPayload = {
-        insightType: "mostActiveDay",
-        insightRange: year,
-        bucket: "year",
-      };
-      return commands.fetchInsights(query);
-    },
-    select: (result): ActiveDay => {
-      if (!("mostActiveDay" in result)) {
-        return { day: null, time: null };
-      }
-      const formattedDay = format(result.mostActiveDay.date, "EEE, MMM d");
-      const formattedDuration = formatDuration(
-        result.mostActiveDay.total_duration,
-      );
-
-      return { day: formattedDay, time: formattedDuration };
-    },
-    enabled: Boolean(year),
-    placeholderData: undefined,
-  });
+const MostActiveDaySection = ({ data, loading }: MostActiveDaySectionProps) => {
+  const resolvedData = data ?? { day: null, time: null };
 
   return (
     <TextSectionItem
       title="Most Active Day"
       text={
-        data.day && data.time !== null
-          ? `Your most active day was ${data.day} with ${data.time} of activity`
+        resolvedData.day && resolvedData.time !== null
+          ? `Your most active day was ${resolvedData.day} with ${resolvedData.time} of activity`
           : "No data found"
       }
-      loading={isLoading}
+      loading={loading}
     />
   );
 };

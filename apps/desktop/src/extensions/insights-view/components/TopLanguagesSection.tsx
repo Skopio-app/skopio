@@ -1,11 +1,14 @@
-import { useTopNInsights } from "../hooks/useInsightsData";
 import TextSectionItem from "./TextSectionItem";
 
-const TopLanguagesSection = () => {
-  const { data, loading } = useTopNInsights({ groupBy: "language" });
+interface TopLanguagesSectionProps {
+  languages: string[];
+  loading: boolean;
+}
 
-  const languages = data.map(([language]) => language);
-
+const TopLanguagesSection = ({
+  languages,
+  loading,
+}: TopLanguagesSectionProps) => {
   return (
     <TextSectionItem
       title="Top Languages"
