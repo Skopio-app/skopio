@@ -50,6 +50,7 @@ const AverageDaySection = () => {
       return { rows, keys };
     },
     enabled: Boolean(year),
+    placeholderData: undefined,
   });
 
   return (

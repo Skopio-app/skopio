@@ -32,6 +32,7 @@ const MostActiveDaySection = () => {
       return { day: formattedDay, time: formattedDuration };
     },
     enabled: Boolean(year),
+    placeholderData: undefined,
   });
 
   return (

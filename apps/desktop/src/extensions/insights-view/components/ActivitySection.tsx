@@ -48,6 +48,7 @@ const ActivitySection = () => {
       }));
     },
     enabled: Boolean(yearConfig.preset),
+    placeholderData: undefined,
   });
 
   if (error) {

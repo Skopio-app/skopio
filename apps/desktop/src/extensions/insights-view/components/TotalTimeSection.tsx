@@ -28,6 +28,7 @@ const TotalTimeSection = () => {
       return formatDuration(result);
     },
     enabled: Boolean(year),
+    placeholderData: undefined,
   });
 
   return (

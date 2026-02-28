@@ -32,6 +32,7 @@ export const useTopNInsights = ({
     },
     select: (res): TopN => ("topN" in res ? res.topN : []),
     enabled: Boolean(year),
+    placeholderData: undefined,
   });
 
   if (error) {
