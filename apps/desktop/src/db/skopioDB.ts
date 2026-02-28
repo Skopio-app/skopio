@@ -1,6 +1,9 @@
 import Dexie, { Table } from "dexie";
-import { Layout } from "react-grid-layout";
+import { Layout, ResponsiveLayouts } from "react-grid-layout";
 import { CalendarChartData } from "@/types/chart";
+
+export type DashboardBreakpoint = "lg" | "md" | "sm";
+export type DashboardLayouts = ResponsiveLayouts<DashboardBreakpoint>;
 
 export interface CachedActivity {
   year: number;
@@ -10,7 +13,8 @@ export interface CachedActivity {
 
 export interface StoredLayout {
   id: string;
-  layout: Layout[];
+  layouts: DashboardLayouts;
+  layout?: Layout;
 }
 
 export interface ColorRow {
@@ -31,6 +35,26 @@ class SkopioDB extends Dexie {
       layouts: "id",
       colors: "id",
     });
+
+    this.version(2)
+      .stores({
+        activity: "year",
+        layouts: "id",
+        colors: "id",
+      })
+      .upgrade((tx) =>
+        tx
+          .table("layouts")
+          .toCollection()
+          .modify((entry: StoredLayout) => {
+            if (entry.layouts) {
+              return;
+            }
+
+            entry.layouts = entry.layout ? { lg: entry.layout } : {};
+            delete entry.layout;
+          }),
+      );
   }
 }
 

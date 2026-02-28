@@ -199,12 +199,10 @@ const GoalDialog: React.FC<GoalDialogProps> = ({
       excludedDays: data.excludedDays || [],
     };
 
-    let success = false;
-    if (goal) {
-      success = await updateGoal(goal.id, updatedInput);
-    } else {
-      success = await addGoal(input);
-    }
+    const success = goal
+      ? await updateGoal(goal.id, updatedInput)
+      : await addGoal(input);
+
     if (success) onOpenChange(false);
   };
 
