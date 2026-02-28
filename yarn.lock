@@ -2951,7 +2951,8 @@ __metadata:
     tailwindcss: "npm:^4.2.1"
     typescript: "npm:^5.9.3"
     typescript-eslint: "npm:^8.56.1"
-    vis-timeline: "npm:^7.7.4"
+    vis-data: "npm:^8.0.3"
+    vis-timeline: "npm:^8.5.0"
     vite: "npm:^7.3.1"
     vite-tsconfig-paths: "npm:^6.1.1"
     zod: "npm:^4.3.6"
@@ -7811,20 +7812,30 @@ __metadata:
   languageName: node
   linkType: hard
 
-"vis-timeline@npm:^7.7.4":
-  version: 7.7.4
-  resolution: "vis-timeline@npm:7.7.4"
+"vis-data@npm:^8.0.3":
+  version: 8.0.3
+  resolution: "vis-data@npm:8.0.3"
+  peerDependencies:
+    uuid: ^3.4.0 || ^7.0.0 || ^8.0.0 || ^9.0.0 || ^10.0.0 || ^11.0.0 || ^13.0.0
+    vis-util: ">=6.0.0"
+  checksum: 10c0/c344a8c6ce2ce31bd00b6a51da3c3d20ac0bef735b76644d937b999d70d6a3a847f5f0fa78222f1d7d659f80be877302edd78f2747a972b15368686eff6a9034
+  languageName: node
+  linkType: hard
+
+"vis-timeline@npm:^8.5.0":
+  version: 8.5.0
+  resolution: "vis-timeline@npm:8.5.0"
   peerDependencies:
     "@egjs/hammerjs": ^2.0.0
     component-emitter: ^1.3.0
     keycharm: ^0.2.0 || ^0.3.0 || ^0.4.0
     moment: ^2.24.0
-    propagating-hammerjs: ^1.4.0 || ^2.0.0
-    uuid: ^3.4.0 || ^7.0.0 || ^8.0.0 || ^9.0.0 || ^10.0.0 || ^11.0.0
-    vis-data: ^6.3.0 || ^7.0.0
-    vis-util: ^5.0.1
+    propagating-hammerjs: ^1.4.0 || ^2.0.0 || ^3.0.0
+    uuid: ^3.4.0 || ^7.0.0 || ^8.0.0 || ^9.0.0 || ^10.0.0 || ^11.0.0 || ^13.0.0
+    vis-data: ">=8.0.0"
+    vis-util: ">=6.0.0"
     xss: ^1.0.0
-  checksum: 10c0/c29a23a023824002d2b5814369b11732df41185b6a113cfef6989d3a7d3a8e0cfbf08f84ac3716d170c54dacbe68e12f6a3e4f29461bee014f609da4755e8720
+  checksum: 10c0/bb5bc9e23365049db7fa56839e493100eaccdb95161a2654490721741aca8c0c2b30ac97d261dad1bd9c9175fbe6ec8443390c7d38a0ec140add732b0e54206f
   languageName: node
   linkType: hard
 

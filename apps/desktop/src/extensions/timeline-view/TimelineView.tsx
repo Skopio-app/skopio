@@ -1,5 +1,7 @@
 import React, { useEffect, useRef, useMemo, useCallback } from "react";
-import { Timeline, TimelineOptions, DataSet } from "vis-timeline/standalone";
+import { Timeline } from "vis-timeline/standalone";
+import type { DataGroup, DataItem, TimelineOptions } from "vis-timeline";
+import { DataSet } from "vis-data";
 import Color from "color";
 import _ from "lodash";
 import {
@@ -24,36 +26,8 @@ interface TimelineViewProps {
   customEnd?: Date;
 }
 
-interface TimelineDataItem {
-  id?: string | number;
-  start: Date | number | string;
-  end?: Date | number | string;
-  group?: any;
-  content: string;
-  title?: string;
-  style?: string;
-  subgroup?: string | number;
-  type?: string;
-  limitSize?: boolean;
-  editable?: boolean | object;
-  className?: string;
-  align?: string;
-  selectable?: boolean;
-}
-
-interface TimelineGroup {
-  id: string | number;
-  title?: string;
-  className?: string;
-  content?: string | HTMLElement;
-  style?: string;
-  subgroupOrder?: string | ((a: any, b: any) => number);
-  subgroupStack?: Record<string, boolean> | boolean;
-  subgroupVisibility?: Record<string, boolean>;
-  visible?: boolean;
-  nestedGroups?: Array<string | number>;
-  showNested?: boolean;
-}
+type TimelineDataItem = DataItem;
+type TimelineGroup = DataGroup;
 
 export const TimelineView: React.FC<TimelineViewProps> = ({
   durationMinutes,
@@ -63,7 +37,7 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
   customEnd,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
-  const timelineRef = useRef<Timeline | null>(null);
+  const timelineRef = useRef<InstanceType<typeof Timeline> | null>(null);
   const dataSetRef = useRef<DataSet<TimelineDataItem> | null>(null);
   const animationTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const rangeChangedDebounceRef = useRef<ReturnType<typeof _.debounce> | null>(
