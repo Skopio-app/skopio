@@ -23,6 +23,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v0.1.3] - 2026-03-01
+
+### Changed
+
+- Updated app dependencies
+
+---
+
 ## [v0.1.2] - 2025-09-16
 
 ### Changed
