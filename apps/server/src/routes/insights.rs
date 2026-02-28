@@ -13,16 +13,13 @@ use db::{
     server::insights::{InsightProvider, InsightQuery, Insights},
     DBContext,
 };
-use tokio::sync::Mutex;
 
 use crate::error::ServerResult;
 
 pub async fn fetch_insight(
-    State(db): State<Arc<Mutex<DBContext>>>,
+    State(db): State<Arc<DBContext>>,
     Query(payload): Query<InsightQueryPayload>,
 ) -> ServerResult<Json<InsightResult>> {
-    let db = db.lock().await;
-
     let insight_range = match &payload.insight_range {
         Some(s) => Some(InsightRange::try_from(s.clone())?),
         None => None,
@@ -41,7 +38,7 @@ pub async fn fetch_insight(
     Ok(Json(result))
 }
 
-pub fn insights_routes(db: Arc<Mutex<DBContext>>) -> Router {
+pub fn insights_routes(db: Arc<DBContext>) -> Router {
     Router::new()
         .route("/insights", get(fetch_insight))
         .with_state(db)

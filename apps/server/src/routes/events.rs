@@ -14,17 +14,14 @@ use db::server::summary::SummaryQueryBuilder;
 use db::DBContext;
 use serde_qs::axum::QsQuery;
 use std::sync::Arc;
-use tokio::sync::Mutex;
 use tracing::info;
 use uuid::Uuid;
 
 async fn insert_events(
-    State(db): State<Arc<Mutex<DBContext>>>,
+    State(db): State<Arc<DBContext>>,
     Json(payload): Json<Vec<EventInput>>,
 ) -> ServerResult<()> {
     info!("Handling {} events", payload.len());
-
-    let db = db.lock().await;
 
     let mut staged: Vec<Event> = Vec::with_capacity(payload.len());
 
@@ -79,17 +76,16 @@ async fn insert_events(
 }
 
 async fn fetch_events(
-    State(db): State<Arc<Mutex<DBContext>>>,
+    State(db): State<Arc<DBContext>>,
     QsQuery(payload): QsQuery<BucketSummaryInput>,
 ) -> ServerResult<Json<EventGroupResult>> {
-    let db = db.lock().await;
     let builder = SummaryQueryBuilder::from(payload);
     let result = builder.fetch_event_range(&db).await?;
 
     Ok(Json(result))
 }
 
-pub fn event_routes(db: Arc<Mutex<DBContext>>) -> Router {
+pub fn event_routes(db: Arc<DBContext>) -> Router {
     Router::new()
         .route("/events", post(insert_events))
         .route("/events", get(fetch_events))

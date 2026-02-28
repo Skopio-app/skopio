@@ -10,16 +10,14 @@ use db::{
     server::projects::{cursor::ProjectCursor, ServerProject},
     DBContext,
 };
-use tokio::sync::Mutex;
 use uuid::Uuid;
 
 use crate::error::ServerResult;
 
 pub async fn get_projects(
-    State(db): State<Arc<Mutex<DBContext>>>,
+    State(db): State<Arc<DBContext>>,
     Query(query): Query<ProjectListQuery>,
 ) -> ServerResult<Json<PaginatedProjects>> {
-    let db = db.lock().await;
     let limit = query.limit.unwrap_or(20).min(100);
 
     if let Some(term) = query.query.as_deref() {
@@ -43,15 +41,14 @@ pub async fn get_projects(
 }
 
 pub async fn get_project_by_id(
-    State(db): State<Arc<Mutex<DBContext>>>,
+    State(db): State<Arc<DBContext>>,
     Path(id): Path<Uuid>,
 ) -> ServerResult<Json<Option<Project>>> {
-    let db = db.lock().await;
     let project = ServerProject::find_by_id(&db, id).await?;
     Ok(Json(project))
 }
 
-pub fn project_routes(db: Arc<Mutex<DBContext>>) -> Router {
+pub fn project_routes(db: Arc<DBContext>) -> Router {
     Router::new()
         .route("/projects", get(get_projects))
         .route("/projects/{id}", get(get_project_by_id))

@@ -4,16 +4,13 @@ use axum::{extract::State, routing::get, Json, Router};
 use common::models::inputs::{BucketSummaryInput, SummaryQueryInput};
 use db::{models::BucketTimeSummary, server::summary::SummaryQueryBuilder, DBContext};
 use serde_qs::axum::QsQuery;
-use tokio::sync::Mutex;
 
 use crate::error::ServerResult;
 
 pub async fn total_time_handler(
-    State(db): State<Arc<Mutex<DBContext>>>,
+    State(db): State<Arc<DBContext>>,
     QsQuery(payload): QsQuery<SummaryQueryInput>,
 ) -> ServerResult<Json<i64>> {
-    let db = db.lock().await;
-
     let builder: SummaryQueryBuilder = payload.into();
     let time = builder.execute_total_time(&db).await?;
 
@@ -21,10 +18,9 @@ pub async fn total_time_handler(
 }
 
 pub async fn get_bucketed_summary(
-    State(db): State<Arc<Mutex<DBContext>>>,
+    State(db): State<Arc<DBContext>>,
     QsQuery(payload): QsQuery<BucketSummaryInput>,
 ) -> ServerResult<Json<Vec<BucketTimeSummary>>> {
-    let db = db.lock().await;
     let builder: SummaryQueryBuilder = payload.into();
 
     let records = builder.execute_range_summary_with_bucket(&db).await?;
@@ -32,7 +28,7 @@ pub async fn get_bucketed_summary(
     Ok(Json(records))
 }
 
-pub fn summary_routes(db: Arc<Mutex<DBContext>>) -> Router {
+pub fn summary_routes(db: Arc<DBContext>) -> Router {
     Router::new()
         .route("/summary/total", get(total_time_handler))
         .route("/summary/buckets", get(get_bucketed_summary))

@@ -9,10 +9,9 @@ use crate::routes::summary::summary_routes;
 use axum::Router;
 use db::DBContext;
 use std::sync::Arc;
-use tokio::sync::Mutex;
 use tower_http::cors::CorsLayer;
 
-pub async fn create_app(db: Arc<Mutex<DBContext>>) -> Router {
+pub async fn create_app(db: Arc<DBContext>) -> Router {
     let router = Router::new()
         .merge(event_routes(db.clone()))
         .merge(afk_event_routes(db.clone()))

@@ -13,14 +13,13 @@ use db::{
 };
 use serde_qs::axum::QsQuery;
 use std::sync::Arc;
-use tokio::sync::Mutex;
 use tracing::info;
 use uuid::Uuid;
 
 use crate::error::ServerResult;
 
 async fn handle_afk_events(
-    State(db): State<Arc<Mutex<DBContext>>>,
+    State(db): State<Arc<DBContext>>,
     Json(payload): Json<Vec<AFKEventInput>>,
 ) -> ServerResult<()> {
     info!("Handling {} afk events", payload.len());
@@ -49,7 +48,6 @@ async fn handle_afk_events(
     events.sort_by_key(|e| e.id);
     events.dedup_by_key(|e| e.id);
 
-    let db = db.lock().await;
     let inserted = AFKEvent::bulk_create(&db, &events).await?;
 
     info!("Inserted {} AFK events", inserted);
@@ -57,17 +55,16 @@ async fn handle_afk_events(
 }
 
 async fn fetch_afk_events(
-    State(db): State<Arc<Mutex<DBContext>>>,
+    State(db): State<Arc<DBContext>>,
     QsQuery(payload): QsQuery<BucketSummaryInput>,
 ) -> ServerResult<Json<Vec<FullEvent>>> {
-    let db = db.lock().await;
     let builder = SummaryQueryBuilder::from(payload);
     let events = builder.fetch_afk_event_range(&db).await?;
 
     Ok(Json(events))
 }
 
-pub fn afk_event_routes(db: Arc<Mutex<DBContext>>) -> Router {
+pub fn afk_event_routes(db: Arc<DBContext>) -> Router {
     Router::new()
         .route("/afk", post(handle_afk_events))
         .route("/afk", get(fetch_afk_events))

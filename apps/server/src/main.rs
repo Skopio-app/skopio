@@ -3,7 +3,6 @@ use crate::{app::create_app, utils::init_tracing};
 use db::DBContext;
 use std::sync::Arc;
 use tokio::net::TcpListener;
-use tokio::sync::Mutex;
 use tracing::{error, info};
 
 mod app;
@@ -24,7 +23,7 @@ async fn main() {
     let db_url = format!("sqlite://{}", db_path.to_str().unwrap());
 
     let db = match DBContext::new(&db_url).await {
-        Ok(db) => Arc::new(Mutex::new(db)),
+        Ok(db) => Arc::new(db),
         Err(err) => {
             tracing::error!("Failed to connect to database: {}", err);
             std::process::exit(1);
