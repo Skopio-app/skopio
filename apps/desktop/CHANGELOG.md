@@ -23,6 +23,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v0.1.11] - 2020-03-01
+
+### Added
+
+- New dino minigame while server is starting up.
+
+### Changed
+
+- Updated app dependencies.
+
+### Fixed
+
+- Loading speed for insights data.
+
+---
+
 ## [v0.1.10] - 2026-02-07
 
 ### Added

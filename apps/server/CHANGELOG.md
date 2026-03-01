@@ -23,6 +23,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v0.1.12] - 2026-03-01
+
+### Changed
+
+- Updated app dependencies.
+
+### Fixed
+
+- Removed redundant Mutex locks.
+
+---
+
 ## [v0.1.11] - 2026-02-07
 
 ### Fixed
