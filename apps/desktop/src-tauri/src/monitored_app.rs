@@ -134,6 +134,7 @@ static APP_CATEGORIES: LazyLock<HashSet<(MonitoredApp, Category)>> = LazyLock::n
         (MonitoredApp::Warp, Category::Coding),
         (MonitoredApp::Terminal, Category::Coding),
         (MonitoredApp::Iterm, Category::Coding),
+        (MonitoredApp::Codex, Category::Coding),
     ])
 });
 
@@ -328,6 +329,8 @@ pub enum MonitoredApp {
     Windsurf,
     #[strum(serialize = "com.todesktop.230313mzl4w4u92")]
     Cursor,
+    #[strum(serialize = "com.openai.codex")]
+    Codex,
 
     // Android studio
     #[strum(serialize = "com.google.android.studio")]
