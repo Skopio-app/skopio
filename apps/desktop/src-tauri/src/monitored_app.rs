@@ -134,7 +134,10 @@ static APP_CATEGORIES: LazyLock<HashSet<(MonitoredApp, Category)>> = LazyLock::n
         (MonitoredApp::Warp, Category::Coding),
         (MonitoredApp::Terminal, Category::Coding),
         (MonitoredApp::Iterm, Category::Coding),
-        (MonitoredApp::Codex, Category::Coding),
+        (MonitoredApp::Codex, Category::AIPairing),
+        (MonitoredApp::ChatGPT, Category::AIPairing),
+        (MonitoredApp::Claude, Category::AIPairing),
+        (MonitoredApp::Air, Category::AIPairing),
     ])
 });
 
@@ -331,6 +334,10 @@ pub enum MonitoredApp {
     Cursor,
     #[strum(serialize = "com.openai.codex")]
     Codex,
+    #[strum(serialize = "com.openai.chat")]
+    ChatGPT,
+    #[strum(serialize = "com.anthropic.claudefordesktop")]
+    Claude,
 
     // Android studio
     #[strum(serialize = "com.google.android.studio")]
@@ -371,6 +378,8 @@ pub enum MonitoredApp {
     RustRover,
     #[strum(serialize = "com.jetbrains.dataspell")]
     DataSpell,
+    #[strum(serialize = "com.jetbrains.air")]
+    Air,
 
     /// Fallback for unrecognized applications
     #[strum(serialize = "unknown")]
@@ -394,6 +403,8 @@ pub enum Category {
     Planning,
     #[strum(serialize = "Writing Docs")]
     WritingDocs,
+    #[strum(serialize = "AI Pairing")]
+    AIPairing,
     Other,
 }
 
