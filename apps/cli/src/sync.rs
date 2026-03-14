@@ -65,9 +65,9 @@ async fn sync_to_server<T: serde::Serialize>(
     } else {
         format!("/{}", path)
     };
-    let json = serde_json::to_string(data)?;
+    let json = serde_json::to_vec(data)?;
 
-    let _ = transport.post_json(&path, &json).await?;
+    let _ = transport.post(&path, json).await?;
     Ok(())
 }
 

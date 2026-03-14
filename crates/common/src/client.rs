@@ -1,6 +1,7 @@
 use std::{path::PathBuf, sync::OnceLock};
 
 use anyhow::anyhow;
+use bytes::Bytes;
 use reqwest::{
     header::{HeaderMap, HeaderValue, AUTHORIZATION, CONTENT_TYPE},
     Client,
@@ -34,32 +35,32 @@ impl Transport {
         cached.clone().map_err(|message| anyhow!(message).into())
     }
 
-    pub async fn get(&self, path: &str) -> Result<String, CommonError> {
+    pub async fn get(&self, path: &str) -> Result<Bytes, CommonError> {
         let url = self.url(path);
-        let txt = self
+        let payload = self
             .client
             .get(url)
             .send()
             .await?
             .error_for_status()?
-            .text()
+            .bytes()
             .await?;
-        Ok(txt)
+        Ok(payload)
     }
 
-    pub async fn post_json(&self, path: &str, json: &str) -> Result<String, CommonError> {
+    pub async fn post(&self, path: &str, body: Vec<u8>) -> Result<Bytes, CommonError> {
         let url = self.url(path);
-        let txt = self
+        let payload = self
             .client
             .post(url)
             .header(CONTENT_TYPE, "application/json")
-            .body(json.to_owned())
+            .body(body)
             .send()
             .await?
             .error_for_status()?
-            .text()
+            .bytes()
             .await?;
-        Ok(txt)
+        Ok(payload)
     }
 }
 

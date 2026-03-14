@@ -27,8 +27,8 @@ where
     }
 
     let transport = Transport::new().map_err(|e| e.to_string())?;
-    let text = transport.get(&full_path).await.map_err(|e| e.to_string())?;
-    serde_json::from_str::<TRes>(&text).map_err(|e| e.to_string())
+    let payload = transport.get(&full_path).await.map_err(|e| e.to_string())?;
+    serde_json::from_slice::<TRes>(&payload).map_err(|e| e.to_string())
 }
 
 pub async fn post_json<TReq, TRes>(path: &str, body: &TReq) -> Result<TRes, String>
@@ -42,15 +42,16 @@ where
     }
     full_path.push_str(path);
 
-    let json = serde_json::to_string(body).map_err(|e| e.to_string())?;
+    let json = serde_json::to_vec(body).map_err(|e| e.to_string())?;
     let transport = Transport::new().map_err(|e| e.to_string())?;
-    let text = transport
-        .post_json(&full_path, &json)
+    let payload = transport
+        .post(&full_path, json)
         .await
         .map_err(|e| e.to_string())?;
 
-    let trimmed = text.trim();
-    let json_src = if trimmed.is_empty() { "null" } else { trimmed };
+    if payload.iter().all(|byte| byte.is_ascii_whitespace()) {
+        return serde_json::from_slice::<TRes>(b"null").map_err(|e| e.to_string());
+    }
 
-    serde_json::from_str::<TRes>(json_src).map_err(|e| e.to_string())
+    serde_json::from_slice::<TRes>(&payload).map_err(|e| e.to_string())
 }

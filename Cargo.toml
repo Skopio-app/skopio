@@ -36,6 +36,7 @@ keyring = "3.6.3"
 uuid = "1.21.0"
 futures-util = "0.3.32"
 sha2 = "0.10.9"
+bytes = "1.11.1"
 
 specta = "2.0.0-rc.22"
 tauri-specta = "2.0.0-rc.21"
