@@ -20,4 +20,3 @@ uuid = {workspace = true, features = ["v7", "v4", "serde"]}
 dirs.workspace = true
 anyhow.workspace = true
 reqwest = { workspace = true, features = ["json", "rustls"] }
-tokio = { workspace = true, features = ["net"]}
