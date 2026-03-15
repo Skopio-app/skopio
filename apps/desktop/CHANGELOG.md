@@ -23,6 +23,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v0.1.12] - 2020-03-16
+
+### Added
+
+- Codex, Claude, and ChatGPT can now be tracked under the category `AI Pairing`
+
+### Fixed
+
+- Modified transport layer to allow for connection pooling and convenience helpers.
+
+---
+
 ## [v0.1.11] - 2020-03-01
 
 ### Added

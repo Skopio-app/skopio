@@ -14,7 +14,7 @@ runs:
       with:
         targets: ${{ inputs.rust_target }}
 
-    - uses: Swatinem/rust-cache@v2.8.0
+    - uses: Swatinem/rust-cache@v2.9.1
       with:
         workspaces: |
           apps/cli

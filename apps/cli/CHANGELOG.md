@@ -23,6 +23,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v0.1.4] - 2026-03-16
+
+### Fixed
+
+- Modified transport layer to allow for connection pooling and convenience helpers.
+
+---
+
 ## [v0.1.3] - 2026-03-01
 
 ### Changed
