@@ -12,20 +12,7 @@ where
     TRes: for<'de> Deserialize<'de>,
     TQuery: Serialize,
 {
-    let mut full_path = String::new();
-    if !path.starts_with('/') {
-        full_path.push('/');
-    }
-    full_path.push_str(path);
-
-    if let Some(q) = query {
-        let qs = serde_qs::to_string(q).map_err(|e| e.to_string())?;
-        if !qs.is_empty() {
-            full_path.push('?');
-            full_path.push_str(&qs);
-        }
-    }
-
+    let full_path = Transport::build_path_with_query(path, query).map_err(|e| e.to_string())?;
     let transport = Transport::new().map_err(|e| e.to_string())?;
     let payload = transport.get(&full_path).await.map_err(|e| e.to_string())?;
     serde_json::from_slice::<TRes>(&payload).map_err(|e| e.to_string())
@@ -36,12 +23,7 @@ where
     TReq: Serialize + ?Sized,
     TRes: for<'de> Deserialize<'de>,
 {
-    let mut full_path = String::new();
-    if !path.starts_with('/') {
-        full_path.push('/');
-    }
-    full_path.push_str(path);
-
+    let full_path = Transport::build_path(path);
     let json = serde_json::to_vec(body).map_err(|e| e.to_string())?;
     let transport = Transport::new().map_err(|e| e.to_string())?;
     let payload = transport

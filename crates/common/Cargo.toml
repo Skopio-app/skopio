@@ -21,3 +21,5 @@ dirs.workspace = true
 anyhow.workspace = true
 reqwest = { workspace = true, features = ["json", "rustls"] }
 bytes.workspace = true
+tracing.workspace = true
+serde_qs.workspace = true

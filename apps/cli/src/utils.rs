@@ -1,12 +1,12 @@
 use std::{
-    io::{stderr, stdout, Write},
+    io::{stderr, stdout},
     path::Path,
 };
 
 use common::keyring::Keyring;
-use env_logger::Builder;
-use log::LevelFilter;
 use rusqlite::Connection;
+use tracing::Level;
+use tracing_subscriber::{fmt::writer::MakeWriterExt, EnvFilter};
 
 use crate::{db::migrations, error::CliError};
 
@@ -19,33 +19,25 @@ pub fn extract_project_name<T: AsRef<Path>>(project_path: T) -> String {
         .unwrap_or_default()
 }
 
-pub fn init_logger() {
-    let log_level = if cfg!(debug_assertions) {
-        LevelFilter::Debug
+pub fn init_tracing() {
+    let default_level = if cfg!(debug_assertions) {
+        "debug"
     } else {
-        LevelFilter::Info
+        "info"
     };
 
-    Builder::new()
-        .format(|_buf, record| {
-            // Prevent normal logs from appearing as warnings in plugin debug console
-            let mut target: Box<dyn Write> =
-                if record.level() == LevelFilter::Info || record.level() == LevelFilter::Debug {
-                    Box::new(stdout())
-                } else {
-                    Box::new(stderr())
-                };
+    let filter =
+        EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new(default_level));
+    let stdout_writer = stdout.with_max_level(Level::INFO);
+    let stderr_writer = stderr.with_min_level(Level::WARN);
 
-            writeln!(
-                target,
-                "[{} {}:{}] {}",
-                record.level(),
-                record.file().unwrap_or("unknown"),
-                record.line().unwrap_or(0),
-                record.args()
-            )
-        })
-        .filter(None, log_level)
+    tracing_subscriber::fmt()
+        .with_env_filter(filter)
+        .with_writer(stdout_writer.or_else(stderr_writer))
+        .with_target(false)
+        .with_file(true)
+        .with_line_number(true)
+        .without_time()
         .init();
 }
 

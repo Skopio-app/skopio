@@ -10,6 +10,10 @@ pub enum CommonError {
     #[error("Reqwest error: {0}")]
     Reqwest(#[from] reqwest::Error),
 
+    /// Used for query-string serialization errors
+    #[error("Query serialization error: {0}")]
+    Query(#[from] serde_qs::Error),
+
     /// Used for IO errors
     #[error("IO error: {0}")]
     IO(#[from] std::io::Error),

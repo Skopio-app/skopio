@@ -40,7 +40,6 @@ tauri-plugin-updater = "2.10.0"
 specta = { workspace = true, features = ["chrono"] }
 specta-typescript = { workspace = true }
 tauri-specta = { workspace = true, features = ["derive", "typescript"] }
-serde_qs = { workspace = true }
 ril = { version = "0.10.3", features = ["png"] }
 reqwest = { workspace = true, features = ["stream"] }
 sha2.workspace = true

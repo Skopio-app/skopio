@@ -1,6 +1,6 @@
 use common::git::find_git_branch;
-use log::info;
 use rusqlite::{params, Connection};
+use tracing::info;
 
 use crate::error::CliError;
 

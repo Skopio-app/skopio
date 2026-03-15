@@ -30,7 +30,6 @@ dependencies = [
  "semver",
  "serde",
  "serde_json",
- "serde_qs",
  "sha2",
  "specta",
  "specta-typescript",
@@ -743,9 +742,11 @@ dependencies = [
  "percent-encoding",
  "reqwest",
  "serde",
+ "serde_qs",
  "specta",
  "thiserror 2.0.18",
  "tokei",
+ "tracing",
  "uuid",
 ]
 
@@ -4996,8 +4997,6 @@ dependencies = [
  "clap",
  "common",
  "dirs 6.0.0",
- "env_logger",
- "log",
  "refinery",
  "rusqlite",
  "serde",
@@ -5005,6 +5004,8 @@ dependencies = [
  "tempfile",
  "thiserror 2.0.18",
  "tokio",
+ "tracing",
+ "tracing-subscriber",
  "uuid",
 ]
 

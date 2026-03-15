@@ -3,9 +3,9 @@ use crate::db::init_db;
 use crate::error::CliError;
 use crate::handlers::event::handle_event;
 use crate::handlers::sync::handle_sync;
-use crate::utils::init_logger;
+use crate::utils::init_tracing;
 use clap::Parser;
-use log::error;
+use tracing::error;
 
 mod cli;
 mod db;
@@ -17,7 +17,7 @@ mod utils;
 
 #[tokio::main]
 async fn main() {
-    init_logger();
+    init_tracing();
 
     if let Err(err) = run().await {
         error!("CLI error: {:#}", err);

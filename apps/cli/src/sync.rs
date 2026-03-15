@@ -1,8 +1,8 @@
 use crate::{error::CliError, utils::extract_project_name};
 use chrono::{Duration, TimeZone, Utc};
 use common::{client::Transport, models::inputs::EventInput};
-use log::{debug, info};
 use rusqlite::{Connection, Row};
+use tracing::{debug, info};
 
 pub async fn sync_data(conn: &Connection) -> Result<(), CliError> {
     let transport = Transport::new()?;
@@ -60,11 +60,7 @@ async fn sync_to_server<T: serde::Serialize>(
     path: &str,
     data: &T,
 ) -> Result<(), CliError> {
-    let path = if path.starts_with('/') {
-        path.to_string()
-    } else {
-        format!("/{}", path)
-    };
+    let path = Transport::build_path(path);
     let json = serde_json::to_vec(data)?;
 
     let _ = transport.post(&path, json).await?;
