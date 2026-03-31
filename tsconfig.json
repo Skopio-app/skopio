@@ -1,12 +1,11 @@
 {
   "compilerOptions": {
-    "baseUrl": ".",
     "paths": {
-      "@skopio/desktop": ["apps/desktop"],
-      "@skopio/manifest": ["packages/manifest"],
-      "@skopio/rpc": ["packages/rpc"],
-      "@skopio/ui": ["packages/ui"],
-      "@skopio/sdk": ["packages/sdk"]
+      "@skopio/desktop": ["./apps/desktop"],
+      "@skopio/manifest": ["./packages/manifest"],
+      "@skopio/rpc": ["./packages/rpc"],
+      "@skopio/ui": ["./packages/ui"],
+      "@skopio/sdk": ["./packages/sdk"]
     },
     "moduleResolution": "bundler",
     "module": "esnext",
