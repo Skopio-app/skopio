@@ -23,6 +23,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v0.1.13] - 2020-05-08
+
+### Fixed
+
+- Account for missing, empty, or invalid version file when installing server helper app.
+
+---
+
 ## [v0.1.12] - 2020-03-16
 
 ### Added
