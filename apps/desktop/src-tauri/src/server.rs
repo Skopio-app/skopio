@@ -165,11 +165,28 @@ impl<R: Runtime> ServerManagerExt for AppHandle<R> {
         let manifest = fetch_manifest(&client).await?;
         let asset = pick_asset(&manifest)?;
 
-        let latest = Version::parse(&manifest.version)?;
-        let current_str = read_installed_version(self).unwrap_or_default();
-        let current = Version::parse(&current_str)?;
+        let latest = Version::parse(manifest.version.trim())?;
+        let current = read_installed_version(self).and_then(|current_str| {
+            if current_str.is_empty() {
+                return None;
+            }
 
-        let needs_update = latest > current;
+            match Version::parse(&current_str) {
+                Ok(version) => Some(version),
+                Err(err) => {
+                    debug!("Ignoring invalid installed server version `{current_str}`: {err}");
+                    None
+                }
+            }
+        });
+
+        let bin_missing = !server_bin_path(self)?.exists();
+
+        let needs_update = bin_missing
+            || match current {
+                Some(current) => latest > current,
+                None => true,
+            };
 
         if needs_update {
             self.set_server_status(ServerStatus::Updating);
