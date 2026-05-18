@@ -58,6 +58,7 @@ export function TourProvider({ children }: { children: ReactNode }) {
   const [tourId, setTourId] = useState<TourId>("main");
   const [run, setRun] = useState(false);
   const [runKey, setRunKey] = useState(0);
+  const [windowSignal, setWindowSignal] = useState(0);
   const floatingOptions = useMemo(() => {
     const viewportBoundary =
       typeof document === "undefined" ? undefined : document.documentElement;
@@ -150,6 +151,33 @@ export function TourProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
+    const notifyWindowSignal = () => setWindowSignal((current) => current + 1);
+
+    const handleStorage = (event: StorageEvent) => {
+      if (
+        event.key === PENDING_SETTINGS_TOUR_KEY ||
+        event.key === RESTART_MAIN_TOUR_KEY
+      ) {
+        notifyWindowSignal();
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (!document.hidden) notifyWindowSignal();
+    };
+
+    window.addEventListener("storage", handleStorage);
+    window.addEventListener("focus", notifyWindowSignal);
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener("storage", handleStorage);
+      window.removeEventListener("focus", notifyWindowSignal);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
+  }, []);
+
+  useEffect(() => {
     if (run) return;
     if (isSettingsWindow) return;
 
@@ -163,7 +191,7 @@ export function TourProvider({ children }: { children: ReactNode }) {
     }, 300);
 
     return () => window.clearInterval(restartId);
-  }, [isSettingsWindow, run, runTour]);
+  }, [isSettingsWindow, run, runTour, windowSignal]);
 
   useEffect(() => {
     if (run) return;
@@ -210,7 +238,14 @@ export function TourProvider({ children }: { children: ReactNode }) {
     }, 300);
 
     return () => window.clearInterval(id);
-  }, [isSettingsWindow, location.pathname, navigate, run, runTour]);
+  }, [
+    isSettingsWindow,
+    location.pathname,
+    navigate,
+    run,
+    runTour,
+    windowSignal,
+  ]);
 
   const onEvent = (data: EventData) => {
     if (data.status === STATUS.FINISHED || data.status === STATUS.SKIPPED) {
