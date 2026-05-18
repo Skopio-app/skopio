@@ -66,6 +66,13 @@ export const TOUR_STEPS: Record<TourId, TourStep[]> = {
   ],
   settings: [
     {
+      id: "afk-sensitivity",
+      route: "/settings/general",
+      target: "settings.afkSensitivity",
+      title: "AFK sensitivity",
+      body: "Set how quickly Skopio should mark you as idle when there is no keyboard or mouse input.",
+    },
+    {
       id: "tracked-apps",
       route: "/settings/general",
       target: "settings.trackedApps",

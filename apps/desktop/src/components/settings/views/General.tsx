@@ -382,7 +382,7 @@ const General = () => {
             control={form.control}
             name="afkSensitivity"
             render={({ field }) => (
-              <FormItem>
+              <FormItem data-tour="settings.afkSensitivity">
                 <FormLabel>AFK sensitivity</FormLabel>
                 <FormDescription>
                   How quickly Skopio marks you as idle when there's no input.

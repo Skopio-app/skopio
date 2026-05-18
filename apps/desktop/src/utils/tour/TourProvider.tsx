@@ -227,7 +227,7 @@ export function TourProvider({ children }: { children: ReactNode }) {
 
     const id = window.setInterval(() => {
       const targetReady = document.querySelector(
-        '[data-tour="settings.trackedApps"]',
+        '[data-tour="settings.afkSensitivity"]',
       );
 
       if (!targetReady) return;
