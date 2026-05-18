@@ -15,7 +15,7 @@ const GoalsView = () => {
 
   if (loading) {
     return (
-      <div className="h-[220px] w-full flex items-center justify-center text-sm text-muted-foreground animate-pulse">
+      <div className="h-55 w-full flex items-center justify-center text-sm text-muted-foreground animate-pulse">
         Loading...
       </div>
     );
@@ -25,7 +25,11 @@ const GoalsView = () => {
     <div className="w-full px-4 space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-lg text-foreground font-semibold">Goals</h1>
-        <Button variant="secondary" onClick={() => setShowGoalDialog(true)}>
+        <Button
+          data-tour="goals.new"
+          variant="secondary"
+          onClick={() => setShowGoalDialog(true)}
+        >
           <Plus /> New Goal
         </Button>
       </div>

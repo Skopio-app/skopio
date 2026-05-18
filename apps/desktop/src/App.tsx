@@ -26,6 +26,7 @@ import { commands } from "@/types/tauri.gen";
 import PermissionsDialog from "@/components/settings/PermissionsDialog";
 import UpdaterToast from "@/components/updater/UpdaterToast";
 import ThemeProvider from "@/components/settings/ThemeProvider";
+import { TourProvider } from "./utils/tour/TourProvider";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -48,47 +49,51 @@ function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider>
-        <Toaster richColors />
-        <PermissionsDialog />
-        <UpdaterToast />
-        <ContextMenu>
-          <ContextMenuTrigger className="block min-h-screen w-full">
-            <Outlet />
-          </ContextMenuTrigger>
+        <TourProvider>
+          <Toaster richColors />
+          <PermissionsDialog />
+          <UpdaterToast />
+          <ContextMenu>
+            <ContextMenuTrigger className="block min-h-screen w-full">
+              <Outlet />
+            </ContextMenuTrigger>
 
-          <ContextMenuContent className={cn("w-42", isDev() ? "h-32" : "h-24")}>
-            <ContextMenuItem
-              className="text-xs"
-              disabled={!canGoBack}
-              onClick={goBack}
+            <ContextMenuContent
+              className={cn("w-42", isDev() ? "h-32" : "h-24")}
             >
-              Back
-              <ContextMenuShortcut>⌘[</ContextMenuShortcut>
-            </ContextMenuItem>
-            <ContextMenuItem
-              className="text-xs"
-              disabled={!canGoForward}
-              onClick={goForward}
-            >
-              Forward
-              <ContextMenuShortcut>⌘]</ContextMenuShortcut>
-            </ContextMenuItem>
-            <ContextMenuItem className="text-xs" onClick={reloadWindow}>
-              Reload
-              <ContextMenuShortcut>⌘R</ContextMenuShortcut>
-            </ContextMenuItem>
-            {isDev() && (
               <ContextMenuItem
-                inset
                 className="text-xs"
-                disabled={!isDev()}
-                onClick={() => commands.openDevtools()}
+                disabled={!canGoBack}
+                onClick={goBack}
               >
-                Inspect Element
+                Back
+                <ContextMenuShortcut>⌘[</ContextMenuShortcut>
               </ContextMenuItem>
-            )}
-          </ContextMenuContent>
-        </ContextMenu>
+              <ContextMenuItem
+                className="text-xs"
+                disabled={!canGoForward}
+                onClick={goForward}
+              >
+                Forward
+                <ContextMenuShortcut>⌘]</ContextMenuShortcut>
+              </ContextMenuItem>
+              <ContextMenuItem className="text-xs" onClick={reloadWindow}>
+                Reload
+                <ContextMenuShortcut>⌘R</ContextMenuShortcut>
+              </ContextMenuItem>
+              {isDev() && (
+                <ContextMenuItem
+                  inset
+                  className="text-xs"
+                  disabled={!isDev()}
+                  onClick={() => commands.openDevtools()}
+                >
+                  Inspect Element
+                </ContextMenuItem>
+              )}
+            </ContextMenuContent>
+          </ContextMenu>
+        </TourProvider>
       </ThemeProvider>
       <ReactQueryDevtools initialIsOpen={false} />
     </QueryClientProvider>

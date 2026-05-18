@@ -112,7 +112,10 @@ const TimelineExtension = () => {
   return (
     <div className="flex-col items-center h-full w-full space-y-4 px-4">
       <h3 className="font-semibold text-3xl text-foreground">Timeline</h3>
-      <div className="flex flex-wrap justify-start gap-2">
+      <div
+        data-tour="timeline.controls"
+        className="flex flex-wrap justify-start gap-2"
+      >
         <Label htmlFor="timePreset">Show last</Label>
         <ToggleGroup
           type="single"
