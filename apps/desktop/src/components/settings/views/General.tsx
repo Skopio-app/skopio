@@ -282,10 +282,7 @@ const General = () => {
           <FormItem className="flex items-start justify-between gap-4">
             <div>
               <FormLabel>Guided tour</FormLabel>
-              <FormDescription>
-                Replay the walkthrough for the dashboard, goals, insights,
-                projects, timeline, and tracked apps.
-              </FormDescription>
+              <FormDescription>Replay the app walkthrough.</FormDescription>
             </div>
 
             <Button
@@ -392,7 +389,7 @@ const General = () => {
                 </FormDescription>
                 <FormControl>
                   <Select value={field.value} onValueChange={field.onChange}>
-                    <SelectTrigger className="w-[220px]">
+                    <SelectTrigger className="w-55">
                       <SelectValue placeholder="Select timeout" />
                     </SelectTrigger>
                     <SelectContent>
@@ -433,7 +430,7 @@ const General = () => {
                     }}
                     renderChip={(a) => (
                       <span className="flex items-center gap-1">
-                        <span className="truncate max-w-[10rem]">{a.name}</span>
+                        <span className="truncate max-w-40">{a.name}</span>
                       </span>
                     )}
                     renderOption={(o) => (

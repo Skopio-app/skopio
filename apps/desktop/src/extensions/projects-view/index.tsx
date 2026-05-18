@@ -89,7 +89,7 @@ const ProjectsView = () => {
       <div className="flex-1 overflow-auto space-y-6 scroll-hidden">
         <ul
           data-tour="projects.list"
-          className="divide-y divide-[var(--muted-foreground)] border border-[var(--muted-foreground)]"
+          className="divide-y divide-(--muted-foreground) border border-(--muted-foreground)"
         >
           {isLoading ? (
             Array.from({ length: LIMIT }).map((_, i) => (

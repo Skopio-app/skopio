@@ -40,14 +40,14 @@ export const TOUR_STEPS: Record<TourId, TourStep[]> = {
       route: tabs.goals,
       target: "goals.new",
       title: "Set goals",
-      body: "Use New Goal to create targets by time span, app, category, and excluded days.",
+      body: "Use New Goal to create activity targets by time span, app, and activity category.",
     },
     {
       id: "insights-year",
       route: tabs.insights,
       target: "insights.year",
       title: "Insights",
-      body: "Pick a year to view long-term stats like averages, total time, top projects, top languages, and most active day.",
+      body: "Pick a year to view long-term stats like averages, total time spent, top projects, top languages, and the most active day for the year.",
     },
     {
       id: "projects-list",
