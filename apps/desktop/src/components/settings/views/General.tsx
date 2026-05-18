@@ -16,6 +16,7 @@ import {
   Form,
   ChipSelector,
   cn,
+  Button,
 } from "@skopio/ui";
 import { useEffect, useRef } from "react";
 import { useForm, useWatch } from "react-hook-form";
@@ -26,8 +27,9 @@ import { useAutostart } from "@/hooks/useAutostart";
 import { useGlobalShortcut } from "@/hooks/useGlobalShortcut";
 import { commands, OpenApp, TrackedApp, Theme } from "@/types/tauri.gen";
 import { useOpenApps } from "@/hooks/useOpenApps";
-import { Monitor, Moon, Sun } from "lucide-react";
+import { HelpCircle, Monitor, Moon, Sun } from "lucide-react";
 import { useTheme } from "@/utils/theme";
+import { useGuidedTour } from "@/utils/tour/TourContext";
 
 const TrackedAppSchema = z.object({
   name: z.string(),
@@ -93,6 +95,7 @@ const General = () => {
   const lastShortcut = useRef<string>("");
   const lastTrackedJSON = useRef<string>("[]");
   const lastTheme = useRef<ThemeValue>("system");
+  const { startTour } = useGuidedTour();
 
   useEffect(() => {
     const ready = !autoLoading && !hotkeyLoading;
@@ -276,6 +279,27 @@ const General = () => {
 
           <Separator />
 
+          <FormItem className="flex items-start justify-between gap-4">
+            <div>
+              <FormLabel>Guided tour</FormLabel>
+              <FormDescription>Replay the app walkthrough.</FormDescription>
+            </div>
+
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={() => {
+                localStorage.removeItem("skopio.tour.main.completed");
+                startTour("main");
+              }}
+            >
+              <HelpCircle />
+              Repeat tour
+            </Button>
+          </FormItem>
+
+          <Separator />
+
           <FormField
             control={form.control}
             name="globalShortcut"
@@ -358,14 +382,14 @@ const General = () => {
             control={form.control}
             name="afkSensitivity"
             render={({ field }) => (
-              <FormItem>
+              <FormItem data-tour="settings.afkSensitivity">
                 <FormLabel>AFK sensitivity</FormLabel>
                 <FormDescription>
                   How quickly Skopio marks you as idle when there's no input.
                 </FormDescription>
                 <FormControl>
                   <Select value={field.value} onValueChange={field.onChange}>
-                    <SelectTrigger className="w-[220px]">
+                    <SelectTrigger className="w-55">
                       <SelectValue placeholder="Select timeout" />
                     </SelectTrigger>
                     <SelectContent>
@@ -388,7 +412,7 @@ const General = () => {
             control={form.control}
             name="trackedApps"
             render={({ field }) => (
-              <FormItem>
+              <FormItem data-tour="settings.trackedApps">
                 <FormLabel>Tracked apps</FormLabel>
                 <FormDescription>
                   Pick which currently open apps Skopio should track.
@@ -406,7 +430,7 @@ const General = () => {
                     }}
                     renderChip={(a) => (
                       <span className="flex items-center gap-1">
-                        <span className="truncate max-w-[10rem]">{a.name}</span>
+                        <span className="truncate max-w-40">{a.name}</span>
                       </span>
                     )}
                     renderOption={(o) => (

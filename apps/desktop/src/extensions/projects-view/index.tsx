@@ -87,7 +87,10 @@ const ProjectsView = () => {
       </div>
 
       <div className="flex-1 overflow-auto space-y-6 scroll-hidden">
-        <ul className="divide-y divide-[var(--muted-foreground)] border border-[var(--muted-foreground)]">
+        <ul
+          data-tour="projects.list"
+          className="divide-y divide-(--muted-foreground) border border-(--muted-foreground)"
+        >
           {isLoading ? (
             Array.from({ length: LIMIT }).map((_, i) => (
               <li key={i} className="p-4">
@@ -95,7 +98,7 @@ const ProjectsView = () => {
               </li>
             ))
           ) : list.length === 0 ? (
-            <p className="h-[300px] w-full flex items-center justify-center text-sm text-muted-foreground">
+            <p className="h-75 w-full flex items-center justify-center text-sm text-muted-foreground">
               No projects found
             </p>
           ) : (
@@ -105,7 +108,7 @@ const ProjectsView = () => {
                 className="p-4 hover:bg-muted/40 transition-colors hover:cursor-pointer"
                 onClick={() => navigate(`/tab/${tabId}/projects/${project.id}`)}
               >
-                <h3 className="text-base font-medium break-words text-foreground">
+                <h3 className="text-base font-medium wrap-break-word text-foreground">
                   {project.name}
                 </h3>
               </li>

@@ -14,12 +14,12 @@ name = "skopio_desktop_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]
-tauri-build = { version = "2.5.5", features = [] }
+tauri-build = { version = "2.6.2", features = [] }
 
 [dependencies]
 serde_json = { workspace = true }
 serde = { workspace = true, features = ["derive"] }
-tauri = { version = "2.10.2", features = [ "protocol-asset", "macos-private-api", "tray-icon", "image-png", "devtools"] }
+tauri = { version = "2.11.2", features = [ "protocol-asset", "macos-private-api", "tray-icon", "image-png", "devtools"] }
 tracing.workspace = true
 tracing-subscriber = { workspace = true, features = ["env-filter", "chrono"] }
 tracing-appender.workspace = true
@@ -31,11 +31,11 @@ anyhow = { workspace = true }
 percent-encoding = { workspace = true }
 async-trait = { workspace = true }
 url = "2.5.8"
-semver = "1.0.27"
+semver = "1.0.28"
 # console-subscriber = "0.4.1"
 tauri-plugin-autostart = "2.5.1"
 tauri-plugin-global-shortcut = "2.3.1"
-tauri-plugin-updater = "2.10.0"
+tauri-plugin-updater = "2.10.1"
 
 specta = { workspace = true, features = ["chrono"] }
 specta-typescript = { workspace = true }
@@ -45,7 +45,7 @@ reqwest = { workspace = true, features = ["stream"] }
 sha2.workspace = true
 thiserror.workspace = true
 futures-util.workspace = true
-zip = "8.1.0"
+zip = "8.6.0"
 uuid.workspace = true
 
 db = { path = "../../../crates/db", features = ["desktop"] }
@@ -63,4 +63,4 @@ objc2-foundation = { version = "0.3.2", features = [
 objc2-app-kit = "0.3.2"
 
 [target.'cfg(unix)'.dependencies]
-libc = "0.2.182"
+libc = "0.2.186"

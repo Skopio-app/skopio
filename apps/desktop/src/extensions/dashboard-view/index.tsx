@@ -73,7 +73,7 @@ const DashboardView = () => {
 
   const layoutChildren = useMemo(
     () => [
-      <div key="projects">
+      <div key="projects" data-tour="dashboard.widgets">
         <ProjectChartWidget />
       </div>,
       <div key="apps">
@@ -102,7 +102,7 @@ const DashboardView = () => {
         <span className="text-muted-foreground">{formattedRange}</span>
       </h1>
 
-      <p className="text-lg">
+      <p data-tour="dashboard.summary" className="text-lg">
         <span className="text-accent-foreground font-medium">
           Time logged for{" "}
           <RangeSelectionDialog
