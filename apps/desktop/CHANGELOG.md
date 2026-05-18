@@ -23,7 +23,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [v0.1.13] - 2020-05-08
+## [v0.1.14] - 2026-05-19
+
+### Added
+
+- App guided tour to walkthrough the main app features.
+
+### Changed
+
+- Updated app dependencies.
+
+---
+
+## [v0.1.13] - 2026-05-08
 
 ### Fixed
 
@@ -31,7 +43,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [v0.1.12] - 2020-03-16
+## [v0.1.12] - 2026-03-16
 
 ### Added
 
@@ -43,7 +55,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [v0.1.11] - 2020-03-01
+## [v0.1.11] - 2026-03-01
 
 ### Added
 
