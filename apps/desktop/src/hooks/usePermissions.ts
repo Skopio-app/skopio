@@ -21,7 +21,11 @@ export const usePermissions = () => {
   }, []);
 
   useEffect(() => {
-    void check();
+    const id = window.setTimeout(() => {
+      void check();
+    }, 0);
+
+    return () => window.clearTimeout(id);
   }, [check]);
 
   const requestAccessibility = async () => {

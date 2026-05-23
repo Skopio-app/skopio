@@ -4,7 +4,7 @@ import {
   getRangeDates,
   mapRangeToPreset,
 } from "@/utils/time";
-import { addDays, startOfDay } from "date-fns";
+import { addDays, differenceInMilliseconds, startOfDay } from "date-fns";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router";
 
@@ -46,8 +46,38 @@ export const useDateRangeParams = (): UseDateRangeParams => {
   const [customEnd, _setCustomEnd] = useState<Date>(new Date());
   const [pendingStart, setPendingStart] = useState<Date>(customStart);
   const [pendingEnd, setPendingEnd] = useState<Date>(customEnd);
+  const [relativeRangeClock, setRelativeRangeClock] = useState<number>(() =>
+    Date.now(),
+  );
 
   const isCustom = selectedRange === DateRangeType.Custom;
+
+  useEffect(() => {
+    if (isCustom) return;
+
+    const refreshRelativeRange = () => setRelativeRangeClock(Date.now());
+    const refreshOnVisibility = () => {
+      if (!document.hidden) refreshRelativeRange();
+    };
+
+    const now = new Date();
+    const nextDay = addDays(startOfDay(now), 1);
+    const timeoutMs = Math.max(
+      1_000,
+      differenceInMilliseconds(nextDay, now) + 1_000,
+    );
+
+    const timeoutId = window.setTimeout(refreshRelativeRange, timeoutMs);
+
+    window.addEventListener("focus", refreshRelativeRange);
+    document.addEventListener("visibilitychange", refreshOnVisibility);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+      window.removeEventListener("focus", refreshRelativeRange);
+      document.removeEventListener("visibilitychange", refreshOnVisibility);
+    };
+  }, [isCustom, relativeRangeClock]);
 
   useEffect(() => {
     setSearchParams(
@@ -84,10 +114,10 @@ export const useDateRangeParams = (): UseDateRangeParams => {
     [isCustom, customStart],
   );
 
-  const [startDate, endDate] = useMemo(
-    () => getRangeDates(selectedRange, customStart, customEnd),
-    [selectedRange, customStart, customEnd],
-  );
+  const [startDate, endDate] = useMemo(() => {
+    void relativeRangeClock;
+    return getRangeDates(selectedRange, customStart, customEnd);
+  }, [selectedRange, customStart, customEnd, relativeRangeClock]);
 
   // Helper to push preset to a store without re-implementing this in every screen
   const applyPresetToStore = (storeSetter: (preset: any) => void) => {

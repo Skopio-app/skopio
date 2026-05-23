@@ -16,8 +16,6 @@ export default function ThemeProvider({
   const [theme, setTheme] = useState<Theme>(defaultTheme);
   const [hydrated, setHydrated] = useState(false);
   const isInitialMount = useRef(true);
-  const themeRef = useRef(theme);
-  themeRef.current = theme;
 
   const applyThemeToDOM = useCallback((theme: Theme, isDark: boolean) => {
     const root = document.documentElement;
@@ -37,8 +35,6 @@ export default function ThemeProvider({
   );
 
   useEffect(() => {
-    const mql = window.matchMedia("(prefers-color-scheme: dark)");
-
     (async () => {
       try {
         const cfg = await commands.getConfig();
@@ -49,18 +45,22 @@ export default function ThemeProvider({
         setHydrated(true);
       }
     })();
+  }, [applyTheme]);
 
+  useEffect(() => {
+    const mql = window.matchMedia("(prefers-color-scheme: dark)");
     const onChange = (e: MediaQueryListEvent) => {
-      if (themeRef.current === "system") {
+      if (theme === "system") {
         applyThemeToDOM("system", e.matches);
       }
     };
+
     mql.addEventListener("change", onChange);
 
     return () => {
       mql.removeEventListener("change", onChange);
     };
-  }, [applyTheme, applyThemeToDOM]);
+  }, [theme, applyThemeToDOM]);
 
   useEffect(() => {
     if (isInitialMount.current) {
