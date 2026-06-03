@@ -187,19 +187,6 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
       options,
     );
 
-    const now = new Date();
-    const initialMax = customEnd ?? new Date(now.getTime() + 5 * 60 * 1000);
-    const initialMin =
-      customStart ??
-      new Date(initialMax.getTime() - durationMinutes * 60 * 1000);
-
-    timelineRef.current.setOptions({
-      min: initialMin,
-      max: initialMax,
-      start: initialMin,
-      end: initialMax,
-    });
-
     const onRangeChanged = ({ start, end }: { start: Date; end: Date }) => {
       if (!dataSetRef.current || !timelineRef.current) return;
       console.debug(
@@ -238,7 +225,25 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
 
       clearAnimationTimeout();
     };
-  }, [durationMinutes, customStart, customEnd, clearAnimationTimeout]);
+  }, [clearAnimationTimeout]);
+
+  useEffect(() => {
+    if (!timelineRef.current) return;
+
+    const now = new Date();
+    const rangeEnd = customEnd ?? new Date(now.getTime() + 5 * 60 * 1000);
+    const rangeStart =
+      customStart ?? new Date(rangeEnd.getTime() - durationMinutes * 60 * 1000);
+
+    timelineRef.current.setOptions({
+      min: rangeStart,
+      max: rangeEnd,
+      start: rangeStart,
+      end: rangeEnd,
+    });
+
+    timelineRef.current.setWindow(rangeStart, rangeEnd, { animation: false });
+  }, [durationMinutes, customStart, customEnd]);
 
   useEffect(() => {
     if (!timelineRef.current) return;
