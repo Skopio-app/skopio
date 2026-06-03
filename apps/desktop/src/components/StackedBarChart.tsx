@@ -184,7 +184,9 @@ const StackedBarChart: React.FC<StackedBarChartProps> = ({
           color: getColorForKey(key),
           barMaxWidth: 42,
           itemStyle: {
-            borderRadius: [2, 2, 0, 0],
+            borderColor: "var(--background)",
+            borderRadius: [2, 2, 2, 2],
+            borderWidth: 1,
           },
           emphasis: {
             focus: "series",

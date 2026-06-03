@@ -2843,6 +2843,7 @@ __metadata:
     remark-gfm: "npm:^4.0.1"
     sonner: "npm:^2.0.7"
     tailwindcss: "npm:^4.3.0"
+    typescript: "npm:^6.0.3"
     typescript-eslint: "npm:^8.59.4"
     vis-data: "npm:^8.0.4"
     vis-timeline: "npm:^8.5.1"
