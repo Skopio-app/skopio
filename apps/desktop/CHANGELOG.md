@@ -28,6 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Stacked bar chart now displays stack order appropriately when displaying multiple bars.
+- Timeline now resolves without having to rebuild every time the preset is changed.
 
 ---
 
