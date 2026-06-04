@@ -44,6 +44,7 @@ interface StackedBarChartProps {
 const MAX_TOOLTIP_ENTRIES = 10;
 const MAX_BAR_WIDTH = 42;
 const BAR_WIDTH_RATIO = 0.7;
+const BAR_BORDER_RADIUS = 2;
 
 type StackSegment = {
   key: string;
@@ -295,7 +296,10 @@ const StackedBarChart: React.FC<StackedBarChartProps> = ({
             name: `${segment.label}:${segment.key}`,
             focus: "self",
             blurScope: "coordinateSystem",
-            shape,
+            shape: {
+              ...shape,
+              r: BAR_BORDER_RADIUS,
+            },
             style: {
               fill: segment.color,
               stroke: backgroundColor,
