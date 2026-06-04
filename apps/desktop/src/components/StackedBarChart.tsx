@@ -149,7 +149,54 @@ const StackedBarChart: React.FC<StackedBarChartProps> = ({
 
       tooltip: {
         trigger: "item",
-        confine: true,
+        confine: false,
+        appendTo: "body",
+
+        position: (point, _params, _dom, _rect, size) => {
+          const margin = 12;
+          const [mouseX, mouseY] = point;
+          const chartRect = containerRef.current?.getBoundingClientRect();
+          const viewportWidth =
+            window.visualViewport?.width ??
+            document.documentElement.clientWidth;
+          const viewportHeight =
+            window.visualViewport?.height ??
+            document.documentElement.clientHeight;
+
+          const availableWidth = chartRect
+            ? viewportWidth - chartRect.left
+            : size.viewSize[0];
+          const availableHeight = chartRect
+            ? viewportHeight - chartRect.top
+            : size.viewSize[1];
+          const width = Math.min(
+            size.contentSize[0] || 320,
+            Math.max(0, availableWidth - margin * 2),
+          );
+          const height = Math.min(
+            size.contentSize[1] || 384,
+            Math.max(0, availableHeight - margin * 2),
+          );
+          const maxX = Math.max(margin, availableWidth - width - margin);
+          const maxY = Math.max(margin, availableHeight - height - margin);
+
+          let x = mouseX + margin;
+          let y = mouseY + margin;
+
+          if (x + width > availableWidth - margin) {
+            x = mouseX - width - margin;
+          }
+
+          if (y + height > availableHeight - margin) {
+            y = mouseY - height - margin;
+          }
+
+          return [
+            Math.min(Math.max(margin, x), maxX),
+            Math.min(Math.max(margin, y), maxY),
+          ];
+        },
+
         backgroundColor: backgroundColor,
         borderColor: borderColor,
         borderWidth: 1,
@@ -162,6 +209,7 @@ const StackedBarChart: React.FC<StackedBarChartProps> = ({
           "border-radius:6px",
           "box-shadow:0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)",
         ].join(";"),
+
         formatter: (params) => {
           const items = Array.isArray(params) ? params : [params];
           const dataIndex = items[0]?.dataIndex ?? -1;
@@ -191,11 +239,20 @@ const StackedBarChart: React.FC<StackedBarChartProps> = ({
             .join("");
 
           return `
-            <div style="min-width:200px;max-width:320px;max-height:384px;overflow-y:auto;color:${foregroundColor};">
-              <div style="font-weight:600;margin-bottom:4px;color:${foregroundColor};">${title}</div>
-              ${rows}
-            </div>
-          `;
+                <div style="
+                    min-width:200px;
+                    max-width:min(320px, calc(100vw - 24px));
+                    max-height:min(384px, calc(100vh - 24px));
+                    overflow-y:auto;
+                    overscroll-behavior:contain;
+                    color:${foregroundColor};
+                ">
+                  <div style="font-weight:600;margin-bottom:4px;color:${foregroundColor};">
+                    ${title}
+                  </div>
+                    ${rows}
+                </div>
+`;
         },
       },
       xAxis: {
