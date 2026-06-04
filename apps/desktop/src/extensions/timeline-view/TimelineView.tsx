@@ -1,4 +1,10 @@
-import React, { useEffect, useRef, useMemo, useCallback } from "react";
+import React, {
+  useEffect,
+  useRef,
+  useMemo,
+  useCallback,
+  useLayoutEffect,
+} from "react";
 import { Timeline } from "vis-timeline/standalone";
 import type { DataGroup, DataItem, TimelineOptions } from "vis-timeline";
 import { DataSet } from "vis-data";
@@ -49,31 +55,6 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
 
   const AFK_GROUP_KEY = "__AFK__";
 
-  const combinedGroups: EventGroup[] = useMemo(() => {
-    const afk = (afkEvents ?? []).length
-      ? [{ group: AFK_GROUP_KEY, events: afkEvents ?? [] }]
-      : [];
-    return [...afk, ...groupedEvents];
-  }, [groupedEvents, afkEvents]);
-
-  const groups: TimelineGroup[] = useMemo(() => {
-    return combinedGroups
-      .slice()
-      .sort((a, b) => {
-        if (a.group === AFK_GROUP_KEY) return -1;
-        if (b.group === AFK_GROUP_KEY) return 1;
-        return a.group.localeCompare(b.group);
-      })
-      .map((group) => {
-        const label = group.group === AFK_GROUP_KEY ? "AFK" : group.group;
-        const content = truncateValue(label, 20);
-        return {
-          id: group.group,
-          content,
-        };
-      });
-  }, [combinedGroups]);
-
   const safeParseISO = (dateInput: unknown): Date | null => {
     if (typeof dateInput === "number") {
       if (dateInput > 1e12) return new Date(dateInput); // ms
@@ -94,6 +75,44 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
 
     return null;
   };
+
+  const combinedGroups: EventGroup[] = useMemo(() => {
+    const afk = (afkEvents ?? []).length
+      ? [{ group: AFK_GROUP_KEY, events: afkEvents ?? [] }]
+      : [];
+    return [...afk, ...groupedEvents];
+  }, [groupedEvents, afkEvents]);
+
+  const hasEvents = useMemo(() => {
+    return combinedGroups.some((groupData) =>
+      groupData.events.some((e) => {
+        const start = safeParseISO(e.timestamp);
+        const end = e.endTimestamp
+          ? safeParseISO(e.endTimestamp)
+          : addSeconds(start ?? 0, e.duration ?? 0);
+
+        return !!start && !!end && differenceInSeconds(end, start) > 1;
+      }),
+    );
+  }, [combinedGroups]);
+
+  const groups: TimelineGroup[] = useMemo(() => {
+    return combinedGroups
+      .slice()
+      .sort((a, b) => {
+        if (a.group === AFK_GROUP_KEY) return -1;
+        if (b.group === AFK_GROUP_KEY) return 1;
+        return a.group.localeCompare(b.group);
+      })
+      .map((group) => {
+        const label = group.group === AFK_GROUP_KEY ? "AFK" : group.group;
+        const content = truncateValue(label, 20);
+        return {
+          id: group.group,
+          content,
+        };
+      });
+  }, [combinedGroups]);
 
   const getColorForCategory = (category: string): string => {
     const cachedColor = useColorCache.getState().getColor(category);
@@ -156,7 +175,8 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
     groupsRef.current = groups;
   }, [groups]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
+    if (!hasEvents) return;
     if (!containerRef.current) return;
 
     if (timelineRef.current) {
@@ -225,9 +245,10 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
 
       clearAnimationTimeout();
     };
-  }, [clearAnimationTimeout]);
+  }, [hasEvents, clearAnimationTimeout]);
 
   useEffect(() => {
+    if (!hasEvents) return;
     if (!timelineRef.current) return;
 
     const now = new Date();
@@ -243,9 +264,10 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
     });
 
     timelineRef.current.setWindow(rangeStart, rangeEnd, { animation: false });
-  }, [durationMinutes, customStart, customEnd]);
+  }, [hasEvents, durationMinutes, customStart, customEnd]);
 
   useEffect(() => {
+    if (!hasEvents) return;
     if (!timelineRef.current) return;
 
     if (!groupsDataSetRef.current) {
@@ -258,9 +280,10 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
     groupsDataSetRef.current.add(groups);
 
     timelineRef.current.setGroups(groupsDataSetRef.current);
-  }, [groups]);
+  }, [hasEvents, groups]);
 
   useEffect(() => {
+    if (!hasEvents) return;
     if (!dataSetRef.current || !timelineRef.current) {
       console.debug(
         "Timeline or DataSet not initialized, skipping data update.",
@@ -336,9 +359,9 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
         }, ANIMATION_INACTIVITY_DELAY_MS);
       }
     }
-  }, [combinedGroups, clearAnimationTimeout]);
+  }, [hasEvents, combinedGroups, clearAnimationTimeout]);
 
-  if (combinedGroups.length === 0) {
+  if (!hasEvents) {
     return (
       <p className="text-muted-foreground flex items-center justify-center py-10">
         No events to display for the selected range
