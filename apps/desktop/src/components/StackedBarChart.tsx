@@ -1,10 +1,34 @@
-import { ResponsiveBarCanvas } from "@nivo/bar";
-import { useRef, useState, useEffect, useMemo, useCallback } from "react";
-import ChartTooltipPortal from "@/components/ChartTooltipPortal";
+import { useRef, useEffect, useMemo } from "react";
 import { formatDuration } from "@/utils/time";
 import { useChartColor, useCssVarColor } from "@/hooks/useChartColor";
 import { truncateValue } from "@/utils/data";
-import { BarChartData } from "@/types/chart";
+import * as echarts from "echarts/core";
+import { CustomChart, CustomSeriesOption } from "echarts/charts";
+import {
+  GridComponent,
+  TooltipComponent,
+  DatasetComponent,
+  GridComponentOption,
+  TooltipComponentOption,
+  DatasetComponentOption,
+} from "echarts/components";
+import { CanvasRenderer } from "echarts/renderers";
+import type { ECharts, ComposeOption } from "echarts/core";
+
+echarts.use([
+  CustomChart,
+  GridComponent,
+  TooltipComponent,
+  DatasetComponent,
+  CanvasRenderer,
+]);
+
+type ChartOption = ComposeOption<
+  | CustomSeriesOption
+  | GridComponentOption
+  | TooltipComponentOption
+  | DatasetComponentOption
+>;
 
 interface StackedBarChartProps {
   data: {
@@ -18,6 +42,28 @@ interface StackedBarChartProps {
 }
 
 const MAX_TOOLTIP_ENTRIES = 10;
+const MAX_BAR_WIDTH = 42;
+const BAR_WIDTH_RATIO = 0.7;
+const BAR_BORDER_RADIUS = 2;
+
+type StackSegment = {
+  key: string;
+  value: number;
+  color: string;
+  start: number;
+  end: number;
+  rowIndex: number;
+};
+
+type StackedRow = {
+  label: string;
+  total: number;
+  segments: StackSegment[];
+};
+
+type FlatStackSegment = StackSegment & {
+  label: string;
+};
 
 const StackedBarChart: React.FC<StackedBarChartProps> = ({
   data,
@@ -26,203 +72,314 @@ const StackedBarChart: React.FC<StackedBarChartProps> = ({
   axisBottom = true,
   axisLeft = false,
 }) => {
-  const [mousePos, setMousePos] = useState<{ x: number; y: number } | null>(
-    null,
-  );
-  const mousePosRef = useRef<{ x: number; y: number } | null>(null);
-  const rafId = useRef<number | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const chartRef = useRef<ECharts | null>(null);
+
   const { getColorForKey } = useChartColor();
   const axisTextColor = useCssVarColor("--muted-foreground");
+  const backgroundColor = useCssVarColor("--background");
+  const foregroundColor = useCssVarColor("--foreground");
+  const mutedForegroundColor = useCssVarColor("--muted-foreground");
+  const borderColor = useCssVarColor("--border");
   const gridColor = useCssVarColor("--input");
 
-  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement, MouseEvent>) => {
-    const x = e.clientX + 5;
-    const y = e.clientY + 5;
-    mousePosRef.current = { x, y };
-    if (rafId.current === null) {
-      rafId.current = requestAnimationFrame(() => {
-        if (mousePosRef.current) {
-          setMousePos(mousePosRef.current);
-        }
-        rafId.current = null;
-      });
-    }
-  };
+  const { stackedRows, flatSegments } = useMemo<{
+    stackedRows: StackedRow[];
+    flatSegments: FlatStackSegment[];
+  }>(() => {
+    return data.reduce<{
+      stackedRows: StackedRow[];
+      flatSegments: FlatStackSegment[];
+    }>(
+      (acc, row, rowIndex) => {
+        let offset = 0;
+        const segments = keys
+          .map((key, index) => ({
+            key,
+            index,
+            value: Number(row[key] ?? 0),
+            color: getColorForKey(key),
+          }))
+          .filter((segment) => segment.value > 0)
+          .sort((a, b) => a.value - b.value || a.index - b.index)
+          .map(({ key, value, color }) => {
+            const segment = {
+              key,
+              value,
+              color,
+              start: offset,
+              end: offset + value,
+              rowIndex,
+            };
+            offset += value;
+            return segment;
+          });
+
+        const stackedRow = {
+          label: String(row.label),
+          total: offset,
+          segments,
+        };
+
+        acc.stackedRows.push(stackedRow);
+        acc.flatSegments.push(
+          ...segments.map((segment) => ({
+            ...segment,
+            label: stackedRow.label,
+          })),
+        );
+
+        return acc;
+      },
+      { stackedRows: [], flatSegments: [] },
+    );
+  }, [data, getColorForKey, keys]);
+
+  const option = useMemo<ChartOption>(() => {
+    return {
+      animation: false,
+
+      grid: {
+        top: 20,
+        right: 30,
+        bottom: axisBottom ? 50 : 20,
+        left: axisLeft ? 90 : 50,
+        containLabel: true, // deprecated
+      },
+
+      tooltip: {
+        trigger: "item",
+        confine: true,
+        backgroundColor: backgroundColor,
+        borderColor: borderColor,
+        borderWidth: 1,
+        padding: [12, 16],
+        textStyle: {
+          color: foregroundColor,
+          fontSize: 12,
+        },
+        extraCssText: [
+          "border-radius:6px",
+          "box-shadow:0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)",
+        ].join(";"),
+        formatter: (params) => {
+          const items = Array.isArray(params) ? params : [params];
+          const dataIndex = items[0]?.dataIndex ?? -1;
+          const rowIndex = flatSegments[dataIndex]?.rowIndex ?? -1;
+          const row = stackedRows[rowIndex];
+
+          const visibleItems = (row?.segments ?? [])
+            .slice()
+            .sort((a, b) => b.value - a.value)
+            .slice(0, MAX_TOOLTIP_ENTRIES);
+
+          const title = row?.label ?? String(items[0]?.name ?? "");
+
+          const rows = visibleItems
+            .map((item) => {
+              const name = truncateValue(item.key, 25);
+              const duration = formatDuration(item.value);
+
+              return `
+                <div style="display:flex;align-items:center;gap:8px;padding:2px 0;">
+                  <span style="width:10px;height:10px;border-radius:999px;background:${item.color};display:inline-block;flex-shrink:0;"></span>
+                  <span style="flex:1;min-width:0;color:${foregroundColor};">${name}</span>
+                  <span style="color:${mutedForegroundColor};white-space:nowrap;">${duration}</span>
+                </div>
+              `;
+            })
+            .join("");
+
+          return `
+            <div style="min-width:200px;max-width:320px;max-height:384px;overflow-y:auto;color:${foregroundColor};">
+              <div style="font-weight:600;margin-bottom:4px;color:${foregroundColor};">${title}</div>
+              ${rows}
+            </div>
+          `;
+        },
+      },
+      xAxis: {
+        type: "category",
+        data: data.map((row) => row.label),
+        name: axisBottom ? bucketLabel : undefined,
+        nameLocation: "middle",
+        nameGap: 32,
+        axisLabel: {
+          color: axisTextColor,
+          fontSize: 11,
+        },
+        axisLine: {
+          lineStyle: {
+            color: axisTextColor,
+          },
+        },
+        axisTick: {
+          lineStyle: {
+            color: axisTextColor,
+          },
+        },
+      },
+
+      yAxis: {
+        type: "value",
+        show: axisLeft,
+        name: axisLeft ? bucketLabel : undefined,
+        nameLocation: "middle",
+        nameGap: 70,
+        axisLabel: {
+          color: axisTextColor,
+          formatter: (value: number) => formatDuration(value),
+        },
+        splitLine: {
+          lineStyle: {
+            color: gridColor,
+            type: "dashed",
+          },
+        },
+      },
+
+      series: {
+        type: "custom",
+        name: bucketLabel,
+        coordinateSystem: "cartesian2d",
+        data: flatSegments.map((segment) => [
+          segment.rowIndex,
+          segment.end,
+          segment.start,
+          segment.value,
+        ]),
+        encode: {
+          x: 0,
+          y: 1,
+        },
+        renderItem: (params, api) => {
+          const segment = flatSegments[params.dataIndex];
+          if (!segment) return null;
+
+          const categorySize = api.size?.([1, 0]);
+          const categoryWidth = Array.isArray(categorySize)
+            ? Number(categorySize[0])
+            : MAX_BAR_WIDTH;
+          const barWidth = Math.min(
+            MAX_BAR_WIDTH,
+            Math.max(1, categoryWidth * BAR_WIDTH_RATIO),
+          );
+          const coordSys = params.coordSys as unknown as {
+            x: number;
+            y: number;
+            width: number;
+            height: number;
+          };
+
+          const start = api.coord([segment.rowIndex, segment.start]);
+          const end = api.coord([segment.rowIndex, segment.end]);
+          const height = Math.max(0, start[1] - end[1]);
+          const shape = echarts.graphic.clipRectByRect(
+            {
+              x: start[0] - barWidth / 2,
+              y: end[1],
+              width: barWidth,
+              height,
+            },
+            {
+              x: coordSys.x,
+              y: coordSys.y,
+              width: coordSys.width,
+              height: coordSys.height,
+            },
+          );
+
+          if (!shape) return null;
+
+          return {
+            type: "rect",
+            name: `${segment.label}:${segment.key}`,
+            focus: "self",
+            blurScope: "coordinateSystem",
+            shape: {
+              ...shape,
+              r: BAR_BORDER_RADIUS,
+            },
+            style: {
+              fill: segment.color,
+              stroke: backgroundColor,
+              lineWidth: 0.5,
+            },
+            emphasis: {
+              style: {
+                stroke: borderColor,
+                lineWidth: 1,
+              },
+            },
+            blur: {
+              style: {
+                opacity: 0.32,
+              },
+            },
+          };
+        },
+      },
+    };
+  }, [
+    axisBottom,
+    axisLeft,
+    axisTextColor,
+    backgroundColor,
+    borderColor,
+    foregroundColor,
+    mutedForegroundColor,
+    bucketLabel,
+    data,
+    flatSegments,
+    gridColor,
+    stackedRows,
+  ]);
 
   useEffect(() => {
+    if (!containerRef.current) return;
+
+    chartRef.current = echarts.init(containerRef.current, undefined, {
+      renderer: "canvas",
+    });
+
     return () => {
-      if (rafId.current !== null) {
-        cancelAnimationFrame(rafId.current);
-      }
+      chartRef.current?.dispose();
+      chartRef.current = null;
     };
   }, []);
 
-  const entriesByLabel = useMemo(() => {
-    const map = new Map<
-      string,
-      Array<{ key: string; value: number; displayKey: string }>
-    >();
+  useEffect(() => {
+    if (!chartRef.current) return;
 
-    for (const row of data) {
-      const label = row.label;
-      const entries = keys
-        .map((k) => ({ key: k, value: Number(row[k] ?? 0) }))
-        .filter(({ value }) => value > 0)
-        .sort((a, b) => b.value - a.value)
-        .slice(0, MAX_TOOLTIP_ENTRIES)
-        .map(({ key, value }) => ({
-          key,
-          value,
-          displayKey: truncateValue(key, 25),
-        }));
+    chartRef.current.setOption(option, {
+      notMerge: true,
+      lazyUpdate: true,
+    });
+  }, [option]);
 
-      map.set(label, entries);
-    }
-    return map;
-  }, [data, keys]);
+  useEffect(() => {
+    if (!containerRef.current || !chartRef.current) return;
 
-  const renderTooltip = useCallback(
-    ({ data: pointData }: { data: BarChartData }) => {
-      if (!mousePos) return null;
+    const resizeObserver = new ResizeObserver(() => {
+      chartRef.current?.resize();
+    });
 
-      const label = pointData.label;
-      const entries = entriesByLabel.get(label) ?? [];
+    resizeObserver.observe(containerRef.current);
 
-      return (
-        <ChartTooltipPortal
-          style={{
-            top: mousePos.y,
-            left: mousePos.x,
-            zIndex: 50,
-          }}
-        >
-          <div className="max-h-96 overflow-y-auto rounded-md border border-border bg-background px-4 py-3 text-sm shadow-lg text-foreground min-w-[200px] max-w-[320px]">
-            <div className="font-semibold mb-1">{label}</div>
-            {entries.map(({ value, displayKey }) => {
-              return (
-                <div
-                  key={displayKey}
-                  className="flex items-center gap-2 py-0.5"
-                >
-                  <span
-                    className="w-2.5 h-2.5 rounded-full inline-block shrink-0"
-                    style={{
-                      backgroundColor: getColorForKey(displayKey),
-                    }}
-                  />
-                  <span className="flex-1 text-xs">{displayKey}</span>
-                  <span className="text-muted-foreground text-xs">
-                    {formatDuration(value)}
-                  </span>
-                </div>
-              );
-            })}
-          </div>
-        </ChartTooltipPortal>
-      );
-    },
-    [entriesByLabel, getColorForKey, mousePos],
-  );
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, []);
 
-  // TODO: Reuse not available text
   if (!data.length) {
     return (
-      <p className="h-[220px] w-full flex items-center justify-center text-sm text-muted-foreground">
+      <p className="h-55 w-full flex items-center justify-center text-sm text-muted-foreground">
         No data available
       </p>
     );
   }
 
-  return (
-    <div
-      ref={containerRef}
-      className="h-[200px] w-full relative"
-      onMouseMove={handleMouseMove}
-    >
-      <ResponsiveBarCanvas
-        data={data}
-        keys={keys}
-        indexBy="label"
-        margin={{ top: 20, right: 30, bottom: 50, left: axisLeft ? 90 : 50 }}
-        padding={0.3}
-        groupMode="stacked"
-        colors={(bar) => getColorForKey(String(bar.id))}
-        borderRadius={2}
-        borderWidth={1}
-        borderColor={{ from: "color", modifiers: [["darker", 1.6]] }}
-        axisBottom={
-          axisBottom
-            ? {
-                tickSize: 4,
-                tickPadding: 6,
-                tickRotation: 0,
-                legend: bucketLabel,
-                legendPosition: "middle",
-                legendOffset: 36,
-              }
-            : null
-        }
-        axisLeft={
-          axisLeft
-            ? {
-                tickSize: 10,
-                tickPadding: 5,
-                tickRotation: 0,
-                tickValues: 5,
-                legend: bucketLabel,
-                legendOffset: -80,
-                legendPosition: "middle",
-                format: (value) => formatDuration(value),
-              }
-            : null
-        }
-        theme={{
-          axis: {
-            domain: {
-              line: {
-                stroke: axisTextColor,
-                strokeWidth: 1,
-              },
-            },
-            ticks: {
-              line: {
-                stroke: axisTextColor,
-                strokeWidth: 1,
-              },
-              text: {
-                fill: axisTextColor,
-                fontSize: 11,
-              },
-            },
-            legend: {
-              text: {
-                fill: axisTextColor,
-                fontSize: 12,
-                fontWeight: 500,
-              },
-            },
-          },
-          grid: {
-            line: {
-              stroke: gridColor,
-              strokeWidth: 1,
-              strokeDasharray: "2,2",
-            },
-          },
-        }}
-        tooltip={renderTooltip}
-        enableLabel={false}
-        labelSkipWidth={12}
-        labelSkipHeight={12}
-        labelTextColor={{
-          from: "color",
-          modifiers: [["darker", 1.6]],
-        }}
-        role="application"
-      />
-    </div>
-  );
+  return <div ref={containerRef} className="h-55 w-full" />;
 };
 
 export default StackedBarChart;

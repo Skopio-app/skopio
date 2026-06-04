@@ -25,7 +25,7 @@ const BarLineChart: React.FC<BasicBarChartProps> = ({
 
   if (!data.length) {
     return (
-      <div className="h-[220px] w-full flex items-center justify-center text-sm text-muted-foreground">
+      <div className="h-55 w-full flex items-center justify-center text-sm text-muted-foreground">
         No data available
       </div>
     );
@@ -51,7 +51,7 @@ const BarLineChart: React.FC<BasicBarChartProps> = ({
   ];
 
   return (
-    <div className="h-[220px] w-full relative">
+    <div className="h-55 w-full relative">
       <div className="absolute inset-0">
         <ResponsiveBar
           data={sortedData}

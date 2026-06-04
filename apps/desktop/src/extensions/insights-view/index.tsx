@@ -106,12 +106,16 @@ const InsightsView = () => {
             return row;
           });
 
-          const keys = Array.from(
-            new Set(
-              Object.values(raw)
-                .flatMap((pairs) => pairs ?? [])
-                .map(([group]) => group),
-            ),
+          const totalPerKey: Record<string, number> = {};
+
+          for (const pairs of Object.values(raw)) {
+            for (const [group, value] of pairs ?? []) {
+              totalPerKey[group] = (totalPerKey[group] ?? 0) + (value ?? 0);
+            }
+          }
+
+          const keys = Object.keys(totalPerKey).sort(
+            (a, b) => (totalPerKey[a] ?? 0) - (totalPerKey[b] ?? 0),
           );
 
           return { rows, keys };

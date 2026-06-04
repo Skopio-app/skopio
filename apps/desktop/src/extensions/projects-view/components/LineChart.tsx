@@ -46,7 +46,7 @@ const LineChart: React.FC<LineChartProps> = ({ id, data }) => {
 
   if (!data.length) {
     return (
-      <div className="h-[220px] w-full flex items-center justify-center text-sm text-muted-foreground">
+      <div className="h-55 w-full flex items-center justify-center text-sm text-muted-foreground">
         No data available
       </div>
     );
@@ -64,7 +64,7 @@ const LineChart: React.FC<LineChartProps> = ({ id, data }) => {
   return (
     <div
       ref={containerRef}
-      className="h-[200px] w-full flex"
+      className="h-50 w-full flex"
       onMouseMove={handleMouseMove}
     >
       <div className="flex-1">
