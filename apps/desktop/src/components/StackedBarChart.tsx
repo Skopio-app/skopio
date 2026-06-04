@@ -3,7 +3,7 @@ import { formatDuration } from "@/utils/time";
 import { useChartColor, useCssVarColor } from "@/hooks/useChartColor";
 import { truncateValue } from "@/utils/data";
 import * as echarts from "echarts/core";
-import { BarChart, BarSeriesOption } from "echarts/charts";
+import { CustomChart, CustomSeriesOption } from "echarts/charts";
 import {
   GridComponent,
   TooltipComponent,
@@ -16,7 +16,7 @@ import { CanvasRenderer } from "echarts/renderers";
 import type { ECharts, ComposeOption } from "echarts/core";
 
 echarts.use([
-  BarChart,
+  CustomChart,
   GridComponent,
   TooltipComponent,
   DatasetComponent,
@@ -24,7 +24,7 @@ echarts.use([
 ]);
 
 type ChartOption = ComposeOption<
-  | BarSeriesOption
+  | CustomSeriesOption
   | GridComponentOption
   | TooltipComponentOption
   | DatasetComponentOption
@@ -42,14 +42,27 @@ interface StackedBarChartProps {
 }
 
 const MAX_TOOLTIP_ENTRIES = 10;
+const MAX_BAR_WIDTH = 42;
+const BAR_WIDTH_RATIO = 0.7;
 
-const escapeHtml = (value: string) =>
-  value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#039;");
+type StackSegment = {
+  key: string;
+  value: number;
+  color: string;
+  start: number;
+  end: number;
+  rowIndex: number;
+};
+
+type StackedRow = {
+  label: string;
+  total: number;
+  segments: StackSegment[];
+};
+
+type FlatStackSegment = StackSegment & {
+  label: string;
+};
 
 const StackedBarChart: React.FC<StackedBarChartProps> = ({
   data,
@@ -63,7 +76,63 @@ const StackedBarChart: React.FC<StackedBarChartProps> = ({
 
   const { getColorForKey } = useChartColor();
   const axisTextColor = useCssVarColor("--muted-foreground");
+  const backgroundColor = useCssVarColor("--background");
+  const foregroundColor = useCssVarColor("--foreground");
+  const mutedForegroundColor = useCssVarColor("--muted-foreground");
+  const borderColor = useCssVarColor("--border");
   const gridColor = useCssVarColor("--input");
+
+  const { stackedRows, flatSegments } = useMemo<{
+    stackedRows: StackedRow[];
+    flatSegments: FlatStackSegment[];
+  }>(() => {
+    return data.reduce<{
+      stackedRows: StackedRow[];
+      flatSegments: FlatStackSegment[];
+    }>(
+      (acc, row, rowIndex) => {
+        let offset = 0;
+        const segments = keys
+          .map((key, index) => ({
+            key,
+            index,
+            value: Number(row[key] ?? 0),
+            color: getColorForKey(key),
+          }))
+          .filter((segment) => segment.value > 0)
+          .sort((a, b) => a.value - b.value || a.index - b.index)
+          .map(({ key, value, color }) => {
+            const segment = {
+              key,
+              value,
+              color,
+              start: offset,
+              end: offset + value,
+              rowIndex,
+            };
+            offset += value;
+            return segment;
+          });
+
+        const stackedRow = {
+          label: String(row.label),
+          total: offset,
+          segments,
+        };
+
+        acc.stackedRows.push(stackedRow);
+        acc.flatSegments.push(
+          ...segments.map((segment) => ({
+            ...segment,
+            label: stackedRow.label,
+          })),
+        );
+
+        return acc;
+      },
+      { stackedRows: [], flatSegments: [] },
+    );
+  }, [data, getColorForKey, keys]);
 
   const option = useMemo<ChartOption>(() => {
     return {
@@ -78,18 +147,14 @@ const StackedBarChart: React.FC<StackedBarChartProps> = ({
       },
 
       tooltip: {
-        trigger: "axis",
-        axisPointer: {
-          type: "shadow",
-        },
-        order: "seriesAsc",
+        trigger: "item",
         confine: true,
-        backgroundColor: "var(--background)",
-        borderColor: "var(--border)",
+        backgroundColor: backgroundColor,
+        borderColor: borderColor,
         borderWidth: 1,
         padding: [12, 16],
         textStyle: {
-          color: "var(--foreground)",
+          color: foregroundColor,
           fontSize: 12,
         },
         extraCssText: [
@@ -98,37 +163,35 @@ const StackedBarChart: React.FC<StackedBarChartProps> = ({
         ].join(";"),
         formatter: (params) => {
           const items = Array.isArray(params) ? params : [params];
+          const dataIndex = items[0]?.dataIndex ?? -1;
+          const rowIndex = flatSegments[dataIndex]?.rowIndex ?? -1;
+          const row = stackedRows[rowIndex];
 
-          const visibleItems = items
-            .map((item) => ({
-              name: String(item.seriesName ?? ""),
-              value: Number(item.value ?? 0),
-              color: String(item.color ?? ""),
-            }))
-            .filter((item) => item.value > 0)
+          const visibleItems = (row?.segments ?? [])
+            .slice()
             .sort((a, b) => b.value - a.value)
             .slice(0, MAX_TOOLTIP_ENTRIES);
 
-          const title = escapeHtml(String(items[0]?.name ?? ""));
+          const title = row?.label ?? String(items[0]?.name ?? "");
 
           const rows = visibleItems
             .map((item) => {
-              const name = escapeHtml(truncateValue(item.name, 25));
-              const duration = escapeHtml(formatDuration(item.value));
+              const name = truncateValue(item.key, 25);
+              const duration = formatDuration(item.value);
 
               return `
                 <div style="display:flex;align-items:center;gap:8px;padding:2px 0;">
                   <span style="width:10px;height:10px;border-radius:999px;background:${item.color};display:inline-block;flex-shrink:0;"></span>
-                  <span style="flex:1;min-width:0;color:var(--foreground);">${name}</span>
-                  <span style="color:var(--muted-foreground);white-space:nowrap;">${duration}</span>
+                  <span style="flex:1;min-width:0;color:${foregroundColor};">${name}</span>
+                  <span style="color:${mutedForegroundColor};white-space:nowrap;">${duration}</span>
                 </div>
               `;
             })
             .join("");
 
           return `
-            <div style="min-width:200px;max-width:320px;max-height:384px;overflow-y:auto;color:var(--foreground);">
-              <div style="font-weight:600;margin-bottom:4px;color:var(--foreground);">${title}</div>
+            <div style="min-width:200px;max-width:320px;max-height:384px;overflow-y:auto;color:${foregroundColor};">
+              <div style="font-weight:600;margin-bottom:4px;color:${foregroundColor};">${title}</div>
               ${rows}
             </div>
           `;
@@ -174,35 +237,98 @@ const StackedBarChart: React.FC<StackedBarChartProps> = ({
         },
       },
 
-      series: keys.map((key): BarSeriesOption => {
-        return {
-          type: "bar",
-          name: key,
-          data: data.map((row) => Number(row[key] ?? 0)),
-          stack: "total",
-          stackOrder: "seriesAsc",
-          color: getColorForKey(key),
-          barMaxWidth: 42,
-          itemStyle: {
-            borderColor: "var(--background)",
-            borderRadius: [2, 2, 2, 2],
-            borderWidth: 1,
-          },
-          emphasis: {
-            focus: "series",
-          },
-        };
-      }),
+      series: {
+        type: "custom",
+        name: bucketLabel,
+        coordinateSystem: "cartesian2d",
+        data: flatSegments.map((segment) => [
+          segment.rowIndex,
+          segment.end,
+          segment.start,
+          segment.value,
+        ]),
+        encode: {
+          x: 0,
+          y: 1,
+        },
+        renderItem: (params, api) => {
+          const segment = flatSegments[params.dataIndex];
+          if (!segment) return null;
+
+          const categorySize = api.size?.([1, 0]);
+          const categoryWidth = Array.isArray(categorySize)
+            ? Number(categorySize[0])
+            : MAX_BAR_WIDTH;
+          const barWidth = Math.min(
+            MAX_BAR_WIDTH,
+            Math.max(1, categoryWidth * BAR_WIDTH_RATIO),
+          );
+          const coordSys = params.coordSys as unknown as {
+            x: number;
+            y: number;
+            width: number;
+            height: number;
+          };
+
+          const start = api.coord([segment.rowIndex, segment.start]);
+          const end = api.coord([segment.rowIndex, segment.end]);
+          const height = Math.max(0, start[1] - end[1]);
+          const shape = echarts.graphic.clipRectByRect(
+            {
+              x: start[0] - barWidth / 2,
+              y: end[1],
+              width: barWidth,
+              height,
+            },
+            {
+              x: coordSys.x,
+              y: coordSys.y,
+              width: coordSys.width,
+              height: coordSys.height,
+            },
+          );
+
+          if (!shape) return null;
+
+          return {
+            type: "rect",
+            name: `${segment.label}:${segment.key}`,
+            focus: "self",
+            blurScope: "coordinateSystem",
+            shape,
+            style: {
+              fill: segment.color,
+              stroke: backgroundColor,
+              lineWidth: 0.5,
+            },
+            emphasis: {
+              style: {
+                stroke: borderColor,
+                lineWidth: 1,
+              },
+            },
+            blur: {
+              style: {
+                opacity: 0.32,
+              },
+            },
+          };
+        },
+      },
     };
   }, [
     axisBottom,
     axisLeft,
     axisTextColor,
+    backgroundColor,
+    borderColor,
+    foregroundColor,
+    mutedForegroundColor,
     bucketLabel,
     data,
-    getColorForKey,
+    flatSegments,
     gridColor,
-    keys,
+    stackedRows,
   ]);
 
   useEffect(() => {
