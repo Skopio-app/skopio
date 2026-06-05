@@ -213,6 +213,7 @@ const StackedBarChart: React.FC<StackedBarChartProps> = ({
         formatter: (params) => {
           const items = Array.isArray(params) ? params : [params];
           const dataIndex = items[0]?.dataIndex ?? -1;
+          const hoveredSegment = flatSegments[dataIndex];
           const rowIndex = flatSegments[dataIndex]?.rowIndex ?? -1;
           const row = stackedRows[rowIndex];
 
@@ -225,26 +226,57 @@ const StackedBarChart: React.FC<StackedBarChartProps> = ({
 
           const rows = visibleItems
             .map((item) => {
+              const isHighlighted =
+                hoveredSegment.rowIndex === item.rowIndex &&
+                hoveredSegment.key === item.key;
               const name = truncateValue(item.key, 25);
               const duration = formatDuration(item.value);
 
               return `
-                <div style="display:flex;align-items:center;gap:8px;padding:2px 0;">
-                  <span style="width:10px;height:10px;border-radius:999px;background:${item.color};display:inline-block;flex-shrink:0;"></span>
-                  <span style="flex:1;min-width:0;color:${foregroundColor};">${name}</span>
-                  <span style="color:${mutedForegroundColor};white-space:nowrap;">${duration}</span>
-                </div>
-              `;
+                <div style="
+                  display:flex;
+                  align-items:center;
+                  gap:8px;
+                  padding:4px 6px;
+                  margin:1px -6px;
+                  border-radius:4px;
+                  border-left:3px solid ${isHighlighted ? item.color : "transparent"};
+                  background:${isHighlighted ? borderColor : "transparent"};
+                  font-weight:${isHighlighted ? 600 : 400};
+                ">
+                  <span style="
+                    width:10px;
+                    height:10px;
+                    border-radius:999px;
+                    background:${item.color};
+                    display:inline-block;
+                    flex-shrink:0;
+                  "></span>
+
+                <span style="
+                  flex:1;
+                  min-width:0;
+                  color:${foregroundColor};
+                ">${name}</span>
+
+                <span style="
+                  color:${mutedForegroundColor};
+                  white-space:nowrap;
+                ">${duration}</span>
+              </div>
+            `;
             })
             .join("");
 
           return `
-                <div style="
+                <div class="scroll-hidden" style="
                     min-width:200px;
                     max-width:min(320px, calc(100vw - 24px));
                     max-height:min(384px, calc(100vh - 24px));
                     overflow-y:auto;
                     overscroll-behavior:contain;
+                    scrollbar-width: none;
+                    -ms-oveflow-style: none;
                     color:${foregroundColor};
                 ">
                   <div style="font-weight:600;margin-bottom:4px;color:${foregroundColor};">
