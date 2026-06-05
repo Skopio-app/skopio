@@ -14,6 +14,7 @@ const CategoryChartSection = () => {
         keys={keys}
         axisBottom={false}
         axisLeft={true}
+        bucketLabel="Time"
       />
     </ChartContainer>
   );

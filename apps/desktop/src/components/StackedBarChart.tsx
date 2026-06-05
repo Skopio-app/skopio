@@ -68,7 +68,7 @@ type FlatStackSegment = StackSegment & {
 const StackedBarChart: React.FC<StackedBarChartProps> = ({
   data,
   keys,
-  bucketLabel = "Time",
+  bucketLabel = "Days",
   axisBottom = true,
   axisLeft = false,
 }) => {
@@ -144,7 +144,8 @@ const StackedBarChart: React.FC<StackedBarChartProps> = ({
         right: 30,
         bottom: axisBottom ? 50 : 20,
         left: axisLeft ? 90 : 50,
-        containLabel: true, // deprecated
+        outerBoundsMode: "same",
+        outerBoundsContain: "axisLabel",
       },
 
       tooltip: {
