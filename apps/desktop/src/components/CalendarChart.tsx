@@ -33,7 +33,7 @@ const CalendarChart: React.FC<CalendarChartProps> = ({ data, start, end }) => {
   const monthTextColor = useCssVarColor("--muted-foreground");
 
   return (
-    <div className="h-[200px] w-full">
+    <div className="h-50 w-full">
       <ResponsiveCalendar
         data={data}
         from={start}

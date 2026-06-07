@@ -33,14 +33,14 @@ const CustomPieChart: React.FC<CustomPieChartProps> = ({ data }) => {
 
   if (!chartData.length) {
     return (
-      <div className="h-[220px] w-full flex items-center justify-center text-sm text-muted-foreground">
+      <div className="h-55 w-full flex items-center justify-center text-sm text-muted-foreground">
         No data available
       </div>
     );
   }
 
   return (
-    <div className="h-[200px] w-full flex">
+    <div className="h-50 w-full flex">
       <div ref={ref} className="flex-1 min-w-0">
         <ResponsivePieCanvas
           data={chartData}
