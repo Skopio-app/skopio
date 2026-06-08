@@ -47,7 +47,7 @@ const mdComponents: Components = {
       </code>
     ) : (
       <pre
-        className="mt-2 max-h-56 overflow-auto rounded bg-[var(--foreground)] p-2 text-[11px] text-primary-foreground"
+        className="mt-2 max-h-56 overflow-auto rounded bg-(--foreground) p-2 text-[11px] text-primary-foreground"
         {...props}
       >
         <code className={className}>{children}</code>
@@ -89,7 +89,7 @@ const showUpdaterToast = (meta: {
   const render = () =>
     toast.custom(
       () => (
-        <div className="w-[28rem] max-w-[90vw] rounded-xl border border-border bg-sidebar p-3 shadow-lg">
+        <div className="w-md max-w-[90vw] rounded-xl border border-border bg-sidebar p-3 shadow-lg">
           <div className="flex items-start gap-2">
             <div className="flex-1">
               <p className="text-sm font-semibold text-foreground">
