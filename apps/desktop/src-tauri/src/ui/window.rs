@@ -212,9 +212,3 @@ pub fn show_window<R: Runtime>(app: AppHandle<R>, kind: WindowKind) -> Result<()
         .map_err(|e| format!("Error showing settings window: {e}"))?;
     Ok(())
 }
-
-#[tauri::command]
-#[specta::specta]
-pub fn open_devtools<R: Runtime>(window: tauri::WebviewWindow<R>) {
-    window.open_devtools();
-}

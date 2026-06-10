@@ -21,8 +21,6 @@ import {
   useGlobalShortcutListener,
   useHistoryControls,
 } from "@/utils/shortcut";
-import { isDev } from "@/utils/environment";
-import { commands } from "@/types/tauri.gen";
 import PermissionsDialog from "@/components/settings/PermissionsDialog";
 import UpdaterToast from "@/components/updater/UpdaterToast";
 import ThemeProvider from "@/components/settings/ThemeProvider";
@@ -58,9 +56,7 @@ function App() {
               <Outlet />
             </ContextMenuTrigger>
 
-            <ContextMenuContent
-              className={cn("w-42", isDev() ? "h-32" : "h-24")}
-            >
+            <ContextMenuContent className={cn("w-42", "h-24")}>
               <ContextMenuItem
                 className="text-xs"
                 disabled={!canGoBack}
@@ -81,16 +77,6 @@ function App() {
                 Reload
                 <ContextMenuShortcut>⌘R</ContextMenuShortcut>
               </ContextMenuItem>
-              {isDev() && (
-                <ContextMenuItem
-                  inset
-                  className="text-xs"
-                  disabled={!isDev()}
-                  onClick={() => commands.openDevtools()}
-                >
-                  Inspect Element
-                </ContextMenuItem>
-              )}
             </ContextMenuContent>
           </ContextMenu>
         </TourProvider>
