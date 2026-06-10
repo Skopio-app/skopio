@@ -14,6 +14,7 @@ use crate::{
     goals_service::GoalService,
     server::{ServerManagerExt, ServerStatus},
     ui::{
+        menu::MenuExt,
         tray::TrayExt,
         window::{NotificationPayload, WindowExt, WindowKind},
     },
@@ -73,6 +74,7 @@ pub async fn run() {
                 }
             });
 
+            app_handle.init_menu()?;
             app_handle.show_window(WindowKind::Main)?;
 
             app.init_tray()?;
