@@ -13,6 +13,7 @@ import {
   QueryClient,
   QueryClientProvider,
 } from "@tanstack/react-query";
+import { useEffect } from "react";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import {
   goBack,
@@ -42,6 +43,7 @@ const queryClient = new QueryClient({
 
 function App() {
   useGlobalShortcutListener();
+  useDisableNativeContextMenu();
   const { canGoBack, canGoForward } = useHistoryControls();
 
   return (
@@ -85,5 +87,18 @@ function App() {
     </QueryClientProvider>
   );
 }
+
+const useDisableNativeContextMenu = () => {
+  useEffect(() => {
+    const preventNativeContextMenu = (event: MouseEvent) => {
+      event.preventDefault();
+    };
+
+    document.addEventListener("contextmenu", preventNativeContextMenu);
+    return () => {
+      document.removeEventListener("contextmenu", preventNativeContextMenu);
+    };
+  }, []);
+};
 
 export default App;
