@@ -45,6 +45,8 @@ const MAX_TOOLTIP_ENTRIES = 10;
 const MAX_BAR_WIDTH = 42;
 const BAR_WIDTH_RATIO = 0.7;
 const BAR_BORDER_RADIUS = 2;
+const TOOLTIP_GAP = 8;
+const TOOLTIP_VIEWPORT_MARGIN = 8;
 
 type StackSegment = {
   key: string;
@@ -74,6 +76,10 @@ const StackedBarChart: React.FC<StackedBarChartProps> = ({
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<ECharts | null>(null);
+  const lastResizeRef = useRef({ width: 0, height: 0, rafId: 0 });
+  const lastAppliedOptionSignatureRef = useRef("");
+  const lastOptionDataSignatureRef = useRef("");
+  const tooltipVisibleRef = useRef(false);
 
   const { getColorForKey } = useChartColor();
   const axisTextColor = useCssVarColor("--muted-foreground");
@@ -153,52 +159,79 @@ const StackedBarChart: React.FC<StackedBarChartProps> = ({
         trigger: "item",
         confine: false,
         appendTo: "body",
-
-        position: (point, _params, _dom, _rect, size) => {
-          const margin = 12;
-          const [mouseX, mouseY] = point;
+        alwaysShowContent: false,
+        enterable: false,
+        hideDelay: 0,
+        transitionDuration: 0,
+        displayTransition: false,
+        position: (point, _params, _dom, rect, size) => {
           const chartRect = containerRef.current?.getBoundingClientRect();
+          const viewport = window.visualViewport;
           const viewportWidth =
-            window.visualViewport?.width ??
-            document.documentElement.clientWidth;
+            viewport?.width ?? document.documentElement.clientWidth;
           const viewportHeight =
-            window.visualViewport?.height ??
-            document.documentElement.clientHeight;
-
-          const availableWidth = chartRect
-            ? viewportWidth - chartRect.left
-            : size.viewSize[0];
-          const availableHeight = chartRect
-            ? viewportHeight - chartRect.top
-            : size.viewSize[1];
-          const width = Math.min(
+            viewport?.height ?? document.documentElement.clientHeight;
+          const viewportLeft = viewport?.offsetLeft ?? 0;
+          const viewportTop = viewport?.offsetTop ?? 0;
+          const contentWidth = Math.min(
             size.contentSize[0] || 320,
-            Math.max(0, availableWidth - margin * 2),
+            Math.max(1, viewportWidth - TOOLTIP_VIEWPORT_MARGIN * 2),
           );
-          const height = Math.min(
+          const contentHeight = Math.min(
             size.contentSize[1] || 384,
-            Math.max(0, availableHeight - margin * 2),
+            Math.max(1, viewportHeight - TOOLTIP_VIEWPORT_MARGIN * 2),
           );
-          const maxX = Math.max(margin, availableWidth - width - margin);
-          const maxY = Math.max(margin, availableHeight - height - margin);
 
-          let x = mouseX + margin;
-          let y = mouseY + margin;
-
-          if (x + width > availableWidth - margin) {
-            x = mouseX - width - margin;
+          if (!chartRect) {
+            return [
+              Math.max(TOOLTIP_VIEWPORT_MARGIN, point[0] + TOOLTIP_GAP),
+              Math.max(TOOLTIP_VIEWPORT_MARGIN, point[1] - contentHeight / 2),
+            ];
           }
 
-          if (y + height > availableHeight - margin) {
-            y = mouseY - height - margin;
+          const chartLeft = chartRect.left + viewportLeft;
+          const chartTop = chartRect.top + viewportTop;
+          const viewportRight = viewportLeft + viewportWidth;
+          const viewportBottom = viewportTop + viewportHeight;
+          const itemRect = rect as
+            | { x: number; y: number; width: number; height: number }
+            | undefined;
+          const anchorX = itemRect ? itemRect.x + itemRect.width : point[0];
+          const anchorY = itemRect
+            ? itemRect.y + itemRect.height / 2
+            : point[1];
+          const hoveredViewportX = chartLeft + anchorX;
+          const hoveredViewportY = chartTop + anchorY;
+          const minX = viewportLeft + TOOLTIP_VIEWPORT_MARGIN;
+          const maxX = viewportRight - contentWidth - TOOLTIP_VIEWPORT_MARGIN;
+          const minY = viewportTop + TOOLTIP_VIEWPORT_MARGIN;
+          const maxY = viewportBottom - contentHeight - TOOLTIP_VIEWPORT_MARGIN;
+
+          let viewportX: number;
+
+          if (
+            hoveredViewportX + TOOLTIP_GAP + contentWidth <=
+            viewportRight - TOOLTIP_VIEWPORT_MARGIN
+          ) {
+            viewportX = hoveredViewportX + TOOLTIP_GAP;
+          } else if (
+            hoveredViewportX - TOOLTIP_GAP - contentWidth >=
+            viewportLeft + TOOLTIP_VIEWPORT_MARGIN
+          ) {
+            viewportX = hoveredViewportX - contentWidth - TOOLTIP_GAP;
+          } else if (hoveredViewportX > viewportLeft + viewportWidth / 2) {
+            viewportX = minX;
+          } else {
+            viewportX = maxX;
           }
 
-          return [
-            Math.min(Math.max(margin, x), maxX),
-            Math.min(Math.max(margin, y), maxY),
-          ];
+          const viewportY = Math.min(
+            Math.max(minY, hoveredViewportY - contentHeight / 2),
+            maxY,
+          );
+
+          return [viewportX - chartLeft, viewportY - chartTop];
         },
-
         backgroundColor: backgroundColor,
         borderColor: borderColor,
         borderWidth: 1,
@@ -219,7 +252,11 @@ const StackedBarChart: React.FC<StackedBarChartProps> = ({
           const rowIndex = hoveredSegment?.rowIndex ?? -1;
           const row = stackedRows[rowIndex];
 
-          if (!hoveredSegment || !row) return "";
+          if (!hoveredSegment || !row) {
+            return "";
+          }
+
+          tooltipVisibleRef.current = true;
 
           const visibleItems = (row?.segments ?? [])
             .slice()
@@ -280,7 +317,7 @@ const StackedBarChart: React.FC<StackedBarChartProps> = ({
                     overflow-y:auto;
                     overscroll-behavior:contain;
                     scrollbar-width: none;
-                    -ms-oveflow-style: none;
+                    -ms-overflow-style: none;
                     color:${foregroundColor};
                 ">
                   <div style="font-weight:600;margin-bottom:4px;color:${foregroundColor};">
@@ -429,6 +466,52 @@ const StackedBarChart: React.FC<StackedBarChartProps> = ({
     stackedRows,
   ]);
 
+  const optionDataSignature = useMemo(
+    () =>
+      stackedRows
+        .map(
+          (row) =>
+            `${row.label}:${row.total}:${row.segments
+              .map(
+                (segment) =>
+                  `${segment.key}:${segment.start}:${segment.end}:${segment.value}`,
+              )
+              .join(",")}`,
+        )
+        .join("|"),
+    [stackedRows],
+  );
+
+  const optionSignature = useMemo(
+    () =>
+      [
+        optionDataSignature,
+        axisBottom,
+        axisLeft,
+        axisTextColor,
+        backgroundColor,
+        borderColor,
+        bucketLabel,
+        foregroundColor,
+        gridColor,
+        hoverBackground,
+        mutedForegroundColor,
+      ].join("::"),
+    [
+      axisBottom,
+      axisLeft,
+      axisTextColor,
+      backgroundColor,
+      borderColor,
+      bucketLabel,
+      foregroundColor,
+      gridColor,
+      hoverBackground,
+      mutedForegroundColor,
+      optionDataSignature,
+    ],
+  );
+
   useEffect(() => {
     if (!containerRef.current) return;
 
@@ -445,24 +528,146 @@ const StackedBarChart: React.FC<StackedBarChartProps> = ({
   useEffect(() => {
     if (!chartRef.current) return;
 
-    chartRef.current.dispatchAction({ type: "hideTip" });
-    chartRef.current.dispatchAction({ type: "downplay" });
+    const chart = chartRef.current as ECharts & {
+      on: (eventName: string, handler: (params: unknown) => void) => void;
+      off: (eventName: string, handler: (params: unknown) => void) => void;
+    };
+    const handleShowTip = () => {
+      tooltipVisibleRef.current = true;
+    };
+    const handleHideTip = () => {
+      tooltipVisibleRef.current = false;
+    };
+
+    chart.on("showTip", handleShowTip);
+    chart.on("hideTip", handleHideTip);
+
+    return () => {
+      chart.off("showTip", handleShowTip);
+      chart.off("hideTip", handleHideTip);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!chartRef.current) return;
+
+    const previousDataSignature = lastOptionDataSignatureRef.current;
+    const previousOptionSignature = lastAppliedOptionSignatureRef.current;
+    const didDataChange = previousDataSignature !== optionDataSignature;
+    const didOptionChange = previousOptionSignature !== optionSignature;
+
+    if (!didOptionChange) return;
+
+    if (didDataChange) {
+      chartRef.current.dispatchAction({ type: "hideTip" });
+      chartRef.current.dispatchAction({ type: "downplay" });
+    }
+
     chartRef.current.setOption(option, {
       notMerge: true,
       lazyUpdate: false,
     });
-  }, [option]);
+    lastOptionDataSignatureRef.current = optionDataSignature;
+    lastAppliedOptionSignatureRef.current = optionSignature;
+  }, [
+    flatSegments.length,
+    keys.length,
+    option,
+    optionDataSignature,
+    optionSignature,
+    stackedRows.length,
+  ]);
 
   useEffect(() => {
     if (!containerRef.current || !chartRef.current) return;
 
-    const resizeObserver = new ResizeObserver(() => {
-      chartRef.current?.resize();
+    const container = containerRef.current;
+    const hideTooltip = () => {
+      tooltipVisibleRef.current = false;
+      chartRef.current?.dispatchAction({ type: "hideTip" });
+      chartRef.current?.dispatchAction({ type: "downplay" });
+    };
+    const isPointerInsideChart = (event: MouseEvent | PointerEvent) => {
+      const rect = container.getBoundingClientRect();
+      return (
+        event.clientX >= rect.left &&
+        event.clientX <= rect.right &&
+        event.clientY >= rect.top &&
+        event.clientY <= rect.bottom
+      );
+    };
+    const handleMouseLeave = () => {
+      hideTooltip();
+    };
+    const handlePointerLeave = () => {
+      hideTooltip();
+    };
+    const handleDocumentPointerMove = (event: PointerEvent) => {
+      if (!tooltipVisibleRef.current || isPointerInsideChart(event)) return;
+
+      hideTooltip();
+    };
+    const handleDocumentMouseMove = (event: MouseEvent) => {
+      if (!tooltipVisibleRef.current || isPointerInsideChart(event)) return;
+
+      hideTooltip();
+    };
+    const handleWindowBlur = () => {
+      if (!tooltipVisibleRef.current) return;
+
+      hideTooltip();
+    };
+    const handleDocumentScroll = () => {
+      if (!tooltipVisibleRef.current) return;
+
+      hideTooltip();
+    };
+
+    container.addEventListener("mouseleave", handleMouseLeave);
+    container.addEventListener("pointerleave", handlePointerLeave);
+    document.addEventListener("pointermove", handleDocumentPointerMove, true);
+    document.addEventListener("mousemove", handleDocumentMouseMove, true);
+    document.addEventListener("scroll", handleDocumentScroll, true);
+    window.addEventListener("blur", handleWindowBlur);
+
+    const resizeState = lastResizeRef.current;
+    const resizeObserver = new ResizeObserver(([entry]) => {
+      const { width, height } = entry.contentRect;
+
+      if (
+        Math.round(width) === resizeState.width &&
+        Math.round(height) === resizeState.height
+      ) {
+        return;
+      }
+
+      resizeState.width = Math.round(width);
+      resizeState.height = Math.round(height);
+
+      if (resizeState.rafId) cancelAnimationFrame(resizeState.rafId);
+      resizeState.rafId = requestAnimationFrame(() => {
+        chartRef.current?.resize();
+        resizeState.rafId = 0;
+      });
     });
 
     resizeObserver.observe(containerRef.current);
 
     return () => {
+      container.removeEventListener("mouseleave", handleMouseLeave);
+      container.removeEventListener("pointerleave", handlePointerLeave);
+      document.removeEventListener(
+        "pointermove",
+        handleDocumentPointerMove,
+        true,
+      );
+      document.removeEventListener("mousemove", handleDocumentMouseMove, true);
+      document.removeEventListener("scroll", handleDocumentScroll, true);
+      window.removeEventListener("blur", handleWindowBlur);
+      if (resizeState.rafId) {
+        cancelAnimationFrame(resizeState.rafId);
+        resizeState.rafId = 0;
+      }
       resizeObserver.disconnect();
     };
   }, []);
