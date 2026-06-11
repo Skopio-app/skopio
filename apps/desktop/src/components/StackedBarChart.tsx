@@ -82,6 +82,7 @@ const StackedBarChart: React.FC<StackedBarChartProps> = ({
   const mutedForegroundColor = useCssVarColor("--muted-foreground");
   const borderColor = useCssVarColor("--border");
   const gridColor = useCssVarColor("--input");
+  const hoverBackground = `color-mix(in oklch, ${borderColor} 30%, transparent)`;
 
   const { stackedRows, flatSegments } = useMemo<{
     stackedRows: StackedRow[];
@@ -215,8 +216,10 @@ const StackedBarChart: React.FC<StackedBarChartProps> = ({
           const items = Array.isArray(params) ? params : [params];
           const dataIndex = items[0]?.dataIndex ?? -1;
           const hoveredSegment = flatSegments[dataIndex];
-          const rowIndex = flatSegments[dataIndex]?.rowIndex ?? -1;
+          const rowIndex = hoveredSegment?.rowIndex ?? -1;
           const row = stackedRows[rowIndex];
+
+          if (!hoveredSegment || !row) return "";
 
           const visibleItems = (row?.segments ?? [])
             .slice()
@@ -228,7 +231,7 @@ const StackedBarChart: React.FC<StackedBarChartProps> = ({
           const rows = visibleItems
             .map((item) => {
               const isHighlighted =
-                hoveredSegment.rowIndex === item.rowIndex &&
+                hoveredSegment?.rowIndex === item.rowIndex &&
                 hoveredSegment.key === item.key;
               const name = truncateValue(item.key, 25);
               const duration = formatDuration(item.value);
@@ -242,7 +245,7 @@ const StackedBarChart: React.FC<StackedBarChartProps> = ({
                   margin:1px -6px;
                   border-radius:4px;
                   border-left:3px solid ${isHighlighted ? item.color : "transparent"};
-                  background:${isHighlighted ? borderColor : "transparent"};
+                  background:${isHighlighted ? hoverBackground : "transparent"};
                   font-weight:${isHighlighted ? 600 : 400};
                 ">
                   <span style="
@@ -422,6 +425,7 @@ const StackedBarChart: React.FC<StackedBarChartProps> = ({
     data,
     flatSegments,
     gridColor,
+    hoverBackground,
     stackedRows,
   ]);
 
@@ -441,9 +445,11 @@ const StackedBarChart: React.FC<StackedBarChartProps> = ({
   useEffect(() => {
     if (!chartRef.current) return;
 
+    chartRef.current.dispatchAction({ type: "hideTip" });
+    chartRef.current.dispatchAction({ type: "downplay" });
     chartRef.current.setOption(option, {
       notMerge: true,
-      lazyUpdate: true,
+      lazyUpdate: false,
     });
   }, [option]);
 
