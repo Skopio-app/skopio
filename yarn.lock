@@ -2820,6 +2820,7 @@ __metadata:
     "@tauri-apps/api": "npm:^2.11.0"
     "@tauri-apps/cli": "npm:^2.11.2"
     "@tauri-apps/plugin-autostart": "npm:^2.5.1"
+    "@tauri-apps/plugin-dialog": "npm:^2.7.1"
     "@tauri-apps/plugin-global-shortcut": "npm:^2.3.1"
     "@tauri-apps/plugin-process": "npm:^2.3.1"
     "@tauri-apps/plugin-updater": "npm:^2.10.1"
@@ -3459,6 +3460,15 @@ __metadata:
   dependencies:
     "@tauri-apps/api": "npm:^2.8.0"
   checksum: 10c0/b66fe2b87fd77e4b2c73b04fb93b34ba1fea32cadf74c01da6df037a508ca8c03aba9bcf9ef13e949effc219b26936d0596717f0d031ee552d60c069406026dd
+  languageName: node
+  linkType: hard
+
+"@tauri-apps/plugin-dialog@npm:^2.7.1":
+  version: 2.7.1
+  resolution: "@tauri-apps/plugin-dialog@npm:2.7.1"
+  dependencies:
+    "@tauri-apps/api": "npm:^2.11.0"
+  checksum: 10c0/ae441f1fa34ef0c1494e4e4ee1d7e91ce7d140a1d6f7282c844c52fc5a021676570be4472473a8d3cfb404e42c2570caf4567d535f02bbeaf11da903c224c576
   languageName: node
   linkType: hard
 

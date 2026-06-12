@@ -2,7 +2,6 @@ use tauri::{
     menu::{IconMenuItemBuilder, Menu, MenuItemKind, PredefinedMenuItem, Submenu, SubmenuBuilder},
     AppHandle, Manager, Runtime,
 };
-use tauri_plugin_updater::UpdaterExt;
 use tracing::error;
 
 use crate::ui::window::{WindowExt, WindowKind};
@@ -29,7 +28,7 @@ impl<R: Runtime> MenuExt<R> for AppHandle<R> {
         let default_view_items = take_menu_items(&view_menu)?;
 
         let check_updates =
-            IconMenuItemBuilder::with_id(APP_CHECK_UPDATES_ID, "Check for updates...")
+            IconMenuItemBuilder::with_id(APP_CHECK_UPDATES_ID, "Check for Updates...")
                 .build(self)?;
         let settings = IconMenuItemBuilder::with_id(APP_SETTINGS_ID, "Preferences...")
             .accelerator("CmdOrCtrl+,")
@@ -98,15 +97,12 @@ impl<R: Runtime> MenuExt<R> for AppHandle<R> {
         self.on_menu_event(|app, event| {
             let result = match event.id().as_ref() {
                 APP_SETTINGS_ID => app.show_window(WindowKind::Settings).map(|_| ()),
-                APP_CHECK_UPDATES_ID => {
-                    let app = app.clone();
-                    tauri::async_runtime::spawn(async move {
-                        if let Err(err) = check_for_updates(app).await {
-                            error!(%err, "Failed to check for updates");
-                        }
-                    });
-                    Ok(())
-                }
+                APP_CHECK_UPDATES_ID => app
+                    .get_webview_window("main")
+                    .map(|window| {
+                        window.eval("window.dispatchEvent(new Event('skopio:check-for-updates'));")
+                    })
+                    .unwrap_or(Ok(())),
                 id => {
                     app.get_webview_window("main")
                         .map(|window| match id {
@@ -151,29 +147,6 @@ fn get_app_menu<R: Runtime>(app: &AppHandle<R>, menu: &Menu<R>) -> tauri::Result
 
         Ok(())
     })
-}
-
-async fn check_for_updates<R: Runtime>(app: AppHandle<R>) -> tauri_plugin_updater::Result<()> {
-    if let Some(update) = app.updater()?.check().await? {
-        let mut downloaded = 0;
-
-        update
-            .download_and_install(
-                |chunk_length, content_length| {
-                    downloaded += chunk_length;
-                    tracing::info!(downloaded, content_length, "Downloaded app update chunk");
-                },
-                || {
-                    tracing::info!("App update download finished");
-                },
-            )
-            .await?;
-
-        tracing::info!("App update installed; restarting");
-        app.restart();
-    }
-
-    Ok(())
 }
 
 fn get_view_menu<R: Runtime>(app: &AppHandle<R>, menu: &Menu<R>) -> tauri::Result<Submenu<R>> {
