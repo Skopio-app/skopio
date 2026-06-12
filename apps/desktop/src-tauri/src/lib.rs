@@ -14,6 +14,7 @@ use crate::{
     goals_service::GoalService,
     server::{ServerManagerExt, ServerStatus},
     ui::{
+        menu::MenuExt,
         tray::TrayExt,
         window::{NotificationPayload, WindowExt, WindowKind},
     },
@@ -73,6 +74,7 @@ pub async fn run() {
                 }
             });
 
+            app_handle.init_menu()?;
             app_handle.show_window(WindowKind::Main)?;
 
             app.init_tray()?;
@@ -115,6 +117,7 @@ pub async fn run() {
             tauri_plugin_autostart::MacosLauncher::LaunchAgent,
             Some(vec!["--background"]),
         ))
+        .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
@@ -247,7 +250,6 @@ fn make_specta_builder<R: Runtime>() -> tauri_specta::Builder<R> {
             crate::network::afk_events::fetch_afk_events,
             crate::ui::window::dismiss_notification_window::<tauri::Wry>,
             crate::ui::window::show_window::<tauri::Wry>,
-            crate::ui::window::open_devtools::<tauri::Wry>,
             crate::monitored_app::get_open_apps,
             crate::server::get_server_status::<tauri::Wry>,
         ])

@@ -13,6 +13,7 @@ import {
   QueryClient,
   QueryClientProvider,
 } from "@tanstack/react-query";
+import { useEffect } from "react";
 import { ReactQueryDevtools } from "@tanstack/react-query-devtools";
 import {
   goBack,
@@ -21,8 +22,6 @@ import {
   useGlobalShortcutListener,
   useHistoryControls,
 } from "@/utils/shortcut";
-import { isDev } from "@/utils/environment";
-import { commands } from "@/types/tauri.gen";
 import PermissionsDialog from "@/components/settings/PermissionsDialog";
 import UpdaterToast from "@/components/updater/UpdaterToast";
 import ThemeProvider from "@/components/settings/ThemeProvider";
@@ -44,6 +43,7 @@ const queryClient = new QueryClient({
 
 function App() {
   useGlobalShortcutListener();
+  useDisableNativeContextMenu();
   const { canGoBack, canGoForward } = useHistoryControls();
 
   return (
@@ -58,9 +58,7 @@ function App() {
               <Outlet />
             </ContextMenuTrigger>
 
-            <ContextMenuContent
-              className={cn("w-42", isDev() ? "h-32" : "h-24")}
-            >
+            <ContextMenuContent className={cn("w-42", "h-24")}>
               <ContextMenuItem
                 className="text-xs"
                 disabled={!canGoBack}
@@ -81,16 +79,6 @@ function App() {
                 Reload
                 <ContextMenuShortcut>⌘R</ContextMenuShortcut>
               </ContextMenuItem>
-              {isDev() && (
-                <ContextMenuItem
-                  inset
-                  className="text-xs"
-                  disabled={!isDev()}
-                  onClick={() => commands.openDevtools()}
-                >
-                  Inspect Element
-                </ContextMenuItem>
-              )}
             </ContextMenuContent>
           </ContextMenu>
         </TourProvider>
@@ -99,5 +87,18 @@ function App() {
     </QueryClientProvider>
   );
 }
+
+const useDisableNativeContextMenu = () => {
+  useEffect(() => {
+    const preventNativeContextMenu = (event: MouseEvent) => {
+      event.preventDefault();
+    };
+
+    document.addEventListener("contextmenu", preventNativeContextMenu);
+    return () => {
+      document.removeEventListener("contextmenu", preventNativeContextMenu);
+    };
+  }, []);
+};
 
 export default App;

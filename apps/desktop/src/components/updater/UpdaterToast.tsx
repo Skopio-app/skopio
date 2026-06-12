@@ -1,5 +1,6 @@
 import { Button } from "@skopio/ui";
 import { toast } from "sonner";
+import { message } from "@tauri-apps/plugin-dialog";
 import { relaunch } from "@tauri-apps/plugin-process";
 import { check } from "@tauri-apps/plugin-updater";
 import { useEffect } from "react";
@@ -16,6 +17,9 @@ type ProgressState = {
   date?: string;
   error?: string;
 };
+
+const CHECK_FOR_UPDATES_EVENT = "skopio:check-for-updates";
+const CHECKING_FOR_UPDATES_TOAST_ID = "checking-for-updates";
 
 const formatMB = (n: number) => (n / (1024 * 1024)).toFixed(1);
 
@@ -244,8 +248,42 @@ const showUpdaterToast = (meta: {
   return api;
 };
 
-const runUpdaterFlow = async () => {
-  const update = await check().catch((e) => console.warn("Updater error: ", e));
+const runUpdaterFlow = async ({
+  notifyError = false,
+  onNoUpdate,
+  showCheckingToast = false,
+}: {
+  notifyError?: boolean;
+  onNoUpdate?: () => void;
+  showCheckingToast?: boolean;
+} = {}) => {
+  if (showCheckingToast) {
+    toast.loading("Checking for updates...", {
+      id: CHECKING_FOR_UPDATES_TOAST_ID,
+      duration: Infinity,
+    });
+  }
+
+  const update = await check().catch((e) => {
+    console.warn("Updater error: ", e);
+    if (showCheckingToast) {
+      toast.dismiss(CHECKING_FOR_UPDATES_TOAST_ID);
+    }
+    if (notifyError) {
+      toast.error("Failed to check for updates.");
+    }
+    return null;
+  });
+
+  if (showCheckingToast) {
+    toast.dismiss(CHECKING_FOR_UPDATES_TOAST_ID);
+  }
+
+  if (!update && onNoUpdate) {
+    onNoUpdate();
+    return;
+  }
+
   if (!update) return;
 
   const ui = showUpdaterToast({
@@ -285,7 +323,26 @@ const runUpdaterFlow = async () => {
 const UpdaterToast = () => {
   useEffect(() => {
     void runUpdaterFlow();
+
+    const checkForUpdates = () => {
+      void runUpdaterFlow({
+        notifyError: true,
+        showCheckingToast: true,
+        onNoUpdate: () => {
+          void message("You are running the latest available version.", {
+            title: "Skopio is up to date",
+            kind: "info",
+          });
+        },
+      });
+    };
+
+    window.addEventListener(CHECK_FOR_UPDATES_EVENT, checkForUpdates);
+    return () => {
+      window.removeEventListener(CHECK_FOR_UPDATES_EVENT, checkForUpdates);
+    };
   }, []);
+
   return null;
 };
 

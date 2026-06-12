@@ -16,7 +16,9 @@ import {
   SidebarMenuSkeleton,
   SidebarProvider,
   SidebarTrigger,
+  useSidebar,
 } from "@skopio/ui";
+import { useEffect } from "react";
 import { Outlet, useLocation, useNavigate } from "react-router";
 import { builtinExtensionRegistry } from "@/extensions/registry";
 import { LAST_ACTIVE_TAB } from "@/utils/constants";
@@ -56,6 +58,7 @@ const DashboardLayout = () => {
 
   return (
     <SidebarProvider className="bg-muted fixed inset-0 overflow-hidden">
+      <SidebarMenuBridge />
       <div
         data-tauri-drag-region
         className={cn(
@@ -148,6 +151,19 @@ const DashboardLayout = () => {
       </SidebarInset>
     </SidebarProvider>
   );
+};
+
+const SidebarMenuBridge = () => {
+  const { toggleSidebar } = useSidebar();
+
+  useEffect(() => {
+    window.addEventListener("skopio:toggle-sidebar", toggleSidebar);
+    return () => {
+      window.removeEventListener("skopio:toggle-sidebar", toggleSidebar);
+    };
+  }, [toggleSidebar]);
+
+  return null;
 };
 
 export default DashboardLayout;

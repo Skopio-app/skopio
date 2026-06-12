@@ -1,17 +1,22 @@
 import { useColorCache } from "@/stores/useColorCache";
 import { useOrdinalColorScale } from "@nivo/colors";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 export const useChartColor = () => {
   const getColorScale = useOrdinalColorScale({ scheme: "nivo" }, "id");
+  const getColorScaleRef = useRef(getColorScale);
 
-  const getColorForKey = (key: string): string => {
+  useEffect(() => {
+    getColorScaleRef.current = getColorScale;
+  }, [getColorScale]);
+
+  const getColorForKey = useCallback((key: string): string => {
     const cachedColor = useColorCache.getState().getColor(key);
     if (cachedColor) return cachedColor;
-    const newColor = getColorScale({ id: key });
+    const newColor = getColorScaleRef.current({ id: key });
     useColorCache.getState().setColor(key, newColor);
     return newColor;
-  };
+  }, []);
 
   return { getColorForKey };
 };
