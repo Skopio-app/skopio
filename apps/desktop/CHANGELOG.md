@@ -23,6 +23,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v0.1.16] - 2026-06-13
+
+### Fixed
+
+- Stacked bar chart tooltip now stops flickering when space is constricted.
+- Timeline now loads without issue instead of showing empty view.
+
+### Added
+
+- Tooltip highlights hovered stack item.
+- New History menu item, and Preferences and Check for Updates sub menu items.
+
+---
+
 ## [v0.1.15] - 2026-06-04
 
 ### Fixed
