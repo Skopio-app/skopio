@@ -6,15 +6,15 @@ use core_foundation::{
     array::CFArrayRef,
     base::{CFGetTypeID, CFRelease, CFRetain, CFTypeRef, TCFType},
     number::{
-        kCFNumberFloatType, CFBooleanGetTypeID, CFBooleanGetValue, CFBooleanRef, CFNumberGetTypeID,
-        CFNumberGetValue, CFNumberRef,
+        CFBooleanGetTypeID, CFBooleanGetValue, CFBooleanRef, CFNumberGetTypeID, CFNumberGetValue,
+        CFNumberRef, kCFNumberFloatType,
     },
     string::CFString,
     url::CFURL,
 };
 
 #[link(name = "ApplicationServices", kind = "framework")]
-extern "C" {
+unsafe extern "C" {
     fn AXUIElementCreateApplication(pid: i32) -> *const c_void;
     fn AXUIElementCopyAttributeValue(
         element: *const c_void,
@@ -42,12 +42,8 @@ impl AxElement {
     /// - Caller must ensure `pid` refers to a running process on this system.
     /// - The returned element retains a CoreFoundation object and **must** be dropped.
     pub unsafe fn app(pid: i32) -> Option<Self> {
-        let p = AXUIElementCreateApplication(pid);
-        if p.is_null() {
-            None
-        } else {
-            Some(Self(p))
-        }
+        let p = unsafe { AXUIElementCreateApplication(pid) };
+        if p.is_null() { None } else { Some(Self(p)) }
     }
 
     /// Copy a named AX attribute from this element.
@@ -57,8 +53,9 @@ impl AxElement {
     /// - Returned `CFTypeRef` is retained; the caller is responsible for eventual release.
     pub unsafe fn copy_attr(&self, name: &str) -> Option<CFTypeRef> {
         let mut out: *const c_void = ptr::null();
-        let err =
-            AXUIElementCopyAttributeValue(self.0, k(name).as_concrete_TypeRef() as _, &mut out);
+        let err = unsafe {
+            AXUIElementCopyAttributeValue(self.0, k(name).as_concrete_TypeRef() as _, &mut out)
+        };
         if err == ERR_SUCCESS && !out.is_null() {
             Some(out as CFTypeRef)
         } else {
@@ -72,13 +69,13 @@ impl AxElement {
     /// - Traversing the AX tree is inherently racy; nodes can disappear between calls.
     pub unsafe fn children(&self) -> Vec<Self> {
         let mut out = vec![];
-        if let Some(arr) = self.copy_attr("AXChildren") {
+        if let Some(arr) = unsafe { self.copy_attr("AXChildren") } {
             let cf_arr = arr as CFArrayRef;
-            let count = CFArrayGetCount(cf_arr);
+            let count = unsafe { CFArrayGetCount(cf_arr) };
             if count > 0 {
                 out.reserve(count as usize);
                 for i in 0..count {
-                    let item = CFArrayGetValueAtIndex(cf_arr, i);
+                    let item = unsafe { CFArrayGetValueAtIndex(cf_arr, i) };
                     if !item.is_null() {
                         unsafe { CFRetain(item) };
                         out.push(Self(item));
@@ -98,8 +95,8 @@ impl AxElement {
     /// - The returned string is created from a retained CF object whuch we wrap in
     ///   `CFString::wrap_under_create_rule` to manage release.
     pub unsafe fn role(&self) -> Option<String> {
-        self.copy_attr("AXRole").map(|t| {
-            let s = CFString::wrap_under_create_rule(t as _);
+        unsafe { self.copy_attr("AXRole") }.map(|t| {
+            let s = unsafe { CFString::wrap_under_create_rule(t as _) };
             s.to_string()
         })
     }
@@ -109,8 +106,8 @@ impl AxElement {
     /// # Safety
     /// - See notes in [`role`]; we wrap under create rule to ensure CFRelease is called.
     pub unsafe fn title(&self) -> Option<String> {
-        self.copy_attr("AXTitle").map(|t| {
-            let s = CFString::wrap_under_create_rule(t as _);
+        unsafe { self.copy_attr("AXTitle") }.map(|t| {
+            let s = unsafe { CFString::wrap_under_create_rule(t as _) };
             s.to_string()
         })
     }
@@ -121,13 +118,13 @@ impl AxElement {
     /// - If the attribute is CFURL, we wrap it and ask for `absolute().get_string()`;
     ///   both wrappers observe CoreFoundation ownership correctly.
     pub unsafe fn url(&self) -> Option<String> {
-        self.copy_attr("AXURL").map(|t| {
-            if CFURL::type_id() == CFGetTypeID(t) {
-                let u = CFURL::wrap_under_create_rule(t as _);
+        unsafe { self.copy_attr("AXURL") }.map(|t| {
+            if CFURL::type_id() == unsafe { CFGetTypeID(t) } {
+                let u = unsafe { CFURL::wrap_under_create_rule(t as _) };
                 let abs = u.absolute();
                 abs.get_string().to_string()
             } else {
-                let s = CFString::wrap_under_create_rule(t as _);
+                let s = unsafe { CFString::wrap_under_create_rule(t as _) };
                 s.to_string()
             }
         })
@@ -141,7 +138,7 @@ impl AxElement {
     /// - The returned element is retained and must be dropped to avoid leaks (handled by `Drop`).
     /// - The focused window may change asynchronously; this may be stale by the time it's used.
     pub unsafe fn focused_window(&self) -> Option<Self> {
-        self.copy_attr("AXFocusedWindow").map(|p| Self(p as _))
+        unsafe { self.copy_attr("AXFocusedWindow") }.map(|p| Self(p as _))
     }
 
     /// Depth-first search for the first descendant with the given AX role.
@@ -154,10 +151,10 @@ impl AxElement {
             if depth > max_depth {
                 return None;
             }
-            if let Some(r) = unsafe { node.role() } {
-                if r == role {
-                    return Some(node.clone());
-                }
+            if let Some(r) = unsafe { node.role() }
+                && r == role
+            {
+                return Some(node.clone());
             }
             for child in unsafe { node.children() } {
                 if let Some(found) = dfs(&child, role, depth + 1, max_depth) {
@@ -174,13 +171,13 @@ impl AxElement {
     /// # Safety
     /// - Same ownership rules as `url()`: we wrap the returned CF object under create rule.
     pub unsafe fn document(&self) -> Option<String> {
-        self.copy_attr("AXDocument").map(|t| {
-            if CFURL::type_id() == CFGetTypeID(t) {
-                let u = CFURL::wrap_under_create_rule(t as _);
+        unsafe { self.copy_attr("AXDocument") }.map(|t| {
+            if CFURL::type_id() == unsafe { CFGetTypeID(t) } {
+                let u = unsafe { CFURL::wrap_under_create_rule(t as _) };
                 let abs = u.absolute();
                 abs.get_string().to_string()
             } else {
-                let s = CFString::wrap_under_create_rule(t as _);
+                let s = unsafe { CFString::wrap_under_create_rule(t as _) };
                 s.to_string()
             }
         })
@@ -191,8 +188,8 @@ impl AxElement {
     /// # Safety
     /// - Assumes the attribute is a `CFString`. Wrapping under create rule ensures release.
     pub unsafe fn string_attr(&self, name: &str) -> Option<String> {
-        self.copy_attr(name).map(|t| {
-            let s = CFString::wrap_under_create_rule(t as _);
+        unsafe { self.copy_attr(name) }.map(|t| {
+            let s = unsafe { CFString::wrap_under_create_rule(t as _) };
             s.to_string()
         })
     }
@@ -203,14 +200,18 @@ impl AxElement {
     /// - The raw `CFTypeRef` is retained; we **must** `CFRelease` it after we use since we
     ///   don't wrap it in a RAII type here.
     pub unsafe fn bool_attr(&self, name: &str) -> Option<bool> {
-        self.copy_attr(name).and_then(|t| {
+        let t = unsafe { self.copy_attr(name) }?;
+        let value = unsafe {
             if CFGetTypeID(t) == CFBooleanGetTypeID() {
-                let b = t as CFBooleanRef;
-                Some(CFBooleanGetValue(b))
+                Some(CFBooleanGetValue(t as CFBooleanRef))
             } else {
                 None
             }
-        })
+        };
+        unsafe {
+            CFRelease(t as _);
+        }
+        value
     }
 
     /// Read a numeric AX attribute as `f64`.
@@ -218,20 +219,21 @@ impl AxElement {
     /// # Safety
     /// - The raw `CFTypeRef` is retained; we explicitly `CFRelease` after extraction.
     pub unsafe fn number_attr_f64(&self, name: &str) -> Option<f64> {
-        self.copy_attr(name).and_then(|t| {
+        let t = unsafe { self.copy_attr(name) }?;
+        let value = unsafe {
             if CFGetTypeID(t) == CFNumberGetTypeID() {
                 let n = t as CFNumberRef;
                 let mut out: f64 = 0.0;
                 let ok = CFNumberGetValue(n, kCFNumberFloatType, &mut out as *mut _ as *mut _);
-                if ok {
-                    Some(out)
-                } else {
-                    None
-                }
+                if ok { Some(out) } else { None }
             } else {
                 None
             }
-        })
+        };
+        unsafe {
+            CFRelease(t as _);
+        }
+        value
     }
 
     /// Convenience accessor for `AXIdentifier` (if present).
@@ -239,7 +241,7 @@ impl AxElement {
     /// # Safety
     /// - Delegates to `string_attr`, which handles ownership correctly.
     pub unsafe fn identifier(&self) -> Option<String> {
-        self.string_attr("AXIdentifier")
+        unsafe { self.string_attr("AXIdentifier") }
     }
 
     /// Convenience accessor for `AXEnabled` (if present).
@@ -247,7 +249,7 @@ impl AxElement {
     /// # Safety
     /// - Delegates to `bool_attr`, which balances ownership via `CFRelease`.
     pub unsafe fn enabled(&self) -> Option<bool> {
-        self.bool_attr("AXEnabled")
+        unsafe { self.bool_attr("AXEnabled") }
     }
 }
 

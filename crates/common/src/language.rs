@@ -16,10 +16,8 @@ pub fn detect_language(file_path: &str) -> Option<String> {
 
     languages.get_statistics(&[decoded_path.as_path()], &[], &config);
 
-    let detected_language = languages
+    languages
         .iter()
         .max_by_key(|(_, stats)| stats.code)
-        .map(|(lang, _)| lang.name().to_string());
-
-    detected_language
+        .map(|(lang, _)| lang.name().to_string())
 }

@@ -3,7 +3,7 @@ use std::path::Path;
 #[cfg(debug_assertions)]
 use sqlx::{Row, SqlitePool};
 
-use crate::{error::DBError, DBContext};
+use crate::{DBContext, error::DBError};
 
 pub fn extract_db_file_path(database_url: &str) -> std::path::PathBuf {
     let db_path = database_url.trim_start_matches("sqlite://");

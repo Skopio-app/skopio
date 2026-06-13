@@ -2,8 +2,8 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use db::{
-    desktop::{afk_events::AFKEvent, events::Event},
     DBContext,
+    desktop::{afk_events::AFKEvent, events::Event},
 };
 
 #[async_trait]

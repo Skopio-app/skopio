@@ -509,26 +509,27 @@ fn get_browser_category(url: &str) -> Category {
 /// - AX trees are dynamic; elements may disappear during traversal, so results are best-effort.
 /// - The function must be run on macOS with the app having `AXIsProcessTrusted()` privileges.
 pub unsafe fn is_xcode_compiling(pid: i32) -> Result<bool, AxError> {
-    let app = AxElement::app(pid).ok_or(AxError::AccessibilityNotGranted)?;
-    let win = match app.focused_window() {
+    let app = unsafe { AxElement::app(pid) }.ok_or(AxError::AccessibilityNotGranted)?;
+    let win = match unsafe { app.focused_window() } {
         Some(w) => w,
         None => return Ok(false),
     };
 
-    if let Some(toolbar) = win.find_descendants("AXToolbar", 6) {
+    if let Some(toolbar) = unsafe { win.find_descendants("AXToolbar", 6) } {
         let mut stack = vec![toolbar.clone()];
         while let Some(node) = stack.pop() {
-            if let Some(role) = node.role() {
+            if let Some(role) = unsafe { node.role() } {
                 if role == "AXProgressIndicator" {
-                    if let Some(v) = node.number_attr_f64("AXValue") {
-                        if v.is_finite() && v > 0.0 && v <= 1.0 {
-                            return Ok(true);
-                        }
+                    if let Some(v) = unsafe { node.number_attr_f64("AXValue") }
+                        && v.is_finite()
+                        && v > 0.0
+                        && v <= 1.0
+                    {
+                        return Ok(true);
                     }
 
-                    if node
-                        .string_attr("AXDescription")
-                        .or_else(|| node.title())
+                    if unsafe { node.string_attr("AXDescription") }
+                        .or_else(|| unsafe { node.title() })
                         .map(|s| s.contains("Build") || s.contains("Compile") || s.contains("Link"))
                         .unwrap_or(false)
                     {
@@ -537,9 +538,8 @@ pub unsafe fn is_xcode_compiling(pid: i32) -> Result<bool, AxError> {
                 }
 
                 if role == "AXStaticText"
-                    && node
-                        .title()
-                        .or_else(|| node.string_attr("AXDescription"))
+                    && unsafe { node.title() }
+                        .or_else(|| unsafe { node.string_attr("AXDescription") })
                         .map(|s| {
                             s.contains("Building")
                                 || s.contains("Compiling")
@@ -550,17 +550,15 @@ pub unsafe fn is_xcode_compiling(pid: i32) -> Result<bool, AxError> {
                     return Ok(true);
                 }
             }
-            stack.extend(node.children());
+            stack.extend(unsafe { node.children() });
         }
     }
 
-    if let Some(text) = win
-        .find_descendants("AXStaticText", 12)
-        .and_then(|el| el.title().or_else(|| el.string_attr("AXDescription")))
+    if let Some(text) = unsafe { win.find_descendants("AXStaticText", 12) }
+        .and_then(|el| unsafe { el.title() }.or_else(|| unsafe { el.string_attr("AXDescription") }))
+        && (text.contains("Building") || text.contains("Compiling") || text.contains("Linking"))
     {
-        if text.contains("Building") || text.contains("Compiling") || text.contains("Linking") {
-            return Ok(true);
-        }
+        return Ok(true);
     }
 
     Ok(false)
@@ -578,46 +576,43 @@ pub unsafe fn is_xcode_compiling(pid: i32) -> Result<bool, AxError> {
 /// - AX structures are volatile; missing nodes are not considered errors.
 /// - Returned `bool` is best-effort, based on current visible UI.
 pub unsafe fn is_xcode_debugging(pid: i32) -> Result<bool, AxError> {
-    let app = AxElement::app(pid).ok_or(AxError::AccessibilityNotGranted)?;
-    let win = match app.focused_window() {
+    let app = unsafe { AxElement::app(pid) }.ok_or(AxError::AccessibilityNotGranted)?;
+    let win = match unsafe { app.focused_window() } {
         Some(w) => w,
         None => return Ok(false),
     };
 
-    if let Some(toolbar) = win.find_descendants("AXToolbar", 6) {
+    if let Some(toolbar) = unsafe { win.find_descendants("AXToolbar", 6) } {
         let mut stack = vec![toolbar.clone()];
         while let Some(node) = stack.pop() {
-            if let Some(role) = node.role() {
+            if let Some(role) = unsafe { node.role() } {
                 if role == "AXButton" {
-                    if let Some(id) = node.identifier() {
-                        if (id.contains("Debugger") && id.contains("Stop"))
-                            && node.enabled().unwrap_or(false)
-                        {
-                            return Ok(true);
-                        }
+                    if let Some(id) = unsafe { node.identifier() }
+                        && (id.contains("Debugger") && id.contains("Stop"))
+                        && unsafe { node.enabled() }.unwrap_or(false)
+                    {
+                        return Ok(true);
                     }
 
-                    let labeled_stop = node
-                        .title()
-                        .or_else(|| node.string_attr("AXDescription"))
+                    let labeled_stop = unsafe { node.title() }
+                        .or_else(|| unsafe { node.string_attr("AXDescription") })
                         .map(|s| s.contains("Stop"))
                         .unwrap_or(false);
-                    if labeled_stop && node.enabled().unwrap_or(false) {
+                    if labeled_stop && unsafe { node.enabled() }.unwrap_or(false) {
                         return Ok(true);
                     }
                 }
 
                 if role == "AXStaticText"
-                    && node
-                        .title()
-                        .or_else(|| node.string_attr("AXDescription"))
+                    && unsafe { node.title() }
+                        .or_else(|| unsafe { node.string_attr("AXDescription") })
                         .map(|s| s.contains("Running"))
                         .unwrap_or(false)
                 {
                     return Ok(true);
                 }
             }
-            stack.extend(node.children());
+            stack.extend(unsafe { node.children() });
         }
     }
 

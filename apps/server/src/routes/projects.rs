@@ -1,14 +1,14 @@
 use std::sync::Arc;
 
 use axum::{
+    Json, Router,
     extract::{Path, Query, State},
     routing::get,
-    Json, Router,
 };
-use common::models::{inputs::ProjectListQuery, outputs::PaginatedProjects, Project};
+use common::models::{Project, inputs::ProjectListQuery, outputs::PaginatedProjects};
 use db::{
-    server::projects::{cursor::ProjectCursor, ServerProject},
     DBContext,
+    server::projects::{ServerProject, cursor::ProjectCursor},
 };
 use uuid::Uuid;
 

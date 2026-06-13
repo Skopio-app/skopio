@@ -1,6 +1,6 @@
 use tauri::{
-    menu::{IconMenuItemBuilder, Menu, MenuItemKind, PredefinedMenuItem, Submenu, SubmenuBuilder},
     AppHandle, Manager, Runtime,
+    menu::{IconMenuItemBuilder, Menu, MenuItemKind, PredefinedMenuItem, Submenu, SubmenuBuilder},
 };
 use tracing::error;
 

@@ -3,7 +3,7 @@ use std::{
     time::{Duration, Instant},
 };
 
-use tokio::sync::{watch, RwLock};
+use tokio::sync::{RwLock, watch};
 
 use crate::{
     monitored_app::BundleIdExt,
@@ -50,14 +50,13 @@ impl<P: AxProvider> AxSnapshotCache<P> {
     pub async fn snapshot(&self) -> AxSnapshot {
         {
             let inner = self.inner.read().await;
-            if let (Some(snap), Some(at)) = (&inner.last, inner.last_at) {
-                if at.elapsed() <= self.cfg.max_age {
-                    return snap.clone();
-                }
+            if let (Some(snap), Some(at)) = (&inner.last, inner.last_at)
+                && at.elapsed() <= self.cfg.max_age
+            {
+                return snap.clone();
             }
         }
-        let snap = self.refresh_now().await;
-        snap
+        self.refresh_now().await
     }
 
     /// Force refresh
@@ -112,10 +111,10 @@ impl<P: AxProvider> AxSnapshotCache<P> {
                 }
             }
 
-            if app.bundle_id.is_xcode_bundle() {
-                if let Ok(xi) = self.provider.xcode_info(app.pid) {
-                    out.xcode = Some(xi);
-                }
+            if app.bundle_id.is_xcode_bundle()
+                && let Ok(xi) = self.provider.xcode_info(app.pid)
+            {
+                out.xcode = Some(xi);
             }
         } else {
             out.app = None;

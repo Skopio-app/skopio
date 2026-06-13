@@ -1,10 +1,10 @@
 use anyhow::Result;
 use tauri::AppHandle;
 use tracing_subscriber::{
+    EnvFilter,
     fmt::{self},
     layer::SubscriberExt,
     util::SubscriberInitExt,
-    EnvFilter,
 };
 
 pub trait TracingExt {

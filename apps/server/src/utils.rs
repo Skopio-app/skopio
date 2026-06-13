@@ -1,6 +1,6 @@
 use dirs::data_dir;
 use std::path::PathBuf;
-use tracing_subscriber::{fmt, layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
+use tracing_subscriber::{EnvFilter, fmt, layer::SubscriberExt, util::SubscriberInitExt};
 
 fn get_db_name() -> String {
     if cfg!(debug_assertions) {

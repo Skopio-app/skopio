@@ -1,8 +1,8 @@
 use std::sync::Arc;
 
-use axum::{extract::State, routing::get, Json, Router};
+use axum::{Json, Router, extract::State, routing::get};
 use common::models::inputs::{BucketSummaryInput, SummaryQueryInput};
-use db::{models::BucketTimeSummary, server::summary::SummaryQueryBuilder, DBContext};
+use db::{DBContext, models::BucketTimeSummary, server::summary::SummaryQueryBuilder};
 use serde_qs::axum::QsQuery;
 
 use crate::error::ServerResult;

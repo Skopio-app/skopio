@@ -6,7 +6,7 @@ use std::{
 use common::keyring::Keyring;
 use rusqlite::Connection;
 use tracing::Level;
-use tracing_subscriber::{fmt::writer::MakeWriterExt, EnvFilter};
+use tracing_subscriber::{EnvFilter, fmt::writer::MakeWriterExt};
 
 use crate::{db::migrations, error::CliError};
 

@@ -2,11 +2,11 @@ use std::sync::Arc;
 
 use async_trait::async_trait;
 use common::models::inputs::{AFKEventInput, EventInput};
-use db::desktop::{afk_events::AFKEvent, events::Event};
 use db::DBContext;
-use tokio::sync::{mpsc, oneshot, watch, Mutex};
+use db::desktop::{afk_events::AFKEvent, events::Event};
+use tokio::sync::{Mutex, mpsc, oneshot, watch};
 use tokio::task::JoinHandle;
-use tokio::time::{interval, Duration, Instant};
+use tokio::time::{Duration, Instant, interval};
 use tracing::{error, info};
 
 use crate::network::post_json;
@@ -60,10 +60,10 @@ impl BufferedTrackingService {
             let _ = tx.send(());
         }
 
-        if let Some(handle) = self.flush_handle.lock().await.take() {
-            if let Err(err) = handle.await {
-                error!("Flush loop task panicked or failed to join: {}", err);
-            }
+        if let Some(handle) = self.flush_handle.lock().await.take()
+            && let Err(err) = handle.await
+        {
+            error!("Flush loop task panicked or failed to join: {}", err);
         }
     }
 }

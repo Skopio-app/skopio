@@ -1,4 +1,4 @@
-use crate::{error::DBError, DBContext};
+use crate::{DBContext, error::DBError};
 use chrono::Utc;
 use serde::{Deserialize, Serialize};
 use uuid::Uuid;

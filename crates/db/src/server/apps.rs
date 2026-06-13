@@ -1,4 +1,4 @@
-use crate::{error::DBError, models::App, DBContext};
+use crate::{DBContext, error::DBError, models::App};
 use chrono::Utc;
 use uuid::Uuid;
 

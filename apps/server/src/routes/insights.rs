@@ -1,17 +1,17 @@
 use std::sync::Arc;
 
 use axum::{
+    Json, Router,
     extract::{Query, State},
     routing::get,
-    Json, Router,
 };
 use common::{
     models::{inputs::InsightQueryPayload, outputs::InsightResult},
     time::insight::InsightRange,
 };
 use db::{
-    server::insights::{InsightProvider, InsightQuery, Insights},
     DBContext,
+    server::insights::{InsightProvider, InsightQuery, Insights},
 };
 
 use crate::error::ServerResult;

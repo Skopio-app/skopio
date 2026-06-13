@@ -1,4 +1,4 @@
-use crate::{desktop::goals::TimeSpan, error::DBError, DBContext};
+use crate::{DBContext, desktop::goals::TimeSpan, error::DBError};
 
 pub struct GoalNotification;
 

@@ -8,7 +8,7 @@ use std::{
 use serde::{Deserialize, Serialize};
 use specta::Type;
 use tauri::{AppHandle, Manager, Runtime};
-use tokio::sync::{watch, RwLock};
+use tokio::sync::{RwLock, watch};
 
 #[derive(Debug, Serialize, Deserialize, Clone, Type)]
 #[serde(rename_all = "camelCase")]

@@ -7,7 +7,7 @@ use std::{
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
-use crate::{error::DBError, DBContext};
+use crate::{DBContext, error::DBError};
 
 #[derive(Serialize, Deserialize, Debug, Clone, specta::Type)]
 #[serde(rename_all = "camelCase")]
@@ -106,22 +106,22 @@ impl Goal {
                 excluded_days: vec![],
             });
 
-            if let Some(app) = row.app {
-                if !entry.apps.contains(&app) {
-                    entry.apps.push(app);
-                }
+            if let Some(app) = row.app
+                && !entry.apps.contains(&app)
+            {
+                entry.apps.push(app);
             }
 
-            if let Some(cat) = row.category {
-                if !entry.categories.contains(&cat) {
-                    entry.categories.push(cat);
-                }
+            if let Some(cat) = row.category
+                && !entry.categories.contains(&cat)
+            {
+                entry.categories.push(cat);
             }
 
-            if let Some(day) = row.day {
-                if !entry.excluded_days.contains(&day) {
-                    entry.excluded_days.push(day);
-                }
+            if let Some(day) = row.day
+                && !entry.excluded_days.contains(&day)
+            {
+                entry.excluded_days.push(day);
             }
         }
 

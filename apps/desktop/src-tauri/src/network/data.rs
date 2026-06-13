@@ -1,4 +1,4 @@
-use common::models::{inputs::ProjectListQuery, outputs::PaginatedProjects, Project};
+use common::models::{Project, inputs::ProjectListQuery, outputs::PaginatedProjects};
 use db::models::{App, Category};
 use uuid::Uuid;
 

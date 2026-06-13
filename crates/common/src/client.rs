@@ -3,8 +3,8 @@ use std::{path::PathBuf, sync::OnceLock, time::Duration};
 use anyhow::anyhow;
 use bytes::Bytes;
 use reqwest::{
-    header::{HeaderMap, HeaderValue, AUTHORIZATION, CONTENT_TYPE},
     Client, RequestBuilder,
+    header::{AUTHORIZATION, CONTENT_TYPE, HeaderMap, HeaderValue},
 };
 use serde::Serialize;
 use tracing::{debug, warn};

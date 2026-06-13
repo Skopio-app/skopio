@@ -1,4 +1,4 @@
-use percent_encoding::{utf8_percent_encode, NON_ALPHANUMERIC};
+use percent_encoding::{NON_ALPHANUMERIC, utf8_percent_encode};
 use serde::{Deserialize, Serialize};
 use tauri::{
     AppHandle, LogicalPosition, Manager, Position, Runtime, TitleBarStyle, WebviewUrl,
@@ -49,13 +49,11 @@ impl WindowKind {
         app: &'a AppHandle<R>,
         url: WebviewUrl,
     ) -> WebviewWindowBuilder<'a, R, AppHandle<R>> {
-        let builder = WebviewWindow::builder(app, self.label(), url)
+        WebviewWindow::builder(app, self.label(), url)
             .title(self.title())
             .decorations(true)
             .hidden_title(true)
-            .title_bar_style(TitleBarStyle::Overlay);
-
-        builder
+            .title_bar_style(TitleBarStyle::Overlay)
     }
 
     fn build<R: Runtime>(self, app: &AppHandle<R>) -> tauri::Result<WebviewWindow<R>> {

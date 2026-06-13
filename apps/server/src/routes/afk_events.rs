@@ -1,15 +1,15 @@
 use axum::{
+    Json, Router,
     extract::State,
     routing::{get, post},
-    Json, Router,
 };
 use common::models::{
     inputs::{AFKEventInput, BucketSummaryInput},
     outputs::FullEvent,
 };
 use db::{
-    server::{afk_events::AFKEvent, summary::SummaryQueryBuilder},
     DBContext,
+    server::{afk_events::AFKEvent, summary::SummaryQueryBuilder},
 };
 use serde_qs::axum::QsQuery;
 use std::sync::Arc;

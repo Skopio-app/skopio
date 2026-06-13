@@ -10,8 +10,8 @@ use std::{
 };
 use tauri::Error;
 use tauri::{
-    tray::{TrayIcon, TrayIconBuilder},
     App, AppHandle, Manager,
+    tray::{TrayIcon, TrayIconBuilder},
 };
 use tokio::sync::Mutex;
 use tracing::error;
@@ -153,12 +153,12 @@ impl TrayExt for App {
                         }
                     };
 
-                    if let Ok(icon_bytes) = generate_text_icon(app_handle.clone(), time_text) {
-                        if let Ok(new_icon) = tauri::image::Image::from_bytes(&icon_bytes) {
-                            let tray_lock = tray_state.icon.lock().await;
-                            if let Some(ref tray) = *tray_lock {
-                                let _ = tray.set_icon(Some(new_icon));
-                            }
+                    if let Ok(icon_bytes) = generate_text_icon(app_handle.clone(), time_text)
+                        && let Ok(new_icon) = tauri::image::Image::from_bytes(&icon_bytes)
+                    {
+                        let tray_lock = tray_state.icon.lock().await;
+                        if let Some(ref tray) = *tray_lock {
+                            let _ = tray.set_icon(Some(new_icon));
                         }
                     }
                 }

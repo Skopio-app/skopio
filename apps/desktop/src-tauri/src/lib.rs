@@ -67,10 +67,10 @@ pub async fn run() {
                     error!("Failed async setup: {e}");
                 }
 
-                if !cfg!(debug_assertions) {
-                    if let Err(e) = app_handle_clone.ensure_server_ready().await {
-                        error!("Server manager error: {e}")
-                    }
+                if !cfg!(debug_assertions)
+                    && let Err(e) = app_handle_clone.ensure_server_ready().await
+                {
+                    error!("Server manager error: {e}")
                 }
             });
 
@@ -82,35 +82,35 @@ pub async fn run() {
             Ok(())
         })
         .on_window_event(|window, event| {
-            if let tauri::WindowEvent::CloseRequested { api, .. } = event {
-                if window.label() == "main" {
-                    api.prevent_close();
+            if let tauri::WindowEvent::CloseRequested { api, .. } = event
+                && window.label() == "main"
+            {
+                api.prevent_close();
 
-                    let cursor_tracker = window.state::<Arc<MouseTracker>>();
-                    let keyboard_tracker = window.state::<Arc<KeyboardTracker>>();
-                    let event_tracker = window.state::<Arc<EventTracker>>();
-                    let buffered_service = window.state::<Arc<BufferedTrackingService>>();
-                    let goal_service = window.state::<Arc<GoalService>>();
-                    let window_tracker = window.state::<Arc<WindowTracker>>();
-                    let afk_tracker = window.state::<Arc<AFKTracker>>();
+                let cursor_tracker = window.state::<Arc<MouseTracker>>();
+                let keyboard_tracker = window.state::<Arc<KeyboardTracker>>();
+                let event_tracker = window.state::<Arc<EventTracker>>();
+                let buffered_service = window.state::<Arc<BufferedTrackingService>>();
+                let goal_service = window.state::<Arc<GoalService>>();
+                let window_tracker = window.state::<Arc<WindowTracker>>();
+                let afk_tracker = window.state::<Arc<AFKTracker>>();
 
-                    cursor_tracker.stop_tracking();
-                    keyboard_tracker.stop_tracking();
-                    goal_service.shutdown();
-                    window_tracker.stop_tracking();
+                cursor_tracker.stop_tracking();
+                keyboard_tracker.stop_tracking();
+                goal_service.shutdown();
+                window_tracker.stop_tracking();
 
-                    let window = window.clone();
-                    let buffered_service = Arc::clone(&buffered_service);
-                    let event_tracker = Arc::clone(&event_tracker);
-                    let afk_tracker = Arc::clone(&afk_tracker);
-                    tokio::spawn(async move {
-                        event_tracker.stop_tracking().await;
-                        afk_tracker.stop_tracking().await;
-                        buffered_service.shutdown().await;
+                let window = window.clone();
+                let buffered_service = Arc::clone(&buffered_service);
+                let event_tracker = Arc::clone(&event_tracker);
+                let afk_tracker = Arc::clone(&afk_tracker);
+                tokio::spawn(async move {
+                    event_tracker.stop_tracking().await;
+                    afk_tracker.stop_tracking().await;
+                    buffered_service.shutdown().await;
 
-                        window.app_handle().exit(0);
-                    });
-                }
+                    window.app_handle().exit(0);
+                });
             }
         })
         .plugin(tauri_plugin_autostart::init(

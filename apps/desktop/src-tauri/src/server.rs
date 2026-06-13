@@ -20,8 +20,8 @@ use thiserror::Error;
 use tokio::time::timeout;
 use tokio::{fs as tokiofs, io::AsyncWriteExt};
 use tracing::{debug, error};
-use zip::result::ZipError;
 use zip::ZipArchive;
+use zip::result::ZipError;
 
 use crate::network;
 

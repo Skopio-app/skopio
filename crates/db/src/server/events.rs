@@ -8,12 +8,12 @@ use uuid::Uuid;
 use sqlx::{QueryBuilder, Row, Sqlite};
 
 use crate::{
+    DBContext,
     error::DBError,
     server::{
         summary::SummaryQueryBuilder,
-        utils::query::{group_key_info, QueryBuilderExt},
+        utils::query::{QueryBuilderExt, group_key_info},
     },
-    DBContext,
 };
 
 #[derive(Serialize, Deserialize, Debug, sqlx::FromRow)]

@@ -84,7 +84,7 @@ fn delete_synced_data(conn: &Connection) -> Result<(), CliError> {
 mod tests {
     use super::*;
     use crate::{
-        event::{save_event, EventData},
+        event::{EventData, save_event},
         utils::setup_test_conn,
     };
     use rusqlite::params;

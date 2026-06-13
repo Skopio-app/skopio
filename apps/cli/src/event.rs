@@ -1,5 +1,5 @@
 use common::git::find_git_branch;
-use rusqlite::{params, Connection};
+use rusqlite::{Connection, params};
 use tracing::info;
 
 use crate::error::CliError;

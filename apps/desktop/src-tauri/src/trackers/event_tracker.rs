@@ -11,7 +11,7 @@ use db::desktop::events::Event as DBEvent;
 use std::collections::HashSet;
 use std::pin::Pin;
 use std::sync::Arc;
-use tokio::sync::{watch, Mutex, RwLock};
+use tokio::sync::{Mutex, RwLock, watch};
 use tokio::time::{self, Duration, Instant, Sleep};
 use tracing::{error, info};
 

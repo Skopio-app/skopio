@@ -2,21 +2,21 @@ use std::{collections::HashMap, fmt::Debug};
 
 use common::{
     models::{
-        inputs::{BucketSummaryInput, SummaryQueryInput},
         Group,
+        inputs::{BucketSummaryInput, SummaryQueryInput},
     },
     time::{TimeBucket, TimeRange},
 };
 use sqlx::{QueryBuilder, Sqlite};
 
 use crate::{
+    DBContext,
     error::DBError,
     models::BucketTimeSummary,
     server::utils::{
-        query::{bucket_step, group_key_info, push_next_end_with, QueryBuilderExt},
+        query::{QueryBuilderExt, bucket_step, group_key_info, push_next_end_with},
         summary_filter::SummaryFilters,
     },
-    DBContext,
 };
 
 pub trait SummaryQueryParams {

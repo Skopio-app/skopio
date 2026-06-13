@@ -1,13 +1,13 @@
 #![cfg(target_os = "macos")]
 
 use objc2::msg_send;
-use objc2::rc::{autoreleasepool, Retained};
+use objc2::rc::{Retained, autoreleasepool};
 use objc2::runtime::{AnyClass, AnyObject};
 use objc2_app_kit::{NSApplicationActivationPolicy, NSRunningApplication, NSWorkspace};
 use objc2_foundation::{NSArray, NSString};
 use std::sync::Arc;
-use tokio::sync::{watch, Notify};
-use tokio::time::{interval, Duration};
+use tokio::sync::{Notify, watch};
+use tokio::time::{Duration, interval};
 use tracing::{debug, info, warn};
 
 use crate::utils::ax::ffi::AxElement;

@@ -1,7 +1,7 @@
 use std::sync::Arc;
 
-use axum::{extract::State, routing::get, Json, Router};
-use db::{models::App, DBContext};
+use axum::{Json, Router, extract::State, routing::get};
+use db::{DBContext, models::App};
 
 use crate::error::ServerResult;
 

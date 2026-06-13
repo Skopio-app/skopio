@@ -1,4 +1,4 @@
-use crate::{error::DBError, server::projects::cursor::ProjectCursor, DBContext};
+use crate::{DBContext, error::DBError, server::projects::cursor::ProjectCursor};
 use chrono::Utc;
 use common::models::Project;
 use uuid::Uuid;

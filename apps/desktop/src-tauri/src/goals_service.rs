@@ -6,11 +6,11 @@ use common::{
     time::{TimeRange, TimeRangePreset},
 };
 use db::{
+    DBContext,
     desktop::{
         goal_notifications::GoalNotification,
         goals::{Goal, GoalInput, GoalUpdateInput, TimeSpan},
     },
-    DBContext,
 };
 use tauri::AppHandle;
 use tokio::{sync::broadcast, task::JoinHandle};

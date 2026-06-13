@@ -2,7 +2,7 @@ use crate::error::DBError;
 use crate::utils::extract_db_file_path;
 use common::keyring::Keyring;
 use sqlx::sqlite::SqliteConnectOptions;
-use sqlx::{sqlite::SqlitePoolOptions, SqlitePool};
+use sqlx::{SqlitePool, sqlite::SqlitePoolOptions};
 use std::str::FromStr;
 use uuid::Uuid;
 

@@ -3,7 +3,7 @@ use std::sync::Arc;
 use axum::{
     body::Body,
     extract::State,
-    http::{header, StatusCode},
+    http::{StatusCode, header},
     middleware::Next,
     response::Response,
 };
@@ -24,10 +24,10 @@ pub async fn bearer_auth(
     let Ok(val) = hv.to_str() else {
         return Err(StatusCode::UNAUTHORIZED);
     };
-    if let Some(tok) = val.strip_prefix("Bearer ") {
-        if tok == &*cfg.bearer {
-            return Ok(next.run(req).await);
-        }
+    if let Some(tok) = val.strip_prefix("Bearer ")
+        && tok == &*cfg.bearer
+    {
+        return Ok(next.run(req).await);
     }
     Err(StatusCode::UNAUTHORIZED)
 }

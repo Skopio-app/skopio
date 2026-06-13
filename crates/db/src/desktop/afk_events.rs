@@ -1,7 +1,7 @@
 use chrono::{DateTime, Utc};
 use serde::{Deserialize, Serialize};
 
-use crate::{error::DBError, utils::update_synced_in, DBContext};
+use crate::{DBContext, error::DBError, utils::update_synced_in};
 
 #[derive(Serialize, Deserialize, Clone, Debug, sqlx::FromRow)]
 pub struct AFKEvent {

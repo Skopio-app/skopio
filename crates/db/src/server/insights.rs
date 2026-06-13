@@ -2,17 +2,17 @@ use std::collections::BTreeMap;
 
 use async_trait::async_trait;
 use common::{
-    models::{outputs::InsightResult, Group, InsightBucket, InsightType},
-    time::{insight::InsightRange, TimeBucket},
+    models::{Group, InsightBucket, InsightType, outputs::InsightResult},
+    time::{TimeBucket, insight::InsightRange},
 };
 use sqlx::{QueryBuilder, Sqlite};
 
 use crate::{
+    DBContext,
     error::DBError,
     server::utils::query::{
-        bucket_step, group_key_info, push_next_end_with, BucketStep, QueryBuilderExt,
+        BucketStep, QueryBuilderExt, bucket_step, group_key_info, push_next_end_with,
     },
-    DBContext,
 };
 
 #[derive(sqlx::FromRow)]
@@ -42,7 +42,7 @@ struct AvgRow {
 #[async_trait]
 pub trait InsightProvider {
     async fn execute(db_context: &DBContext, query: InsightQuery)
-        -> Result<InsightResult, DBError>;
+    -> Result<InsightResult, DBError>;
 }
 
 #[derive(Debug, Clone)]

@@ -33,7 +33,7 @@ async fn main() {
     let mut app = create_app(db.clone()).await;
 
     if !cfg!(debug_assertions) {
-        use auth::{bearer_auth, AuthCfg};
+        use auth::{AuthCfg, bearer_auth};
         use axum::middleware;
         use common::keyring::Keyring;
 

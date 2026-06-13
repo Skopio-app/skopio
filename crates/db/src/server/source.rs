@@ -1,7 +1,7 @@
 use chrono::Utc;
 use uuid::Uuid;
 
-use crate::{error::DBError, models::Source, DBContext};
+use crate::{DBContext, error::DBError, models::Source};
 
 impl Source {
     /// Finds an existing source by name or inserts a new one, returning its ID.

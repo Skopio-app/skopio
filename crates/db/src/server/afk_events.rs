@@ -1,4 +1,4 @@
-use crate::{error::DBError, server::summary::SummaryQueryBuilder, DBContext};
+use crate::{DBContext, error::DBError, server::summary::SummaryQueryBuilder};
 use chrono::{DateTime, Utc};
 use common::models::outputs::FullEvent;
 use serde::{Deserialize, Serialize};

@@ -1,5 +1,5 @@
 use chrono::{
-    offset::LocalResult, DateTime, Datelike, Duration, Local, NaiveDate, TimeZone, Utc, Weekday,
+    DateTime, Datelike, Duration, Local, NaiveDate, TimeZone, Utc, Weekday, offset::LocalResult,
 };
 use serde::{Deserialize, Serialize};
 
