@@ -20,6 +20,36 @@ body,
   display: none;
 }
 
+.scrollbar-subtle,
+.scrollbar-subtle * {
+  scrollbar-color: var(--muted-foreground) transparent;
+  scrollbar-width: thin;
+}
+
+.scrollbar-subtle::-webkit-scrollbar,
+.scrollbar-subtle *::-webkit-scrollbar {
+  width: 0.5rem;
+  height: 0.5rem;
+}
+
+.scrollbar-subtle::-webkit-scrollbar-track,
+.scrollbar-subtle *::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.scrollbar-subtle::-webkit-scrollbar-thumb,
+.scrollbar-subtle *::-webkit-scrollbar-thumb {
+  background-color: var(--muted-foreground);
+  border-radius: 999px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+.scrollbar-subtle::-webkit-scrollbar-corner,
+.scrollbar-subtle *::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
 /* https://github.com/tauri-apps/tauri/issues/4316#issuecomment-2408445483 */
 
 .draggable-state {
