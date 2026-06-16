@@ -30,7 +30,7 @@ export const TabExtensionHost: React.FC<TabExtensionHostProps> = ({
   }, [extension]);
 
   return (
-    <div className="w-full h-full overflow-auto">
+    <div className="w-full h-full overflow-auto scroll-hidden">
       <Component />
     </div>
   );

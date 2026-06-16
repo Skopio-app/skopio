@@ -146,7 +146,7 @@ const DashboardLayout = () => {
         </SidebarFooter>
       </Sidebar>
 
-      <SidebarInset className="pt-10 h-dvh overflow-auto overscroll-contain">
+      <SidebarInset className="pt-10 h-dvh overflow-auto overscroll-contain scroll-hidden">
         <Outlet />
       </SidebarInset>
     </SidebarProvider>

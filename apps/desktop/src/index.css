@@ -10,11 +10,13 @@ body,
   height: 100%;
 }
 
-.scroll-hidden {
+.scroll-hidden,
+.scroll-hidden * {
   scrollbar-width: none;
 }
 
-.scroll-hidden::-webkit-scrollbar {
+.scroll-hidden::-webkit-scrollbar,
+.scroll-hidden *::-webkit-scrollbar {
   display: none;
 }
 
