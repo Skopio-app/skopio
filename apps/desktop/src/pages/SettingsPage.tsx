@@ -62,7 +62,7 @@ const SettingsPage = () => {
           <div className="w-40" data-tauri-drag-region />
         </header>
 
-        <div className="min-h-0 min-w-0 flex-1 overflow-auto p-6">
+        <div className="min-h-0 min-w-0 flex-1 overflow-auto p-6 scrollbar-subtle">
           <Outlet />
         </div>
       </main>
