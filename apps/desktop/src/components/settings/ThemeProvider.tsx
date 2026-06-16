@@ -2,6 +2,13 @@ import { Theme, commands } from "@/types/tauri.gen";
 import { ThemeContext } from "@/utils/theme";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { setTheme as setTauriTheme } from "@tauri-apps/api/app";
+import { emit, listen, type UnlistenFn } from "@tauri-apps/api/event";
+
+const THEME_CHANGED_EVENT = "theme-changed";
+const THEMES = ["light", "dark", "system"] satisfies Theme[];
+
+const isTheme = (value: unknown): value is Theme =>
+  THEMES.includes(value as Theme);
 
 type ThemeProviderProps = {
   children: React.ReactNode;
@@ -16,6 +23,8 @@ export default function ThemeProvider({
   const [theme, setTheme] = useState<Theme>(defaultTheme);
   const [hydrated, setHydrated] = useState(false);
   const isInitialMount = useRef(true);
+  const externalThemeChange = useRef(false);
+  const themeRef = useRef(theme);
 
   const applyThemeToDOM = useCallback((theme: Theme, isDark: boolean) => {
     const root = document.documentElement;
@@ -35,6 +44,10 @@ export default function ThemeProvider({
   );
 
   useEffect(() => {
+    themeRef.current = theme;
+  }, [theme]);
+
+  useEffect(() => {
     (async () => {
       try {
         const cfg = await commands.getConfig();
@@ -46,6 +59,24 @@ export default function ThemeProvider({
       }
     })();
   }, [applyTheme]);
+
+  useEffect(() => {
+    let unlisten: UnlistenFn | null = null;
+
+    (async () => {
+      unlisten = await listen<Theme>(THEME_CHANGED_EVENT, (event) => {
+        const nextTheme = event.payload;
+        if (!isTheme(nextTheme) || nextTheme === themeRef.current) return;
+
+        externalThemeChange.current = true;
+        setTheme(nextTheme);
+      });
+    })();
+
+    return () => {
+      if (unlisten) unlisten();
+    };
+  }, []);
 
   useEffect(() => {
     const mql = window.matchMedia("(prefers-color-scheme: dark)");
@@ -71,7 +102,13 @@ export default function ThemeProvider({
     if (hydrated) {
       (async () => {
         await applyTheme(theme);
+        if (externalThemeChange.current) {
+          externalThemeChange.current = false;
+          return;
+        }
+
         await commands.setTheme(theme);
+        await emit<Theme>(THEME_CHANGED_EVENT, theme);
       })();
     }
   }, [theme, hydrated, applyTheme]);
