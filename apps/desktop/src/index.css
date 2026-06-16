@@ -10,16 +10,6 @@ body,
   height: 100%;
 }
 
-.scroll-hidden,
-.scroll-hidden * {
-  scrollbar-width: none;
-}
-
-.scroll-hidden::-webkit-scrollbar,
-.scroll-hidden *::-webkit-scrollbar {
-  display: none;
-}
-
 .scrollbar-subtle,
 .scrollbar-subtle * {
   scrollbar-color: var(--muted-foreground) transparent;
@@ -48,6 +38,18 @@ body,
 .scrollbar-subtle::-webkit-scrollbar-corner,
 .scrollbar-subtle *::-webkit-scrollbar-corner {
   background: transparent;
+}
+
+.scroll-hidden,
+.scroll-hidden * {
+  scrollbar-width: none;
+}
+
+.scroll-hidden::-webkit-scrollbar,
+.scroll-hidden *::-webkit-scrollbar {
+  display: none;
+  width: 0;
+  height: 0;
 }
 
 /* https://github.com/tauri-apps/tauri/issues/4316#issuecomment-2408445483 */
