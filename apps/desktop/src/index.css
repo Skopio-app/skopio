@@ -13,16 +13,8 @@ body,
 }
 
 :root {
-  --scrollbar-subtle-thumb: color-mix(
-    in srgb,
-    var(--muted-foreground) 100%,
-    transparent
-  );
-  --scrollbar-subtle-thumb-hover: color-mix(
-    in srgb,
-    var(--foreground) 100%,
-    transparent
-  );
+  --scrollbar-subtle-thumb: var(--muted-foreground);
+  --scrollbar-subtle-thumb-hover: var(--foreground);
 }
 
 .scrollbar-subtle,
