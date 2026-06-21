@@ -28,6 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 
 - Scrollbar styling is now more inline with the current theme.
+- Ensure body overflow and overscroll behavior are consistently hidden
 
 ### Changed
 
