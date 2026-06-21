@@ -12,9 +12,14 @@ body,
   overscroll-behavior: none;
 }
 
+:root {
+  --scrollbar-subtle-thumb: var(--muted-foreground);
+  --scrollbar-subtle-thumb-hover: var(--foreground);
+}
+
 .scrollbar-subtle,
 .scrollbar-subtle * {
-  scrollbar-color: var(--muted-foreground) transparent;
+  scrollbar-color: var(--scrollbar-subtle-thumb) transparent;
   scrollbar-width: thin;
 }
 
@@ -26,20 +31,26 @@ body,
 
 .scrollbar-subtle::-webkit-scrollbar-track,
 .scrollbar-subtle *::-webkit-scrollbar-track {
-  background: transparent;
+  background-color: transparent;
 }
 
 .scrollbar-subtle::-webkit-scrollbar-thumb,
 .scrollbar-subtle *::-webkit-scrollbar-thumb {
-  background-color: var(--muted-foreground);
+  background-color: var(--scrollbar-subtle-thumb);
   border-radius: 999px;
   border: 2px solid transparent;
   background-clip: content-box;
+  min-height: 2rem;
+}
+
+.scrollbar-subtle:hover::-webkit-scrollbar-thumb,
+.scrollbar-subtle *:hover::-webkit-scrollbar-thumb {
+  background-color: var(--scrollbar-subtle-thumb-hover);
 }
 
 .scrollbar-subtle::-webkit-scrollbar-corner,
 .scrollbar-subtle *::-webkit-scrollbar-corner {
-  background: transparent;
+  background-color: transparent;
 }
 
 .scroll-hidden,
