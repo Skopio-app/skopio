@@ -23,6 +23,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v0.1.17] - 2026-06-21
+
+### Fixed
+
+- Scrollbar styling is now more inline with the current theme.
+- Ensure body overflow and overscroll behavior are consistently hidden
+
+### Changed
+
+- Updated app dependencies.
+
 ## [v0.1.16] - 2026-06-13
 
 ### Fixed

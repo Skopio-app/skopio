@@ -1,4 +1,5 @@
 import { cn } from "@skopio/ui";
+import { SubtleScrollArea } from "@/components/SubtleScrollArea";
 import { LucideIcon, MonitorCog, Settings2 } from "lucide-react";
 import { NavLink, Outlet, useLocation } from "react-router";
 
@@ -62,9 +63,12 @@ const SettingsPage = () => {
           <div className="w-40" data-tauri-drag-region />
         </header>
 
-        <div className="min-h-0 min-w-0 flex-1 overflow-auto p-6 scrollbar-subtle">
+        <SubtleScrollArea
+          className="min-h-0 min-w-0 flex-1"
+          viewportClassName="p-6"
+        >
           <Outlet />
-        </div>
+        </SubtleScrollArea>
       </main>
     </div>
   );

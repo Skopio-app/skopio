@@ -1,6 +1,7 @@
 import { Outlet, useMatch, useParams } from "react-router";
 import { builtinExtensionRegistry } from "@/extensions/registry";
 import { TabExtensionHost } from "@/pages/TabExtensionHost";
+import { SubtleScrollArea } from "@/components/SubtleScrollArea";
 
 const TabExtensionPage = () => {
   const { id } = useParams();
@@ -14,8 +15,14 @@ const TabExtensionPage = () => {
   }
 
   return (
-    <div className="h-full w-full">
-      {isProjectView ? <Outlet /> : <TabExtensionHost extension={extension} />}
+    <div className="h-full min-h-0 w-full">
+      {isProjectView ? (
+        <SubtleScrollArea className="h-full w-full">
+          <Outlet />
+        </SubtleScrollArea>
+      ) : (
+        <TabExtensionHost extension={extension} />
+      )}
     </div>
   );
 };
