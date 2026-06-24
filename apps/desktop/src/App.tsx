@@ -26,8 +26,6 @@ import PermissionsDialog from "@/components/settings/PermissionsDialog";
 import UpdaterToast from "@/components/updater/UpdaterToast";
 import ThemeProvider from "@/components/settings/ThemeProvider";
 import { TourProvider } from "./utils/tour/TourProvider";
-import { useScrollbarDebugProbe } from "@/utils/scrollbarDebug";
-import { useScrollbarThemeColors } from "@/utils/scrollbarTheme";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -45,8 +43,6 @@ const queryClient = new QueryClient({
 
 function App() {
   useGlobalShortcutListener();
-  useScrollbarThemeColors();
-  useScrollbarDebugProbe();
   useDisableNativeContextMenu();
   const { canGoBack, canGoForward } = useHistoryControls();
 

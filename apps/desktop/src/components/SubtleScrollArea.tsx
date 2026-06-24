@@ -137,7 +137,7 @@ export const SubtleScrollArea = ({
       {thumb.visible && (
         <div className="pointer-events-none absolute inset-y-0 right-0 w-3">
           <div
-            className="pointer-events-auto absolute right-0.5 w-2 cursor-default rounded-full bg-(--scrollbar-subtle-thumb)"
+            className="pointer-events-auto absolute right-1 w-1.5 cursor-default rounded-full bg-(--muted-foreground)"
             style={
               {
                 height: thumb.height,
