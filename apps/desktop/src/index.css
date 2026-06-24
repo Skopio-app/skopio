@@ -25,17 +25,23 @@ body,
 
 .scrollbar-subtle::-webkit-scrollbar,
 .scrollbar-subtle *::-webkit-scrollbar {
+  -webkit-appearance: none;
   width: 0.5rem;
   height: 0.5rem;
+  background-color: transparent;
 }
 
 .scrollbar-subtle::-webkit-scrollbar-track,
-.scrollbar-subtle *::-webkit-scrollbar-track {
+.scrollbar-subtle *::-webkit-scrollbar-track,
+.scrollbar-subtle::-webkit-scrollbar-track-piece,
+.scrollbar-subtle *::-webkit-scrollbar-track-piece {
+  -webkit-appearance: none;
   background-color: transparent;
 }
 
 .scrollbar-subtle::-webkit-scrollbar-thumb,
 .scrollbar-subtle *::-webkit-scrollbar-thumb {
+  -webkit-appearance: none;
   background-color: var(--scrollbar-subtle-thumb);
   border-radius: 999px;
   border: 2px solid transparent;

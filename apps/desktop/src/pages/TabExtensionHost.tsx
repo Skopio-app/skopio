@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { ExtensionRegistration } from "@/extensions/registry";
 import { RPCChannel, IframeIO } from "@skopio/rpc";
+import { SubtleScrollArea } from "@/components/SubtleScrollArea";
 
 interface TabExtensionHostProps {
   extension: ExtensionRegistration;
@@ -30,8 +31,8 @@ export const TabExtensionHost: React.FC<TabExtensionHostProps> = ({
   }, [extension]);
 
   return (
-    <div className="w-full h-full overflow-auto scrollbar-subtle">
+    <SubtleScrollArea className="h-full w-full">
       <Component />
-    </div>
+    </SubtleScrollArea>
   );
 };
