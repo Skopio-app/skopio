@@ -11,10 +11,12 @@ use db::desktop::events::Event as DBEvent;
 use std::collections::HashSet;
 use std::pin::Pin;
 use std::sync::Arc;
-use tokio::sync::{Mutex, RwLock, watch};
+use tokio::sync::{Mutex, RwLock, broadcast, watch};
 use tokio::time::{self, Duration, Instant, Sleep};
 use tracing::{error, info};
 
+use super::afk_tracker::AfkState;
+use super::power_tracker::PowerEvent;
 use super::window_tracker::Window;
 
 #[derive(Debug, Clone)]
@@ -167,7 +169,8 @@ impl EventTracker {
         self: Arc<Self>,
         mut window_rx: watch::Receiver<Option<Window>>,
         mut afk_timeout_rx: watch::Receiver<u64>,
-        mut afk_state_rx: watch::Receiver<bool>,
+        mut afk_state_rx: watch::Receiver<AfkState>,
+        mut power_rx: broadcast::Receiver<PowerEvent>,
     ) -> tokio::task::JoinHandle<()> {
         let mut tracked_rx = self.tracked_apps_rx.clone();
         let allowed_ids = Arc::clone(&self.allowed_ids);
@@ -191,11 +194,31 @@ impl EventTracker {
                     // AFK state changed: if AFK started, end right away.
                     changed = afk_state_rx.changed() => {
                         if changed.is_err() { break; }
-                        if *afk_state_rx.borrow() {
-                            self.end_active_event().await;
-                            last_state = None;
-                        } else {
-                            sleep.as_mut().reset(Instant::now() + afk_threshold);
+                        let afk_state = *afk_state_rx.borrow_and_update();
+                        match afk_state {
+                            AfkState::Afk { started_at } => {
+                                self.end_active_event_at(started_at).await;
+                                last_state = None;
+                            }
+                            AfkState::Active => {
+                                sleep.as_mut().reset(Instant::now() + afk_threshold);
+                            }
+                        }
+                    }
+                    power_event = power_rx.recv() => {
+                        match power_event {
+                            Ok(PowerEvent::WillSleep { at }) => {
+                                self.end_active_event_at(at).await;
+                                last_state = None;
+                            }
+                            Ok(PowerEvent::DidWake { .. }) => {
+                                sleep.as_mut().reset(Instant::now() + afk_threshold);
+                            }
+                            Err(broadcast::error::RecvError::Lagged(_)) => {
+                                self.end_active_event_at(Utc::now()).await;
+                                last_state = None;
+                            }
+                            Err(broadcast::error::RecvError::Closed) => break,
                         }
                     }
                     changed = tracked_rx.changed() => {
@@ -245,14 +268,20 @@ impl EventTracker {
         })
     }
 
-    async fn end_active_event(&self) {
+    pub async fn end_active_event_at(&self, end_at: DateTime<Utc>) {
         let mut active = self.active_event.lock().await;
+
         if let Some(prev_event) = active.take() {
-            let event_duration = (Utc::now() - prev_event.timestamp.unwrap()).num_seconds();
+            let start_at = prev_event.timestamp.unwrap();
+            let event_duration = (end_at - start_at).num_seconds().max(0);
+
+            if event_duration == 0 {
+                return;
+            }
 
             let mut ended_event = prev_event.clone();
             ended_event.duration = Some(event_duration);
-            ended_event.end_timestamp = Some(Utc::now());
+            ended_event.end_timestamp = Some(end_at);
 
             let db_event: DBEvent = ended_event.into();
 
@@ -266,6 +295,10 @@ impl EventTracker {
                 prev_event.app_name, prev_event.entity_name, prev_event.category, event_duration
             );
         }
+    }
+
+    async fn end_active_event(&self) {
+        self.end_active_event_at(Utc::now()).await;
     }
 
     pub async fn stop_tracking(&self) {

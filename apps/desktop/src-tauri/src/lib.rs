@@ -13,6 +13,7 @@ use utils::{config::ConfigStore, db::get_db_path};
 use crate::{
     goals_service::GoalService,
     server::{ServerManagerExt, ServerStatus},
+    trackers::power_tracker::PowerMonitor,
     ui::{
         menu::MenuExt,
         tray::TrayExt,
@@ -203,7 +204,14 @@ async fn setup_trackers(app_handle: &AppHandle) -> Result<(), anyhow::Error> {
 
     mouse_tracker.start_tracking();
 
-    afk_tracker.start_tracking();
+    let power_monitor = Arc::new(PowerMonitor::new());
+    power_monitor.start();
+    app_handle.manage(Arc::clone(&power_monitor));
+
+    let power_rx_afk = power_monitor.subscribe();
+    let power_rx_events = power_monitor.subscribe();
+
+    afk_tracker.start_tracking(power_rx_afk);
 
     let keyboard_tracker = Arc::clone(&keyboard_tracker);
     keyboard_tracker.start_tracking();
@@ -212,7 +220,12 @@ async fn setup_trackers(app_handle: &AppHandle) -> Result<(), anyhow::Error> {
     tokio::spawn({
         async move {
             if let Err(e) = event_tracker
-                .start_tracking(event_window_rx, afk_timeout_rx_event, afk_state_rx)
+                .start_tracking(
+                    event_window_rx,
+                    afk_timeout_rx_event,
+                    afk_state_rx,
+                    power_rx_events,
+                )
                 .await
             {
                 error!("Event tracker failed: {}", e);
