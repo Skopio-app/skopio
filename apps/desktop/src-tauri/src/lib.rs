@@ -13,7 +13,7 @@ use utils::{config::ConfigStore, db::get_db_path};
 use crate::{
     goals_service::GoalService,
     server::{ServerManagerExt, ServerStatus},
-    trackers::power_tracker::PowerMonitor,
+    trackers::{input_activity::InputActivityBus, power_monitor::PowerMonitor},
     ui::{
         menu::MenuExt,
         tray::TrayExt,
@@ -42,8 +42,10 @@ pub mod utils;
 pub async fn run() {
     tauri::async_runtime::set(tokio::runtime::Handle::current());
 
-    let cursor_tracker = Arc::new(MouseTracker::new());
-    let keyboard_tracker = Arc::new(KeyboardTracker::new());
+    let input_activity_bus = Arc::new(InputActivityBus::new());
+
+    let cursor_tracker = Arc::new(MouseTracker::new(Arc::clone(&input_activity_bus)));
+    let keyboard_tracker = Arc::new(KeyboardTracker::new(Arc::clone(&input_activity_bus)));
     let window_tracker = Arc::new(WindowTracker::new());
 
     let specta_builder = make_specta_builder();
@@ -52,6 +54,7 @@ pub async fn run() {
         .manage(Arc::clone(&cursor_tracker))
         .manage(Arc::clone(&keyboard_tracker))
         .manage(Arc::clone(&window_tracker))
+        .manage(Arc::clone(&input_activity_bus))
         .invoke_handler({
             let handler = specta_builder.invoke_handler();
             move |invoke| handler(invoke)
@@ -179,15 +182,11 @@ async fn setup_trackers(app_handle: &AppHandle) -> Result<(), anyhow::Error> {
 
     let service_trait: Arc<dyn TrackingService> = buffered_service.clone();
 
+    let input_activity_bus = app_handle.state::<Arc<InputActivityBus>>();
     let mouse_tracker = app_handle.state::<Arc<MouseTracker>>();
     let keyboard_tracker = app_handle.state::<Arc<KeyboardTracker>>();
     let afk_timeout_rx = config_store.subscribe_afk_timeout();
-    let afk_tracker = Arc::new(AFKTracker::new(
-        Arc::clone(&mouse_tracker),
-        Arc::clone(&keyboard_tracker),
-        afk_timeout_rx,
-        Arc::clone(&service_trait),
-    ));
+    let afk_tracker = Arc::new(AFKTracker::new(afk_timeout_rx, Arc::clone(&service_trait)));
     app_handle.manage(Arc::clone(&afk_tracker));
 
     let tracked_apps_rx = config_store.subscribe_tracked_apps();
@@ -211,7 +210,9 @@ async fn setup_trackers(app_handle: &AppHandle) -> Result<(), anyhow::Error> {
     let power_rx_afk = power_monitor.subscribe();
     let power_rx_events = power_monitor.subscribe();
 
-    afk_tracker.start_tracking(power_rx_afk);
+    let input_activity_rx = input_activity_bus.subscribe();
+
+    afk_tracker.start_tracking(power_rx_afk, input_activity_rx);
 
     let keyboard_tracker = Arc::clone(&keyboard_tracker);
     keyboard_tracker.start_tracking();

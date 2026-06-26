@@ -7,10 +7,11 @@ use core_graphics::event::{
 };
 use core_graphics::geometry::CGPoint;
 use objc2_foundation::NSAutoreleasePool;
-use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 use tracing::{error, info};
+
+use crate::trackers::input_activity::{InputActivityBus, InputActivityKind};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct MouseButtons {
@@ -24,12 +25,12 @@ pub struct MouseTracker {
     last_position: Arc<Mutex<CGPoint>>,
     last_movement: Arc<Mutex<Instant>>,
     pressed_buttons: Arc<Mutex<MouseButtons>>,
-    mouse_moved: Arc<AtomicBool>,
     runloop: Arc<Mutex<Option<CFRunLoop>>>,
+    input_activity_bus: Arc<InputActivityBus>,
 }
 
 impl MouseTracker {
-    pub fn new() -> Self {
+    pub fn new(input_activity_bus: Arc<InputActivityBus>) -> Self {
         Self {
             last_position: Arc::new(Mutex::new(CGPoint::new(0.0, 0.0))),
             last_movement: Arc::new(Mutex::new(Instant::now())),
@@ -39,8 +40,8 @@ impl MouseTracker {
                 middle: false,
                 other: false,
             })),
-            mouse_moved: Arc::new(AtomicBool::new(false)),
             runloop: Arc::new(Mutex::new(None)),
+            input_activity_bus,
         }
     }
 
@@ -48,8 +49,8 @@ impl MouseTracker {
         let last_position = Arc::clone(&self.last_position);
         let last_movement = Arc::clone(&self.last_movement);
         let pressed_buttons = Arc::clone(&self.pressed_buttons);
-        let mouse_moved = Arc::clone(&self.mouse_moved);
         let runloop_ref = Arc::clone(&self.runloop);
+        let input_activity_bus = Arc::clone(&self.input_activity_bus);
 
         tokio::task::spawn_blocking(move || unsafe {
             let pool = NSAutoreleasePool::new();
@@ -85,15 +86,24 @@ impl MouseTracker {
                             {
                                 *last_pos = position;
                                 *last_move_time = now;
-                                mouse_moved.store(true, Ordering::Relaxed);
+                                input_activity_bus.publish(InputActivityKind::MouseMoved);
                             }
                         }
 
-                        CGEventType::LeftMouseDown => buttons.left = true,
+                        CGEventType::LeftMouseDown => {
+                            buttons.left = true;
+                            input_activity_bus.publish(InputActivityKind::MouseButton);
+                        }
                         CGEventType::LeftMouseUp => buttons.left = false,
-                        CGEventType::RightMouseDown => buttons.right = true,
+                        CGEventType::RightMouseDown => {
+                            buttons.right = true;
+                            input_activity_bus.publish(InputActivityKind::MouseButton);
+                        }
                         CGEventType::RightMouseUp => buttons.right = false,
-                        CGEventType::OtherMouseDown => buttons.other = true,
+                        CGEventType::OtherMouseDown => {
+                            buttons.other = true;
+                            input_activity_bus.publish(InputActivityKind::MouseButton);
+                        }
                         CGEventType::OtherMouseUp => buttons.other = false,
                         _ => {}
                     }
@@ -124,24 +134,10 @@ impl MouseTracker {
         });
     }
 
-    pub fn get_pressed_mouse_buttons(&self) -> MouseButtons {
-        self.pressed_buttons.lock().unwrap().clone()
-    }
-
-    pub fn has_mouse_moved(&self) -> bool {
-        self.mouse_moved.swap(false, Ordering::Relaxed)
-    }
-
     pub fn stop_tracking(&self) {
         if let Some(ref rl) = *self.runloop.lock().unwrap() {
             CFRunLoop::stop(rl);
             info!("Mouse tracker stopped");
         }
-    }
-}
-
-impl Default for MouseTracker {
-    fn default() -> Self {
-        Self::new()
     }
 }

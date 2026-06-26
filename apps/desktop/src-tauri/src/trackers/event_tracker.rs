@@ -16,7 +16,7 @@ use tokio::time::{self, Duration, Instant, Sleep};
 use tracing::{error, info};
 
 use super::afk_tracker::AfkState;
-use super::power_tracker::PowerEvent;
+use super::power_monitor::PowerEvent;
 use super::window_tracker::Window;
 
 #[derive(Debug, Clone)]

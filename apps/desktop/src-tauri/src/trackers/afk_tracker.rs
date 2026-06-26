@@ -5,11 +5,9 @@ use tokio::sync::{Mutex, RwLock, broadcast, watch};
 use tokio::time::{Duration, interval};
 use tracing::{error, info};
 
-use crate::trackers::power_tracker::PowerEvent;
+use crate::trackers::input_activity::InputActivity;
+use crate::trackers::power_monitor::PowerEvent;
 use crate::tracking_service::TrackingService;
-
-use super::keyboard_tracker::KeyboardTracker;
-use super::mouse_tracker::MouseTracker;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum AfkState {
@@ -21,39 +19,49 @@ pub struct AFKTracker {
     last_activity: Arc<RwLock<DateTime<Utc>>>,
     afk_start: Arc<Mutex<Option<DateTime<Utc>>>>,
     afk_timeout_rx: watch::Receiver<u64>,
-    cursor_tracker: Arc<MouseTracker>,
-    keyboard_tracker: Arc<KeyboardTracker>,
     tracker: Arc<dyn TrackingService>,
     afk_state_tx: watch::Sender<AfkState>,
     afk_state_rx: watch::Receiver<AfkState>,
 }
 
 impl AFKTracker {
-    pub fn new(
-        cursor_tracker: Arc<MouseTracker>,
-        keyboard_tracker: Arc<KeyboardTracker>,
-        afk_timeout_rx: watch::Receiver<u64>,
-        tracker: Arc<dyn TrackingService>,
-    ) -> Self {
+    pub fn new(afk_timeout_rx: watch::Receiver<u64>, tracker: Arc<dyn TrackingService>) -> Self {
         let (afk_state_tx, afk_state_rx) = watch::channel(AfkState::Active);
         Self {
             last_activity: Arc::new(RwLock::new(Utc::now())),
             afk_start: Arc::new(Mutex::new(None)),
             afk_timeout_rx,
-            cursor_tracker,
-            keyboard_tracker,
             tracker,
             afk_state_tx,
             afk_state_rx,
         }
     }
 
-    pub fn start_tracking(self: Arc<Self>, mut power_rx: broadcast::Receiver<PowerEvent>) {
+    pub fn start_tracking(
+        self: Arc<Self>,
+        mut power_rx: broadcast::Receiver<PowerEvent>,
+        mut input_rx: broadcast::Receiver<InputActivity>,
+    ) {
         tokio::spawn(async move {
             let mut interval = interval(Duration::from_secs(1));
             loop {
                 tokio::select! {
-                    _ = interval.tick() => {}
+                    _ = interval.tick() => {
+                        self.mark_afk_idle_at(Utc::now()).await;
+                    }
+
+                    input_event = input_rx.recv() => {
+                        match input_event {
+                            Ok(activity) => {
+                                self.handle_input_activity(activity.at).await;
+                            }
+                            Err(broadcast::error::RecvError::Lagged(_)) => {
+                                self.handle_input_activity(Utc::now()).await;
+                            }
+                            Err(broadcast::error::RecvError::Closed) => break,
+                        }
+                    }
+
                     power_event = power_rx.recv() => {
                         match power_event {
                             Ok(PowerEvent::WillSleep { at } | PowerEvent::DidWake { at }) => {
@@ -64,12 +72,8 @@ impl AFKTracker {
                             }
                             Err(broadcast::error::RecvError::Closed) => break,
                         }
-
-                        continue;
                     }
                 }
-
-                self.process_activity_tick().await;
             }
         });
     }
@@ -124,13 +128,8 @@ impl AFKTracker {
         });
     }
 
-    async fn process_activity_tick(&self) {
-        let now = Utc::now();
+    async fn handle_input_activity(&self, now: DateTime<Utc>) {
         self.mark_afk_idle_at(now).await;
-
-        if !self.activity_detected() {
-            return;
-        }
 
         let afk_start_time = {
             let mut afk_time = self.afk_start.lock().await;
@@ -143,20 +142,6 @@ impl AFKTracker {
 
         *self.last_activity.write().await = now;
         self.update_state(AfkState::Active);
-    }
-
-    fn activity_detected(&self) -> bool {
-        let mouse_buttons = self.cursor_tracker.get_pressed_mouse_buttons();
-        let keys_pressed = self.keyboard_tracker.get_pressed_keys();
-
-        let mouse_active = self.cursor_tracker.has_mouse_moved();
-        let mouse_clicked = mouse_buttons.left
-            || mouse_buttons.right
-            || mouse_buttons.middle
-            || mouse_buttons.other;
-        let keyboard_active = !keys_pressed.is_empty();
-
-        mouse_active || mouse_clicked || keyboard_active
     }
 
     async fn record_afk_return(&self, afk_start_time: DateTime<Utc>, now: DateTime<Utc>) {

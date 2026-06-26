@@ -11,18 +11,22 @@ use std::sync::{Arc, Mutex};
 use std::time::Instant;
 use tracing::{error, info};
 
+use crate::trackers::input_activity::{InputActivityBus, InputActivityKind};
+
 pub struct KeyboardTracker {
     last_keypress: Arc<Mutex<Instant>>,
     pressed_keys: Arc<Mutex<HashSet<i64>>>,
     runloop: Arc<Mutex<Option<CFRunLoop>>>,
+    input_activity_bus: Arc<InputActivityBus>,
 }
 
 impl KeyboardTracker {
-    pub fn new() -> Self {
+    pub fn new(input_activity_bus: Arc<InputActivityBus>) -> Self {
         Self {
             last_keypress: Arc::new(Mutex::new(Instant::now())),
             pressed_keys: Arc::new(Mutex::new(HashSet::new())),
             runloop: Arc::new(Mutex::new(None)),
+            input_activity_bus,
         }
     }
 
@@ -30,6 +34,7 @@ impl KeyboardTracker {
         let pressed_keys = Arc::clone(&self.pressed_keys);
         let last_keypress = Arc::clone(&self.last_keypress);
         let runloop_ref = Arc::clone(&self.runloop);
+        let input_activity_bus = Arc::clone(&self.input_activity_bus);
 
         tokio::task::spawn_blocking(move || unsafe {
             let pool = NSAutoreleasePool::new();
@@ -62,6 +67,7 @@ impl KeyboardTracker {
                                 != 0;
                             if !repeat {
                                 keys.insert(key_code);
+                                input_activity_bus.publish(InputActivityKind::KeyPressed);
                             }
                         }
                         CGEventType::KeyUp => {
@@ -71,7 +77,10 @@ impl KeyboardTracker {
                             let flags = event.get_flags();
                             if let Some(flag) = flag_for_modifier(key_code) {
                                 if flags.contains(flag) {
-                                    keys.insert(key_code);
+                                    let was_new = keys.insert(key_code);
+                                    if was_new {
+                                        input_activity_bus.publish(InputActivityKind::KeyPressed);
+                                    }
                                 } else {
                                     keys.remove(&key_code);
                                 }
@@ -106,11 +115,6 @@ impl KeyboardTracker {
         });
     }
 
-    pub fn get_pressed_keys(&self) -> HashSet<i64> {
-        let keys = self.pressed_keys.lock().unwrap();
-        keys.clone()
-    }
-
     pub fn stop_tracking(&self) {
         if let Some(ref rl) = *self.runloop.lock().unwrap() {
             CFRunLoop::stop(rl);
@@ -127,11 +131,5 @@ fn flag_for_modifier(key_code: i64) -> Option<CGEventFlags> {
         55 | 54 => Some(CGEventFlags::CGEventFlagCommand), // Left/Right Command
         57 => Some(CGEventFlags::CGEventFlagAlphaShift), // Caps Lock
         _ => None,
-    }
-}
-
-impl Default for KeyboardTracker {
-    fn default() -> Self {
-        Self::new()
     }
 }
