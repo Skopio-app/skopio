@@ -31,7 +31,7 @@ const SkeletonBarChart = () => {
   const barHeightPx = (i: number) => Math.round(seededRange(i, 40, 140)); // 40..140px
 
   return (
-    <div className="h-[200px] w-full relative flex gap-1 items-end px-4 animate-pulse">
+    <div className="h-50 w-full relative flex gap-1 items-end px-4 animate-pulse">
       {Array.from({ length: 12 }).map((_, idx) => (
         <div
           key={idx}
@@ -55,13 +55,13 @@ const SkeletonCalendarChart: React.FC<SkeletonCalendarChartProps> = ({
   const cellOpacity = (i: number) => seededRange(i, 0.25, 0.85); // 0.25..0.85
 
   return (
-    <div className="h-[200px] w-full px-4 py-3 animate-pulse">
+    <div className="h-50 w-full px-4 py-3 animate-pulse">
       {/* calendar body */}
       <div className="flex w-full">
         {/* grid */}
         <div className="flex-1 overflow-hidden">
           <div
-            className="grid gap-[2px]"
+            className="grid gap-0.5"
             style={{
               gridTemplateColumns: `repeat(${weeks}, minmax(0, 1fr))`,
               gridTemplateRows: "repeat(7, minmax(0, 1fr))",
@@ -93,12 +93,12 @@ const SkeletonPieChart: React.FC<SkeletonPieChartProps> = ({
   const legendWidthPct = (i: number) => toPercent(seededRange(i, 0.4, 0.95)); // 40%..95%
 
   return (
-    <div className="h-[200px] w-full flex items-center gap-4 px-4 animate-pulse">
+    <div className="h-50 w-full flex items-center gap-4 px-4 animate-pulse">
       {/* Donut placeholder */}
       <div className="flex-1 flex items-center justify-center min-w-0">
-        <div className="relative w-[140px] h-[140px] rounded-full bg-gray-300/50">
+        <div className="relative w-35 h-35 rounded-full bg-gray-300/50">
           {/* donut hole */}
-          <div className="absolute inset-0 m-auto w-[70px] h-[70px] rounded-full bg-background" />
+          <div className="absolute inset-0 m-auto w-17.5 h-17.5 rounded-full bg-background" />
           {/* subtle “slice” hints */}
           <div className="absolute inset-0 rounded-full border border-gray-300/40" />
         </div>

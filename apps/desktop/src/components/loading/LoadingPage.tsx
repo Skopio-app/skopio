@@ -1,5 +1,5 @@
 import BorderBeam from "./BorderBeam";
-import DinoLoading from "./DinoLoading";
+import MatrixLoading from "./MatrixLoading";
 
 const LoadingPage = () => {
   return (
@@ -7,7 +7,7 @@ const LoadingPage = () => {
       <BorderBeam loading />
       <div className="relative rounded-2xl px-10 py-8">
         <div className="relative z-10 flex flex-col items-center gap-6">
-          <DinoLoading />
+          <MatrixLoading />
           <div className="flex flex-col items-center">
             <p className="text-lg font-medium text-foreground animate-pulse">
               Starting the local server…
