@@ -3,21 +3,9 @@ import MatrixLoading from "./MatrixLoading";
 
 const LoadingPage = () => {
   return (
-    <div className="relative flex flex-col items-center justify-center h-dvh w-full overflow-hidden bg-transparent">
-      <BorderBeam loading />
-      <div className="relative w-full px-4 py-6 sm:px-10 sm:py-8">
-        <div className="relative z-10 flex w-full flex-col items-center gap-6">
-          <MatrixLoading />
-          <div className="flex flex-col items-center">
-            <p className="text-lg font-medium text-foreground animate-pulse">
-              Starting the local server…
-            </p>
-            <p className="text-sm text-muted-foreground">
-              This might take a few seconds.
-            </p>
-          </div>
-        </div>
-      </div>
+    <div className="relative h-dvh w-full overflow-hidden bg-background">
+      <MatrixLoading fit="cover" height="100%" width="100%" />
+      <BorderBeam loading className="inset-1 z-50 rounded-lg" />
     </div>
   );
 };

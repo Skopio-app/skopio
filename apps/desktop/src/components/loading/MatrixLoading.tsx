@@ -11,6 +11,7 @@ import {
 
 type MatrixLoadingProps = {
   className?: string;
+  fit?: "cover" | "stretch";
   height?: CSSProperties["height"];
   style?: CSSProperties;
   width?: CSSProperties["width"];
@@ -25,6 +26,7 @@ const VIEWPORT_BLOCK_RESERVE = 180;
 
 const MatrixLoading = ({
   className,
+  fit = "stretch",
   height,
   style,
   width,
@@ -32,8 +34,8 @@ const MatrixLoading = ({
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const frameRef = useRef<HTMLDivElement | null>(null);
   const frameIndexRef = useRef(0);
-  const foreground = useCssVarColor("--foreground");
   const themeMode = useResolvedThemeMode();
+  const matrixColor = useCssVarColor("--foreground");
   const matrixFrames = matrixFramesByTheme[themeMode];
   const resolvedHeight = height ?? style?.height;
   const resolvedWidth = width ?? style?.width;
@@ -43,6 +45,14 @@ const MatrixLoading = ({
     frameRef,
     shouldUseResponsiveSize,
   );
+  const coverCanvasSize = useCoverCanvasSize(frameRef, fit === "cover");
+  const canvasStyle =
+    fit === "cover"
+      ? coverCanvasSize
+      : ({
+          height: "100%",
+          width: "100%",
+        } satisfies CSSProperties);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -72,7 +82,7 @@ const MatrixLoading = ({
         matrixFrames[frameIndexRef.current % matrixFrames.length],
         width,
         height,
-        foreground,
+        matrixColor,
       );
     };
 
@@ -82,7 +92,7 @@ const MatrixLoading = ({
     resizeObserver.observe(canvas);
 
     return () => resizeObserver.disconnect();
-  }, [foreground, matrixFrames]);
+  }, [matrixColor, matrixFrames]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -102,7 +112,7 @@ const MatrixLoading = ({
         matrixFrames[frameIndexRef.current % matrixFrames.length],
         Math.max(1, Math.round(rect.width)),
         Math.max(1, Math.round(rect.height)),
-        foreground,
+        matrixColor,
       );
     };
 
@@ -132,13 +142,14 @@ const MatrixLoading = ({
     animationFrame = window.requestAnimationFrame(animate);
 
     return () => window.cancelAnimationFrame(animationFrame);
-  }, [foreground, matrixFrames]);
+  }, [matrixColor, matrixFrames]);
 
   return (
     <div
       ref={frameRef}
       className={[
-        "relative box-border overflow-hidden bg-background/80 p-2 sm:p-3",
+        "box-border overflow-hidden",
+        fit === "cover" ? undefined : "relative p-2 sm:p-3",
         className,
       ]
         .filter(Boolean)
@@ -151,6 +162,8 @@ const MatrixLoading = ({
         height:
           resolvedHeight ??
           (shouldUseResponsiveSize ? responsiveSize.height : undefined),
+        inset: style?.inset ?? (fit === "cover" ? 0 : undefined),
+        position: style?.position ?? (fit === "cover" ? "absolute" : undefined),
         width:
           resolvedWidth ??
           (shouldUseResponsiveSize ? responsiveSize.width : "100%"),
@@ -158,13 +171,89 @@ const MatrixLoading = ({
     >
       <canvas
         ref={canvasRef}
-        className="block h-full w-full"
+        className={
+          fit === "cover"
+            ? "absolute left-1/2 top-1/2 block -translate-x-1/2 -translate-y-1/2"
+            : "block"
+        }
+        style={canvasStyle}
         role="img"
         aria-label="Skopio loading animation"
       />
     </div>
   );
 };
+
+function useCoverCanvasSize(
+  ref: RefObject<HTMLDivElement | null>,
+  enabled: boolean,
+) {
+  const [size, setSize] = useState<CSSProperties>({
+    height: "100%",
+    width: "100%",
+  });
+
+  useEffect(() => {
+    if (!enabled) {
+      return;
+    }
+
+    const updateSize = () => {
+      const element = ref.current;
+
+      if (!element) {
+        return;
+      }
+
+      const rect = element.getBoundingClientRect();
+      const containerWidth = Math.max(1, rect.width);
+      const containerHeight = Math.max(1, rect.height);
+      const containerAspectRatio = containerWidth / containerHeight;
+      let nextWidth = containerWidth;
+      let nextHeight = containerHeight;
+
+      if (containerAspectRatio > MATRIX_ASPECT_RATIO) {
+        nextHeight = containerWidth / MATRIX_ASPECT_RATIO;
+      } else {
+        nextWidth = containerHeight * MATRIX_ASPECT_RATIO;
+      }
+
+      setSize((previousSize) => {
+        const roundedWidth = `${Math.ceil(nextWidth)}px`;
+        const roundedHeight = `${Math.ceil(nextHeight)}px`;
+
+        if (
+          previousSize.width === roundedWidth &&
+          previousSize.height === roundedHeight
+        ) {
+          return previousSize;
+        }
+
+        return {
+          height: roundedHeight,
+          width: roundedWidth,
+        };
+      });
+    };
+
+    updateSize();
+
+    const resizeObserver = new ResizeObserver(updateSize);
+
+    if (ref.current) {
+      resizeObserver.observe(ref.current);
+    }
+
+    window.addEventListener("resize", updateSize);
+
+    return () => {
+      resizeObserver.disconnect();
+      window.removeEventListener("resize", updateSize);
+    };
+  }, [enabled, ref]);
+
+  return size;
+}
 
 function useResponsiveMatrixSize(
   ref: RefObject<HTMLDivElement | null>,
