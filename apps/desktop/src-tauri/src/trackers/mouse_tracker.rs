@@ -13,18 +13,9 @@ use tracing::{error, info};
 
 use crate::trackers::input_activity::{InputActivityBus, InputActivityKind, MouseButton};
 
-#[derive(Debug, Clone, PartialEq)]
-pub struct MouseButtons {
-    pub left: bool,
-    pub right: bool,
-    pub middle: bool,
-    pub other: bool,
-}
-
 pub struct MouseTracker {
     last_position: Arc<Mutex<CGPoint>>,
     last_movement: Arc<Mutex<Instant>>,
-    pressed_buttons: Arc<Mutex<MouseButtons>>,
     runloop: Arc<Mutex<Option<CFRunLoop>>>,
     input_activity_bus: Arc<InputActivityBus>,
 }
@@ -34,12 +25,6 @@ impl MouseTracker {
         Self {
             last_position: Arc::new(Mutex::new(CGPoint::new(0.0, 0.0))),
             last_movement: Arc::new(Mutex::new(Instant::now())),
-            pressed_buttons: Arc::new(Mutex::new(MouseButtons {
-                left: false,
-                right: false,
-                middle: false,
-                other: false,
-            })),
             runloop: Arc::new(Mutex::new(None)),
             input_activity_bus,
         }
@@ -48,7 +33,6 @@ impl MouseTracker {
     pub fn start_tracking(&self) {
         let last_position = Arc::clone(&self.last_position);
         let last_movement = Arc::clone(&self.last_movement);
-        let pressed_buttons = Arc::clone(&self.pressed_buttons);
         let runloop_ref = Arc::clone(&self.runloop);
         let input_activity_bus = Arc::clone(&self.input_activity_bus);
 
@@ -71,7 +55,6 @@ impl MouseTracker {
                 move |_proxy, event_type, event| {
                     let mut last_pos = last_position.lock().unwrap();
                     let mut last_move_time = last_movement.lock().unwrap();
-                    let mut buttons = pressed_buttons.lock().unwrap();
 
                     match event_type {
                         CGEventType::MouseMoved => {
@@ -95,26 +78,23 @@ impl MouseTracker {
                         }
 
                         CGEventType::LeftMouseDown => {
-                            buttons.left = true;
                             input_activity_bus.publish(InputActivityKind::MouseButtonPressed {
                                 button: MouseButton::Left,
                             });
                         }
-                        CGEventType::LeftMouseUp => buttons.left = false,
+                        CGEventType::LeftMouseUp => {}
                         CGEventType::RightMouseDown => {
-                            buttons.right = true;
                             input_activity_bus.publish(InputActivityKind::MouseButtonPressed {
                                 button: MouseButton::Right,
                             });
                         }
-                        CGEventType::RightMouseUp => buttons.right = false,
+                        CGEventType::RightMouseUp => {}
                         CGEventType::OtherMouseDown => {
-                            buttons.other = true;
                             input_activity_bus.publish(InputActivityKind::MouseButtonPressed {
                                 button: MouseButton::Other,
                             });
                         }
-                        CGEventType::OtherMouseUp => buttons.other = false,
+                        CGEventType::OtherMouseUp => {}
 
                         CGEventType::ScrollWheel => {
                             let position = event.location();
