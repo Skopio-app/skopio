@@ -11,7 +11,7 @@ use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 use tracing::{error, info};
 
-use crate::trackers::input_activity::{InputActivityBus, InputActivityKind};
+use crate::trackers::input_activity::{InputActivityBus, InputActivityKind, MouseButton};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct MouseButtons {
@@ -86,23 +86,32 @@ impl MouseTracker {
                             {
                                 *last_pos = position;
                                 *last_move_time = now;
-                                input_activity_bus.publish(InputActivityKind::MouseMoved);
+                                input_activity_bus.publish(InputActivityKind::MouseMoved {
+                                    x: position.x,
+                                    y: position.y,
+                                });
                             }
                         }
 
                         CGEventType::LeftMouseDown => {
                             buttons.left = true;
-                            input_activity_bus.publish(InputActivityKind::MouseButton);
+                            input_activity_bus.publish(InputActivityKind::MouseButtonPressed {
+                                button: MouseButton::Left,
+                            });
                         }
                         CGEventType::LeftMouseUp => buttons.left = false,
                         CGEventType::RightMouseDown => {
                             buttons.right = true;
-                            input_activity_bus.publish(InputActivityKind::MouseButton);
+                            input_activity_bus.publish(InputActivityKind::MouseButtonPressed {
+                                button: MouseButton::Right,
+                            });
                         }
                         CGEventType::RightMouseUp => buttons.right = false,
                         CGEventType::OtherMouseDown => {
                             buttons.other = true;
-                            input_activity_bus.publish(InputActivityKind::MouseButton);
+                            input_activity_bus.publish(InputActivityKind::MouseButtonPressed {
+                                button: MouseButton::Other,
+                            });
                         }
                         CGEventType::OtherMouseUp => buttons.other = false,
                         _ => {}

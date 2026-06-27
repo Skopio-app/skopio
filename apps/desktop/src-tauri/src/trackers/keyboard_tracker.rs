@@ -67,7 +67,8 @@ impl KeyboardTracker {
                                 != 0;
                             if !repeat {
                                 keys.insert(key_code);
-                                input_activity_bus.publish(InputActivityKind::KeyPressed);
+                                input_activity_bus
+                                    .publish(InputActivityKind::KeyPressed { key_code });
                             }
                         }
                         CGEventType::KeyUp => {
@@ -79,7 +80,8 @@ impl KeyboardTracker {
                                 if flags.contains(flag) {
                                     let was_new = keys.insert(key_code);
                                     if was_new {
-                                        input_activity_bus.publish(InputActivityKind::KeyPressed);
+                                        input_activity_bus
+                                            .publish(InputActivityKind::KeyPressed { key_code });
                                     }
                                 } else {
                                     keys.remove(&key_code);
