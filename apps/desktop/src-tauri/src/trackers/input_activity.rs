@@ -10,9 +10,25 @@ pub enum MouseButton {
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum InputActivityKind {
-    MouseMoved { x: f64, y: f64 },
-    MouseButtonPressed { button: MouseButton },
-    KeyPressed { key_code: i64 },
+    MouseMoved {
+        x: f64,
+        y: f64,
+    },
+    MouseButtonPressed {
+        button: MouseButton,
+    },
+    MouseScrolled {
+        x: f64,
+        y: f64,
+        delta_x: i64,
+        delta_y: i64,
+        point_delta_x: i64,
+        point_delta_y: i64,
+        is_continuous: bool,
+    },
+    KeyPressed {
+        key_code: i64,
+    },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]

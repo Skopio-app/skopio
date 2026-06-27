@@ -3,7 +3,7 @@
 use core_foundation::runloop::{CFRunLoop, kCFRunLoopCommonModes};
 use core_graphics::event::{
     CGEventTap, CGEventTapLocation, CGEventTapOptions, CGEventTapPlacement, CGEventType,
-    CallbackResult,
+    CallbackResult, EventField,
 };
 use core_graphics::geometry::CGPoint;
 use objc2_foundation::NSAutoreleasePool;
@@ -60,6 +60,7 @@ impl MouseTracker {
                 CGEventTapOptions::ListenOnly,
                 vec![
                     CGEventType::MouseMoved,
+                    CGEventType::ScrollWheel,
                     CGEventType::LeftMouseDown,
                     CGEventType::LeftMouseUp,
                     CGEventType::RightMouseDown,
@@ -114,6 +115,36 @@ impl MouseTracker {
                             });
                         }
                         CGEventType::OtherMouseUp => buttons.other = false,
+
+                        CGEventType::ScrollWheel => {
+                            let position = event.location();
+
+                            let delta_y = event.get_integer_value_field(
+                                EventField::SCROLL_WHEEL_EVENT_DELTA_AXIS_1,
+                            );
+                            let delta_x = event.get_integer_value_field(
+                                EventField::SCROLL_WHEEL_EVENT_DELTA_AXIS_2,
+                            );
+                            let point_delta_y = event.get_integer_value_field(
+                                EventField::SCROLL_WHEEL_EVENT_POINT_DELTA_AXIS_1,
+                            );
+                            let point_delta_x = event.get_integer_value_field(
+                                EventField::SCROLL_WHEEL_EVENT_POINT_DELTA_AXIS_2,
+                            );
+                            let is_continuous = event.get_integer_value_field(
+                                EventField::SCROLL_WHEEL_EVENT_IS_CONTINUOUS,
+                            ) != 0;
+
+                            input_activity_bus.publish(InputActivityKind::MouseScrolled {
+                                x: position.x,
+                                y: position.y,
+                                delta_x,
+                                delta_y,
+                                point_delta_x,
+                                point_delta_y,
+                                is_continuous,
+                            });
+                        }
                         _ => {}
                     }
 
