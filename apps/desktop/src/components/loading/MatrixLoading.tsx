@@ -1,4 +1,5 @@
 import { useCssVarColor } from "@/hooks/useChartColor";
+import type { CSSProperties, RefObject } from "react";
 import { useEffect, useRef, useState } from "react";
 import {
   matrixColumns,
@@ -10,14 +11,38 @@ import {
 
 type MatrixLoadingProps = {
   className?: string;
+  height?: CSSProperties["height"];
+  style?: CSSProperties;
+  width?: CSSProperties["width"];
 };
 
-const MatrixLoading = ({ className }: MatrixLoadingProps) => {
+const MATRIX_ASPECT_RATIO =
+  matrixRenderBounds.width / matrixRenderBounds.height;
+const DEFAULT_MAX_WIDTH = 980;
+const MIN_RESPONSIVE_HEIGHT = 120;
+const VIEWPORT_INLINE_GUTTER = 32;
+const VIEWPORT_BLOCK_RESERVE = 180;
+
+const MatrixLoading = ({
+  className,
+  height,
+  style,
+  width,
+}: MatrixLoadingProps) => {
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+  const frameRef = useRef<HTMLDivElement | null>(null);
   const frameIndexRef = useRef(0);
   const foreground = useCssVarColor("--foreground");
   const themeMode = useResolvedThemeMode();
   const matrixFrames = matrixFramesByTheme[themeMode];
+  const resolvedHeight = height ?? style?.height;
+  const resolvedWidth = width ?? style?.width;
+  const shouldUseResponsiveSize =
+    resolvedHeight === undefined && resolvedWidth === undefined;
+  const responsiveSize = useResponsiveMatrixSize(
+    frameRef,
+    shouldUseResponsiveSize,
+  );
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -111,14 +136,24 @@ const MatrixLoading = ({ className }: MatrixLoadingProps) => {
 
   return (
     <div
+      ref={frameRef}
       className={[
-        "relative w-[min(92vw,820px)] overflow-hidden rounded-md border border-border/60 bg-background/40 p-3 shadow-sm",
+        "relative box-border overflow-hidden bg-background/80 p-2 sm:p-3",
         className,
       ]
         .filter(Boolean)
         .join(" ")}
       style={{
-        aspectRatio: `${matrixRenderBounds.width} / ${matrixRenderBounds.height}`,
+        ...style,
+        aspectRatio:
+          style?.aspectRatio ??
+          `${matrixRenderBounds.width} / ${matrixRenderBounds.height}`,
+        height:
+          resolvedHeight ??
+          (shouldUseResponsiveSize ? responsiveSize.height : undefined),
+        width:
+          resolvedWidth ??
+          (shouldUseResponsiveSize ? responsiveSize.width : "100%"),
       }}
     >
       <canvas
@@ -130,6 +165,81 @@ const MatrixLoading = ({ className }: MatrixLoadingProps) => {
     </div>
   );
 };
+
+function useResponsiveMatrixSize(
+  ref: RefObject<HTMLDivElement | null>,
+  enabled: boolean,
+) {
+  const [size, setSize] = useState<CSSProperties>({
+    width: "min(100%, 92vw, 980px)",
+  });
+
+  useEffect(() => {
+    if (!enabled) {
+      return;
+    }
+
+    const updateSize = () => {
+      const element = ref.current;
+      const parentWidth =
+        element?.parentElement?.getBoundingClientRect().width ||
+        window.innerWidth;
+      const viewportWidth = window.innerWidth;
+      const viewportHeight = window.innerHeight;
+      const availableWidth = Math.min(
+        DEFAULT_MAX_WIDTH,
+        parentWidth,
+        viewportWidth - VIEWPORT_INLINE_GUTTER,
+      );
+      const availableHeight = Math.max(
+        MIN_RESPONSIVE_HEIGHT,
+        viewportHeight - VIEWPORT_BLOCK_RESERVE,
+      );
+      let nextWidth = Math.max(1, availableWidth);
+      let nextHeight = nextWidth / MATRIX_ASPECT_RATIO;
+
+      if (nextHeight > availableHeight) {
+        nextHeight = availableHeight;
+        nextWidth = nextHeight * MATRIX_ASPECT_RATIO;
+      }
+
+      setSize((previousSize) => {
+        const roundedWidth = `${Math.round(nextWidth)}px`;
+        const roundedHeight = `${Math.round(nextHeight)}px`;
+
+        if (
+          previousSize.width === roundedWidth &&
+          previousSize.height === roundedHeight
+        ) {
+          return previousSize;
+        }
+
+        return {
+          height: roundedHeight,
+          width: roundedWidth,
+        };
+      });
+    };
+
+    updateSize();
+
+    const resizeObserver = new ResizeObserver(updateSize);
+    const observedElement = ref.current?.parentElement ?? ref.current;
+
+    if (observedElement) {
+      resizeObserver.observe(observedElement);
+    }
+
+    window.addEventListener("resize", updateSize);
+
+    return () => {
+      resizeObserver.disconnect();
+      window.removeEventListener("resize", updateSize);
+    };
+  }, [enabled, ref]);
+
+  return size;
+}
 
 function useResolvedThemeMode() {
   const [themeMode, setThemeMode] = useState<"light" | "dark">(() =>
