@@ -33,10 +33,13 @@ export default defineConfig({
     minify: !process.env.TAURI_ENV_DEBUG ? "oxc" : false,
     // produce sourcemaps for debug builds
     sourcemap: !!process.env.TAURI_ENV_DEBUG,
-    rollupOptions: {
+    rolldownOptions: {
       input: {
         main: path.resolve(__dirname, "index.html"),
         notification: path.resolve(__dirname, "notification.html"),
+      },
+      output: {
+        codeSplitting: true,
       },
     },
   },
