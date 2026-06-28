@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import {
   matrixColumns,
   matrixFrameRate,
-  matrixFramesByTheme,
+  matrixFramesUrl,
   matrixLevels,
   matrixRenderBounds,
 } from "./matrix/generatedFrames";
@@ -24,6 +24,16 @@ const MIN_RESPONSIVE_HEIGHT = 120;
 const VIEWPORT_INLINE_GUTTER = 32;
 const VIEWPORT_BLOCK_RESERVE = 180;
 
+type MatrixThemeMode = "light" | "dark";
+type MatrixFramesByTheme = Record<MatrixThemeMode, readonly string[]>;
+type MatrixFramesPayload = {
+  framesByTheme?: MatrixFramesByTheme;
+};
+
+let cachedMatrixFrames: MatrixFramesByTheme | null = null;
+let matrixFramesPromise: Promise<MatrixFramesByTheme> | null = null;
+const EMPTY_MATRIX_FRAMES: readonly string[] = [];
+
 const MatrixLoading = ({
   className,
   fit = "stretch",
@@ -36,7 +46,8 @@ const MatrixLoading = ({
   const frameIndexRef = useRef(0);
   const themeMode = useResolvedThemeMode();
   const matrixColor = useCssVarColor("--foreground");
-  const matrixFrames = matrixFramesByTheme[themeMode];
+  const matrixFramesByTheme = useMatrixFrames();
+  const matrixFrames = matrixFramesByTheme?.[themeMode] ?? EMPTY_MATRIX_FRAMES;
   const resolvedHeight = height ?? style?.height;
   const resolvedWidth = width ?? style?.width;
   const shouldUseResponsiveSize =
@@ -77,13 +88,12 @@ const MatrixLoading = ({
       }
 
       context.setTransform(dpr, 0, 0, dpr, 0, 0);
-      drawFrame(
-        context,
-        matrixFrames[frameIndexRef.current % matrixFrames.length],
-        width,
-        height,
-        matrixColor,
-      );
+      const frame = currentMatrixFrame(matrixFrames, frameIndexRef.current);
+      context.clearRect(0, 0, width, height);
+
+      if (frame) {
+        drawFrame(context, frame, width, height, matrixColor);
+      }
     };
 
     resizeCanvas();
@@ -107,19 +117,23 @@ const MatrixLoading = ({
 
     const drawCurrentFrame = () => {
       const rect = canvas.getBoundingClientRect();
-      drawFrame(
-        context,
-        matrixFrames[frameIndexRef.current % matrixFrames.length],
-        Math.max(1, Math.round(rect.width)),
-        Math.max(1, Math.round(rect.height)),
-        matrixColor,
-      );
+      const width = Math.max(1, Math.round(rect.width));
+      const height = Math.max(1, Math.round(rect.height));
+      const frame = currentMatrixFrame(matrixFrames, frameIndexRef.current);
+
+      context.clearRect(0, 0, width, height);
+
+      if (frame) {
+        drawFrame(context, frame, width, height, matrixColor);
+      }
     };
 
-    if (
-      matrixFrames.length <= 1 ||
-      window.matchMedia("(prefers-reduced-motion: reduce)").matches
-    ) {
+    if (matrixFrames.length === 0) {
+      drawCurrentFrame();
+      return;
+    }
+
+    if (matrixFrames.length <= 1 || prefersReducedMotion()) {
       drawCurrentFrame();
       return;
     }
@@ -183,6 +197,74 @@ const MatrixLoading = ({
     </div>
   );
 };
+
+function useMatrixFrames() {
+  const [framesByTheme, setFramesByTheme] =
+    useState<MatrixFramesByTheme | null>(cachedMatrixFrames);
+
+  useEffect(() => {
+    if (cachedMatrixFrames) {
+      return;
+    }
+
+    let isMounted = true;
+
+    loadMatrixFrames()
+      .then((frames) => {
+        if (isMounted) {
+          setFramesByTheme(frames);
+        }
+      })
+      .catch((error) => {
+        console.error("Failed to load matrix loading frames", error);
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  return framesByTheme;
+}
+
+function loadMatrixFrames() {
+  matrixFramesPromise ??= fetch(matrixFramesUrl)
+    .then((response) => {
+      if (!response.ok) {
+        throw new Error(
+          `Failed to fetch ${matrixFramesUrl}: ${response.status} ${response.statusText}`,
+        );
+      }
+
+      return response.json() as Promise<MatrixFramesPayload>;
+    })
+    .then((payload) => {
+      const framesByTheme = payload.framesByTheme;
+
+      if (!framesByTheme?.dark?.length || !framesByTheme?.light?.length) {
+        throw new Error(
+          "Matrix frame payload is missing light or dark frames.",
+        );
+      }
+
+      cachedMatrixFrames = framesByTheme;
+      return framesByTheme;
+    });
+
+  return matrixFramesPromise;
+}
+
+function prefersReducedMotion() {
+  return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+}
+
+function currentMatrixFrame(frames: readonly string[], frameIndex: number) {
+  if (frames.length === 0) {
+    return undefined;
+  }
+
+  return frames[frameIndex % frames.length];
+}
 
 function useCoverCanvasSize(
   ref: RefObject<HTMLDivElement | null>,
@@ -363,6 +445,10 @@ function drawFrame(
   height: number,
   color: string,
 ) {
+  if (!frame) {
+    return;
+  }
+
   const cellWidth = width / matrixRenderBounds.width;
   const cellHeight = height / matrixRenderBounds.height;
 
