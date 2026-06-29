@@ -36,122 +36,129 @@ impl MouseTracker {
         let runloop_ref = Arc::clone(&self.runloop);
         let input_activity_bus = Arc::clone(&self.input_activity_bus);
 
-        tokio::task::spawn_blocking(move || unsafe {
-            let pool = NSAutoreleasePool::new();
-            match CGEventTap::new(
-                CGEventTapLocation::Session,
-                CGEventTapPlacement::HeadInsertEventTap,
-                CGEventTapOptions::ListenOnly,
-                vec![
-                    CGEventType::MouseMoved,
-                    CGEventType::ScrollWheel,
-                    CGEventType::LeftMouseDown,
-                    CGEventType::LeftMouseUp,
-                    CGEventType::RightMouseDown,
-                    CGEventType::RightMouseUp,
-                    CGEventType::OtherMouseDown,
-                    CGEventType::OtherMouseUp,
-                ],
-                move |_proxy, event_type, event| {
-                    let mut last_pos = last_position.lock().unwrap();
-                    let mut last_move_time = last_movement.lock().unwrap();
+        match std::thread::Builder::new()
+            .name("skopio-mouse-tracker".into())
+            .spawn(move || unsafe {
+                let pool = NSAutoreleasePool::new();
+                match CGEventTap::new(
+                    CGEventTapLocation::Session,
+                    CGEventTapPlacement::HeadInsertEventTap,
+                    CGEventTapOptions::ListenOnly,
+                    vec![
+                        CGEventType::MouseMoved,
+                        CGEventType::ScrollWheel,
+                        CGEventType::LeftMouseDown,
+                        CGEventType::LeftMouseUp,
+                        CGEventType::RightMouseDown,
+                        CGEventType::RightMouseUp,
+                        CGEventType::OtherMouseDown,
+                        CGEventType::OtherMouseUp,
+                    ],
+                    move |_proxy, event_type, event| {
+                        let mut last_pos = last_position.lock().unwrap();
+                        let mut last_move_time = last_movement.lock().unwrap();
 
-                    match event_type {
-                        CGEventType::MouseMoved => {
-                            let position = event.location();
-                            let dx = (position.x - last_pos.x).abs();
-                            let dy = (position.y - last_pos.y).abs();
-                            let movement_threshold = 100.0;
-                            let debounce_duration = Duration::from_millis(50);
-                            let now = Instant::now();
+                        match event_type {
+                            CGEventType::MouseMoved => {
+                                let position = event.location();
+                                let dx = (position.x - last_pos.x).abs();
+                                let dy = (position.y - last_pos.y).abs();
+                                let movement_threshold = 100.0;
+                                let debounce_duration = Duration::from_millis(50);
+                                let now = Instant::now();
 
-                            if (dx > movement_threshold || dy > movement_threshold)
-                                && now.duration_since(*last_move_time) > debounce_duration
-                            {
-                                *last_pos = position;
-                                *last_move_time = now;
-                                input_activity_bus.publish(InputActivityKind::MouseMoved {
-                                    x: position.x,
-                                    y: position.y,
+                                if (dx > movement_threshold || dy > movement_threshold)
+                                    && now.duration_since(*last_move_time) > debounce_duration
+                                {
+                                    *last_pos = position;
+                                    *last_move_time = now;
+                                    input_activity_bus.publish(InputActivityKind::MouseMoved {
+                                        x: position.x,
+                                        y: position.y,
+                                    });
+                                }
+                            }
+
+                            CGEventType::LeftMouseDown => {
+                                input_activity_bus.publish(InputActivityKind::MouseButtonPressed {
+                                    button: MouseButton::Left,
                                 });
                             }
+                            CGEventType::LeftMouseUp => {}
+                            CGEventType::RightMouseDown => {
+                                input_activity_bus.publish(InputActivityKind::MouseButtonPressed {
+                                    button: MouseButton::Right,
+                                });
+                            }
+                            CGEventType::RightMouseUp => {}
+                            CGEventType::OtherMouseDown => {
+                                input_activity_bus.publish(InputActivityKind::MouseButtonPressed {
+                                    button: MouseButton::Other,
+                                });
+                            }
+                            CGEventType::OtherMouseUp => {}
+
+                            CGEventType::ScrollWheel => {
+                                let position = event.location();
+
+                                let delta_y = event.get_integer_value_field(
+                                    EventField::SCROLL_WHEEL_EVENT_DELTA_AXIS_1,
+                                );
+                                let delta_x = event.get_integer_value_field(
+                                    EventField::SCROLL_WHEEL_EVENT_DELTA_AXIS_2,
+                                );
+                                let point_delta_y = event.get_integer_value_field(
+                                    EventField::SCROLL_WHEEL_EVENT_POINT_DELTA_AXIS_1,
+                                );
+                                let point_delta_x = event.get_integer_value_field(
+                                    EventField::SCROLL_WHEEL_EVENT_POINT_DELTA_AXIS_2,
+                                );
+                                let is_continuous = event.get_integer_value_field(
+                                    EventField::SCROLL_WHEEL_EVENT_IS_CONTINUOUS,
+                                ) != 0;
+
+                                input_activity_bus.publish(InputActivityKind::MouseScrolled {
+                                    x: position.x,
+                                    y: position.y,
+                                    delta_x,
+                                    delta_y,
+                                    point_delta_x,
+                                    point_delta_y,
+                                    is_continuous,
+                                });
+                            }
+                            _ => {}
                         }
 
-                        CGEventType::LeftMouseDown => {
-                            input_activity_bus.publish(InputActivityKind::MouseButtonPressed {
-                                button: MouseButton::Left,
-                            });
-                        }
-                        CGEventType::LeftMouseUp => {}
-                        CGEventType::RightMouseDown => {
-                            input_activity_bus.publish(InputActivityKind::MouseButtonPressed {
-                                button: MouseButton::Right,
-                            });
-                        }
-                        CGEventType::RightMouseUp => {}
-                        CGEventType::OtherMouseDown => {
-                            input_activity_bus.publish(InputActivityKind::MouseButtonPressed {
-                                button: MouseButton::Other,
-                            });
-                        }
-                        CGEventType::OtherMouseUp => {}
-
-                        CGEventType::ScrollWheel => {
-                            let position = event.location();
-
-                            let delta_y = event.get_integer_value_field(
-                                EventField::SCROLL_WHEEL_EVENT_DELTA_AXIS_1,
-                            );
-                            let delta_x = event.get_integer_value_field(
-                                EventField::SCROLL_WHEEL_EVENT_DELTA_AXIS_2,
-                            );
-                            let point_delta_y = event.get_integer_value_field(
-                                EventField::SCROLL_WHEEL_EVENT_POINT_DELTA_AXIS_1,
-                            );
-                            let point_delta_x = event.get_integer_value_field(
-                                EventField::SCROLL_WHEEL_EVENT_POINT_DELTA_AXIS_2,
-                            );
-                            let is_continuous = event.get_integer_value_field(
-                                EventField::SCROLL_WHEEL_EVENT_IS_CONTINUOUS,
-                            ) != 0;
-
-                            input_activity_bus.publish(InputActivityKind::MouseScrolled {
-                                x: position.x,
-                                y: position.y,
-                                delta_x,
-                                delta_y,
-                                point_delta_x,
-                                point_delta_y,
-                                is_continuous,
-                            });
-                        }
-                        _ => {}
+                        CallbackResult::Keep
+                    },
+                ) {
+                    Ok(tap) => {
+                        let loop_source = match tap.mach_port().create_runloop_source(0) {
+                            Ok(source) => source,
+                            Err(_) => {
+                                error!("Failed to create runloop source!");
+                                return;
+                            }
+                        };
+                        let current = CFRunLoop::get_current();
+                        let current_clone = current.clone();
+                        *runloop_ref.lock().unwrap() = Some(current_clone);
+                        current.add_source(&loop_source, kCFRunLoopCommonModes);
+                        tap.enable();
+                        CFRunLoop::run_current();
                     }
-
-                    CallbackResult::Keep
-                },
-            ) {
-                Ok(tap) => {
-                    let loop_source = match tap.mach_port().create_runloop_source(0) {
-                        Ok(source) => source,
-                        Err(_) => {
-                            error!("Failed to create runloop source!");
-                            return;
-                        }
-                    };
-                    let current = CFRunLoop::get_current();
-                    let current_clone = current.clone();
-                    *runloop_ref.lock().unwrap() = Some(current_clone);
-                    current.add_source(&loop_source, kCFRunLoopCommonModes);
-                    tap.enable();
-                    CFRunLoop::run_current();
+                    Err(_) => {
+                        error!("Failed to create cursor event tap!");
+                    }
                 }
-                Err(_) => {
-                    error!("Failed to create cursor event tap!");
-                }
+                drop(pool);
+            }) {
+            Ok(_handle) => {}
+            Err(error) => {
+                error!("Failed to spawn mouse tracker thread: {error}");
             }
-            drop(pool);
-        });
+        }
     }
 
     pub fn stop_tracking(&self) {

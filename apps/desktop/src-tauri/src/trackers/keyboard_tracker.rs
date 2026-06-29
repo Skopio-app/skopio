@@ -36,85 +36,93 @@ impl KeyboardTracker {
         let runloop_ref = Arc::clone(&self.runloop);
         let input_activity_bus = Arc::clone(&self.input_activity_bus);
 
-        tokio::task::spawn_blocking(move || unsafe {
-            let pool = NSAutoreleasePool::new();
-            let current = CFRunLoop::get_current();
+        match std::thread::Builder::new()
+            .name("skopio-keyboard-tracker".into())
+            .spawn(move || unsafe {
+                let pool = NSAutoreleasePool::new();
+                let current = CFRunLoop::get_current();
 
-            match CGEventTap::new(
-                CGEventTapLocation::Session,
-                CGEventTapPlacement::HeadInsertEventTap,
-                CGEventTapOptions::ListenOnly,
-                vec![
-                    CGEventType::KeyDown,
-                    CGEventType::KeyUp,
-                    CGEventType::FlagsChanged,
-                ],
-                move |_proxy, event_type, event| {
-                    let key_event = event.clone();
-                    let now = Instant::now();
+                match CGEventTap::new(
+                    CGEventTapLocation::Session,
+                    CGEventTapPlacement::HeadInsertEventTap,
+                    CGEventTapOptions::ListenOnly,
+                    vec![
+                        CGEventType::KeyDown,
+                        CGEventType::KeyUp,
+                        CGEventType::FlagsChanged,
+                    ],
+                    move |_proxy, event_type, event| {
+                        let key_event = event.clone();
+                        let now = Instant::now();
 
-                    *last_keypress.lock().unwrap() = now;
+                        *last_keypress.lock().unwrap() = now;
 
-                    let key_code =
-                        key_event.get_integer_value_field(EventField::KEYBOARD_EVENT_KEYCODE);
+                        let key_code =
+                            key_event.get_integer_value_field(EventField::KEYBOARD_EVENT_KEYCODE);
 
-                    let mut keys = pressed_keys.lock().unwrap();
+                        let mut keys = pressed_keys.lock().unwrap();
 
-                    match event_type {
-                        CGEventType::KeyDown => {
-                            let repeat = key_event
-                                .get_integer_value_field(EventField::KEYBOARD_EVENT_AUTOREPEAT)
-                                != 0;
-                            if !repeat {
-                                keys.insert(key_code);
-                                input_activity_bus
-                                    .publish(InputActivityKind::KeyPressed { key_code });
+                        match event_type {
+                            CGEventType::KeyDown => {
+                                let repeat = key_event
+                                    .get_integer_value_field(EventField::KEYBOARD_EVENT_AUTOREPEAT)
+                                    != 0;
+                                if !repeat {
+                                    keys.insert(key_code);
+                                    input_activity_bus
+                                        .publish(InputActivityKind::KeyPressed { key_code });
+                                }
                             }
-                        }
-                        CGEventType::KeyUp => {
-                            keys.remove(&key_code);
-                        }
-                        CGEventType::FlagsChanged => {
-                            let flags = event.get_flags();
-                            if let Some(flag) = flag_for_modifier(key_code) {
-                                if flags.contains(flag) {
-                                    let was_new = keys.insert(key_code);
-                                    if was_new {
-                                        input_activity_bus
-                                            .publish(InputActivityKind::KeyPressed { key_code });
+                            CGEventType::KeyUp => {
+                                keys.remove(&key_code);
+                            }
+                            CGEventType::FlagsChanged => {
+                                let flags = event.get_flags();
+                                if let Some(flag) = flag_for_modifier(key_code) {
+                                    if flags.contains(flag) {
+                                        let was_new = keys.insert(key_code);
+                                        if was_new {
+                                            input_activity_bus.publish(
+                                                InputActivityKind::KeyPressed { key_code },
+                                            );
+                                        }
+                                    } else {
+                                        keys.remove(&key_code);
                                     }
                                 } else {
                                     keys.remove(&key_code);
                                 }
-                            } else {
-                                keys.remove(&key_code);
                             }
+                            _ => {}
                         }
-                        _ => {}
+                        CallbackResult::Keep
+                    },
+                ) {
+                    Ok(tap) => {
+                        let loop_source = match tap.mach_port().create_runloop_source(0) {
+                            Ok(source) => source,
+                            Err(_) => {
+                                error!("Failed to create runloop source!");
+                                return;
+                            }
+                        };
+                        let current_clone = current.clone();
+                        *runloop_ref.lock().unwrap() = Some(current_clone);
+                        current.add_source(&loop_source, kCFRunLoopCommonModes);
+                        tap.enable();
+                        CFRunLoop::run_current();
                     }
-                    CallbackResult::Keep
-                },
-            ) {
-                Ok(tap) => {
-                    let loop_source = match tap.mach_port().create_runloop_source(0) {
-                        Ok(source) => source,
-                        Err(_) => {
-                            error!("Failed to create runloop source!");
-                            return;
-                        }
-                    };
-                    let current_clone = current.clone();
-                    *runloop_ref.lock().unwrap() = Some(current_clone);
-                    current.add_source(&loop_source, kCFRunLoopCommonModes);
-                    tap.enable();
-                    CFRunLoop::run_current();
+                    Err(_) => {
+                        error!("Failed to create keyboard event tap!");
+                    }
                 }
-                Err(_) => {
-                    error!("Failed to create keyboard event tap!");
-                }
+                drop(pool);
+            }) {
+            Ok(_handle) => {}
+            Err(error) => {
+                error!("Failed to spawn keyboard tracker thread: {error}");
             }
-            drop(pool);
-        });
+        }
     }
 
     pub fn stop_tracking(&self) {
