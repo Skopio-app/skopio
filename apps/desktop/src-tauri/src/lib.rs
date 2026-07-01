@@ -217,16 +217,10 @@ async fn setup_trackers(app_handle: &AppHandle) -> Result<(), anyhow::Error> {
     let keyboard_tracker = Arc::clone(&keyboard_tracker);
     keyboard_tracker.start_tracking();
 
-    let afk_timeout_rx_event = config_store.subscribe_afk_timeout();
     tokio::spawn({
         async move {
             if let Err(e) = event_tracker
-                .start_tracking(
-                    event_window_rx,
-                    afk_timeout_rx_event,
-                    afk_state_rx,
-                    power_rx_events,
-                )
+                .start_tracking(event_window_rx, afk_state_rx, power_rx_events)
                 .await
             {
                 error!("Event tracker failed: {}", e);
