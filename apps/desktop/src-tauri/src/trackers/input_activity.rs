@@ -1,4 +1,5 @@
 use chrono::{DateTime, Utc};
+use std::time::Instant;
 use tokio::sync::broadcast;
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -35,6 +36,7 @@ pub enum InputActivityKind {
 pub struct InputActivity {
     pub kind: InputActivityKind,
     pub at: DateTime<Utc>,
+    pub monotonic_at: Instant,
 }
 
 #[derive(Clone)]
@@ -56,6 +58,7 @@ impl InputActivityBus {
         let _ = self.tx.send(InputActivity {
             kind,
             at: Utc::now(),
+            monotonic_at: Instant::now(),
         });
     }
 }

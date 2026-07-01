@@ -1,6 +1,6 @@
 use chrono::{DateTime, Utc};
 use db::desktop::afk_events::AFKEvent;
-use std::sync::Arc;
+use std::{sync::Arc, time::Instant};
 use tokio::sync::{Mutex, RwLock, broadcast, watch};
 use tokio::time::{Duration, interval};
 use tracing::{error, info};
@@ -17,6 +17,7 @@ pub enum AfkState {
 
 pub struct AFKTracker {
     last_activity: Arc<RwLock<DateTime<Utc>>>,
+    last_activity_instant: Arc<RwLock<Instant>>,
     afk_start: Arc<Mutex<Option<DateTime<Utc>>>>,
     afk_timeout_rx: watch::Receiver<u64>,
     tracker: Arc<dyn TrackingService>,
@@ -29,6 +30,7 @@ impl AFKTracker {
         let (afk_state_tx, afk_state_rx) = watch::channel(AfkState::Active);
         Self {
             last_activity: Arc::new(RwLock::new(Utc::now())),
+            last_activity_instant: Arc::new(RwLock::new(Instant::now())),
             afk_start: Arc::new(Mutex::new(None)),
             afk_timeout_rx,
             tracker,
@@ -47,16 +49,16 @@ impl AFKTracker {
             loop {
                 tokio::select! {
                     _ = interval.tick() => {
-                        self.mark_afk_idle_at(Utc::now()).await;
+                        self.mark_afk_idle_at(Instant::now()).await;
                     }
 
                     input_event = input_rx.recv() => {
                         match input_event {
                             Ok(activity) => {
-                                self.handle_input_activity(activity.at).await;
+                                self.handle_input_activity(activity.at, activity.monotonic_at).await;
                             }
                             Err(broadcast::error::RecvError::Lagged(_)) => {
-                                self.handle_input_activity(Utc::now()).await;
+                                self.handle_input_activity(Utc::now(), Instant::now()).await;
                             }
                             Err(broadcast::error::RecvError::Closed) => break,
                         }
@@ -64,11 +66,12 @@ impl AFKTracker {
 
                     power_event = power_rx.recv() => {
                         match power_event {
-                            Ok(PowerEvent::WillSleep { at } | PowerEvent::DidWake { at }) => {
-                                self.mark_afk_idle_at(at).await;
+                            Ok(PowerEvent::WillSleep { at }) => {
+                                self.mark_afk_at(at).await;
                             }
+                            Ok(PowerEvent::DidWake { .. }) => {}
                             Err(broadcast::error::RecvError::Lagged(_)) => {
-                                self.mark_afk_idle_at(Utc::now()).await;
+                                self.mark_afk_idle_at(Instant::now()).await;
                             }
                             Err(broadcast::error::RecvError::Closed) => break,
                         }
@@ -107,20 +110,32 @@ impl AFKTracker {
         }
     }
 
-    async fn mark_afk_idle_at(&self, now: DateTime<Utc>) {
-        let last_activity_time = *self.last_activity.read().await;
+    async fn mark_afk_idle_at(&self, now: Instant) {
+        let last_activity_instant = *self.last_activity_instant.read().await;
         let timeout_secs = *self.afk_timeout_rx.borrow();
+        let timeout = Duration::from_secs(timeout_secs);
 
-        if (now - last_activity_time).num_seconds() < timeout_secs as i64 {
+        if now.duration_since(last_activity_instant) < timeout {
             return;
         }
 
+        let afk_time = self.afk_start.lock().await;
+        if afk_time.is_some() {
+            return;
+        }
+
+        let last_activity_time = *self.last_activity.read().await;
+        let afk_start_at = self.afk_start_time(last_activity_time, timeout_secs);
+        drop(afk_time);
+        self.mark_afk_at(afk_start_at).await;
+    }
+
+    async fn mark_afk_at(&self, afk_start_at: DateTime<Utc>) {
         let mut afk_time = self.afk_start.lock().await;
         if afk_time.is_some() {
             return;
         }
 
-        let afk_start_at = self.afk_start_time(last_activity_time, timeout_secs);
         info!("User went AFK at: {}", afk_start_at);
         *afk_time = Some(afk_start_at);
         self.update_state(AfkState::Afk {
@@ -128,8 +143,8 @@ impl AFKTracker {
         });
     }
 
-    async fn handle_input_activity(&self, now: DateTime<Utc>) {
-        self.mark_afk_idle_at(now).await;
+    async fn handle_input_activity(&self, now: DateTime<Utc>, monotonic_now: Instant) {
+        self.mark_afk_idle_at(monotonic_now).await;
 
         let afk_start_time = {
             let mut afk_time = self.afk_start.lock().await;
@@ -141,6 +156,7 @@ impl AFKTracker {
         }
 
         *self.last_activity.write().await = now;
+        *self.last_activity_instant.write().await = monotonic_now;
         self.update_state(AfkState::Active);
     }
 
@@ -169,6 +185,10 @@ impl AFKTracker {
     }
 
     fn update_state(&self, state: AfkState) {
+        if *self.afk_state_tx.borrow() == state {
+            return;
+        }
+
         if let Err(e) = self.afk_state_tx.send(state) {
             error!("Error sending AFK state: {}", e);
         }
