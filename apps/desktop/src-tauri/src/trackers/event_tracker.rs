@@ -9,10 +9,12 @@ use common::git::find_git_branch;
 use db::desktop::events::Event as DBEvent;
 
 use std::collections::HashSet;
-use std::sync::Arc;
+use std::sync::{Arc, Mutex as StdMutex};
 use tokio::sync::{Mutex, RwLock, broadcast, watch};
+use tokio::task::JoinHandle;
 use tracing::{error, info};
 
+use super::TrackerLifecycle;
 use super::afk_tracker::AfkState;
 use super::power_monitor::PowerEvent;
 use super::window_tracker::Window;
@@ -58,6 +60,8 @@ pub struct EventTracker {
     tracked_apps_rx: watch::Receiver<Vec<TrackedApp>>,
     allowed_ids: Arc<RwLock<HashSet<String>>>,
     ax_cache: Arc<AxSnapshotCache<SystemAxProvider>>,
+    shutdown_tx: watch::Sender<bool>,
+    task: StdMutex<Option<JoinHandle<()>>>,
 }
 
 impl EventTracker {
@@ -66,6 +70,7 @@ impl EventTracker {
         tracked_apps_rx: watch::Receiver<Vec<TrackedApp>>,
         ax_cache: Arc<AxSnapshotCache<SystemAxProvider>>,
     ) -> Self {
+        let (shutdown_tx, _) = watch::channel(false);
         let initial_allowed: HashSet<String> = tracked_apps_rx
             .borrow()
             .iter()
@@ -78,6 +83,8 @@ impl EventTracker {
             tracked_apps_rx,
             allowed_ids: Arc::new(RwLock::new(initial_allowed)),
             ax_cache,
+            shutdown_tx,
+            task: StdMutex::new(None),
         }
     }
 
@@ -155,43 +162,56 @@ impl EventTracker {
         mut window_rx: watch::Receiver<Option<Window>>,
         mut afk_state_rx: watch::Receiver<AfkState>,
         mut power_rx: broadcast::Receiver<PowerEvent>,
-    ) -> tokio::task::JoinHandle<()> {
+    ) {
+        if let Some(existing) = self.task.lock().unwrap().take() {
+            existing.abort();
+        }
+
+        let _ = self.shutdown_tx.send(false);
+        let mut shutdown_rx = self.shutdown_tx.subscribe();
         let mut tracked_rx = self.tracked_apps_rx.clone();
         let allowed_ids = Arc::clone(&self.allowed_ids);
+        let tracker = Arc::clone(&self);
 
-        tokio::spawn(async move {
+        let handle = tokio::spawn(async move {
             let mut last_state: Option<(Arc<str>, Arc<str>)> = None;
 
             loop {
                 tokio::select! {
+                    changed = shutdown_rx.changed() => {
+                        if changed.is_err() || *shutdown_rx.borrow() {
+                            break;
+                        }
+                    }
+
                     // AFK state changed: if AFK started, end right away.
                     changed = afk_state_rx.changed() => {
                         if changed.is_err() { break; }
                         let afk_state = *afk_state_rx.borrow_and_update();
                         match afk_state {
                             AfkState::Afk { started_at } => {
-                                self.end_active_event_at(started_at).await;
+                                tracker.end_active_event_at(started_at).await;
                                 last_state = None;
                             }
                             AfkState::Active => {
-                                self.track_current_window(&window_rx, &mut last_state).await;
+                                tracker.track_current_window(&window_rx, &mut last_state).await;
                             }
                         }
                     }
                     power_event = power_rx.recv() => {
                         match power_event {
                             Ok(PowerEvent::WillSleep { at }) => {
-                                self.end_active_event_at(at).await;
+                                tracker.end_active_event_at(at).await;
                                 last_state = None;
                             }
                             Ok(PowerEvent::DidWake { .. }) => {
                                 let is_active = *afk_state_rx.borrow() == AfkState::Active;
                                 if is_active {
-                                    self.track_current_window(&window_rx, &mut last_state).await;
+                                    tracker.track_current_window(&window_rx, &mut last_state).await;
                                 }
                             }
                             Err(broadcast::error::RecvError::Lagged(_)) => {
-                                self.end_active_event_at(Utc::now()).await;
+                                tracker.end_active_event_at(Utc::now()).await;
                                 last_state = None;
                             }
                             Err(broadcast::error::RecvError::Closed) => break,
@@ -206,7 +226,7 @@ impl EventTracker {
                             drop(w);
 
                             last_state = None;
-                            self.track_current_window(&window_rx, &mut last_state).await;
+                            tracker.track_current_window(&window_rx, &mut last_state).await;
                         }
                     }
                     changed = window_rx.changed() => {
@@ -217,17 +237,20 @@ impl EventTracker {
                         let window = match current_window {
                             Some(w) => w,
                             None => {
-                                self.end_active_event_at(Utc::now()).await;
+                                tracker.end_active_event_at(Utc::now()).await;
                                 last_state = None;
                                 continue;
                             }
                         };
 
-                        self.track_window(window, &mut last_state).await;
+                        tracker.track_window(window, &mut last_state).await;
                     }
                 }
             }
-        })
+        });
+
+        let mut task = self.task.lock().unwrap();
+        *task = Some(handle);
     }
 
     async fn track_current_window(
@@ -309,7 +332,40 @@ impl EventTracker {
     }
 
     pub async fn stop_tracking(&self) {
+        self.stop_task().await;
         self.end_active_event().await;
         info!("Event tracker stopped");
+    }
+
+    async fn stop_task(&self) {
+        let _ = self.shutdown_tx.send(true);
+        let task = self.task.lock().unwrap().take();
+        if let Some(task) = task
+            && let Err(error) = task.await
+            && !error.is_cancelled()
+        {
+            error!("Event tracker task failed during shutdown: {}", error);
+        }
+    }
+}
+
+#[async_trait::async_trait]
+impl TrackerLifecycle for EventTracker {
+    type StartArgs = (
+        watch::Receiver<Option<Window>>,
+        watch::Receiver<AfkState>,
+        broadcast::Receiver<PowerEvent>,
+    );
+
+    fn start_tracking(self: Arc<Self>, (window_rx, afk_state_rx, power_rx): Self::StartArgs) {
+        EventTracker::start_tracking(self, window_rx, afk_state_rx, power_rx);
+    }
+
+    async fn shutdown(&self) {
+        self.stop_task().await;
+    }
+
+    async fn flush(&self) {
+        self.end_active_event().await;
     }
 }

@@ -11,6 +11,7 @@ use tokio::sync::watch;
 use tokio::time::Duration;
 use tracing::{debug, error, info};
 
+use crate::trackers::TrackerLifecycle;
 use crate::utils::ax::ffi::AxElement;
 use crate::utils::config::TrackedApp;
 
@@ -45,6 +46,7 @@ impl WindowTracker {
     }
 
     pub fn start_tracking(self: Arc<Self>) {
+        self.shutdown.store(false, Ordering::Relaxed);
         let tx = self.tx.clone();
         let shutdown = Arc::clone(&self.shutdown);
 
@@ -169,6 +171,19 @@ impl WindowTracker {
 
     pub fn stop_tracking(&self) {
         self.shutdown.store(true, Ordering::Relaxed);
+    }
+}
+
+#[async_trait::async_trait]
+impl TrackerLifecycle for WindowTracker {
+    type StartArgs = ();
+
+    fn start_tracking(self: Arc<Self>, (): Self::StartArgs) {
+        WindowTracker::start_tracking(self);
+    }
+
+    async fn shutdown(&self) {
+        self.stop_tracking();
     }
 }
 

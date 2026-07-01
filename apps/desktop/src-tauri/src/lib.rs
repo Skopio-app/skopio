@@ -3,6 +3,7 @@ use std::{sync::Arc, time::Duration};
 use sync_service::BufferedTrackingService;
 use tauri::{AppHandle, Manager, Runtime};
 use tracing::error;
+use trackers::TrackerLifecycle;
 use trackers::{
     afk_tracker::AFKTracker, event_tracker::EventTracker, keyboard_tracker::KeyboardTracker,
     mouse_tracker::MouseTracker, window_tracker::WindowTracker,
@@ -91,26 +92,35 @@ pub async fn run() {
             {
                 api.prevent_close();
 
-                let cursor_tracker = window.state::<Arc<MouseTracker>>();
+                let mouse_tracker = window.state::<Arc<MouseTracker>>();
                 let keyboard_tracker = window.state::<Arc<KeyboardTracker>>();
                 let event_tracker = window.state::<Arc<EventTracker>>();
                 let buffered_service = window.state::<Arc<BufferedTrackingService>>();
                 let goal_service = window.state::<Arc<GoalService>>();
                 let window_tracker = window.state::<Arc<WindowTracker>>();
                 let afk_tracker = window.state::<Arc<AFKTracker>>();
-
-                cursor_tracker.stop_tracking();
-                keyboard_tracker.stop_tracking();
-                goal_service.shutdown();
-                window_tracker.stop_tracking();
+                let power_monitor = window.state::<Arc<PowerMonitor>>();
 
                 let window = window.clone();
+                let mouse_tracker = Arc::clone(&mouse_tracker);
+                let keyboard_tracker = Arc::clone(&keyboard_tracker);
+                let window_tracker = Arc::clone(&window_tracker);
+                let power_monitor = Arc::clone(&power_monitor);
                 let buffered_service = Arc::clone(&buffered_service);
                 let event_tracker = Arc::clone(&event_tracker);
                 let afk_tracker = Arc::clone(&afk_tracker);
+                let goal_service = Arc::clone(&goal_service);
                 tokio::spawn(async move {
-                    event_tracker.stop_tracking().await;
-                    afk_tracker.stop_tracking().await;
+                    mouse_tracker.shutdown().await;
+                    keyboard_tracker.shutdown().await;
+                    window_tracker.shutdown().await;
+                    power_monitor.shutdown().await;
+                    goal_service.shutdown();
+
+                    event_tracker.shutdown().await;
+                    afk_tracker.shutdown().await;
+                    event_tracker.flush().await;
+                    afk_tracker.flush().await;
                     buffered_service.shutdown().await;
 
                     window.app_handle().exit(0);
@@ -134,8 +144,7 @@ async fn setup_trackers(app_handle: &AppHandle) -> Result<(), anyhow::Error> {
     app_handle.manage(config_store.clone());
 
     let window_tracker = app_handle.state::<Arc<WindowTracker>>();
-    let window_tracker_ref = Arc::clone(&window_tracker);
-    window_tracker_ref.start_tracking();
+    <WindowTracker as TrackerLifecycle>::start_tracking(Arc::clone(&window_tracker), ());
 
     let ax_cache_rx = window_tracker.subscribe();
 
@@ -201,10 +210,10 @@ async fn setup_trackers(app_handle: &AppHandle) -> Result<(), anyhow::Error> {
 
     let event_window_rx = window_tracker.subscribe();
 
-    mouse_tracker.start_tracking();
+    <MouseTracker as TrackerLifecycle>::start_tracking(Arc::clone(&mouse_tracker), ());
 
     let power_monitor = Arc::new(PowerMonitor::new());
-    power_monitor.start();
+    <PowerMonitor as TrackerLifecycle>::start_tracking(Arc::clone(&power_monitor), ());
     app_handle.manage(Arc::clone(&power_monitor));
 
     let power_rx_afk = power_monitor.subscribe();
@@ -212,21 +221,17 @@ async fn setup_trackers(app_handle: &AppHandle) -> Result<(), anyhow::Error> {
 
     let input_activity_rx = input_activity_bus.subscribe();
 
-    afk_tracker.start_tracking(power_rx_afk, input_activity_rx);
+    <AFKTracker as TrackerLifecycle>::start_tracking(
+        Arc::clone(&afk_tracker),
+        (power_rx_afk, input_activity_rx),
+    );
 
-    let keyboard_tracker = Arc::clone(&keyboard_tracker);
-    keyboard_tracker.start_tracking();
+    <KeyboardTracker as TrackerLifecycle>::start_tracking(Arc::clone(&keyboard_tracker), ());
 
-    tokio::spawn({
-        async move {
-            if let Err(e) = event_tracker
-                .start_tracking(event_window_rx, afk_state_rx, power_rx_events)
-                .await
-            {
-                error!("Event tracker failed: {}", e);
-            }
-        }
-    });
+    <EventTracker as TrackerLifecycle>::start_tracking(
+        Arc::clone(&event_tracker),
+        (event_window_rx, afk_state_rx, power_rx_events),
+    );
 
     Ok(())
 }

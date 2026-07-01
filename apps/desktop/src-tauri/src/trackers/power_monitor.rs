@@ -8,8 +8,12 @@ use objc2::{
     runtime::AnyObject,
 };
 use objc2_foundation::{NSNotification, NSString};
+use std::sync::Arc;
+use std::sync::atomic::{AtomicBool, Ordering};
 use tokio::sync::broadcast;
-use tracing::error;
+use tracing::{error, info};
+
+use crate::trackers::TrackerLifecycle;
 
 #[derive(Debug, Clone)]
 pub enum PowerEvent {
@@ -20,12 +24,16 @@ pub enum PowerEvent {
 #[derive(Clone)]
 pub struct PowerMonitor {
     tx: broadcast::Sender<PowerEvent>,
+    shutdown: Arc<AtomicBool>,
 }
 
 impl PowerMonitor {
     pub fn new() -> Self {
         let (tx, _) = broadcast::channel(16);
-        Self { tx }
+        Self {
+            tx,
+            shutdown: Arc::new(AtomicBool::new(false)),
+        }
     }
 
     pub fn subscribe(&self) -> broadcast::Receiver<PowerEvent> {
@@ -33,12 +41,14 @@ impl PowerMonitor {
     }
 
     pub fn start(&self) {
+        self.shutdown.store(false, Ordering::Relaxed);
         let tx = self.tx.clone();
+        let shutdown = Arc::clone(&self.shutdown);
 
         match std::thread::Builder::new()
             .name("skopio-power-monitor".into())
             .spawn(move || {
-                if let Err(error) = run_power_monitor(tx) {
+                if let Err(error) = run_power_monitor(tx, shutdown) {
                     error!("Failed to start power monitor: {error}");
                 }
             }) {
@@ -50,6 +60,23 @@ impl PowerMonitor {
             }
         }
     }
+
+    pub fn stop_tracking(&self) {
+        self.shutdown.store(true, Ordering::Relaxed);
+    }
+}
+
+#[async_trait::async_trait]
+impl TrackerLifecycle for PowerMonitor {
+    type StartArgs = ();
+
+    fn start_tracking(self: Arc<Self>, (): Self::StartArgs) {
+        self.start();
+    }
+
+    async fn shutdown(&self) {
+        self.stop_tracking();
+    }
 }
 
 impl Default for PowerMonitor {
@@ -58,7 +85,10 @@ impl Default for PowerMonitor {
     }
 }
 
-fn run_power_monitor(tx: broadcast::Sender<PowerEvent>) -> Result<(), String> {
+fn run_power_monitor(
+    tx: broadcast::Sender<PowerEvent>,
+    shutdown: Arc<AtomicBool>,
+) -> Result<(), String> {
     let run_loop = autoreleasepool(|_| unsafe {
         register_power_observers(tx)?;
         let run_loop: *mut AnyObject = msg_send![class!(NSRunLoop), currentRunLoop];
@@ -70,13 +100,16 @@ fn run_power_monitor(tx: broadcast::Sender<PowerEvent>) -> Result<(), String> {
         Ok::<*mut AnyObject, String>(run_loop)
     })?;
 
-    loop {
+    while !shutdown.load(Ordering::Relaxed) {
         autoreleasepool(|_| unsafe {
             let until: *mut AnyObject =
-                msg_send![class!(NSDate), dateWithTimeIntervalSinceNow: 60.0f64];
+                msg_send![class!(NSDate), dateWithTimeIntervalSinceNow: 1.0f64];
             let _: () = msg_send![run_loop, runUntilDate: until];
         })
     }
+
+    info!("Power monitor stopped");
+    Ok(())
 }
 
 unsafe fn register_power_observers(tx: broadcast::Sender<PowerEvent>) -> Result<(), String> {

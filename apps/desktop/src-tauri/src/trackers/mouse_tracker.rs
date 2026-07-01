@@ -7,16 +7,19 @@ use core_graphics::event::{
 };
 use core_graphics::geometry::CGPoint;
 use objc2_foundation::NSAutoreleasePool;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 use tracing::{error, info};
 
+use crate::trackers::TrackerLifecycle;
 use crate::trackers::input_activity::{InputActivityBus, InputActivityKind, MouseButton};
 
 pub struct MouseTracker {
     last_position: Arc<Mutex<CGPoint>>,
     last_movement: Arc<Mutex<Instant>>,
     runloop: Arc<Mutex<Option<CFRunLoop>>>,
+    shutdown: Arc<AtomicBool>,
     input_activity_bus: Arc<InputActivityBus>,
 }
 
@@ -26,14 +29,17 @@ impl MouseTracker {
             last_position: Arc::new(Mutex::new(CGPoint::new(0.0, 0.0))),
             last_movement: Arc::new(Mutex::new(Instant::now())),
             runloop: Arc::new(Mutex::new(None)),
+            shutdown: Arc::new(AtomicBool::new(false)),
             input_activity_bus,
         }
     }
 
     pub fn start_tracking(&self) {
+        self.shutdown.store(false, Ordering::Relaxed);
         let last_position = Arc::clone(&self.last_position);
         let last_movement = Arc::clone(&self.last_movement);
         let runloop_ref = Arc::clone(&self.runloop);
+        let shutdown = Arc::clone(&self.shutdown);
         let input_activity_bus = Arc::clone(&self.input_activity_bus);
 
         match std::thread::Builder::new()
@@ -146,7 +152,10 @@ impl MouseTracker {
                         *runloop_ref.lock().unwrap() = Some(current_clone);
                         current.add_source(&loop_source, kCFRunLoopCommonModes);
                         tap.enable();
-                        CFRunLoop::run_current();
+                        if !shutdown.load(Ordering::Relaxed) {
+                            CFRunLoop::run_current();
+                        }
+                        *runloop_ref.lock().unwrap() = None;
                     }
                     Err(_) => {
                         error!("Failed to create cursor event tap!");
@@ -162,9 +171,23 @@ impl MouseTracker {
     }
 
     pub fn stop_tracking(&self) {
+        self.shutdown.store(true, Ordering::Relaxed);
         if let Some(ref rl) = *self.runloop.lock().unwrap() {
             CFRunLoop::stop(rl);
             info!("Mouse tracker stopped");
         }
+    }
+}
+
+#[async_trait::async_trait]
+impl TrackerLifecycle for MouseTracker {
+    type StartArgs = ();
+
+    fn start_tracking(self: Arc<Self>, (): Self::StartArgs) {
+        MouseTracker::start_tracking(&self);
+    }
+
+    async fn shutdown(&self) {
+        self.stop_tracking();
     }
 }

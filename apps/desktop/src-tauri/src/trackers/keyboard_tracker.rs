@@ -7,16 +7,19 @@ use core_graphics::event::{
 };
 use objc2_foundation::NSAutoreleasePool;
 use std::collections::HashSet;
+use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::Instant;
 use tracing::{error, info};
 
+use crate::trackers::TrackerLifecycle;
 use crate::trackers::input_activity::{InputActivityBus, InputActivityKind};
 
 pub struct KeyboardTracker {
     last_keypress: Arc<Mutex<Instant>>,
     pressed_keys: Arc<Mutex<HashSet<i64>>>,
     runloop: Arc<Mutex<Option<CFRunLoop>>>,
+    shutdown: Arc<AtomicBool>,
     input_activity_bus: Arc<InputActivityBus>,
 }
 
@@ -26,14 +29,17 @@ impl KeyboardTracker {
             last_keypress: Arc::new(Mutex::new(Instant::now())),
             pressed_keys: Arc::new(Mutex::new(HashSet::new())),
             runloop: Arc::new(Mutex::new(None)),
+            shutdown: Arc::new(AtomicBool::new(false)),
             input_activity_bus,
         }
     }
 
     pub fn start_tracking(self: Arc<Self>) {
+        self.shutdown.store(false, Ordering::Relaxed);
         let pressed_keys = Arc::clone(&self.pressed_keys);
         let last_keypress = Arc::clone(&self.last_keypress);
         let runloop_ref = Arc::clone(&self.runloop);
+        let shutdown = Arc::clone(&self.shutdown);
         let input_activity_bus = Arc::clone(&self.input_activity_bus);
 
         match std::thread::Builder::new()
@@ -110,7 +116,10 @@ impl KeyboardTracker {
                         *runloop_ref.lock().unwrap() = Some(current_clone);
                         current.add_source(&loop_source, kCFRunLoopCommonModes);
                         tap.enable();
-                        CFRunLoop::run_current();
+                        if !shutdown.load(Ordering::Relaxed) {
+                            CFRunLoop::run_current();
+                        }
+                        *runloop_ref.lock().unwrap() = None;
                     }
                     Err(_) => {
                         error!("Failed to create keyboard event tap!");
@@ -126,10 +135,24 @@ impl KeyboardTracker {
     }
 
     pub fn stop_tracking(&self) {
+        self.shutdown.store(true, Ordering::Relaxed);
         if let Some(ref rl) = *self.runloop.lock().unwrap() {
             CFRunLoop::stop(rl);
             info!("Keyboard tracker stopped");
         }
+    }
+}
+
+#[async_trait::async_trait]
+impl TrackerLifecycle for KeyboardTracker {
+    type StartArgs = ();
+
+    fn start_tracking(self: Arc<Self>, (): Self::StartArgs) {
+        KeyboardTracker::start_tracking(self);
+    }
+
+    async fn shutdown(&self) {
+        self.stop_tracking();
     }
 }
 

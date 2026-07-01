@@ -1,10 +1,15 @@
 use chrono::{DateTime, Utc};
 use db::desktop::afk_events::AFKEvent;
-use std::{sync::Arc, time::Instant};
+use std::{
+    sync::{Arc, Mutex as StdMutex},
+    time::Instant,
+};
 use tokio::sync::{Mutex, RwLock, broadcast, watch};
+use tokio::task::JoinHandle;
 use tokio::time::{Duration, interval};
 use tracing::{error, info};
 
+use crate::trackers::TrackerLifecycle;
 use crate::trackers::input_activity::InputActivity;
 use crate::trackers::power_monitor::PowerEvent;
 use crate::tracking_service::TrackingService;
@@ -23,11 +28,14 @@ pub struct AFKTracker {
     tracker: Arc<dyn TrackingService>,
     afk_state_tx: watch::Sender<AfkState>,
     afk_state_rx: watch::Receiver<AfkState>,
+    shutdown_tx: watch::Sender<bool>,
+    task: StdMutex<Option<JoinHandle<()>>>,
 }
 
 impl AFKTracker {
     pub fn new(afk_timeout_rx: watch::Receiver<u64>, tracker: Arc<dyn TrackingService>) -> Self {
         let (afk_state_tx, afk_state_rx) = watch::channel(AfkState::Active);
+        let (shutdown_tx, _) = watch::channel(false);
         Self {
             last_activity: Arc::new(RwLock::new(Utc::now())),
             last_activity_instant: Arc::new(RwLock::new(Instant::now())),
@@ -36,6 +44,8 @@ impl AFKTracker {
             tracker,
             afk_state_tx,
             afk_state_rx,
+            shutdown_tx,
+            task: StdMutex::new(None),
         }
     }
 
@@ -44,22 +54,33 @@ impl AFKTracker {
         mut power_rx: broadcast::Receiver<PowerEvent>,
         mut input_rx: broadcast::Receiver<InputActivity>,
     ) {
-        tokio::spawn(async move {
+        if let Some(existing) = self.task.lock().unwrap().take() {
+            existing.abort();
+        }
+
+        let _ = self.shutdown_tx.send(false);
+        let mut shutdown_rx = self.shutdown_tx.subscribe();
+        let tracker = Arc::clone(&self);
+        let handle = tokio::spawn(async move {
             let mut interval = interval(Duration::from_secs(1));
             loop {
                 tokio::select! {
+                    changed = shutdown_rx.changed() => {
+                        if changed.is_err() || *shutdown_rx.borrow() {
+                            break;
+                        }
+                    }
+
                     _ = interval.tick() => {
-                        self.mark_afk_idle_at(Instant::now()).await;
+                        tracker.mark_afk_idle_at(Instant::now()).await;
                     }
 
                     input_event = input_rx.recv() => {
                         match input_event {
                             Ok(activity) => {
-                                self.handle_input_activity(activity.at, activity.monotonic_at).await;
+                                tracker.handle_input_activity(activity.at, activity.monotonic_at).await;
                             }
-                            Err(broadcast::error::RecvError::Lagged(_)) => {
-                                self.handle_input_activity(Utc::now(), Instant::now()).await;
-                            }
+                            Err(broadcast::error::RecvError::Lagged(_)) => {}
                             Err(broadcast::error::RecvError::Closed) => break,
                         }
                     }
@@ -67,11 +88,11 @@ impl AFKTracker {
                     power_event = power_rx.recv() => {
                         match power_event {
                             Ok(PowerEvent::WillSleep { at }) => {
-                                self.mark_afk_at(at).await;
+                                tracker.mark_afk_at(at).await;
                             }
                             Ok(PowerEvent::DidWake { .. }) => {}
                             Err(broadcast::error::RecvError::Lagged(_)) => {
-                                self.mark_afk_idle_at(Instant::now()).await;
+                                tracker.mark_afk_idle_at(Instant::now()).await;
                             }
                             Err(broadcast::error::RecvError::Closed) => break,
                         }
@@ -79,14 +100,33 @@ impl AFKTracker {
                 }
             }
         });
+
+        let mut task = self.task.lock().unwrap();
+        *task = Some(handle);
     }
 
     pub async fn stop_tracking(&self) {
+        self.stop_task().await;
+        self.flush_open_afk_event().await;
+    }
+
+    async fn stop_task(&self) {
+        let _ = self.shutdown_tx.send(true);
+        let task = self.task.lock().unwrap().take();
+        if let Some(task) = task
+            && let Err(error) = task.await
+            && !error.is_cancelled()
+        {
+            error!("AFK tracker task failed during shutdown: {}", error);
+        }
+    }
+
+    async fn flush_open_afk_event(&self) {
         let mut afk_time = self.afk_start.lock().await;
 
         if let Some(afk_start_time) = *afk_time {
             let now = Utc::now();
-            let afk_duration = (now - afk_start_time).num_seconds();
+            let afk_duration = (now - afk_start_time).num_seconds().max(0);
 
             info!(
                 "AFK tracker stopping. Flushing AFK event from {} to {} ({}s)",
@@ -200,5 +240,25 @@ impl AFKTracker {
 
     pub fn subscribe_state(&self) -> watch::Receiver<AfkState> {
         self.afk_state_rx.clone()
+    }
+}
+
+#[async_trait::async_trait]
+impl TrackerLifecycle for AFKTracker {
+    type StartArgs = (
+        broadcast::Receiver<PowerEvent>,
+        broadcast::Receiver<InputActivity>,
+    );
+
+    fn start_tracking(self: Arc<Self>, (power_rx, input_rx): Self::StartArgs) {
+        AFKTracker::start_tracking(self, power_rx, input_rx);
+    }
+
+    async fn shutdown(&self) {
+        self.stop_task().await;
+    }
+
+    async fn flush(&self) {
+        self.flush_open_afk_event().await;
     }
 }
