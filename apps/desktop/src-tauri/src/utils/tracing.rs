@@ -20,6 +20,7 @@ impl TracingExt for AppHandle {
                 "info"
             })
         });
+        let env_filter = filter_dependency_debug_logs(env_filter);
 
         let timer = fmt::time::ChronoLocal::rfc_3339();
 
@@ -73,4 +74,16 @@ impl TracingExt for AppHandle {
 
         Ok(())
     }
+}
+
+fn filter_dependency_debug_logs(filter: EnvFilter) -> EnvFilter {
+    ["hyper_util=info", "h2=info"]
+        .into_iter()
+        .fold(filter, |filter, directive| {
+            filter.add_directive(
+                directive
+                    .parse()
+                    .expect("dependency tracing filter directive should be valid"),
+            )
+        })
 }

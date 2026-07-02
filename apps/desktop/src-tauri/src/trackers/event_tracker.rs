@@ -319,7 +319,7 @@ impl EventTracker {
             .unwrap_or_else(|error| error!("Failed to batch event: {}", error));
 
         info!(
-            "App={}, Entity={:?}, Activity={}, Duration={}s",
+            "Event ended: App={}, Entity={:?}, Activity={}, Duration={}s",
             ended_event.app_name,
             ended_event.entity_name,
             ended_event.category,
