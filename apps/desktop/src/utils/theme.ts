@@ -1,8 +1,11 @@
-import { Theme } from "@/types/tauri.gen";
+import type { Theme } from "@/types/tauri.gen";
 import { createContext, useContext } from "react";
+
+export type ResolvedTheme = Exclude<Theme, "system">;
 
 export type ThemeProviderState = {
   theme: Theme;
+  resolvedTheme: ResolvedTheme;
   setTheme: (theme: Theme) => void;
 };
 

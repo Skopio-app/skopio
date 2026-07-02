@@ -1,4 +1,5 @@
 import { useCssVarColor } from "@/hooks/useChartColor";
+import { useTheme } from "@/utils/theme";
 import type { CSSProperties, RefObject } from "react";
 import { useEffect, useRef, useState } from "react";
 import {
@@ -44,10 +45,11 @@ const MatrixLoading = ({
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const frameRef = useRef<HTMLDivElement | null>(null);
   const frameIndexRef = useRef(0);
-  const themeMode = useResolvedThemeMode();
+  const { resolvedTheme } = useTheme();
   const matrixColor = useCssVarColor("--foreground");
   const matrixFramesByTheme = useMatrixFrames();
-  const matrixFrames = matrixFramesByTheme?.[themeMode] ?? EMPTY_MATRIX_FRAMES;
+  const matrixFrames =
+    matrixFramesByTheme?.[resolvedTheme] ?? EMPTY_MATRIX_FRAMES;
   const resolvedHeight = height ?? style?.height;
   const resolvedWidth = width ?? style?.width;
   const shouldUseResponsiveSize =
@@ -410,32 +412,6 @@ function useResponsiveMatrixSize(
   }, [enabled, ref]);
 
   return size;
-}
-
-function useResolvedThemeMode() {
-  const [themeMode, setThemeMode] = useState<"light" | "dark">(() =>
-    document.documentElement.classList.contains("dark") ? "dark" : "light",
-  );
-
-  useEffect(() => {
-    const updateThemeMode = () => {
-      setThemeMode(
-        document.documentElement.classList.contains("dark") ? "dark" : "light",
-      );
-    };
-
-    updateThemeMode();
-
-    const observer = new MutationObserver(updateThemeMode);
-    observer.observe(document.documentElement, {
-      attributes: true,
-      attributeFilter: ["class"],
-    });
-
-    return () => observer.disconnect();
-  }, []);
-
-  return themeMode;
 }
 
 function drawFrame(
