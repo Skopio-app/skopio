@@ -320,9 +320,6 @@
   .my-1 {
     margin-block: calc(var(--spacing) * 1);
   }
-  .mt-1 {
-    margin-top: calc(var(--spacing) * 1);
-  }
   .mt-2 {
     margin-top: calc(var(--spacing) * 2);
   }
@@ -456,8 +453,8 @@
   .max-h-\(--radix-select-content-available-height\) {
     max-height: var(--radix-select-content-available-height);
   }
-  .max-h-96 {
-    max-height: calc(var(--spacing) * 96);
+  .max-h-\[min\(24rem\,var\(--radix-dropdown-menu-content-available-height\)\)\] {
+    max-height: min(24rem, var(--radix-dropdown-menu-content-available-height));
   }
   .min-h-0 {
     min-height: calc(var(--spacing) * 0);
