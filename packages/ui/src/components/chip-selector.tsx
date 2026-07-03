@@ -93,53 +93,58 @@ export function ChipSelector<V, O = V>({
         </div>
       </DropDownMenu.Trigger>
 
-      <DropDownMenu.Content
-        className={cn(
-          "z-50 mt-1 w-64 max-h-96 overflow-y-auto rounded border border-border bg-popover p-1 shadow",
-          menuClassName,
-        )}
-      >
-        {options.map((option) => {
-          const k = getOptionKey(option);
-          const checked = selectedKeys.has(k);
-          const isDisabled = disabled?.(option) ?? false;
-          const disabledReason = isDisabled ? reason?.(option) : null;
+      <DropDownMenu.Portal>
+        <DropDownMenu.Content
+          sideOffset={4}
+          collisionPadding={8}
+          style={{ zIndex: 1000 }}
+          className={cn(
+            "w-64 max-h-[min(24rem,var(--radix-dropdown-menu-content-available-height))] overflow-y-auto rounded border border-border bg-popover p-1 shadow",
+            menuClassName,
+          )}
+        >
+          {options.map((option) => {
+            const k = getOptionKey(option);
+            const checked = selectedKeys.has(k);
+            const isDisabled = disabled?.(option) ?? false;
+            const disabledReason = isDisabled ? reason?.(option) : null;
 
-          return (
-            <DropDownMenu.CheckboxItem
-              key={k}
-              checked={checked}
-              onCheckedChange={() => {
-                if (!isDisabled) onToggle(option);
-              }}
-              className={cn(
-                "relative flex cursor-pointer text-foreground select-none items-center gap-2 rounded px-2 py-2 outline-none",
-                isDisabled
-                  ? "cursor-not-allowed opacity-80 text-muted-foreground"
-                  : "cursor-pointer hover:bg-accent focus:bg-accent",
-                itemClassName,
-              )}
-            >
-              <span className="flex flex-col min-w-0 items-start gap-1">
-                <span className="flex min-w-0 items-center gap-2">
-                  {renderOption(option)}
-                </span>
-                {reason ? (
-                  <span className="text-xs leading-snug text-destructive">
-                    {disabledReason}
+            return (
+              <DropDownMenu.CheckboxItem
+                key={k}
+                checked={checked}
+                onCheckedChange={() => {
+                  if (!isDisabled) onToggle(option);
+                }}
+                className={cn(
+                  "relative flex cursor-pointer text-foreground select-none items-center gap-2 rounded px-2 py-2 outline-none",
+                  isDisabled
+                    ? "cursor-not-allowed opacity-80 text-muted-foreground"
+                    : "cursor-pointer hover:bg-accent focus:bg-accent",
+                  itemClassName,
+                )}
+              >
+                <span className="flex flex-col min-w-0 items-start gap-1">
+                  <span className="flex min-w-0 items-center gap-2">
+                    {renderOption(option)}
                   </span>
-                ) : null}
-              </span>
+                  {reason ? (
+                    <span className="text-xs leading-snug text-destructive">
+                      {disabledReason}
+                    </span>
+                  ) : null}
+                </span>
 
-              {!isDisabled && (
-                <DropDownMenu.ItemIndicator className="ml-auto">
-                  <Check className="h-4 w-4" aria-hidden />
-                </DropDownMenu.ItemIndicator>
-              )}
-            </DropDownMenu.CheckboxItem>
-          );
-        })}
-      </DropDownMenu.Content>
+                {!isDisabled && (
+                  <DropDownMenu.ItemIndicator className="ml-auto">
+                    <Check className="h-4 w-4" aria-hidden />
+                  </DropDownMenu.ItemIndicator>
+                )}
+              </DropDownMenu.CheckboxItem>
+            );
+          })}
+        </DropDownMenu.Content>
+      </DropDownMenu.Portal>
     </DropDownMenu.Root>
   );
 }

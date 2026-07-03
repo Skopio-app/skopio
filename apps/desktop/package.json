@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
+    "generate:matrix": "node ../../scripts/generate_matrix_frames.mjs",
     "tauri": "tauri",
     "lint": "eslint .",
     "preview": "vite preview"

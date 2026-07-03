@@ -1,6 +1,8 @@
-import { Theme, commands } from "@/types/tauri.gen";
+import { commands } from "@/types/tauri.gen";
+import type { Theme } from "@/types/tauri.gen";
 import { ThemeContext } from "@/utils/theme";
-import { useCallback, useEffect, useRef, useState } from "react";
+import type { ResolvedTheme } from "@/utils/theme";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { setTheme as setTauriTheme } from "@tauri-apps/api/app";
 import { emit, listen, type UnlistenFn } from "@tauri-apps/api/event";
 
@@ -15,30 +17,35 @@ type ThemeProviderProps = {
   defaultTheme?: Theme;
 };
 
+const getSystemTheme = (): ResolvedTheme =>
+  window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+
+const resolveTheme = (theme: Theme, systemTheme: ResolvedTheme) =>
+  theme === "system" ? systemTheme : theme;
+
 export default function ThemeProvider({
   children,
   defaultTheme = "system",
   ...props
 }: ThemeProviderProps) {
   const [theme, setTheme] = useState<Theme>(defaultTheme);
+  const [systemTheme, setSystemTheme] = useState<ResolvedTheme>(getSystemTheme);
   const [hydrated, setHydrated] = useState(false);
-  const isInitialMount = useRef(true);
+  const isInitialThemeChange = useRef(true);
   const externalThemeChange = useRef(false);
   const themeRef = useRef(theme);
+  const resolvedTheme = resolveTheme(theme, systemTheme);
 
-  const applyThemeToDOM = useCallback((theme: Theme, isDark: boolean) => {
+  const applyThemeToDOM = useCallback((resolvedTheme: ResolvedTheme) => {
     const root = document.documentElement;
     root.classList.remove("light", "dark");
-    root.classList.add(
-      theme === "system" ? (isDark ? "dark" : "light") : theme,
-    );
+    root.classList.add(resolvedTheme);
   }, []);
 
   const applyTheme = useCallback(
-    async (theme: Theme) => {
-      const mql = window.matchMedia("(prefers-color-scheme: dark)");
+    async (theme: Theme, resolvedTheme: ResolvedTheme) => {
       await setTauriTheme(theme === "system" ? null : theme);
-      applyThemeToDOM(theme, mql.matches);
+      applyThemeToDOM(resolvedTheme);
     },
     [applyThemeToDOM],
   );
@@ -52,8 +59,10 @@ export default function ThemeProvider({
       try {
         const cfg = await commands.getConfig();
         const initial = cfg.theme;
+        const initialSystemTheme = getSystemTheme();
+        setSystemTheme(initialSystemTheme);
         setTheme(initial);
-        await applyTheme(initial);
+        await applyTheme(initial, resolveTheme(initial, initialSystemTheme));
       } finally {
         setHydrated(true);
       }
@@ -80,43 +89,53 @@ export default function ThemeProvider({
 
   useEffect(() => {
     const mql = window.matchMedia("(prefers-color-scheme: dark)");
-    const onChange = (e: MediaQueryListEvent) => {
-      if (theme === "system") {
-        applyThemeToDOM("system", e.matches);
-      }
-    };
+    const onChange = (e: MediaQueryListEvent) =>
+      setSystemTheme(e.matches ? "dark" : "light");
 
     mql.addEventListener("change", onChange);
 
     return () => {
       mql.removeEventListener("change", onChange);
     };
-  }, [theme, applyThemeToDOM]);
+  }, []);
 
   useEffect(() => {
-    if (isInitialMount.current) {
-      isInitialMount.current = false;
+    if (!hydrated) {
       return;
     }
 
-    if (hydrated) {
-      (async () => {
-        await applyTheme(theme);
-        if (externalThemeChange.current) {
-          externalThemeChange.current = false;
-          return;
-        }
+    void applyTheme(theme, resolvedTheme);
+  }, [theme, resolvedTheme, hydrated, applyTheme]);
 
-        await commands.setTheme(theme);
-        await emit<Theme>(THEME_CHANGED_EVENT, theme);
-      })();
+  useEffect(() => {
+    if (!hydrated) {
+      return;
     }
-  }, [theme, hydrated, applyTheme]);
 
-  const value = {
-    theme,
-    setTheme: (theme: Theme) => setTheme(theme),
-  };
+    if (isInitialThemeChange.current) {
+      isInitialThemeChange.current = false;
+      return;
+    }
+
+    (async () => {
+      if (externalThemeChange.current) {
+        externalThemeChange.current = false;
+        return;
+      }
+
+      await commands.setTheme(theme);
+      await emit<Theme>(THEME_CHANGED_EVENT, theme);
+    })();
+  }, [theme, hydrated]);
+
+  const value = useMemo(
+    () => ({
+      theme,
+      resolvedTheme,
+      setTheme,
+    }),
+    [theme, resolvedTheme],
+  );
 
   return (
     <ThemeContext.Provider {...props} value={value}>

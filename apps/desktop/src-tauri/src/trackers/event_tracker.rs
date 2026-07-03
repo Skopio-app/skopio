@@ -9,12 +9,14 @@ use common::git::find_git_branch;
 use db::desktop::events::Event as DBEvent;
 
 use std::collections::HashSet;
-use std::pin::Pin;
-use std::sync::Arc;
-use tokio::sync::{Mutex, RwLock, watch};
-use tokio::time::{self, Duration, Instant, Sleep};
+use std::sync::{Arc, Mutex as StdMutex};
+use tokio::sync::{Mutex, RwLock, broadcast, watch};
+use tokio::task::JoinHandle;
 use tracing::{error, info};
 
+use super::TrackerLifecycle;
+use super::afk_tracker::AfkState;
+use super::power_monitor::PowerEvent;
 use super::window_tracker::Window;
 
 #[derive(Debug, Clone)]
@@ -54,11 +56,12 @@ impl From<Event> for DBEvent {
 
 pub struct EventTracker {
     active_event: Arc<Mutex<Option<Event>>>,
-    last_activity: Arc<Mutex<Instant>>,
     tracker: Arc<dyn TrackingService>,
     tracked_apps_rx: watch::Receiver<Vec<TrackedApp>>,
     allowed_ids: Arc<RwLock<HashSet<String>>>,
     ax_cache: Arc<AxSnapshotCache<SystemAxProvider>>,
+    shutdown_tx: watch::Sender<bool>,
+    task: StdMutex<Option<JoinHandle<()>>>,
 }
 
 impl EventTracker {
@@ -67,6 +70,7 @@ impl EventTracker {
         tracked_apps_rx: watch::Receiver<Vec<TrackedApp>>,
         ax_cache: Arc<AxSnapshotCache<SystemAxProvider>>,
     ) -> Self {
+        let (shutdown_tx, _) = watch::channel(false);
         let initial_allowed: HashSet<String> = tracked_apps_rx
             .borrow()
             .iter()
@@ -75,11 +79,12 @@ impl EventTracker {
 
         Self {
             active_event: Arc::new(Mutex::new(None)),
-            last_activity: Arc::new(Mutex::new(Instant::now())),
             tracker,
             tracked_apps_rx,
             allowed_ids: Arc::new(RwLock::new(initial_allowed)),
             ax_cache,
+            shutdown_tx,
+            task: StdMutex::new(None),
         }
     }
 
@@ -91,18 +96,21 @@ impl EventTracker {
         entity: &str,
         pid: i32,
     ) {
+        let now = Utc::now();
+
         if app_bundle_id.is_ignored_bundle() {
+            self.end_active_event_at(now).await;
             return;
         }
 
         {
             let allowed = self.allowed_ids.read().await;
             if !allowed.contains(app_bundle_id) {
+                self.end_active_event_at(now).await;
                 return;
             }
         }
 
-        let now = Utc::now();
         let snapshot = self.ax_cache.snapshot().await;
         let app_details =
             app_bundle_id.resolve_app_details(app_name, app_path, entity, &snapshot, pid);
@@ -113,89 +121,100 @@ impl EventTracker {
             None
         };
 
-        let mut should_reset_event = false;
+        let new_event = Event {
+            timestamp: Some(now),
+            duration: None,
+            category: app_details.category,
+            app_name: app_name.to_string(),
+            entity_name: Some(app_details.entity.clone()),
+            entity_type: Some(app_details.entity_type),
+            project_name: app_details.project_name,
+            project_path: app_details.project_path,
+            branch_name,
+            language_name: app_details.language,
+            end_timestamp: None,
+        };
 
-        {
+        let event_to_insert = {
             let mut active = self.active_event.lock().await;
-            if let Some(prev_event) = active.as_ref() {
-                let duration = (now - prev_event.timestamp.unwrap()).num_seconds();
-                if prev_event.app_name != app_name
-                    || prev_event.entity_name.as_deref() != Some(app_details.entity.as_str())
-                {
-                    let mut ended_event = prev_event.clone();
-                    ended_event.duration = Some(duration);
-                    ended_event.end_timestamp = Some(now);
-
-                    let db_event: DBEvent = ended_event.into();
-
-                    self.tracker
-                        .insert_event(&db_event)
-                        .await
-                        .unwrap_or_else(|error| error!("Failed to batch event: {}", error));
-
-                    info!(
-                        "Event Ended: App={}, Entity={:?}, Activity={}, Duration={}s",
-                        prev_event.app_name, prev_event.entity_name, prev_event.category, duration
-                    );
-                    should_reset_event = true;
-                }
+            if let Some(prev_event) = active.as_ref()
+                && prev_event.app_name == app_name
+                && prev_event.entity_name.as_deref() == Some(app_details.entity.as_str())
+            {
+                return;
             }
 
-            if should_reset_event {
-                *active = None;
-            }
+            let event_to_insert = active
+                .take()
+                .and_then(|prev_event| Self::finish_event(prev_event, now));
 
-            *active = Some(Event {
-                timestamp: Some(now),
-                duration: None,
-                category: app_details.category,
-                app_name: app_name.to_string(),
-                entity_name: Some(app_details.entity.clone()),
-                entity_type: Some(app_details.entity_type),
-                project_name: app_details.project_name,
-                project_path: app_details.project_path,
-                branch_name,
-                language_name: app_details.language,
-                end_timestamp: None,
-            });
+            *active = Some(new_event);
+            event_to_insert
+        };
+
+        if let Some((db_event, ended_event)) = event_to_insert {
+            self.insert_ended_event(db_event, &ended_event).await;
         }
-
-        *self.last_activity.lock().await = Instant::now();
     }
 
     pub fn start_tracking(
         self: Arc<Self>,
         mut window_rx: watch::Receiver<Option<Window>>,
-        mut afk_timeout_rx: watch::Receiver<u64>,
-        mut afk_state_rx: watch::Receiver<bool>,
-    ) -> tokio::task::JoinHandle<()> {
+        mut afk_state_rx: watch::Receiver<AfkState>,
+        mut power_rx: broadcast::Receiver<PowerEvent>,
+    ) {
+        if let Some(existing) = self.task.lock().unwrap().take() {
+            existing.abort();
+        }
+
+        let _ = self.shutdown_tx.send(false);
+        let mut shutdown_rx = self.shutdown_tx.subscribe();
         let mut tracked_rx = self.tracked_apps_rx.clone();
         let allowed_ids = Arc::clone(&self.allowed_ids);
+        let tracker = Arc::clone(&self);
 
-        tokio::spawn(async move {
-            let mut last_state = None;
-            let afk_timeout_secs = *afk_timeout_rx.borrow_and_update();
-            let mut afk_threshold = Duration::from_secs(afk_timeout_secs);
-            let mut sleep: Pin<Box<Sleep>> = Box::pin(time::sleep(afk_threshold));
-
-            sleep.as_mut().reset(Instant::now() + afk_threshold);
+        let handle = tokio::spawn(async move {
+            let mut last_state: Option<(Arc<str>, Arc<str>)> = None;
 
             loop {
                 tokio::select! {
-                    // Config changed: update AFK threshold and reset the timer.
-                    changed = afk_timeout_rx.changed() => {
-                        if changed.is_err() { break; }
-                        afk_threshold = Duration::from_secs(*afk_timeout_rx.borrow());
-                        sleep.as_mut().reset(Instant::now() + afk_threshold);
+                    changed = shutdown_rx.changed() => {
+                        if changed.is_err() || *shutdown_rx.borrow() {
+                            break;
+                        }
                     }
+
                     // AFK state changed: if AFK started, end right away.
                     changed = afk_state_rx.changed() => {
                         if changed.is_err() { break; }
-                        if *afk_state_rx.borrow() {
-                            self.end_active_event().await;
-                            last_state = None;
-                        } else {
-                            sleep.as_mut().reset(Instant::now() + afk_threshold);
+                        let afk_state = *afk_state_rx.borrow_and_update();
+                        match afk_state {
+                            AfkState::Afk { started_at } => {
+                                tracker.end_active_event_at(started_at).await;
+                                last_state = None;
+                            }
+                            AfkState::Active => {
+                                tracker.track_current_window(&window_rx, &mut last_state).await;
+                            }
+                        }
+                    }
+                    power_event = power_rx.recv() => {
+                        match power_event {
+                            Ok(PowerEvent::WillSleep { at }) => {
+                                tracker.end_active_event_at(at).await;
+                                last_state = None;
+                            }
+                            Ok(PowerEvent::DidWake { .. }) => {
+                                let is_active = *afk_state_rx.borrow() == AfkState::Active;
+                                if is_active {
+                                    tracker.track_current_window(&window_rx, &mut last_state).await;
+                                }
+                            }
+                            Err(broadcast::error::RecvError::Lagged(_)) => {
+                                tracker.end_active_event_at(Utc::now()).await;
+                                last_state = None;
+                            }
+                            Err(broadcast::error::RecvError::Closed) => break,
                         }
                     }
                     changed = tracked_rx.changed() => {
@@ -204,72 +223,149 @@ impl EventTracker {
                             let mut w = allowed_ids.write().await;
                             w.clear();
                             w.extend(latest.into_iter().map(|t| t.bundle_id));
+                            drop(w);
+
+                            last_state = None;
+                            tracker.track_current_window(&window_rx, &mut last_state).await;
                         }
                     }
                     changed = window_rx.changed() => {
                         if changed.is_err() {
                             break;
                         }
-                        let window = match window_rx.borrow_and_update().clone() {
+                        let current_window = window_rx.borrow_and_update().clone();
+                        let window = match current_window {
                             Some(w) => w,
-                            None => continue,
+                            None => {
+                                tracker.end_active_event_at(Utc::now()).await;
+                                last_state = None;
+                                continue;
+                            }
                         };
 
-                        let app_name = window.app_name;
-                        let bundle_id = window.bundle_id;
-                        let file = window.title;
-                        let app_path = window.path;
-                        let pid = window.pid;
-
-                         let changed = last_state
-                                .as_ref()
-                                .map(|(prev_app, prev_file)| prev_app != &app_name || prev_file != &file)
-                                .unwrap_or(true);
-
-                        if changed {
-                            last_state = Some((app_name.clone(), file.clone()));
-                            self.track_event(&app_name, &bundle_id, &app_path, &file, pid).await;
-                        }
-                    }
-
-                    _ = &mut sleep => {
-                        let last_active_time = *self.last_activity.lock().await;
-                        if Instant::now().duration_since(last_active_time) >= afk_threshold {
-                            self.end_active_event().await;
-                            last_state = None;
-                        }
-                        sleep.as_mut().reset(Instant::now() + afk_threshold);
+                        tracker.track_window(window, &mut last_state).await;
                     }
                 }
             }
-        })
+        });
+
+        let mut task = self.task.lock().unwrap();
+        *task = Some(handle);
     }
 
-    async fn end_active_event(&self) {
-        let mut active = self.active_event.lock().await;
-        if let Some(prev_event) = active.take() {
-            let event_duration = (Utc::now() - prev_event.timestamp.unwrap()).num_seconds();
-
-            let mut ended_event = prev_event.clone();
-            ended_event.duration = Some(event_duration);
-            ended_event.end_timestamp = Some(Utc::now());
-
-            let db_event: DBEvent = ended_event.into();
-
-            self.tracker
-                .insert_event(&db_event)
-                .await
-                .unwrap_or_else(|error| error!("Failed to batch event: {}", error));
-
-            info!(
-                "Auto-ending event: App: {}, Entity: {:?}, Activity: {}, Duration: {}s",
-                prev_event.app_name, prev_event.entity_name, prev_event.category, event_duration
-            );
+    async fn track_current_window(
+        &self,
+        window_rx: &watch::Receiver<Option<Window>>,
+        last_state: &mut Option<(Arc<str>, Arc<str>)>,
+    ) {
+        let current_window = window_rx.borrow().clone();
+        if let Some(window) = current_window {
+            self.track_window(window, last_state).await;
         }
     }
 
+    async fn track_window(&self, window: Window, last_state: &mut Option<(Arc<str>, Arc<str>)>) {
+        let app_name = window.app_name;
+        let bundle_id = window.bundle_id;
+        let file = window.title;
+        let app_path = window.path;
+        let pid = window.pid;
+
+        let changed = last_state
+            .as_ref()
+            .map(|(prev_app, prev_file)| prev_app != &app_name || prev_file != &file)
+            .unwrap_or(true);
+
+        if changed {
+            *last_state = Some((app_name.clone(), file.clone()));
+            self.track_event(&app_name, &bundle_id, &app_path, &file, pid)
+                .await;
+        }
+    }
+
+    pub async fn end_active_event_at(&self, end_at: DateTime<Utc>) {
+        let event_to_insert = {
+            let mut active = self.active_event.lock().await;
+            active
+                .take()
+                .and_then(|prev_event| Self::finish_event(prev_event, end_at))
+        };
+
+        if let Some((db_event, ended_event)) = event_to_insert {
+            self.insert_ended_event(db_event, &ended_event).await;
+        }
+    }
+
+    fn finish_event(prev_event: Event, end_at: DateTime<Utc>) -> Option<(DBEvent, Event)> {
+        let start_at = prev_event.timestamp?;
+        let event_duration = (end_at - start_at).num_seconds().max(0);
+
+        if event_duration == 0 {
+            return None;
+        }
+
+        let mut ended_event = prev_event;
+        ended_event.duration = Some(event_duration);
+        ended_event.end_timestamp = Some(end_at);
+
+        let db_event = ended_event.clone().into();
+        Some((db_event, ended_event))
+    }
+
+    async fn insert_ended_event(&self, db_event: DBEvent, ended_event: &Event) {
+        self.tracker
+            .insert_event(&db_event)
+            .await
+            .unwrap_or_else(|error| error!("Failed to batch event: {}", error));
+
+        info!(
+            "Event ended: App={}, Entity={:?}, Activity={}, Duration={}s",
+            ended_event.app_name,
+            ended_event.entity_name,
+            ended_event.category,
+            ended_event.duration.unwrap_or_default()
+        );
+    }
+
+    async fn end_active_event(&self) {
+        self.end_active_event_at(Utc::now()).await;
+    }
+
     pub async fn stop_tracking(&self) {
+        self.stop_task().await;
         self.end_active_event().await;
         info!("Event tracker stopped");
+    }
+
+    async fn stop_task(&self) {
+        let _ = self.shutdown_tx.send(true);
+        let task = self.task.lock().unwrap().take();
+        if let Some(task) = task
+            && let Err(error) = task.await
+            && !error.is_cancelled()
+        {
+            error!("Event tracker task failed during shutdown: {}", error);
+        }
+    }
+}
+
+#[async_trait::async_trait]
+impl TrackerLifecycle for EventTracker {
+    type StartArgs = (
+        watch::Receiver<Option<Window>>,
+        watch::Receiver<AfkState>,
+        broadcast::Receiver<PowerEvent>,
+    );
+
+    fn start_tracking(self: Arc<Self>, (window_rx, afk_state_rx, power_rx): Self::StartArgs) {
+        EventTracker::start_tracking(self, window_rx, afk_state_rx, power_rx);
+    }
+
+    async fn shutdown(&self) {
+        self.stop_task().await;
+    }
+
+    async fn flush(&self) {
+        self.end_active_event().await;
     }
 }

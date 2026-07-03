@@ -25,6 +25,7 @@ import {
 import PermissionsDialog from "@/components/settings/PermissionsDialog";
 import UpdaterToast from "@/components/updater/UpdaterToast";
 import ThemeProvider from "@/components/settings/ThemeProvider";
+import AppShutdownDialog from "@/components/AppShutdownDialog";
 import { TourProvider } from "./utils/tour/TourProvider";
 
 const queryClient = new QueryClient({
@@ -51,6 +52,7 @@ function App() {
       <ThemeProvider>
         <TourProvider>
           <Toaster richColors />
+          <AppShutdownDialog />
           <PermissionsDialog />
           <UpdaterToast />
           <ContextMenu>

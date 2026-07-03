@@ -95,7 +95,7 @@ impl ConfigStore {
         })
     }
 
-    pub fn get_config_path<R: Runtime>(handle: &AppHandle<R>) -> PathBuf {
+    fn get_config_path<R: Runtime>(handle: &AppHandle<R>) -> PathBuf {
         handle
             .path()
             .app_config_dir()
@@ -103,7 +103,7 @@ impl ConfigStore {
             .join(get_config_name())
     }
 
-    pub async fn get(&self) -> AppConfig {
+    async fn get(&self) -> AppConfig {
         self.inner.read().await.clone()
     }
 

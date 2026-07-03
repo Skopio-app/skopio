@@ -4,6 +4,7 @@ use async_trait::async_trait;
 use common::models::inputs::{AFKEventInput, EventInput};
 use db::DBContext;
 use db::desktop::{afk_events::AFKEvent, events::Event};
+use db::error::DBError;
 use tokio::sync::{Mutex, mpsc, oneshot, watch};
 use tokio::task::JoinHandle;
 use tokio::time::{Duration, Instant, interval};
@@ -19,8 +20,10 @@ enum TrackingStats {
 
 pub struct BufferedTrackingService {
     sender: mpsc::Sender<TrackingStats>,
-    shutdown_tx: Arc<Mutex<Option<oneshot::Sender<()>>>>,
+    flush_shutdown_tx: Arc<Mutex<Option<oneshot::Sender<()>>>>,
     flush_handle: Arc<Mutex<Option<JoinHandle<()>>>>,
+    sync_shutdown_tx: Arc<Mutex<Option<oneshot::Sender<()>>>>,
+    sync_handle: Arc<Mutex<Option<JoinHandle<()>>>>,
 }
 
 impl BufferedTrackingService {
@@ -32,57 +35,78 @@ impl BufferedTrackingService {
     ) -> Self {
         let (tx, rx) = mpsc::channel::<TrackingStats>(100);
 
-        let (shutdown_tx, shutdown_rx) = oneshot::channel::<()>();
-        let shutdown_tx_arc = Arc::new(Mutex::new(Some(shutdown_tx)));
+        let (flush_shutdown_tx, flush_shutdown_rx) = oneshot::channel::<()>();
+        let flush_shutdown_tx = Arc::new(Mutex::new(Some(flush_shutdown_tx)));
+        let (sync_shutdown_tx, sync_shutdown_rx) = oneshot::channel::<()>();
+        let sync_shutdown_tx = Arc::new(Mutex::new(Some(sync_shutdown_tx)));
 
         let inner_clone = Arc::clone(&inner);
         let db_clone = Arc::clone(&db);
 
         let flush_handle = tokio::spawn(run_buffer_flush_loop(
             rx,
-            shutdown_rx,
+            flush_shutdown_rx,
             inner_clone,
             flush_interval_rx,
         ));
 
-        tokio::spawn(run_sync_loop(db_clone, sync_interval_rx));
+        let sync_handle = tokio::spawn(run_sync_loop(db_clone, sync_interval_rx, sync_shutdown_rx));
 
         Self {
             sender: tx,
-            shutdown_tx: shutdown_tx_arc,
+            flush_shutdown_tx,
             flush_handle: Arc::new(Mutex::new(Some(flush_handle))),
+            sync_shutdown_tx,
+            sync_handle: Arc::new(Mutex::new(Some(sync_handle))),
         }
     }
 
     pub async fn shutdown(&self) {
-        let mut tx_guard = self.shutdown_tx.lock().await;
+        let mut tx_guard = self.flush_shutdown_tx.lock().await;
         if let Some(tx) = tx_guard.take() {
             let _ = tx.send(());
         }
+        drop(tx_guard);
+
+        let mut tx_guard = self.sync_shutdown_tx.lock().await;
+        if let Some(tx) = tx_guard.take() {
+            let _ = tx.send(());
+        }
+        drop(tx_guard);
 
         if let Some(handle) = self.flush_handle.lock().await.take()
             && let Err(err) = handle.await
         {
             error!("Flush loop task panicked or failed to join: {}", err);
         }
+
+        if let Some(handle) = self.sync_handle.lock().await.take()
+            && let Err(err) = handle.await
+        {
+            error!("Sync loop task panicked or failed to join: {}", err);
+        }
     }
 }
 
 #[async_trait]
 impl TrackingService for BufferedTrackingService {
-    async fn insert_event(&self, event: &Event) -> Result<(), anyhow::Error> {
-        let _ = self
-            .sender
+    async fn insert_event(&self, event: &Event) -> Result<(), DBError> {
+        self.sender
             .send(TrackingStats::Event(Box::new(event.clone())))
-            .await;
+            .await
+            .map_err(|err| {
+                DBError::Internal(format!("buffered tracking service is shut down: {err}"))
+            })?;
         Ok(())
     }
 
-    async fn insert_afk(&self, afk: &AFKEvent) -> Result<(), anyhow::Error> {
-        let _ = self
-            .sender
+    async fn insert_afk(&self, afk: &AFKEvent) -> Result<(), DBError> {
+        self.sender
             .send(TrackingStats::Afk(Box::new(afk.clone())))
-            .await;
+            .await
+            .map_err(|err| {
+                DBError::Internal(format!("buffered tracking service is shut down: {err}"))
+            })?;
         Ok(())
     }
 }
@@ -93,7 +117,7 @@ async fn run_buffer_flush_loop(
     inner: Arc<dyn TrackingService>,
     mut flush_interval_rx: watch::Receiver<u64>,
 ) {
-    let flush_interval = Duration::from_secs(*flush_interval_rx.borrow_and_update());
+    let mut flush_interval = Duration::from_secs(*flush_interval_rx.borrow_and_update());
     let mut buffer: Vec<TrackingStats> = Vec::with_capacity(20);
     let mut retry_queue: Vec<TrackingStats> = Vec::with_capacity(20);
     let mut last_flush = Instant::now();
@@ -103,56 +127,85 @@ async fn run_buffer_flush_loop(
             Some(msg) = rx.recv() => {
                         buffer.push(msg);
                         if buffer.len() >= 10 || last_flush.elapsed() >= flush_interval {
-                            let inner = Arc::clone(&inner);
                             let mut flush_data = buffer.split_off(0);
                             let mut retry_data = retry_queue.split_off(0);
 
-                            tokio::spawn(async move {
-                                flush(&inner, &mut flush_data, &mut retry_data).await;
-                            });
+                            flush(&inner, &mut flush_data, &mut retry_data).await;
+                            retry_queue.append(&mut retry_data);
 
                             last_flush = Instant::now();
                         }
                     }
             _ = tokio::time::sleep_until(last_flush + flush_interval) => {
                 if !buffer.is_empty() {
-                   let inner = Arc::clone(&inner);
                    let mut flush_data = buffer.split_off(0);
                    let mut retry_data = retry_queue.split_off(0);
 
-                    tokio::spawn(async move {
-                        flush(&inner, &mut flush_data, &mut retry_data).await;
-                    });
+                    flush(&inner, &mut flush_data, &mut retry_data).await;
+                    retry_queue.append(&mut retry_data);
 
                     last_flush = Instant::now();
                 }
             }
-            _ = &mut shutdown_rx => {
-                if !buffer.is_empty() {
-                    let inner = Arc::clone(&inner);
-                    let mut flush_data = buffer.split_off(0);
-                    let mut retry_data = retry_queue.split_off(0);
-
-                    info!("Flushing buffer before shutdown ({}) items...", flush_data.len());
-                    flush(&inner, &mut flush_data, &mut retry_data).await;
-                    info!("Buffer service shut down gracefully.");
+            changed = flush_interval_rx.changed() => {
+                if changed.is_ok() {
+                    flush_interval = Duration::from_secs(*flush_interval_rx.borrow_and_update());
                 }
+            }
+            _ = &mut shutdown_rx => {
+                rx.close();
+                while let Some(msg) = rx.recv().await {
+                    buffer.push(msg);
+                }
+
+                let mut flush_data = buffer.split_off(0);
+                let mut retry_data = retry_queue.split_off(0);
+                let shutdown_item_count = flush_data.len() + retry_data.len();
+
+                if shutdown_item_count > 0 {
+                    info!("Flushing buffer before shutdown ({}) items...", shutdown_item_count);
+                    flush(&inner, &mut flush_data, &mut retry_data).await;
+                }
+
+                if !retry_data.is_empty() {
+                    error!(
+                        "Buffer service shut down with {} item(s) still queued after retries.",
+                        retry_data.len()
+                    );
+                }
+
+                info!("Buffer service shut down gracefully.");
                 break;
             }
         }
     }
 }
 
-async fn run_sync_loop(db: Arc<DBContext>, mut sync_interval_rx: watch::Receiver<u64>) {
+async fn run_sync_loop(
+    db: Arc<DBContext>,
+    mut sync_interval_rx: watch::Receiver<u64>,
+    mut shutdown_rx: oneshot::Receiver<()>,
+) {
     let mut interval = interval(Duration::from_secs(*sync_interval_rx.borrow_and_update()));
     loop {
-        interval.tick().await;
-        let db_clone = Arc::clone(&db);
-        tokio::spawn(async move {
-            if let Err(e) = sync_with_server(&db_clone).await {
-                error!("Sync with server failed: {}", e);
+        tokio::select! {
+            _ = interval.tick() => {
+                if let Err(e) = sync_with_server(&db).await {
+                    error!("Sync with server failed: {}", e);
+                }
             }
-        });
+            changed = sync_interval_rx.changed() => {
+                if changed.is_err() {
+                    break;
+                }
+
+                interval =
+                    tokio::time::interval(Duration::from_secs(*sync_interval_rx.borrow_and_update()));
+            }
+            _ = &mut shutdown_rx => {
+                break;
+            }
+        }
     }
 }
 

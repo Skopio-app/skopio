@@ -23,6 +23,10 @@ pub enum DBError {
     #[error("Unsupported configuration: {0}")]
     Unsupported(&'static str),
 
+    /// An internal operation failed outside the database driver itself
+    #[error("Internal DB operation error: {0}")]
+    Internal(String),
+
     #[error("Migration error: {0}")]
     Migration(#[from] sqlx::migrate::MigrateError),
 }

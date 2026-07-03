@@ -1,8 +1,15 @@
 use db::DBContext;
-use std::{sync::Arc, time::Duration};
+use std::{
+    sync::{
+        Arc,
+        atomic::{AtomicBool, Ordering},
+    },
+    time::Duration,
+};
 use sync_service::BufferedTrackingService;
-use tauri::{AppHandle, Manager, Runtime};
-use tracing::error;
+use tauri::{AppHandle, Emitter, Manager, Runtime};
+use tracing::{error, info};
+use trackers::TrackerLifecycle;
 use trackers::{
     afk_tracker::AFKTracker, event_tracker::EventTracker, keyboard_tracker::KeyboardTracker,
     mouse_tracker::MouseTracker, window_tracker::WindowTracker,
@@ -13,6 +20,7 @@ use utils::{config::ConfigStore, db::get_db_path};
 use crate::{
     goals_service::GoalService,
     server::{ServerManagerExt, ServerStatus},
+    trackers::{input_activity::InputActivityBus, power_monitor::PowerMonitor},
     ui::{
         menu::MenuExt,
         tray::TrayExt,
@@ -37,20 +45,27 @@ mod tracking_service;
 mod ui;
 pub mod utils;
 
+const APP_SHUTDOWN_STARTED_EVENT: &str = "app-shutdown-started";
+
 #[tokio::main]
 pub async fn run() {
     tauri::async_runtime::set(tokio::runtime::Handle::current());
 
-    let cursor_tracker = Arc::new(MouseTracker::new());
-    let keyboard_tracker = Arc::new(KeyboardTracker::new());
+    let input_activity_bus = Arc::new(InputActivityBus::new());
+
+    let cursor_tracker = Arc::new(MouseTracker::new(Arc::clone(&input_activity_bus)));
+    let keyboard_tracker = Arc::new(KeyboardTracker::new(Arc::clone(&input_activity_bus)));
     let window_tracker = Arc::new(WindowTracker::new());
+    let shutdown = Arc::new(AppShutdown::default());
 
     let specta_builder = make_specta_builder();
 
-    tauri::Builder::default()
+    let app = tauri::Builder::default()
         .manage(Arc::clone(&cursor_tracker))
         .manage(Arc::clone(&keyboard_tracker))
         .manage(Arc::clone(&window_tracker))
+        .manage(Arc::clone(&input_activity_bus))
+        .manage(Arc::clone(&shutdown))
         .invoke_handler({
             let handler = specta_builder.invoke_handler();
             move |invoke| handler(invoke)
@@ -85,32 +100,11 @@ pub async fn run() {
             if let tauri::WindowEvent::CloseRequested { api, .. } = event
                 && window.label() == "main"
             {
-                api.prevent_close();
-
-                let cursor_tracker = window.state::<Arc<MouseTracker>>();
-                let keyboard_tracker = window.state::<Arc<KeyboardTracker>>();
-                let event_tracker = window.state::<Arc<EventTracker>>();
-                let buffered_service = window.state::<Arc<BufferedTrackingService>>();
-                let goal_service = window.state::<Arc<GoalService>>();
-                let window_tracker = window.state::<Arc<WindowTracker>>();
-                let afk_tracker = window.state::<Arc<AFKTracker>>();
-
-                cursor_tracker.stop_tracking();
-                keyboard_tracker.stop_tracking();
-                goal_service.shutdown();
-                window_tracker.stop_tracking();
-
-                let window = window.clone();
-                let buffered_service = Arc::clone(&buffered_service);
-                let event_tracker = Arc::clone(&event_tracker);
-                let afk_tracker = Arc::clone(&afk_tracker);
-                tokio::spawn(async move {
-                    event_tracker.stop_tracking().await;
-                    afk_tracker.stop_tracking().await;
-                    buffered_service.shutdown().await;
-
-                    window.app_handle().exit(0);
-                });
+                let shutdown = window.state::<Arc<AppShutdown>>();
+                if !shutdown.is_complete() {
+                    api.prevent_close();
+                    request_app_shutdown(window.app_handle().clone());
+                }
             }
         })
         .plugin(tauri_plugin_autostart::init(
@@ -121,17 +115,34 @@ pub async fn run() {
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_process::init())
-        .run(tauri::generate_context!())
+        .build(tauri::generate_context!())
         .expect("Error while running Tauri application");
+
+    app.run(|app_handle, event| {
+        if let tauri::RunEvent::ExitRequested { api, .. } = event {
+            let shutdown = app_handle.state::<Arc<AppShutdown>>();
+            if !shutdown.is_complete() {
+                api.prevent_exit();
+                request_app_shutdown(app_handle.clone());
+            }
+        }
+    });
 }
 
 async fn setup_trackers(app_handle: &AppHandle) -> Result<(), anyhow::Error> {
+    if app_shutdown_started(app_handle) {
+        return Ok(());
+    }
+
     let config_store = ConfigStore::new(app_handle).await?;
     app_handle.manage(config_store.clone());
 
+    if app_shutdown_started(app_handle) {
+        return Ok(());
+    }
+
     let window_tracker = app_handle.state::<Arc<WindowTracker>>();
-    let window_tracker_ref = Arc::clone(&window_tracker);
-    window_tracker_ref.start_tracking();
+    <WindowTracker as TrackerLifecycle>::start_tracking(Arc::clone(&window_tracker), ());
 
     let ax_cache_rx = window_tracker.subscribe();
 
@@ -150,6 +161,10 @@ async fn setup_trackers(app_handle: &AppHandle) -> Result<(), anyhow::Error> {
     let db_result = tokio::spawn(async move { DBContext::new(&db_url).await })
         .await
         .expect("DB task panicked");
+
+    if app_shutdown_started(app_handle) {
+        return Ok(());
+    }
 
     let db = match db_result {
         Ok(db) => Arc::new(db),
@@ -178,15 +193,11 @@ async fn setup_trackers(app_handle: &AppHandle) -> Result<(), anyhow::Error> {
 
     let service_trait: Arc<dyn TrackingService> = buffered_service.clone();
 
+    let input_activity_bus = app_handle.state::<Arc<InputActivityBus>>();
     let mouse_tracker = app_handle.state::<Arc<MouseTracker>>();
     let keyboard_tracker = app_handle.state::<Arc<KeyboardTracker>>();
     let afk_timeout_rx = config_store.subscribe_afk_timeout();
-    let afk_tracker = Arc::new(AFKTracker::new(
-        Arc::clone(&mouse_tracker),
-        Arc::clone(&keyboard_tracker),
-        afk_timeout_rx,
-        Arc::clone(&service_trait),
-    ));
+    let afk_tracker = Arc::new(AFKTracker::new(afk_timeout_rx, Arc::clone(&service_trait)));
     app_handle.manage(Arc::clone(&afk_tracker));
 
     let tracked_apps_rx = config_store.subscribe_tracked_apps();
@@ -201,26 +212,151 @@ async fn setup_trackers(app_handle: &AppHandle) -> Result<(), anyhow::Error> {
 
     let event_window_rx = window_tracker.subscribe();
 
-    mouse_tracker.start_tracking();
+    <MouseTracker as TrackerLifecycle>::start_tracking(Arc::clone(&mouse_tracker), ());
 
-    afk_tracker.start_tracking();
+    let power_monitor = Arc::new(PowerMonitor::new());
+    <PowerMonitor as TrackerLifecycle>::start_tracking(Arc::clone(&power_monitor), ());
+    app_handle.manage(Arc::clone(&power_monitor));
 
-    let keyboard_tracker = Arc::clone(&keyboard_tracker);
-    keyboard_tracker.start_tracking();
+    let power_rx_afk = power_monitor.subscribe();
+    let power_rx_events = power_monitor.subscribe();
 
-    let afk_timeout_rx_event = config_store.subscribe_afk_timeout();
-    tokio::spawn({
-        async move {
-            if let Err(e) = event_tracker
-                .start_tracking(event_window_rx, afk_timeout_rx_event, afk_state_rx)
-                .await
-            {
-                error!("Event tracker failed: {}", e);
-            }
-        }
-    });
+    let input_activity_rx = input_activity_bus.subscribe();
+
+    <AFKTracker as TrackerLifecycle>::start_tracking(
+        Arc::clone(&afk_tracker),
+        (power_rx_afk, input_activity_rx),
+    );
+
+    <KeyboardTracker as TrackerLifecycle>::start_tracking(Arc::clone(&keyboard_tracker), ());
+
+    <EventTracker as TrackerLifecycle>::start_tracking(
+        Arc::clone(&event_tracker),
+        (event_window_rx, afk_state_rx, power_rx_events),
+    );
 
     Ok(())
+}
+
+#[derive(Default)]
+struct AppShutdown {
+    started: AtomicBool,
+    complete: AtomicBool,
+}
+
+impl AppShutdown {
+    fn begin(&self) -> bool {
+        self.started
+            .compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst)
+            .is_ok()
+    }
+
+    fn is_started(&self) -> bool {
+        self.started.load(Ordering::SeqCst)
+    }
+
+    fn is_complete(&self) -> bool {
+        self.complete.load(Ordering::SeqCst)
+    }
+
+    fn mark_complete(&self) {
+        self.complete.store(true, Ordering::SeqCst);
+    }
+}
+
+fn app_shutdown_started<R: Runtime>(app_handle: &AppHandle<R>) -> bool {
+    app_handle
+        .try_state::<Arc<AppShutdown>>()
+        .is_some_and(|shutdown| shutdown.is_started())
+}
+
+pub(crate) fn request_app_shutdown<R: Runtime>(app_handle: AppHandle<R>) {
+    let Some(shutdown) = app_handle
+        .try_state::<Arc<AppShutdown>>()
+        .map(|shutdown| Arc::clone(shutdown.inner()))
+    else {
+        app_handle.exit(0);
+        return;
+    };
+
+    if !shutdown.begin() {
+        return;
+    }
+
+    if let Err(err) = app_handle.show_window(WindowKind::Main) {
+        error!(%err, "Failed to show main window before shutdown");
+    }
+
+    if let Err(err) = app_handle.emit(APP_SHUTDOWN_STARTED_EVENT, ()) {
+        error!(%err, "Failed to emit app shutdown started event");
+    }
+
+    tokio::spawn(async move {
+        run_app_shutdown(&app_handle).await;
+        shutdown.mark_complete();
+        app_handle.exit(0);
+    });
+}
+
+async fn run_app_shutdown<R: Runtime>(app_handle: &AppHandle<R>) {
+    info!("App shutdown started");
+
+    // tokio::time::sleep(Duration::from_secs(12)).await;
+
+    if let Some(mouse_tracker) = managed_state::<MouseTracker, R>(app_handle) {
+        mouse_tracker.shutdown().await;
+    }
+
+    if let Some(keyboard_tracker) = managed_state::<KeyboardTracker, R>(app_handle) {
+        keyboard_tracker.shutdown().await;
+    }
+
+    if let Some(window_tracker) = managed_state::<WindowTracker, R>(app_handle) {
+        window_tracker.shutdown().await;
+    }
+
+    if let Some(power_monitor) = managed_state::<PowerMonitor, R>(app_handle) {
+        power_monitor.shutdown().await;
+    }
+
+    if let Some(goal_service) = managed_state::<GoalService, R>(app_handle) {
+        goal_service.shutdown();
+    }
+
+    let event_tracker = managed_state::<EventTracker, R>(app_handle);
+    let afk_tracker = managed_state::<AFKTracker, R>(app_handle);
+
+    if let Some(event_tracker) = &event_tracker {
+        event_tracker.shutdown().await;
+    }
+
+    if let Some(afk_tracker) = &afk_tracker {
+        afk_tracker.shutdown().await;
+    }
+
+    if let Some(event_tracker) = &event_tracker {
+        event_tracker.flush().await;
+    }
+
+    if let Some(afk_tracker) = &afk_tracker {
+        afk_tracker.flush().await;
+    }
+
+    if let Some(buffered_service) = managed_state::<BufferedTrackingService, R>(app_handle) {
+        buffered_service.shutdown().await;
+    }
+
+    info!("App shutdown complete");
+}
+
+fn managed_state<T, R>(app_handle: &AppHandle<R>) -> Option<Arc<T>>
+where
+    T: Send + Sync + 'static,
+    R: Runtime,
+{
+    app_handle
+        .try_state::<Arc<T>>()
+        .map(|state| Arc::clone(state.inner()))
 }
 
 fn make_specta_builder<R: Runtime>() -> tauri_specta::Builder<R> {
