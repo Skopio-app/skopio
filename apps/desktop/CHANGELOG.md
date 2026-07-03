@@ -23,6 +23,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v0.1.18] - 2026-07-04
+
+### Fixed
+
+- Correctly capture AFK events when laptop sleeps or wakes instead of continuous app event capture.
+- Update Chip selector dropdown to make items fully visible.
+
+### Changed
+
+- Added new matrix loading component and removed dino game.
+
 ## [v0.1.17] - 2026-06-21
 
 ### Fixed
