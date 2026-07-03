@@ -1,12 +1,14 @@
 use tauri::{
     AppHandle, Manager, Runtime,
-    menu::{IconMenuItemBuilder, Menu, MenuItemKind, PredefinedMenuItem, Submenu, SubmenuBuilder},
+    menu::{Menu, MenuItemBuilder, MenuItemKind, PredefinedMenuItem, Submenu, SubmenuBuilder},
 };
 use tracing::error;
 
+use crate::request_app_shutdown;
 use crate::ui::window::{WindowExt, WindowKind};
 
 const APP_CHECK_UPDATES_ID: &str = "app.check_updates";
+const APP_QUIT_ID: &str = "app.quit";
 const APP_SETTINGS_ID: &str = "app.settings";
 const VIEW_RELOAD_ID: &str = "view.reload";
 const VIEW_FORCE_RELOAD_ID: &str = "view.force_reload";
@@ -28,10 +30,13 @@ impl<R: Runtime> MenuExt<R> for AppHandle<R> {
         let default_view_items = take_menu_items(&view_menu)?;
 
         let check_updates =
-            IconMenuItemBuilder::with_id(APP_CHECK_UPDATES_ID, "Check for Updates...")
-                .build(self)?;
-        let settings = IconMenuItemBuilder::with_id(APP_SETTINGS_ID, "Preferences...")
+            MenuItemBuilder::with_id(APP_CHECK_UPDATES_ID, "Check for Updates...").build(self)?;
+        let settings = MenuItemBuilder::with_id(APP_SETTINGS_ID, "Preferences...")
             .accelerator("CmdOrCtrl+,")
+            .build(self)?;
+        let quit_label = format!("Quit {}", self.package_info().name);
+        let quit = MenuItemBuilder::with_id(APP_QUIT_ID, quit_label)
+            .accelerator("CmdOrCtrl+Q")
             .build(self)?;
 
         if let Some((about_item, remaining_items)) = default_app_items.split_first() {
@@ -40,28 +45,32 @@ impl<R: Runtime> MenuExt<R> for AppHandle<R> {
             app_menu.append(&PredefinedMenuItem::separator(self)?)?;
             app_menu.append(&settings)?;
             for item in remaining_items {
-                app_menu.append(item)?;
+                if !is_default_quit_item(item) {
+                    app_menu.append(item)?;
+                }
             }
+            app_menu.append(&quit)?;
         } else {
             app_menu.append(&check_updates)?;
             app_menu.append(&PredefinedMenuItem::separator(self)?)?;
             app_menu.append(&settings)?;
+            app_menu.append(&PredefinedMenuItem::separator(self)?)?;
+            app_menu.append(&quit)?;
         }
 
-        let reload = IconMenuItemBuilder::with_id(VIEW_RELOAD_ID, "Reload")
+        let reload = MenuItemBuilder::with_id(VIEW_RELOAD_ID, "Reload")
             .accelerator("CmdOrCtrl+R")
             .build(self)?;
-        let force_reload = IconMenuItemBuilder::with_id(VIEW_FORCE_RELOAD_ID, "Force Reload")
+        let force_reload = MenuItemBuilder::with_id(VIEW_FORCE_RELOAD_ID, "Force Reload")
             .accelerator("CmdOrCtrl+Shift+R")
             .build(self)?;
         let toggle_devtools =
-            IconMenuItemBuilder::with_id(VIEW_TOGGLE_DEVTOOLS_ID, "Toggle Developer Tools")
+            MenuItemBuilder::with_id(VIEW_TOGGLE_DEVTOOLS_ID, "Toggle Developer Tools")
                 .accelerator("Alt+CmdOrCtrl+I")
                 .build(self)?;
-        let toggle_sidebar =
-            IconMenuItemBuilder::with_id(VIEW_TOGGLE_SIDEBAR_ID, "Show/Hide Sidebar")
-                .accelerator("CmdOrCtrl+B")
-                .build(self)?;
+        let toggle_sidebar = MenuItemBuilder::with_id(VIEW_TOGGLE_SIDEBAR_ID, "Show/Hide Sidebar")
+            .accelerator("CmdOrCtrl+B")
+            .build(self)?;
 
         view_menu.append(&reload)?;
         view_menu.append(&force_reload)?;
@@ -75,10 +84,10 @@ impl<R: Runtime> MenuExt<R> for AppHandle<R> {
             }
         }
 
-        let back = IconMenuItemBuilder::with_id(HISTORY_BACK_ID, "Back")
+        let back = MenuItemBuilder::with_id(HISTORY_BACK_ID, "Back")
             .accelerator("CmdOrCtrl+[")
             .build(self)?;
-        let forward = IconMenuItemBuilder::with_id(HISTORY_FORWARD_ID, "Forward")
+        let forward = MenuItemBuilder::with_id(HISTORY_FORWARD_ID, "Forward")
             .accelerator("CmdOrCtrl+]")
             .build(self)?;
 
@@ -97,6 +106,10 @@ impl<R: Runtime> MenuExt<R> for AppHandle<R> {
         self.on_menu_event(|app, event| {
             let result = match event.id().as_ref() {
                 APP_SETTINGS_ID => app.show_window(WindowKind::Settings).map(|_| ()),
+                APP_QUIT_ID => {
+                    request_app_shutdown(app.clone());
+                    Ok(())
+                }
                 APP_CHECK_UPDATES_ID => app
                     .get_webview_window("main")
                     .map(|window| {
@@ -133,6 +146,16 @@ impl<R: Runtime> MenuExt<R> for AppHandle<R> {
 
         Ok(())
     }
+}
+
+fn is_default_quit_item<R: Runtime>(item: &MenuItemKind<R>) -> bool {
+    matches!(
+        item,
+        MenuItemKind::Predefined(predefined)
+            if predefined.text().is_ok_and(|text| {
+                text == "Quit" || text == "&Quit" || text == "&Exit" || text.starts_with("Quit ")
+            })
+    )
 }
 
 fn get_app_menu<R: Runtime>(app: &AppHandle<R>, menu: &Menu<R>) -> tauri::Result<Submenu<R>> {

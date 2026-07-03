@@ -57,7 +57,6 @@ impl WindowTracker {
 
                 loop {
                     if shutdown.load(Ordering::Relaxed) {
-                        info!("Window tracker stopped");
                         break;
                     }
 
@@ -170,6 +169,7 @@ impl WindowTracker {
     }
 
     pub fn stop_tracking(&self) {
+        info!("Window tracker stopped");
         self.shutdown.store(true, Ordering::Relaxed);
     }
 }
