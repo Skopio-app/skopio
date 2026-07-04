@@ -1,11 +1,11 @@
 import { Button } from "@skopio/ui";
 import { toast } from "sonner";
 import { message } from "@tauri-apps/plugin-dialog";
-import { relaunch } from "@tauri-apps/plugin-process";
 import { check } from "@tauri-apps/plugin-updater";
 import { useEffect } from "react";
 import Markdown, { Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { commands } from "@/types/tauri.gen";
 
 type ProgressState = {
   pct: number;
@@ -116,7 +116,7 @@ const showUpdaterToast = (meta: {
             <div className="mt-3 space-y-1.5">
               <div className="h-2 w-full overflow-hidden rounded-full bg-background">
                 <div
-                  className="h-full rounded-full bg-foreground transition-[width]"
+                  className="h-full rounded-full bg-primary transition-[width]"
                   style={{ width: `${state.pct}%` }}
                 />
               </div>
@@ -170,7 +170,14 @@ const showUpdaterToast = (meta: {
                 <Button
                   variant="secondary"
                   size="sm"
-                  onClick={() => relaunch()}
+                  onClick={() => {
+                    commands.relaunch().catch((e) => {
+                      state.phase = "error";
+                      state.error =
+                        typeof e?.message === "string" ? e.message : String(e);
+                      rerender();
+                    });
+                  }}
                 >
                   Relaunch
                 </Button>

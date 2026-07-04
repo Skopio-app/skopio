@@ -47,6 +47,23 @@ pub mod utils;
 
 const APP_SHUTDOWN_STARTED_EVENT: &str = "app-shutdown-started";
 
+#[derive(Clone, Copy)]
+enum AppShutdownAction {
+    Exit,
+    Restart,
+}
+
+mod app_process {
+    use super::*;
+
+    #[tauri::command]
+    #[specta::specta]
+    pub fn relaunch<R: Runtime>(app_handle: AppHandle<R>) -> Result<(), String> {
+        request_app_shutdown_with_action(app_handle, AppShutdownAction::Restart);
+        Ok(())
+    }
+}
+
 #[tokio::main]
 pub async fn run() {
     tauri::async_runtime::set(tokio::runtime::Handle::current());
@@ -114,7 +131,6 @@ pub async fn run() {
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .plugin(tauri_plugin_updater::Builder::new().build())
-        .plugin(tauri_plugin_process::init())
         .build(tauri::generate_context!())
         .expect("Error while running Tauri application");
 
@@ -271,11 +287,21 @@ fn app_shutdown_started<R: Runtime>(app_handle: &AppHandle<R>) -> bool {
 }
 
 pub(crate) fn request_app_shutdown<R: Runtime>(app_handle: AppHandle<R>) {
+    request_app_shutdown_with_action(app_handle, AppShutdownAction::Exit);
+}
+
+fn request_app_shutdown_with_action<R: Runtime>(
+    app_handle: AppHandle<R>,
+    action: AppShutdownAction,
+) {
     let Some(shutdown) = app_handle
         .try_state::<Arc<AppShutdown>>()
         .map(|shutdown| Arc::clone(shutdown.inner()))
     else {
-        app_handle.exit(0);
+        match action {
+            AppShutdownAction::Exit => app_handle.exit(0),
+            AppShutdownAction::Restart => app_handle.restart(),
+        }
         return;
     };
 
@@ -294,7 +320,10 @@ pub(crate) fn request_app_shutdown<R: Runtime>(app_handle: AppHandle<R>) {
     tokio::spawn(async move {
         run_app_shutdown(&app_handle).await;
         shutdown.mark_complete();
-        app_handle.exit(0);
+        match action {
+            AppShutdownAction::Exit => app_handle.exit(0),
+            AppShutdownAction::Restart => app_handle.restart(),
+        }
     });
 }
 
@@ -388,6 +417,7 @@ fn make_specta_builder<R: Runtime>() -> tauri_specta::Builder<R> {
             crate::ui::window::show_window::<tauri::Wry>,
             crate::monitored_app::get_open_apps,
             crate::server::get_server_status::<tauri::Wry>,
+            crate::app_process::relaunch::<tauri::Wry>,
         ])
         .events(tauri_specta::collect_events![ServerStatus])
         .error_handling(tauri_specta::ErrorHandlingMode::Throw)

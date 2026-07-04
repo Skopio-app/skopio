@@ -86,6 +86,9 @@ export const commands = {
   async getServerStatus(): Promise<ServerStatus> {
     return await TAURI_INVOKE("get_server_status");
   },
+  async relaunch(): Promise<null> {
+    return await TAURI_INVOKE("relaunch");
+  },
 };
 
 /** user-defined events **/
