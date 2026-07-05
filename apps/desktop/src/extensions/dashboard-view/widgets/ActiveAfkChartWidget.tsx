@@ -1,6 +1,5 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { addDays, format, startOfDay } from "date-fns";
 import WidgetCard from "../components/WidgetCard";
 import StackedBarChart from "@/components/StackedBarChart";
 import {
@@ -10,50 +9,16 @@ import {
   FullEvent,
 } from "@/types/tauri.gen";
 import { BarChartData } from "@/types/chart";
+import { getDailyBucketWindows, mapDatesToDailyPreset } from "@/utils/time";
+import { useDashboardFilter } from "../stores/useDashboardFilter";
 
 const ACTIVE_KEY = "Active";
 const AFK_KEY = "AFK";
 const KEYS = [ACTIVE_KEY, AFK_KEY];
 
-type BucketWindow = {
-  key: string;
-  label: string;
-  start: Date;
-  end: Date;
-};
-
 const getDailyQuery = (start: Date, end: Date): BucketSummaryInput => ({
-  preset: {
-    custom: {
-      start: start.toISOString(),
-      end: end.toISOString(),
-      bucket: "day",
-    },
-  },
+  preset: mapDatesToDailyPreset(start, end),
 });
-
-const buildBucketWindows = (
-  rangeStart: Date,
-  rangeEnd: Date,
-): BucketWindow[] => {
-  const windows: BucketWindow[] = [];
-
-  for (
-    let cursor = startOfDay(rangeStart);
-    cursor < rangeEnd;
-    cursor = addDays(cursor, 1)
-  ) {
-    const end = addDays(cursor, 1);
-    windows.push({
-      key: format(cursor, "yyyy-MM-dd"),
-      label: format(cursor, "MMM d"),
-      start: cursor,
-      end: end > rangeEnd ? rangeEnd : end,
-    });
-  }
-
-  return windows;
-};
 
 const getAfkEventEnd = (event: FullEvent) => {
   if (event.endTimestamp) return new Date(event.endTimestamp);
@@ -77,39 +42,42 @@ const buildActiveAfkData = (
       bucket.groupedValues.Total ?? 0,
     ]),
   );
+  const bucketWindows = getDailyBucketWindows(start, end);
+  const omitEmptyDays = bucketWindows.length > 1;
 
-  return buildBucketWindows(start, end).map((bucket) => {
-    const afkSeconds = afkEvents.reduce((total, event) => {
-      const eventStart = new Date(event.timestamp);
-      const eventEnd = getAfkEventEnd(event);
-      const overlapStart = Math.max(
-        eventStart.getTime(),
-        bucket.start.getTime(),
-      );
-      const overlapEnd = Math.min(eventEnd.getTime(), bucket.end.getTime());
+  return bucketWindows
+    .map((bucket) => {
+      const activeSeconds = activeByBucket.get(bucket.key) ?? 0;
+      const afkSeconds = afkEvents.reduce((total, event) => {
+        const eventStart = new Date(event.timestamp);
+        const eventEnd = getAfkEventEnd(event);
+        const overlapStart = Math.max(
+          eventStart.getTime(),
+          bucket.start.getTime(),
+        );
+        const overlapEnd = Math.min(eventEnd.getTime(), bucket.end.getTime());
 
-      if (overlapEnd <= overlapStart) return total;
+        if (overlapEnd <= overlapStart) return total;
 
-      return total + (overlapEnd - overlapStart) / 1000;
-    }, 0);
+        return total + (overlapEnd - overlapStart) / 1000;
+      }, 0);
 
-    return {
-      label: bucket.label,
-      [ACTIVE_KEY]: activeByBucket.get(bucket.key) ?? 0,
-      [AFK_KEY]: Math.round(afkSeconds),
-    };
-  });
+      return {
+        label: bucket.label,
+        [ACTIVE_KEY]: activeSeconds,
+        [AFK_KEY]: Math.round(afkSeconds),
+      };
+    })
+    .filter(
+      (row) =>
+        !omitEmptyDays ||
+        Number(row[ACTIVE_KEY] ?? 0) > 0 ||
+        Number(row[AFK_KEY] ?? 0) > 0,
+    );
 };
 
-type ActiveAfkChartWidgetProps = {
-  startDate: Date;
-  endDate: Date;
-};
-
-const ActiveAfkChartWidget = ({
-  startDate,
-  endDate,
-}: ActiveAfkChartWidgetProps) => {
+const ActiveAfkChartWidget = () => {
+  const { startDate, endDate } = useDashboardFilter();
   const query = useMemo(
     () => getDailyQuery(startDate, endDate),
     [startDate, endDate],

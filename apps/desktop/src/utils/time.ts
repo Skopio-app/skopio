@@ -1,8 +1,10 @@
 import {
+  addDays,
   differenceInDays,
   endOfDay,
   endOfMonth,
   endOfWeek,
+  format,
   startOfDay,
   startOfMonth,
   startOfWeek,
@@ -118,6 +120,47 @@ export const mapRangeToPreset = (
         },
       };
   }
+};
+
+export type DailyBucketWindow = {
+  key: string;
+  label: string;
+  start: Date;
+  end: Date;
+};
+
+export const mapDatesToDailyPreset = (
+  start: Date,
+  end: Date,
+): TimeRangePreset => ({
+  custom: {
+    start: start.toISOString(),
+    end: end.toISOString(),
+    bucket: "day",
+  },
+});
+
+export const getDailyBucketWindows = (
+  rangeStart: Date,
+  rangeEnd: Date,
+): DailyBucketWindow[] => {
+  const windows: DailyBucketWindow[] = [];
+
+  for (
+    let cursor = startOfDay(rangeStart);
+    cursor < rangeEnd;
+    cursor = addDays(cursor, 1)
+  ) {
+    const end = addDays(cursor, 1);
+    windows.push({
+      key: format(cursor, "yyyy-MM-dd"),
+      label: format(cursor, "MMM d"),
+      start: cursor,
+      end: end > rangeEnd ? rangeEnd : end,
+    });
+  }
+
+  return windows;
 };
 
 export const toHours = (seconds: number): number => {

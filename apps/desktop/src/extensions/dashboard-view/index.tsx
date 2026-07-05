@@ -42,7 +42,9 @@ const DashboardView = () => {
   } = useDateRangeParams();
 
   useEffect(() => {
-    applyPresetToStore((preset) => useDashboardFilter.setState({ preset }));
+    applyPresetToStore((preset) =>
+      useDashboardFilter.setState({ preset, startDate, endDate }),
+    );
   }, [applyPresetToStore, selectedRange, startDate, endDate]);
 
   const sameDay = format(startDate, "PPP") === format(endDate, "PPP");
@@ -94,10 +96,10 @@ const DashboardView = () => {
         <ActivityChartWidget />
       </div>,
       <div key="active-afk">
-        <ActiveAfkChartWidget startDate={startDate} endDate={endDate} />
+        <ActiveAfkChartWidget />
       </div>,
     ],
-    [endDate, startDate],
+    [],
   );
 
   return (
