@@ -42,9 +42,7 @@ const DashboardView = () => {
   } = useDateRangeParams();
 
   useEffect(() => {
-    applyPresetToStore((preset) =>
-      useDashboardFilter.setState({ preset, startDate, endDate }),
-    );
+    applyPresetToStore((preset) => useDashboardFilter.setState({ preset }));
   }, [applyPresetToStore, selectedRange, startDate, endDate]);
 
   const sameDay = format(startDate, "PPP") === format(endDate, "PPP");

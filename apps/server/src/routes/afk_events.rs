@@ -9,6 +9,7 @@ use common::models::{
 };
 use db::{
     DBContext,
+    models::BucketTimeSummary,
     server::{afk_events::AFKEvent, summary::SummaryQueryBuilder},
 };
 use serde_qs::axum::QsQuery;
@@ -64,9 +65,20 @@ async fn fetch_afk_events(
     Ok(Json(events))
 }
 
+async fn fetch_bucketed_afk_summary(
+    State(db): State<Arc<DBContext>>,
+    QsQuery(payload): QsQuery<BucketSummaryInput>,
+) -> ServerResult<Json<Vec<BucketTimeSummary>>> {
+    let builder = SummaryQueryBuilder::from(payload);
+    let records = builder.execute_afk_range_summary_with_bucket(&db).await?;
+
+    Ok(Json(records))
+}
+
 pub fn afk_event_routes(db: Arc<DBContext>) -> Router {
     Router::new()
         .route("/afk", post(handle_afk_events))
         .route("/afk", get(fetch_afk_events))
+        .route("/afk/buckets", get(fetch_bucketed_afk_summary))
         .with_state(db)
 }

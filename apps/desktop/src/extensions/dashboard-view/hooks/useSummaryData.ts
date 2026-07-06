@@ -59,6 +59,37 @@ type UseSummaryDataFn = {
   ): ParsedCalendarChartResult;
 };
 
+export const useSummaryBuckets = ({
+  groupBy,
+  presetOverride,
+}: {
+  groupBy?: Group;
+  presetOverride?: TimeRangePreset;
+} = {}) => {
+  const { preset: dashboardPreset } = useDashboardFilter();
+  const preset = presetOverride ?? dashboardPreset;
+  const keyGroupBy = presetOverride ? null : groupBy;
+
+  const { data: rawData = [], isLoading } = useQuery({
+    queryKey: ["dashboardSummary", preset, keyGroupBy],
+    queryFn: async (): Promise<BucketTimeSummary[]> => {
+      const query: BucketSummaryInput = {
+        preset,
+        groupBy: keyGroupBy,
+      };
+      return commands.fetchBucketedSummary(query);
+    },
+    enabled: Boolean(preset),
+  });
+
+  return {
+    data: rawData,
+    loading: isLoading,
+    preset,
+    groupBy: keyGroupBy,
+  };
+};
+
 // Shared logic for bar chart grouping
 const generateGroupedChartData = (
   rawData: BucketTimeSummary[],
@@ -188,23 +219,10 @@ const useSummaryDataImpl = (
     ],
   );
 
-  const { preset: dashboardPreset } = useDashboardFilter();
-  const preset = options.presetOverride ?? dashboardPreset;
-  const keyGroupBy = options.presetOverride ? null : options.groupBy;
-
-  const { data: rawData = [], isLoading } = useQuery({
-    queryKey: ["dashboardSummary", preset, keyGroupBy],
-    queryFn: async (): Promise<BucketTimeSummary[]> => {
-      const query: BucketSummaryInput = {
-        preset,
-        groupBy: keyGroupBy,
-      };
-      return commands.fetchBucketedSummary(query);
-    },
-    enabled: Boolean(preset),
+  const { data: rawData, loading } = useSummaryBuckets({
+    groupBy: options.groupBy,
+    presetOverride: options.presetOverride,
   });
-
-  const loading = isLoading;
 
   switch (options.mode) {
     case "line": {

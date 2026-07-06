@@ -1,4 +1,14 @@
-use crate::{DBContext, error::DBError, server::summary::SummaryQueryBuilder};
+use std::collections::HashMap;
+
+use crate::{
+    DBContext,
+    error::DBError,
+    models::BucketTimeSummary,
+    server::{
+        summary::SummaryQueryBuilder,
+        utils::query::{QueryBuilderExt, bucket_step, push_next_end_with},
+    },
+};
 use chrono::{DateTime, Utc};
 use common::models::outputs::FullEvent;
 use serde::{Deserialize, Serialize};
@@ -45,6 +55,108 @@ impl AFKEvent {
 }
 
 impl SummaryQueryBuilder {
+    /// Executes a bucketed range summary for AFK events, aggregating overlap
+    /// durations into the same time buckets used by activity summaries.
+    pub async fn execute_afk_range_summary_with_bucket(
+        &self,
+        db: &DBContext,
+    ) -> Result<Vec<BucketTimeSummary>, DBError> {
+        let range_start = self.filters.start.unwrap_or_default();
+        let range_end = self.filters.end.unwrap_or_default();
+        let step = bucket_step(self.filters.time_bucket);
+
+        let mut qb = QueryBuilder::<Sqlite>::new(
+            "WITH RECURSIVE normalized_afk AS (
+                SELECT
+                    id,
+                    CASE
+                      WHEN typeof(afk_start) = 'integer' THEN afk_start
+                      WHEN typeof(afk_start) = 'text' THEN
+                        CASE
+                          WHEN afk_start GLOB '[0-9]*' THEN CAST(afk_start AS INTEGER)
+                          ELSE CAST(strftime('%s', afk_start) AS INTEGER)
+                        END
+                      ELSE NULL
+                    END AS afk_start_i,
+                    CASE
+                      WHEN afk_end IS NULL THEN NULL
+                      WHEN typeof(afk_end) = 'integer' THEN afk_end
+                      WHEN typeof(afk_end) = 'text' THEN
+                        CASE
+                          WHEN afk_end GLOB '[0-9]*' THEN CAST(afk_end AS INTEGER)
+                          ELSE CAST(strftime('%s', afk_end) AS INTEGER)
+                        END
+                      ELSE NULL
+                    END AS afk_end_i
+                FROM afk_events
+            ),
+            buckets(start_ts, end_ts) AS (
+                SELECT ",
+        );
+
+        qb.push_bind(range_start)
+            .push(", MIN(")
+            .push_bind(range_end)
+            .push(", ");
+        push_next_end_with(
+            &mut qb,
+            |q| {
+                q.push_bind(range_start);
+            },
+            &step,
+        );
+        qb.push(") UNION ALL SELECT end_ts, MIN(")
+            .push_bind(range_end)
+            .push(", ");
+        push_next_end_with(
+            &mut qb,
+            |q| {
+                q.push("end_ts");
+            },
+            &step,
+        );
+        qb.push(") FROM buckets WHERE end_ts < ")
+            .push_bind(range_end)
+            .push(") SELECT ");
+        qb.push_bucket_label_expr(self.filters.time_bucket);
+        qb.push(" AS bucket, COALESCE(SUM(CASE
+            WHEN normalized_afk.afk_start_i >= buckets.start_ts
+              AND COALESCE(normalized_afk.afk_end_i, CAST(strftime('%s','now') AS INTEGER)) <= buckets.end_ts
+                THEN COALESCE(normalized_afk.afk_end_i, CAST(strftime('%s','now') AS INTEGER)) - normalized_afk.afk_start_i
+            WHEN normalized_afk.afk_start_i < buckets.start_ts
+              AND COALESCE(normalized_afk.afk_end_i, CAST(strftime('%s','now') AS INTEGER)) <= buckets.end_ts
+                THEN COALESCE(normalized_afk.afk_end_i, CAST(strftime('%s','now') AS INTEGER)) - buckets.start_ts
+            WHEN normalized_afk.afk_start_i >= buckets.start_ts
+              AND COALESCE(normalized_afk.afk_end_i, CAST(strftime('%s','now') AS INTEGER)) > buckets.end_ts
+                THEN buckets.end_ts - normalized_afk.afk_start_i
+            WHEN normalized_afk.afk_start_i < buckets.start_ts
+              AND COALESCE(normalized_afk.afk_end_i, CAST(strftime('%s','now') AS INTEGER)) > buckets.end_ts
+                THEN buckets.end_ts - buckets.start_ts
+            ELSE 0
+        END), 0) AS total_seconds
+        FROM buckets
+        JOIN normalized_afk ON COALESCE(normalized_afk.afk_end_i, CAST(strftime('%s','now') AS INTEGER)) > buckets.start_ts
+          AND normalized_afk.afk_start_i < buckets.end_ts
+        GROUP BY ");
+        qb.push_bucket_label_expr(self.filters.time_bucket);
+        qb.push(" ORDER BY buckets.start_ts");
+
+        let rows = qb.build().fetch_all(db.pool()).await?;
+        let mut records = Vec::with_capacity(rows.len());
+
+        for row in rows {
+            let mut grouped_values = HashMap::new();
+            grouped_values.insert("Total".to_string(), row.try_get("total_seconds")?);
+            records.push(BucketTimeSummary {
+                bucket: row.try_get("bucket")?,
+                grouped_values,
+                group_meta: None,
+            });
+        }
+
+        Ok(records)
+    }
+
     /// Fetch AFK events overlapping the configured time range
     pub async fn fetch_afk_event_range(&self, db: &DBContext) -> Result<Vec<FullEvent>, DBError> {
         let mut qb = QueryBuilder::<Sqlite>::new(
