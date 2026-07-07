@@ -1,13 +1,4 @@
-import {
-  addDays,
-  addMonths,
-  addWeeks,
-  addYears,
-  format,
-  startOfDay,
-  startOfMonth,
-  startOfWeek,
-} from "date-fns";
+import { format } from "date-fns";
 import { TimeBucket, TimeRangePreset } from "@/types/tauri.gen";
 
 export type DisplayBucket = "day" | "week" | "month" | "year";
@@ -24,18 +15,6 @@ export const getDisplayBucketForPreset = (
   if ("lastNMonths" in preset) return "month";
   if ("lastNYears" in preset) return "year";
   return "day";
-};
-
-const getSqliteWeekNumber = (date: Date) => {
-  const yearStart = startOfDay(new Date(date.getFullYear(), 0, 1));
-  const dayOfYear = Math.floor(
-    (startOfDay(date).getTime() - yearStart.getTime()) / 86_400_000,
-  );
-  const firstMondayOffset = (8 - yearStart.getDay()) % 7;
-
-  if (dayOfYear < firstMondayOffset) return 0;
-
-  return Math.floor((dayOfYear - firstMondayOffset) / 7) + 1;
 };
 
 const parseLocalDate = (key: string) => {
@@ -72,45 +51,6 @@ export const getBucketOrder = (key: string, bucket: DisplayBucket) => {
       const [year = "0", week = "W00"] = key.split("-");
       return Number(year) * 100 + Number(week.replace("W", ""));
     }
-  }
-};
-
-export const getBucketStart = (date: Date, bucket: DisplayBucket) => {
-  switch (bucket) {
-    case "day":
-      return startOfDay(date);
-    case "week":
-      return startOfWeek(date, { weekStartsOn: 1 });
-    case "month":
-      return startOfMonth(date);
-    case "year":
-      return new Date(date.getFullYear(), 0, 1);
-  }
-};
-
-export const getNextBucketStart = (date: Date, bucket: DisplayBucket) => {
-  switch (bucket) {
-    case "day":
-      return addDays(date, 1);
-    case "week":
-      return addWeeks(date, 1);
-    case "month":
-      return addMonths(date, 1);
-    case "year":
-      return addYears(date, 1);
-  }
-};
-
-export const getBucketKeyForDate = (date: Date, bucket: DisplayBucket) => {
-  switch (bucket) {
-    case "day":
-      return format(date, "yyyy-MM-dd");
-    case "week":
-      return `${format(date, "yyyy")}-W${String(getSqliteWeekNumber(date)).padStart(2, "0")}`;
-    case "month":
-      return format(date, "yyyy-MM");
-    case "year":
-      return format(date, "yyyy");
   }
 };
 

@@ -79,6 +79,7 @@ const ActiveAfkChartWidget = () => {
     queryKey: ["dashboardActiveAfkBuckets", preset],
     queryFn: () => commands.fetchBucketedAfkSummary({ preset }),
   });
+
   const data = useMemo(
     () => buildActiveAfkData(displayBucket, activeBuckets, afkBuckets),
     [activeBuckets, afkBuckets, displayBucket],
@@ -90,7 +91,7 @@ const ActiveAfkChartWidget = () => {
       title="Active vs AFK"
       loading={activeLoading || afkLoading}
     >
-      <StackedBarChart data={data ?? []} keys={KEYS} bucketLabel="Time" />
+      <StackedBarChart data={data ?? []} keys={KEYS} bucketLabel="Days" />
     </WidgetCard>
   );
 };
