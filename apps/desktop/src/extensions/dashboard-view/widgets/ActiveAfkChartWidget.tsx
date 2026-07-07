@@ -16,6 +16,10 @@ import { useSummaryBuckets } from "../hooks/useSummaryData";
 const ACTIVE_KEY = "Active";
 const AFK_KEY = "AFK";
 const KEYS = [ACTIVE_KEY, AFK_KEY];
+const COLORS = {
+  [ACTIVE_KEY]: "#4ade80",
+  [AFK_KEY]: "#e5e7eb",
+};
 
 type ChartRow = BarChartData & {
   label: string;
@@ -91,7 +95,12 @@ const ActiveAfkChartWidget = () => {
       title="Active vs AFK"
       loading={activeLoading || afkLoading}
     >
-      <StackedBarChart data={data ?? []} keys={KEYS} bucketLabel="Days" />
+      <StackedBarChart
+        data={data ?? []}
+        keys={KEYS}
+        colors={COLORS}
+        bucketLabel="Days"
+      />
     </WidgetCard>
   );
 };

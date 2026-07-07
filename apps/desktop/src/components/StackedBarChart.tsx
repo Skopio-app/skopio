@@ -36,6 +36,7 @@ interface StackedBarChartProps {
     [key: string]: string | number;
   }[];
   keys: string[];
+  colors?: Record<string, string>;
   bucketLabel?: string;
   axisBottom?: boolean;
   axisLeft?: boolean;
@@ -70,6 +71,7 @@ type FlatStackSegment = StackSegment & {
 const StackedBarChart: React.FC<StackedBarChartProps> = ({
   data,
   keys,
+  colors,
   bucketLabel = "Days",
   axisBottom = true,
   axisLeft = false,
@@ -105,7 +107,7 @@ const StackedBarChart: React.FC<StackedBarChartProps> = ({
             key,
             index,
             value: Number(row[key] ?? 0),
-            color: getColorForKey(key),
+            color: colors?.[key] ?? getColorForKey(key),
           }))
           .filter((segment) => segment.value > 0)
           .sort((a, b) => a.value - b.value || a.index - b.index)
@@ -140,7 +142,7 @@ const StackedBarChart: React.FC<StackedBarChartProps> = ({
       },
       { stackedRows: [], flatSegments: [] },
     );
-  }, [data, getColorForKey, keys]);
+  }, [colors, data, getColorForKey, keys]);
 
   const option = useMemo<ChartOption>(() => {
     return {
@@ -496,6 +498,7 @@ const StackedBarChart: React.FC<StackedBarChartProps> = ({
         gridColor,
         hoverBackground,
         mutedForegroundColor,
+        flatSegments.map((segment) => segment.color).join(","),
       ].join("::"),
     [
       axisBottom,
@@ -509,6 +512,7 @@ const StackedBarChart: React.FC<StackedBarChartProps> = ({
       hoverBackground,
       mutedForegroundColor,
       optionDataSignature,
+      flatSegments,
     ],
   );
 
