@@ -13,9 +13,15 @@ import {
   PieChartData,
 } from "@/types/chart";
 import { useDashboardFilter } from "../stores/useDashboardFilter";
-import { format, parseISO } from "date-fns";
 import { getEntityName } from "@/utils/data";
 import { useQuery } from "@tanstack/react-query";
+import {
+  DisplayBucket,
+  getBucketLabel,
+  getBucketOrder,
+  getDisplayBucketForPreset,
+  getSummaryBucketKey,
+} from "../helpers/summaryBuckets";
 
 export interface UseSummaryOptions {
   groupBy?: Group;
@@ -93,23 +99,26 @@ export const useSummaryBuckets = ({
 // Shared logic for bar chart grouping
 const generateGroupedChartData = (
   rawData: BucketTimeSummary[],
+  displayBucket: DisplayBucket,
   opts?: { topN?: number; collapseRemainder?: boolean },
 ) => {
-  const byLabel: Map<string, Record<string, number>> = new Map();
-  const labelToDate: Map<string, Date> = new Map();
+  const byBucket: Map<string, Record<string, number>> = new Map();
+  const bucketMeta: Map<string, { label: string; order: number }> = new Map();
 
   const totalPerKey: Record<string, number> = {};
 
   for (const { bucket, groupedValues, groupMeta } of rawData) {
-    const date = parseISO(bucket);
-    const label = format(date, "MMM d");
+    const bucketKey = getSummaryBucketKey(bucket, displayBucket);
 
-    if (!byLabel.has(label)) {
-      byLabel.set(label, {});
-      labelToDate.set(label, date);
+    if (!byBucket.has(bucketKey)) {
+      byBucket.set(bucketKey, {});
+      bucketMeta.set(bucketKey, {
+        label: getBucketLabel(bucketKey, displayBucket),
+        order: getBucketOrder(bucketKey, displayBucket),
+      });
     }
 
-    const acc = byLabel.get(label)!;
+    const acc = byBucket.get(bucketKey)!;
 
     for (const [rawKey, seconds] of Object.entries(groupedValues)) {
       if (rawKey === "Total") continue;
@@ -136,7 +145,7 @@ const generateGroupedChartData = (
   const remainder = allKeys.filter((k) => !keepSet.has(k));
 
   if (collapse && remainder.length > 0) {
-    for (const [, values] of byLabel.entries()) {
+    for (const [, values] of byBucket.entries()) {
       let other = 0;
       for (const k of remainder) {
         if (values[k]) {
@@ -147,7 +156,7 @@ const generateGroupedChartData = (
       if (other > 0) values["Other"] = (values["Other"] ?? 0) + other;
     }
 
-    const otherTotal = Array.from(byLabel.values()).reduce(
+    const otherTotal = Array.from(byBucket.values()).reduce(
       (sum, row) => sum + (row["Other"] ?? 0),
       0,
     );
@@ -156,7 +165,7 @@ const generateGroupedChartData = (
       keepSet.add("Other");
     }
   } else {
-    for (const [, values] of byLabel.entries()) {
+    for (const [, values] of byBucket.entries()) {
       for (const k of remainder) delete values[k];
     }
   }
@@ -165,19 +174,17 @@ const generateGroupedChartData = (
     (a, b) => (totalPerKey[a] ?? 0) - (totalPerKey[b] ?? 0),
   );
 
-  const chartData: BarChartData[] = Array.from(byLabel.entries())
-    .map(([label, values]) => {
-      const row: Record<string, number | string> = { label };
+  const chartData: BarChartData[] = Array.from(byBucket.entries())
+    .map(([bucketKey, values]) => {
+      const meta = bucketMeta.get(bucketKey)!;
+      const row: Record<string, number | string> = { label: meta.label };
       for (const k of sortedKeys) {
         row[k] = values[k] ?? 0;
       }
-      return row as BarChartData;
+      return { row: row as BarChartData, order: meta.order };
     })
-    .sort(
-      (a, b) =>
-        labelToDate.get(a.label)!.getTime() -
-        labelToDate.get(b.label)!.getTime(),
-    );
+    .sort((a, b) => a.order - b.order)
+    .map(({ row }) => row);
 
   return { chartData, sortedKeys };
 };
@@ -219,7 +226,11 @@ const useSummaryDataImpl = (
     ],
   );
 
-  const { data: rawData, loading } = useSummaryBuckets({
+  const {
+    data: rawData,
+    loading,
+    preset,
+  } = useSummaryBuckets({
     groupBy: options.groupBy,
     presetOverride: options.presetOverride,
   });
@@ -234,10 +245,15 @@ const useSummaryDataImpl = (
     }
 
     case "bar": {
-      const { chartData, sortedKeys } = generateGroupedChartData(rawData, {
-        topN: options.topN,
-        collapseRemainder: options.collapseRemainder,
-      });
+      const displayBucket = getDisplayBucketForPreset(preset);
+      const { chartData, sortedKeys } = generateGroupedChartData(
+        rawData,
+        displayBucket,
+        {
+          topN: options.topN,
+          collapseRemainder: options.collapseRemainder,
+        },
+      );
       return { data: chartData, keys: sortedKeys, loading };
     }
 
