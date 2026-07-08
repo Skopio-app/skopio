@@ -122,7 +122,7 @@ const RangeSelectionDialog: React.FC<DateRangeDialogProps> = ({
                     setOpen(false);
                   }}
                   className={cn(
-                    "mt-2 inline-block px-4 py-2 rounded-md font-medium transition-all text-primary-foreground",
+                    "mt-2 inline-block px-4 py-2 rounded-md font-medium transition-all text-primary-foreground cursor-pointer",
                     pendingStart > pendingEnd
                       ? "bg-destructive cursor-not-allowed"
                       : "bg-primary hover:bg-ring",
@@ -132,7 +132,7 @@ const RangeSelectionDialog: React.FC<DateRangeDialogProps> = ({
                 </button>
                 {pendingStart > pendingEnd && (
                   <p className="text-sm text-destructive mt-1">
-                    Start date must be before and equal to end date.
+                    Start date must be before or equal to end date.
                   </p>
                 )}
               </div>
