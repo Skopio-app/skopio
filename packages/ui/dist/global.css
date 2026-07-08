@@ -1823,6 +1823,16 @@
       cursor: e-resize;
     }
   }
+  .in-data-\[slot\=card-content\]\:bg-transparent {
+    :where(*[data-slot="card-content"]) & {
+      background-color: transparent;
+    }
+  }
+  .in-data-\[slot\=popover-content\]\:bg-background {
+    :where(*[data-slot="popover-content"]) & {
+      background-color: var(--color-background);
+    }
+  }
   .has-focus\:border-ring {
     &:has(*:focus) {
       border-color: var(--color-ring);
@@ -2635,16 +2645,6 @@
   .\[\[data-side\=right\]\[data-state\=collapsed\]_\&\]\:cursor-w-resize {
     [data-side=right][data-state=collapsed] & {
       cursor: w-resize;
-    }
-  }
-  .\[\[data-slot\=card-content\]_\&\]\:bg-transparent {
-    [data-slot=card-content] & {
-      background-color: transparent;
-    }
-  }
-  .\[\[data-slot\=popover-content\]_\&\]\:bg-background {
-    [data-slot=popover-content] & {
-      background-color: var(--color-background);
     }
   }
 }
