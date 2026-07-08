@@ -676,15 +676,16 @@ const StackedBarChart: React.FC<StackedBarChartProps> = ({
     };
   }, []);
 
-  if (!data.length) {
-    return (
-      <p className="h-55 w-full flex items-center justify-center text-sm text-muted-foreground">
-        No data available
-      </p>
-    );
-  }
-
-  return <div ref={containerRef} className="h-55 w-full" />;
+  return (
+    <div className="relative h-55 w-full">
+      <div ref={containerRef} className="h-full w-full" />
+      {!data.length && (
+        <p className="absolute inset-0 flex items-center justify-center text-sm text-muted-foreground">
+          No data available
+        </p>
+      )}
+    </div>
+  );
 };
 
 export default StackedBarChart;
