@@ -58,6 +58,7 @@ const MatrixLoading = ({
     frameElement?.parentElement ?? null,
   );
   const frameIndexRef = useRef(0);
+  const canvasSizeRef = useRef({ width: 0, height: 0 });
   const { resolvedTheme } = useTheme();
   const matrixColor = useCssVarColor("--foreground");
   const matrixFramesByTheme = useMatrixFrames();
@@ -105,12 +106,14 @@ const MatrixLoading = ({
     }
 
     if (canvasWidth <= 0 || canvasHeight <= 0) {
+      canvasSizeRef.current = { width: 0, height: 0 };
       return;
     }
 
     const dpr = window.devicePixelRatio || 1;
     const width = Math.max(1, Math.round(canvasWidth));
     const height = Math.max(1, Math.round(canvasHeight));
+    canvasSizeRef.current = { width, height };
 
     if (canvas.width !== width * dpr || canvas.height !== height * dpr) {
       canvas.width = width * dpr;
@@ -137,13 +140,12 @@ const MatrixLoading = ({
       return;
     }
 
-    if (canvasWidth <= 0 || canvasHeight <= 0) {
-      return;
-    }
-
     const drawCurrentFrame = () => {
-      const width = Math.max(1, Math.round(canvasWidth));
-      const height = Math.max(1, Math.round(canvasHeight));
+      const { width, height } = canvasSizeRef.current;
+      if (width <= 0 || height <= 0) {
+        return;
+      }
+
       const frame = currentMatrixFrame(matrixFrames, frameIndexRef.current);
 
       context.clearRect(0, 0, width, height);
@@ -181,7 +183,7 @@ const MatrixLoading = ({
     animationFrame = window.requestAnimationFrame(animate);
 
     return () => window.cancelAnimationFrame(animationFrame);
-  }, [canvasHeight, canvasRef, canvasWidth, matrixColor, matrixFrames]);
+  }, [canvasRef, matrixColor, matrixFrames]);
 
   return (
     <div
