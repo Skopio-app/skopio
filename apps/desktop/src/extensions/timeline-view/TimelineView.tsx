@@ -35,6 +35,8 @@ interface TimelineViewProps {
 type TimelineDataItem = DataItem;
 type TimelineGroup = DataGroup;
 
+const TIMELINE_CLUSTER_MAX_ITEMS = 4;
+
 export const TimelineView: React.FC<TimelineViewProps> = ({
   durationMinutes,
   groupedEvents,
@@ -192,6 +194,12 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
     const options: TimelineOptions = {
       zoomMin: 60_000,
       zoomMax: 1000 * 60 * 60 * 24 * 31 * 3, // 3 months
+      cluster: {
+        maxItems: TIMELINE_CLUSTER_MAX_ITEMS,
+        titleTemplate: "{count} events",
+        fitOnDoubleClick: true,
+        showStipes: true,
+      },
       stack: false,
       showMinorLabels: true,
       tooltip: { followMouse: true, overflowMethod: "cap", delay: 0 },
@@ -207,11 +215,8 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
       options,
     );
 
-    const onRangeChanged = ({ start, end }: { start: Date; end: Date }) => {
+    const onRangeChanged = () => {
       if (!dataSetRef.current || !timelineRef.current) return;
-      console.debug(
-        `Range changed: ${format(start, "MMM d, yyyy HH:mm")} to ${format(end, "MMM d, yyyy HH:mm")}`,
-      );
       clearAnimationTimeout();
     };
 
@@ -285,9 +290,6 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
   useEffect(() => {
     if (!hasEvents) return;
     if (!dataSetRef.current || !timelineRef.current) {
-      console.debug(
-        "Timeline or DataSet not initialized, skipping data update.",
-      );
       return;
     }
 
@@ -353,7 +355,6 @@ export const TimelineView: React.FC<TimelineViewProps> = ({
 
         animationTimeoutRef.current = setTimeout(() => {
           if (timelineRef.current) {
-            console.debug("Animating to latest entry after inactivity.");
             timelineRef.current.moveTo(latestOverallEnd, { animation: true });
           }
         }, ANIMATION_INACTIVITY_DELAY_MS);
