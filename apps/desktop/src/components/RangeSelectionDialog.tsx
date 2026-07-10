@@ -43,12 +43,14 @@ const RangeSelectionDialog: React.FC<DateRangeDialogProps> = ({
         <Dialog.Overlay className="fixed inset-0 bg-foreground/50 z-50" />
         <Dialog.Content
           className={cn(
-            "fixed top-1/2 left-1/2 z-50 w-full translate-x-[-50%] translate-y-[-50%] rounded-lg border border-border bg-secondary p-6 shadow-lg",
-            "grid grid-cols-[auto_1fr] gap-x-8 items-start",
-            isCustom ? "max-w-4xl" : "max-w-xl",
+            "fixed top-1/2 left-1/2 z-50 w-[calc(100vw-2rem)] translate-x-[-50%] translate-y-[-50%] overflow-hidden rounded-lg border border-border bg-secondary p-6 shadow-lg",
+            "grid items-start transition-[max-width] duration-300 ease-in-out",
+            isCustom
+              ? "max-w-3xl grid-cols-[auto_1fr] gap-x-8"
+              : "max-w-xs grid-cols-1",
           )}
         >
-          <div className="flex flex-col gap-2 min-w-[180px] flex-shrink-0">
+          <div className="flex flex-col gap-2 min-w-45 shrink-0">
             <Dialog.Title className="text-lg font-semibold text-foreground mb-2">
               Select a date range
             </Dialog.Title>
@@ -78,8 +80,7 @@ const RangeSelectionDialog: React.FC<DateRangeDialogProps> = ({
           </div>
 
           {isCustom && (
-            <div className="flex flex-col gap-4">
-              {" "}
+            <div className="flex min-w-0 flex-col gap-4 animate-in fade-in slide-in-from-left-2 duration-300">
               <div className="flex gap-6">
                 <div className="space-y-2">
                   <label className="block text-sm font-medium text-muted-foreground mb-2 mt-4">
@@ -121,7 +122,7 @@ const RangeSelectionDialog: React.FC<DateRangeDialogProps> = ({
                     setOpen(false);
                   }}
                   className={cn(
-                    "mt-2 inline-block px-4 py-2 rounded-md font-medium transition-all text-primary-foreground",
+                    "mt-2 inline-block px-4 py-2 rounded-md font-medium transition-all text-primary-foreground cursor-pointer",
                     pendingStart > pendingEnd
                       ? "bg-destructive cursor-not-allowed"
                       : "bg-primary hover:bg-ring",
@@ -131,7 +132,7 @@ const RangeSelectionDialog: React.FC<DateRangeDialogProps> = ({
                 </button>
                 {pendingStart > pendingEnd && (
                   <p className="text-sm text-destructive mt-1">
-                    Start date must be before and equal to end date.
+                    Start date must be before or equal to end date.
                   </p>
                 )}
               </div>

@@ -4,7 +4,12 @@ import {
   getRangeDates,
   mapRangeToPreset,
 } from "@/utils/time";
-import { addDays, differenceInMilliseconds, startOfDay } from "date-fns";
+import {
+  addDays,
+  differenceInMilliseconds,
+  format,
+  startOfDay,
+} from "date-fns";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSearchParams } from "react-router";
 
@@ -28,6 +33,29 @@ export type UseDateRangeParams = {
   applyPresetToStore: (storeSetter: (preset: any) => void) => void;
 };
 
+const CUSTOM_START_PARAM = "customStart";
+const CUSTOM_END_PARAM = "customEnd";
+
+const serializeDateParam = (date: Date) => format(date, "yyyy-MM-dd");
+
+const parseDateParam = (value: string | null) => {
+  if (!value) return null;
+
+  const [year, month, day] = value.split("-").map(Number);
+  if (!year || !month || !day) return null;
+
+  const parsed = new Date(year, month - 1, day);
+  if (
+    parsed.getFullYear() !== year ||
+    parsed.getMonth() !== month - 1 ||
+    parsed.getDate() !== day
+  ) {
+    return null;
+  }
+
+  return parsed;
+};
+
 export const useDateRangeParams = (): UseDateRangeParams => {
   const [searchParams, setSearchParams] = useSearchParams();
 
@@ -42,8 +70,12 @@ export const useDateRangeParams = (): UseDateRangeParams => {
     useState<DateRangeType>(initialRange);
 
   // Custom range state
-  const [customStart, _setCustomStart] = useState<Date>(new Date());
-  const [customEnd, _setCustomEnd] = useState<Date>(new Date());
+  const initialCustomStart =
+    parseDateParam(searchParams.get(CUSTOM_START_PARAM)) ?? new Date();
+  const initialCustomEnd =
+    parseDateParam(searchParams.get(CUSTOM_END_PARAM)) ?? initialCustomStart;
+  const [customStart, _setCustomStart] = useState<Date>(initialCustomStart);
+  const [customEnd, _setCustomEnd] = useState<Date>(initialCustomEnd);
   const [pendingStart, setPendingStart] = useState<Date>(customStart);
   const [pendingEnd, setPendingEnd] = useState<Date>(customEnd);
   const [relativeRangeClock, setRelativeRangeClock] = useState<number>(() =>
@@ -83,13 +115,32 @@ export const useDateRangeParams = (): UseDateRangeParams => {
     setSearchParams(
       (prev) => {
         const next = new URLSearchParams(prev);
-        if (next.get("range") === selectedRange) return prev;
+        const customStartParam = serializeDateParam(customStart);
+        const customEndParam = serializeDateParam(customEnd);
+
+        const isUnchanged =
+          next.get("range") === selectedRange &&
+          (selectedRange !== DateRangeType.Custom ||
+            (next.get(CUSTOM_START_PARAM) === customStartParam &&
+              next.get(CUSTOM_END_PARAM) === customEndParam)) &&
+          (selectedRange === DateRangeType.Custom ||
+            (!next.has(CUSTOM_START_PARAM) && !next.has(CUSTOM_END_PARAM)));
+
+        if (isUnchanged) return prev;
+
         next.set("range", selectedRange);
+        if (selectedRange === DateRangeType.Custom) {
+          next.set(CUSTOM_START_PARAM, customStartParam);
+          next.set(CUSTOM_END_PARAM, customEndParam);
+        } else {
+          next.delete(CUSTOM_START_PARAM);
+          next.delete(CUSTOM_END_PARAM);
+        }
         return next;
       },
       { replace: true },
     );
-  }, [selectedRange, setSearchParams]);
+  }, [customEnd, customStart, selectedRange, setSearchParams]);
 
   const setCustomStart = useCallback(
     (d: Date) => {

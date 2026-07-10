@@ -80,7 +80,7 @@ const CustomPieChart: React.FC<CustomPieChartProps> = ({ data }) => {
         />
       </div>
 
-      <div className="basis-[clamp(10rem,30%,18rem)] shrink-0 pr-2 pl-3 overflow-y-auto max-h-[300px] space-y-2 text-sm scroll-hidden">
+      <div className="basis-[clamp(10rem,30%,18rem)] shrink-0 pr-2 pl-3 overflow-y-auto max-h-75 space-y-2 text-sm scroll-hidden">
         {chartData.map((d) => (
           <div key={d.id} className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-2 min-w-0 flex-1">
@@ -96,7 +96,7 @@ const CustomPieChart: React.FC<CustomPieChartProps> = ({ data }) => {
               </span>
             </div>
 
-            <span className="shrink-0 truncate text-xs text-muted-foreground max-w-[5rem] text-right">
+            <span className="shrink-0 truncate text-xs text-muted-foreground max-w-20 text-right">
               {formatDuration(d.value)}
             </span>
           </div>

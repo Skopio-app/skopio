@@ -11,16 +11,35 @@ const normalizeLayouts = (
   entry: StoredLayout | undefined,
   fallback: DashboardLayouts,
 ): DashboardLayouts => {
+  const mergeWithFallback = (layouts: DashboardLayouts): DashboardLayouts => {
+    const merged: DashboardLayouts = { ...fallback, ...layouts };
+
+    for (const [breakpoint, fallbackLayout] of Object.entries(fallback)) {
+      const currentLayout = merged[breakpoint as DashboardBreakpoint] ?? [];
+      const currentIds = new Set(currentLayout.map((item) => item.i));
+      const missingItems = fallbackLayout.filter(
+        (item) => !currentIds.has(item.i),
+      );
+
+      merged[breakpoint as DashboardBreakpoint] = [
+        ...currentLayout,
+        ...missingItems,
+      ];
+    }
+
+    return merged;
+  };
+
   if (!entry) {
     return fallback;
   }
 
   if (entry.layouts) {
-    return entry.layouts;
+    return mergeWithFallback(entry.layouts);
   }
 
   if (entry.layout) {
-    return { ...fallback, lg: entry.layout };
+    return mergeWithFallback({ lg: entry.layout });
   }
 
   return fallback;

@@ -16,6 +16,7 @@ import CategoryChartWidget from "./widgets/CategoryChartWidget";
 import EntityChartWidget from "./widgets/EntityChartWidget";
 import RangeSelectionDialog from "@/components/RangeSelectionDialog";
 import ActivityChartWidget from "./widgets/ActivityChartWidget";
+import ActiveAfkChartWidget from "./widgets/ActiveAfkChartWidget";
 import { useTotalTime } from "./hooks/useTotalTime";
 import { usePersistentLayout } from "./hooks/usePersistentLayout";
 import { formatDuration } from "@/utils/time";
@@ -61,6 +62,7 @@ const DashboardView = () => {
         { i: "categories", x: 6, y: 1, w: 6, h: 3 },
         { i: "entities", x: 0, y: 2, w: 6, h: 3 },
         { i: "activity", x: 6, y: 2, w: 6, h: 3 },
+        { i: "active-afk", x: 0, y: 5, w: 6, h: 3 },
       ],
     }),
     [],
@@ -90,6 +92,9 @@ const DashboardView = () => {
       </div>,
       <div key="activity">
         <ActivityChartWidget />
+      </div>,
+      <div key="active-afk">
+        <ActiveAfkChartWidget />
       </div>,
     ],
     [],

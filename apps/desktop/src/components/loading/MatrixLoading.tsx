@@ -1,7 +1,8 @@
+import { useElementSize } from "@/hooks/useElementSize";
 import { useCssVarColor } from "@/hooks/useChartColor";
 import { useTheme } from "@/utils/theme";
-import type { CSSProperties, RefObject } from "react";
-import { useEffect, useRef, useState } from "react";
+import type { CSSProperties } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   matrixColumns,
   matrixFrameRate,
@@ -42,9 +43,22 @@ const MatrixLoading = ({
   style,
   width,
 }: MatrixLoadingProps) => {
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
-  const frameRef = useRef<HTMLDivElement | null>(null);
+  const {
+    ref: canvasRef,
+    width: canvasWidth,
+    height: canvasHeight,
+  } = useElementSize<HTMLCanvasElement>();
+  const {
+    ref: frameRef,
+    width: frameWidth,
+    height: frameHeight,
+  } = useElementSize<HTMLDivElement>();
+  const [frameElement, setFrameElement] = useState<HTMLDivElement | null>(null);
+  const { width: parentWidth } = useElementSize<HTMLElement>(
+    frameElement?.parentElement ?? null,
+  );
   const frameIndexRef = useRef(0);
+  const canvasSizeRef = useRef({ width: 0, height: 0 });
   const { resolvedTheme } = useTheme();
   const matrixColor = useCssVarColor("--foreground");
   const matrixFramesByTheme = useMatrixFrames();
@@ -54,11 +68,17 @@ const MatrixLoading = ({
   const resolvedWidth = width ?? style?.width;
   const shouldUseResponsiveSize =
     resolvedHeight === undefined && resolvedWidth === undefined;
+  const viewportSize = useViewportSize();
   const responsiveSize = useResponsiveMatrixSize(
-    frameRef,
     shouldUseResponsiveSize,
+    parentWidth,
+    viewportSize,
   );
-  const coverCanvasSize = useCoverCanvasSize(frameRef, fit === "cover");
+  const coverCanvasSize = useCoverCanvasSize(
+    fit === "cover",
+    frameWidth,
+    frameHeight,
+  );
   const canvasStyle =
     fit === "cover"
       ? coverCanvasSize
@@ -66,6 +86,13 @@ const MatrixLoading = ({
           height: "100%",
           width: "100%",
         } satisfies CSSProperties);
+  const assignFrameRef = useCallback(
+    (node: HTMLDivElement | null) => {
+      frameRef.current = node;
+      setFrameElement(node);
+    },
+    [frameRef],
+  );
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -78,33 +105,29 @@ const MatrixLoading = ({
       return;
     }
 
-    const resizeCanvas = () => {
-      const dpr = window.devicePixelRatio || 1;
-      const rect = canvas.getBoundingClientRect();
-      const width = Math.max(1, Math.round(rect.width));
-      const height = Math.max(1, Math.round(rect.height));
+    if (canvasWidth <= 0 || canvasHeight <= 0) {
+      canvasSizeRef.current = { width: 0, height: 0 };
+      return;
+    }
 
-      if (canvas.width !== width * dpr || canvas.height !== height * dpr) {
-        canvas.width = width * dpr;
-        canvas.height = height * dpr;
-      }
+    const dpr = window.devicePixelRatio || 1;
+    const width = Math.max(1, Math.round(canvasWidth));
+    const height = Math.max(1, Math.round(canvasHeight));
+    canvasSizeRef.current = { width, height };
 
-      context.setTransform(dpr, 0, 0, dpr, 0, 0);
-      const frame = currentMatrixFrame(matrixFrames, frameIndexRef.current);
-      context.clearRect(0, 0, width, height);
+    if (canvas.width !== width * dpr || canvas.height !== height * dpr) {
+      canvas.width = width * dpr;
+      canvas.height = height * dpr;
+    }
 
-      if (frame) {
-        drawFrame(context, frame, width, height, matrixColor);
-      }
-    };
+    context.setTransform(dpr, 0, 0, dpr, 0, 0);
+    const frame = currentMatrixFrame(matrixFrames, frameIndexRef.current);
+    context.clearRect(0, 0, width, height);
 
-    resizeCanvas();
-
-    const resizeObserver = new ResizeObserver(resizeCanvas);
-    resizeObserver.observe(canvas);
-
-    return () => resizeObserver.disconnect();
-  }, [matrixColor, matrixFrames]);
+    if (frame) {
+      drawFrame(context, frame, width, height, matrixColor);
+    }
+  }, [canvasHeight, canvasRef, canvasWidth, matrixColor, matrixFrames]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -118,9 +141,11 @@ const MatrixLoading = ({
     }
 
     const drawCurrentFrame = () => {
-      const rect = canvas.getBoundingClientRect();
-      const width = Math.max(1, Math.round(rect.width));
-      const height = Math.max(1, Math.round(rect.height));
+      const { width, height } = canvasSizeRef.current;
+      if (width <= 0 || height <= 0) {
+        return;
+      }
+
       const frame = currentMatrixFrame(matrixFrames, frameIndexRef.current);
 
       context.clearRect(0, 0, width, height);
@@ -158,11 +183,11 @@ const MatrixLoading = ({
     animationFrame = window.requestAnimationFrame(animate);
 
     return () => window.cancelAnimationFrame(animationFrame);
-  }, [matrixColor, matrixFrames]);
+  }, [canvasRef, matrixColor, matrixFrames]);
 
   return (
     <div
-      ref={frameRef}
+      ref={assignFrameRef}
       className={[
         "box-border overflow-hidden",
         fit === "cover" ? undefined : "relative p-2 sm:p-3",
@@ -200,7 +225,7 @@ const MatrixLoading = ({
   );
 };
 
-function useMatrixFrames() {
+const useMatrixFrames = () => {
   const [framesByTheme, setFramesByTheme] =
     useState<MatrixFramesByTheme | null>(cachedMatrixFrames);
 
@@ -227,9 +252,9 @@ function useMatrixFrames() {
   }, []);
 
   return framesByTheme;
-}
+};
 
-function loadMatrixFrames() {
+const loadMatrixFrames = () => {
   matrixFramesPromise ??= fetch(matrixFramesUrl)
     .then((response) => {
       if (!response.ok) {
@@ -254,173 +279,123 @@ function loadMatrixFrames() {
     });
 
   return matrixFramesPromise;
-}
+};
 
-function prefersReducedMotion() {
+const prefersReducedMotion = () => {
   return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-}
+};
 
-function currentMatrixFrame(frames: readonly string[], frameIndex: number) {
+const currentMatrixFrame = (frames: readonly string[], frameIndex: number) => {
   if (frames.length === 0) {
     return undefined;
   }
 
   return frames[frameIndex % frames.length];
-}
+};
 
-function useCoverCanvasSize(
-  ref: RefObject<HTMLDivElement | null>,
+const useCoverCanvasSize = (
   enabled: boolean,
-) {
-  const [size, setSize] = useState<CSSProperties>({
-    height: "100%",
-    width: "100%",
-  });
-
-  useEffect(() => {
+  containerWidth: number,
+  containerHeight: number,
+) => {
+  return useMemo<CSSProperties>(() => {
     if (!enabled) {
-      return;
+      return {
+        height: "100%",
+        width: "100%",
+      };
     }
 
+    if (containerWidth <= 0 || containerHeight <= 0) {
+      return {
+        height: "100%",
+        width: "100%",
+      };
+    }
+
+    const containerAspectRatio = containerWidth / containerHeight;
+    let nextWidth = containerWidth;
+    let nextHeight = containerHeight;
+
+    if (containerAspectRatio > MATRIX_ASPECT_RATIO) {
+      nextHeight = containerWidth / MATRIX_ASPECT_RATIO;
+    } else {
+      nextWidth = containerHeight * MATRIX_ASPECT_RATIO;
+    }
+
+    return {
+      height: `${Math.ceil(nextHeight)}px`,
+      width: `${Math.ceil(nextWidth)}px`,
+    };
+  }, [containerHeight, containerWidth, enabled]);
+};
+
+const useResponsiveMatrixSize = (
+  enabled: boolean,
+  parentWidth: number,
+  viewportSize: { width: number; height: number },
+) => {
+  return useMemo<CSSProperties>(() => {
+    if (!enabled) {
+      return {
+        width: "min(100%, 92vw, 980px)",
+      };
+    }
+
+    const availableWidth = Math.min(
+      DEFAULT_MAX_WIDTH,
+      parentWidth || viewportSize.width,
+      viewportSize.width - VIEWPORT_INLINE_GUTTER,
+    );
+    const availableHeight = Math.max(
+      MIN_RESPONSIVE_HEIGHT,
+      viewportSize.height - VIEWPORT_BLOCK_RESERVE,
+    );
+    let nextWidth = Math.max(1, availableWidth);
+    let nextHeight = nextWidth / MATRIX_ASPECT_RATIO;
+
+    if (nextHeight > availableHeight) {
+      nextHeight = availableHeight;
+      nextWidth = nextHeight * MATRIX_ASPECT_RATIO;
+    }
+
+    return {
+      height: `${Math.round(nextHeight)}px`,
+      width: `${Math.round(nextWidth)}px`,
+    };
+  }, [enabled, parentWidth, viewportSize.height, viewportSize.width]);
+};
+
+const useViewportSize = () => {
+  const [size, setSize] = useState(() => ({
+    height: window.innerHeight,
+    width: window.innerWidth,
+  }));
+
+  useEffect(() => {
     const updateSize = () => {
-      const element = ref.current;
-
-      if (!element) {
-        return;
-      }
-
-      const rect = element.getBoundingClientRect();
-      const containerWidth = Math.max(1, rect.width);
-      const containerHeight = Math.max(1, rect.height);
-      const containerAspectRatio = containerWidth / containerHeight;
-      let nextWidth = containerWidth;
-      let nextHeight = containerHeight;
-
-      if (containerAspectRatio > MATRIX_ASPECT_RATIO) {
-        nextHeight = containerWidth / MATRIX_ASPECT_RATIO;
-      } else {
-        nextWidth = containerHeight * MATRIX_ASPECT_RATIO;
-      }
-
-      setSize((previousSize) => {
-        const roundedWidth = `${Math.ceil(nextWidth)}px`;
-        const roundedHeight = `${Math.ceil(nextHeight)}px`;
-
-        if (
-          previousSize.width === roundedWidth &&
-          previousSize.height === roundedHeight
-        ) {
-          return previousSize;
-        }
-
-        return {
-          height: roundedHeight,
-          width: roundedWidth,
-        };
+      setSize({
+        height: window.innerHeight,
+        width: window.innerWidth,
       });
     };
 
-    updateSize();
-
-    const resizeObserver = new ResizeObserver(updateSize);
-
-    if (ref.current) {
-      resizeObserver.observe(ref.current);
-    }
-
     window.addEventListener("resize", updateSize);
-
     return () => {
-      resizeObserver.disconnect();
       window.removeEventListener("resize", updateSize);
     };
-  }, [enabled, ref]);
+  }, []);
 
   return size;
-}
+};
 
-function useResponsiveMatrixSize(
-  ref: RefObject<HTMLDivElement | null>,
-  enabled: boolean,
-) {
-  const [size, setSize] = useState<CSSProperties>({
-    width: "min(100%, 92vw, 980px)",
-  });
-
-  useEffect(() => {
-    if (!enabled) {
-      return;
-    }
-
-    const updateSize = () => {
-      const element = ref.current;
-      const parentWidth =
-        element?.parentElement?.getBoundingClientRect().width ||
-        window.innerWidth;
-      const viewportWidth = window.innerWidth;
-      const viewportHeight = window.innerHeight;
-      const availableWidth = Math.min(
-        DEFAULT_MAX_WIDTH,
-        parentWidth,
-        viewportWidth - VIEWPORT_INLINE_GUTTER,
-      );
-      const availableHeight = Math.max(
-        MIN_RESPONSIVE_HEIGHT,
-        viewportHeight - VIEWPORT_BLOCK_RESERVE,
-      );
-      let nextWidth = Math.max(1, availableWidth);
-      let nextHeight = nextWidth / MATRIX_ASPECT_RATIO;
-
-      if (nextHeight > availableHeight) {
-        nextHeight = availableHeight;
-        nextWidth = nextHeight * MATRIX_ASPECT_RATIO;
-      }
-
-      setSize((previousSize) => {
-        const roundedWidth = `${Math.round(nextWidth)}px`;
-        const roundedHeight = `${Math.round(nextHeight)}px`;
-
-        if (
-          previousSize.width === roundedWidth &&
-          previousSize.height === roundedHeight
-        ) {
-          return previousSize;
-        }
-
-        return {
-          height: roundedHeight,
-          width: roundedWidth,
-        };
-      });
-    };
-
-    updateSize();
-
-    const resizeObserver = new ResizeObserver(updateSize);
-    const observedElement = ref.current?.parentElement ?? ref.current;
-
-    if (observedElement) {
-      resizeObserver.observe(observedElement);
-    }
-
-    window.addEventListener("resize", updateSize);
-
-    return () => {
-      resizeObserver.disconnect();
-      window.removeEventListener("resize", updateSize);
-    };
-  }, [enabled, ref]);
-
-  return size;
-}
-
-function drawFrame(
+const drawFrame = (
   context: CanvasRenderingContext2D,
   frame: string,
   width: number,
   height: number,
   color: string,
-) {
+) => {
   if (!frame) {
     return;
   }
@@ -460,9 +435,9 @@ function drawFrame(
   }
 
   context.globalAlpha = 1;
-}
+};
 
-function decodeLevel(charCode: number) {
+const decodeLevel = (charCode: number) => {
   if (charCode >= 48 && charCode <= 57) {
     return charCode - 48;
   }
@@ -472,6 +447,6 @@ function decodeLevel(charCode: number) {
   }
 
   return 0;
-}
+};
 
 export default MatrixLoading;

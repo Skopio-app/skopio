@@ -1,5 +1,4 @@
 import {
-  differenceInDays,
   endOfDay,
   endOfMonth,
   endOfWeek,
@@ -10,7 +9,7 @@ import {
   subMonths,
   subWeeks,
 } from "date-fns";
-import { TimeBucket, TimeRangePreset } from "@/types/tauri.gen";
+import { TimeRangePreset } from "@/types/tauri.gen";
 
 export enum DateRangeType {
   Today = "Today",
@@ -58,8 +57,10 @@ export const getRangeDates = (
       return [startOfMonth(lastMonth), endOfMonth(lastMonth)];
     }
     case DateRangeType.Custom:
-      if (customStart && customEnd) return [customStart, customEnd];
-      return [today, today];
+      if (customStart && customEnd) {
+        return [startOfDay(customStart), endOfDay(customEnd)];
+      }
+      return [today, endOfDay(today)];
   }
 };
 
@@ -87,28 +88,14 @@ export const mapRangeToPreset = (
       return { lastNDays: [14, false] };
     case DateRangeType.Last30Days:
       return { lastNDays: [30, false] };
-    case DateRangeType.Custom: {
-      const duration = differenceInDays(end, start);
-
-      let bucket: TimeBucket;
-      if (duration <= 1) {
-        bucket = "hour";
-      } else if (duration <= 14) {
-        bucket = "day";
-      } else if (duration <= 60) {
-        bucket = "week";
-      } else {
-        bucket = "month";
-      }
-
+    case DateRangeType.Custom:
       return {
         custom: {
           start: start.toISOString(),
           end: end.toISOString(),
-          bucket,
+          bucket: "day",
         },
       };
-    }
     default:
       return {
         custom: {
