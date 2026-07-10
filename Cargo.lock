@@ -5335,7 +5335,7 @@ dependencies = [
 
 [[package]]
 name = "skopio-server"
-version = "0.1.12"
+version = "0.1.13"
 dependencies = [
  "anyhow",
  "axum",
