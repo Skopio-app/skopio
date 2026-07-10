@@ -23,6 +23,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v0.1.19] - 2026-07-10
+
+### Fixed
+
+- Persist custom range params when reloading window.
+- Display stacked bar chart content instead of displaying empty view on first load.
+- Cluster timeline results when displaying many items.
+
+### Added
+
+- New Active AFK chart widget in dashboard view.
+
+---
+
 ## [v0.1.18] - 2026-07-04
 
 ### Fixed
@@ -34,6 +48,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - Added new matrix loading component and removed dino game.
 
+---
+
 ## [v0.1.17] - 2026-06-21
 
 ### Fixed
@@ -44,6 +60,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 
 - Updated app dependencies.
+
+---
 
 ## [v0.1.16] - 2026-06-13
 
