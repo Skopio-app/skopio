@@ -25,6 +25,10 @@ static BROWSER_APPS: LazyLock<HashSet<MonitoredApp>> = LazyLock::new(|| {
         MonitoredApp::Chrome,
         MonitoredApp::ChromeBeta,
         MonitoredApp::ChromeCanary,
+        MonitoredApp::Edge,
+        MonitoredApp::EdgeBeta,
+        MonitoredApp::EdgeDev,
+        MonitoredApp::EdgeCanary,
         MonitoredApp::Safari,
         MonitoredApp::SafariPreview,
         MonitoredApp::Firefox,
@@ -280,6 +284,14 @@ pub enum MonitoredApp {
     ChromeBeta,
     #[strum(serialize = "com.google.Chrome.canary")]
     ChromeCanary,
+    #[strum(serialize = "com.microsoft.edgemac")]
+    Edge,
+    #[strum(serialize = "com.microsoft.edgemac.Beta")]
+    EdgeBeta,
+    #[strum(serialize = "com.microsoft.edgemac.Dev")]
+    EdgeDev,
+    #[strum(serialize = "com.microsoft.edgemac.Canary")]
+    EdgeCanary,
     #[strum(serialize = "com.microsoft.VSCode")]
     Code,
     #[strum(serialize = "com.microsoft.VSCodeInsiders")]
